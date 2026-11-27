@@ -135,7 +135,10 @@ export const CALENDAR_CHANGED_EVENT: IntegrationEventSpec = {
   label: "A calendar event changes",
   description:
     "An event is created or updated in the selected calendar (primary by default), for events from a day ago to a year ahead. A cancelled event does not fire. The summary carries its title and times, never its description.",
-  every: 1,
+  // Each look reads every page of that year, since Calendar's MCP server lists no changes
+  // alone: looking each five minutes keeps a calendar of 800 events there to 1,152
+  // requests a day, inside Google's free 5,000 for Calendar.
+  every: 5,
   filters: [{ name: "calendar", label: "Calendar", defaultValue: "primary" }],
 };
 

@@ -33,6 +33,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
 import { ScheduleStore } from "../../../storage/scheduleStore";
 import { atUtilityQos } from "../../../utilityQos";
 import {
+  CALENDAR_CHANGED_EVENT,
   GOOGLE_DATA_FENCE,
   GOOGLE_SCOPES,
   googleIntegration,
@@ -173,6 +174,8 @@ describe("Google as an integration", () => {
           expect.objectContaining({
             name: "event_changed",
             label: "A calendar event changes",
+            // The captain's choice on INF-7017's review: a Calendar rule looks every 5 minutes.
+            every: 5,
             filters: [{ name: "calendar", label: "Calendar", defaultValue: "primary" }],
           }),
         ],
@@ -1721,10 +1724,13 @@ it("carries the first mate's selected Calendar through the real tool, saved rule
   });
   const rule = store.list()[0];
   expect(rule?.spec).toMatchObject({ filter: { calendar: STUDIO_CALENDAR } });
+  // The rule looks once in each `every` minutes' ticks, so one step here is one look.
   const tick = async () => {
-    clock.now += 60_000;
-    scheduler.tick(clock.now);
-    await scheduler.settled();
+    for (let minute = 0; minute < CALENDAR_CHANGED_EVENT.every; minute++) {
+      clock.now += 60_000;
+      scheduler.tick(clock.now);
+      await scheduler.settled();
+    }
   };
   await tick();
   expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);

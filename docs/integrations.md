@@ -309,8 +309,9 @@ An update patches only the fields named; a replaced attendees list is sent as th
 `send_updates` declares guest notifications (`none`, the default, `all` or `externalOnly`), sent as Calendar's `notificationLevel` with `NONE` when omitted, and that choice stays in the exact input the captain approves.
 `free_busy` is Calendar's `suggest_time`: up to five free times when everyone named is free, and it changes nothing.
 No action deletes an event.
-Calendar tells `event_changed` ("A calendar event changes") every minute, filtered by `calendar` (an id from `list_calendars`, primary by default).
+Calendar tells `event_changed` ("A calendar event changes") every five minutes, filtered by `calendar` (an id from `list_calendars`, primary by default).
 Each look reads `list_events` ordered by when each event last changed, for events from a day ago to a year ahead, and fires those changed since the cursor: its time and the revisions at that time, with the calendar and account; the first look starts at the newest change and fires nothing.
+Calendar's MCP server cannot list only what changed, so each look reads every page of that year; looking every five minutes keeps a calendar of 800 events there to 1,152 requests a day, inside Google's free 5,000 a day for Calendar.
 Each changed event carries an id derived from its calendar, event id and revision, so two edits of the same event can both fire while a replay of one revision deduplicates.
 The summary carries title, event id, calendar and times, never its description or guests; a cancelled event does not fire.
 Another account or another calendar discards the old cursor and keeps now without firing; a failed or incomplete look never advances the cursor.

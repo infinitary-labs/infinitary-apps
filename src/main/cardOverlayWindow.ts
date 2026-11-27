@@ -1,4 +1,6 @@
+import { execFile } from "node:child_process";
 import { join } from "node:path";
+import { hostEnv } from "@core/hostEnv";
 import { cardOverlayArgument, overlayBounds, overlayRunsCommand } from "@shared/cardOverlay";
 import {
   COMMAND_IDS,
@@ -109,11 +111,13 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     win.webContents.on("before-mouse-event", (_event, mouse) => {
       if (mouse.type === "mouseDown") pressed = true;
     });
-    // Hiding the app gives the activation back to the app behind it, the game. A panel that
-    // lost the keys first went because the person moved to another app, Infinitary's own
-    // window included, which keeps it. Each way out passes here once while the panel shows.
+    // The app in front at the press, the game: hiding Infinitary instead would activate whichever
+    // app the system orders next, which after a Command-Tab is not the game.
+    const behind = frontApp();
+    // A panel that lost the keys first went because the person moved to another app, Infinitary's
+    // own window included, which keeps them. Each way out passes here once while the panel shows.
     const handBack = () => {
-      if (pressed && win.isVisible() && win.isFocused()) app.hide();
+      if (pressed && win.isVisible() && win.isFocused()) void behind.then(activateApp);
       pressed = false;
     };
     const panel: OverlayPanel = {
@@ -198,6 +202,41 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       shown.win.setIgnoreMouseEvents(!over, { forward: true });
     },
   };
+}
+
+/** The app in front now, by its running instance (`asn`), or null when the system does not say. */
+async function frontApp(): Promise<{ asn: string; bundle: string } | null> {
+  const asn = (await lsappinfo(["front"])).trim();
+  if (!asn.startsWith("ASN:")) return null;
+  const bundle = await bundleOf(asn);
+  return bundle ? { asn, bundle } : null;
+}
+
+/** The bundle of a running instance, null once it has quit. */
+async function bundleOf(asn: string): Promise<string | null> {
+  return (
+    /bundleID="([^"]+)"/.exec(await lsappinfo(["info", "-only", "bundleid", asn]))?.[1] ?? null
+  );
+}
+
+function lsappinfo(args: string[]): Promise<string> {
+  return new Promise((resolve) => {
+    execFile(
+      "/usr/bin/lsappinfo",
+      args,
+      { env: hostEnv(), encoding: "utf8", timeout: 2_000 },
+      (error, out) => resolve(error ? "" : out),
+    );
+  });
+}
+
+/**
+ * Makes `app` active again through Launch Services, which asks no permission, while that very
+ * instance still runs: `open` would launch an app that quit meanwhile.
+ */
+async function activateApp(app: { asn: string; bundle: string } | null): Promise<void> {
+  if (!app || (await bundleOf(app.asn)) !== app.bundle) return;
+  execFile("/usr/bin/open", ["-b", app.bundle], { env: hostEnv(), timeout: 5_000 }, () => {});
 }
 
 /**

@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { generateKeyPairSync } from "node:crypto";
-import { readFileSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { delimiter, join } from "node:path";
 import { promisify } from "node:util";
@@ -38,8 +38,9 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { selectDevice } from "./deviceFixtures";
 import { cardBody } from "./frames";
 import { askFirstmate } from "./lastTurn";
-import { launchApp } from "./launch";
+import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow } from "./layout";
+import { startMockProvider } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { readSavedData } from "./savedData";
@@ -1142,6 +1143,97 @@ printf 'ran\n' >> "$PWD/executions"
     // The program ends by itself; this ends it at once whatever happened.
     writeFileSync(release, "");
     await launched.close();
+  }
+});
+
+// INF-7106 (the approved plan's second part): a crewmate whose approved run
+// the app's close cut off heard how it ended only at its own next status
+// read. Here the app quits while the approved program runs, and the relaunch
+// on the same data folder tells the crewmate, with no read of its own, that
+// the run's outcome is unknown. Data: a disposable credential, a shell
+// recipient and one stand-in model kept across the relaunch; custody and
+// confirmation stand in, and no shared account is used.
+test("a crewmate hears how its approved run ended when the app closed while it ran", async () => {
+  const cwd = realpathSync(scratchDir("secrets-cut-off-recipient-"));
+  const release = join(cwd, "go");
+  writeFileSync(
+    join(cwd, "check.sh"),
+    `#!/bin/sh
+[ "$SERVICE_TOKEN" = '${TOKEN}' ] || exit 1
+: > "$PWD/running"
+waited=0
+while [ ! -e "$PWD/go" ]; do
+  waited=$((waited + 1))
+  [ "$waited" -gt 300 ] && exit 2
+  sleep 0.1
+done
+`,
+  );
+  const provider = await startMockProvider({ scenarios: [protectedSecretUse(cwd, REFERENCE)] });
+  let launched: LaunchedApp | undefined;
+  try {
+    launched = await launchSecrets({ reuseMockProvider: provider });
+    const { app, page, userDataDir, homeDir } = launched;
+    await app.evaluate(
+      async (_electron, input) => {
+        await (globalThis as SecretsJourneyGlobal).secretsJourney.core.services.secrets.put(input);
+      },
+      {
+        ref: REFERENCE,
+        label: LABEL,
+        value: TOKEN,
+        expectedVersion: 0,
+        expectedRevision: null,
+        environment: "Disposable",
+      },
+    );
+    await askFirstmate(page, PROTECTED_USE_PROMPT);
+    const title = approvalTitle(
+      [{ ref: REFERENCE, label: LABEL, environment: "Disposable" }],
+      PROTECTED_USE_TITLE,
+    );
+    const approval = shownCard(page, title);
+    await expect(approval).toBeVisible();
+    await pressKey(
+      approval.getByRole("button", { name: SECRETS_WORDS.once, exact: true }),
+      "Enter",
+    );
+    await expect.poll(() => existsSync(join(cwd, "running"))).toBe(true);
+    // The computer's custody outlives the app, so the relaunch opens the same Secrets.
+    const slots = await app.evaluate(() =>
+      [...(globalThis as SecretsJourneyGlobal).secretsJourney.custody.slots].map(
+        ([slot, bytes]) => [slot, bytes.toString("base64")] as const,
+      ),
+    );
+    await launched.close();
+    launched = undefined;
+    const before = provider.requestBodies().length;
+    launched = await launchSecrets({
+      reuseMockProvider: provider,
+      userDataDir,
+      homeDir,
+      leftCustody: new Map(slots.map(([slot, bytes]) => [slot, Buffer.from(bytes, "base64")])),
+    });
+    const cutOff = new RegExp(`${SECRETS_USE_ENDED_LEAD} [\\w-]+: unknown\\.`);
+    // The crewmate's conversation is opened again from disk before it hears.
+    await expect
+      .poll(
+        () =>
+          provider
+            .requestBodies()
+            .slice(before)
+            .some((body) => cutOff.test(body)),
+        {
+          timeout: 30_000,
+        },
+      )
+      .toBe(true);
+    expect(provider.requestBodies().join("\n")).not.toContain(TOKEN);
+  } finally {
+    // The orphaned program ends by itself; this ends it at once whatever happened.
+    writeFileSync(release, "");
+    await launched?.close();
+    await provider.close();
   }
 });
 

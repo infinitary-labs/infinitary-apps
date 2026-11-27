@@ -76,6 +76,7 @@ const isolatedUnit = [
   "src/core/helper/sessionHostPersonal.test.ts",
   "src/core/helper/sessionHostRestarts.test.ts",
   "src/core/helper/sessionHostUpdateSave.test.ts",
+  "src/core/helper/signIns.forges.test.ts",
   "src/core/helper/signIns.test.ts",
   "src/core/models/accountStore.test.ts",
   "src/core/models/catalogReaders.test.ts",

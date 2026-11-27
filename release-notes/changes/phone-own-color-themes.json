@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "phone-own-color-themes",
+      "kind": "feature",
+      "title": "Your own color themes on iPhone and iPad",
+      "body": "A color theme you made with the first mate now shows on your iPhone and iPad too, under Yours in Settings, Appearance, Theme. Pick it there to recolor the app on that device. A theme you change or remove on your computer changes or leaves the phone with it.",
+      "area": "devices",
+      "picture": {
+        "dark": "phone-own-color-themes-dark.webp",
+        "light": "phone-own-color-themes-light.webp",
+        "alt": "The phone's Theme setting with a Yours group under the built-in themes holding an Old terminal tile, picked on a dark screen that draws its words in the theme's green, and the same list on a light screen"
+      },
+      "docsSite": ["iphone-and-ipad"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

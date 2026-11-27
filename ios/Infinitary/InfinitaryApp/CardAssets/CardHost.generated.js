@@ -68105,34 +68105,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${model} · ${vendor} · on`;
   }
-  function settingsDecisionsOpenRouterModels() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `نماذج القرارات من OpenRouter`;
-      case "de":
-        return `Entscheidungsmodelle von OpenRouter`;
-      case "es":
-        return `Modelos de decisiones de OpenRouter`;
-      case "fr":
-        return `Modèles de décision OpenRouter`;
-      case "ja":
-        return `OpenRouter の判断用モデル`;
-      case "ko":
-        return `OpenRouter 결정 모델`;
-      case "pt-BR":
-        return `Modelos de decisão do OpenRouter`;
-      case "zh-Hans":
-        return `OpenRouter 决定模型`;
-      case "zh-Hant":
-        return `OpenRouter 決定模型`;
-      case "en-XA":
-        return `[ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļš ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮OpenRouter decision models‬`;
-    }
-    return `OpenRouter decision models`;
-  }
-  function settingsDecisionsOpenRouterPrice(input2) {
+  function settingsDecisionsModelPrice(input2) {
     const model = input2.model;
     const price = input2.price;
     const vendor = input2.vendor;
@@ -68162,33 +68135,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${model} · ${vendor} · $${price} / million input tokens`;
   }
-  function settingsDecisionsOpenRouterUnavailable() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `OpenRouter غير متاح · يُستخدم أحد نماذجك`;
-      case "de":
-        return `OpenRouter nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
-      case "es":
-        return `OpenRouter no disponible · se usa uno de tus propios modelos`;
-      case "fr":
-        return `OpenRouter indisponible · un de vos propres modèles est utilisé`;
-      case "ja":
-        return `OpenRouter を利用できません · 自分のモデルの1つを使用中`;
-      case "ko":
-        return `OpenRouter 사용 불가 · 선장님의 모델 중 하나 사용 중`;
-      case "pt-BR":
-        return `OpenRouter indisponível · usando um dos seus próprios modelos`;
-      case "zh-Hans":
-        return `OpenRouter 不可用 · 正在使用你自己的一个模型`;
-      case "zh-Hant":
-        return `無法使用 OpenRouter · 正在使用你自己的一個模型`;
-      case "en-XA":
-        return `[ÖþéñŔöûţéŕ ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮OpenRouter unavailable · using one of your own models‬`;
-    }
-    return `OpenRouter unavailable · using one of your own models`;
-  }
   function settingsDecisionsPicker() {
     switch (currentLanguage()) {
       case "ar":
@@ -68215,6 +68161,179 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Choose the model that answers decisions‬`;
     }
     return `Choose the model that answers decisions`;
+  }
+  function settingsDecisionsProviderChoice() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أوقف أي استخدام في قائمة القرارات، أو اختر نموذج قرارات آخر.`;
+      case "de":
+        return `Schalte jede Verwendung in der Liste unter Entscheidungen aus oder wähle ein anderes Entscheidungsmodell.`;
+      case "es":
+        return `Desactiva cualquier uso en la lista de Decisiones o elige otro modelo de decisiones.`;
+      case "fr":
+        return `Désactivez n’importe quel usage dans la liste Décisions, ou choisissez un autre modèle de décision.`;
+      case "ja":
+        return `判断の一覧で用途をオフにするか、別の判断用モデルを選んでください。`;
+      case "ko":
+        return `결정 목록에서 원하는 용도를 끄거나 다른 결정 모델을 고르세요.`;
+      case "pt-BR":
+        return `Desative qualquer uso na lista de Decisões ou escolha outro modelo de decisão.`;
+      case "zh-Hans":
+        return `在决定列表中关闭任一用途，或选择另一个决定模型。`;
+      case "zh-Hant":
+        return `在決定清單中關閉任一用途，或選擇另一個決定模型。`;
+      case "en-XA":
+        return `[Ţûŕñ öƒƒ áñý ûšé îñ ţĥé Ðéçîšîöñš ļîšţ, öŕ çĥööšé áñöţĥéŕ ðéçîšîöñ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Turn off any use in the Decisions list, or choose another decision model.‬`;
+    }
+    return `Turn off any use in the Decisions list, or choose another decision model.`;
+  }
+  function settingsDecisionsProviderCostAccount(input2) {
+    const model = input2.model;
+    const price = input2.price;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يدفع حسابك في ${provider} $${price} لكل مليون رمز إدخال؛ والإخراج مجاني. إذا لم يستطع ${model} الإجابة، تجيب نماذجك بدلًا منه.`;
+      case "de":
+        return `Dein ${provider}-Konto zahlt $${price} pro Million Eingabe-Tokens; die Ausgabe ist kostenlos. Wenn ${model} nicht antworten kann, antworten stattdessen deine eigenen Modelle.`;
+      case "es":
+        return `Tu cuenta de ${provider} paga $${price} por millón de tokens de entrada; la salida es gratis. Si ${model} no puede responder, responden tus propios modelos.`;
+      case "fr":
+        return `Votre compte ${provider} paie $${price} par million de jetons en entrée ; la sortie est gratuite. Si ${model} ne peut pas répondre, vos propres modèles répondent à sa place.`;
+      case "ja":
+        return `${provider} のアカウントが入力100万トークンあたり $${price} を支払います。出力は無料です。${model} が答えられないときは、自分のモデルが代わりに答えます。`;
+      case "ko":
+        return `${provider} 계정이 입력 토큰 100만 개당 $${price}를 내요. 출력은 무료예요. ${model}이 답하지 못하면 선장님의 모델이 대신 답해요.`;
+      case "pt-BR":
+        return `Sua conta do ${provider} paga $${price} por milhão de tokens de entrada; a saída é gratuita. Se ${model} não puder responder, seus próprios modelos respondem no lugar.`;
+      case "zh-Hans":
+        return `你的 ${provider} 账户按每百万输入 token $${price} 付费；输出免费。如果 ${model} 无法回答，由你自己的模型回答。`;
+      case "zh-Hant":
+        return `你的 ${provider} 帳號按每百萬輸入 token $${price} 付費；輸出免費。如果 ${model} 無法回答，由你自己的模型回答。`;
+      case "en-XA":
+        return `[Ýöûŕ ${provider} áççöûñţ þáýš $${price} þéŕ ɱîļļîöñ îñþûţ ţöķéñš; öûţþûţ îš ƒŕéé. Îƒ ${model} çáññöţ áñšŵéŕ, ýöûŕ öŵñ ɱöðéļš áñšŵéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your ‬${provider}‮ account pays $‬${price}‮ per million input tokens; output is free. If ‬${model}‮ cannot answer, your own models answer instead.‬`;
+    }
+    return `Your ${provider} account pays $${price} per million input tokens; output is free. If ${model} cannot answer, your own models answer instead.`;
+  }
+  function settingsDecisionsProviderCostAllowance(input2) {
+    const model = input2.model;
+    const price = input2.price;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل استدعاء يُحتسب من رصيدك في ${provider} بسعر القائمة، $${price} لكل مليون رمز إدخال؛ والإخراج مجاني. إذا لم يستطع ${model} الإجابة، تجيب نماذجك بدلًا منه.`;
+      case "de":
+        return `Jeder Aufruf zählt zum Listenpreis gegen dein ${provider}-Kontingent, $${price} pro Million Eingabe-Tokens; die Ausgabe ist kostenlos. Wenn ${model} nicht antworten kann, antworten stattdessen deine eigenen Modelle.`;
+      case "es":
+        return `Cada llamada cuenta contra tu asignación de ${provider} a precio de lista, $${price} por millón de tokens de entrada; la salida es gratis. Si ${model} no puede responder, responden tus propios modelos.`;
+      case "fr":
+        return `Chaque appel est décompté de votre allocation ${provider} au prix catalogue, $${price} par million de jetons en entrée ; la sortie est gratuite. Si ${model} ne peut pas répondre, vos propres modèles répondent à sa place.`;
+      case "ja":
+        return `呼び出しごとに ${provider} の利用枠を定価で使います。入力100万トークンあたり $${price}、出力は無料です。${model} が答えられないときは、自分のモデルが代わりに答えます。`;
+      case "ko":
+        return `호출할 때마다 ${provider} 사용 한도에서 정가로 차감돼요. 입력 토큰 100만 개당 $${price}이고 출력은 무료예요. ${model}이 답하지 못하면 선장님의 모델이 대신 답해요.`;
+      case "pt-BR":
+        return `Cada chamada conta na sua franquia do ${provider} pelo preço de tabela, $${price} por milhão de tokens de entrada; a saída é gratuita. Se ${model} não puder responder, seus próprios modelos respondem no lugar.`;
+      case "zh-Hans":
+        return `每次调用按标价计入你的 ${provider} 额度，每百万输入 token $${price}；输出免费。如果 ${model} 无法回答，由你自己的模型回答。`;
+      case "zh-Hant":
+        return `每次呼叫按定價計入你的 ${provider} 額度，每百萬輸入 token $${price}；輸出免費。如果 ${model} 無法回答，由你自己的模型回答。`;
+      case "en-XA":
+        return `[Éáçĥ çáļļ çöûñţš áĝáîñšţ ýöûŕ ${provider} áļļöŵáñçé áţ ļîšţ þŕîçé, $${price} þéŕ ɱîļļîöñ îñþûţ ţöķéñš; öûţþûţ îš ƒŕéé. Îƒ ${model} çáññöţ áñšŵéŕ, ýöûŕ öŵñ ɱöðéļš áñšŵéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each call counts against your ‬${provider}‮ allowance at list price, $‬${price}‮ per million input tokens; output is free. If ‬${model}‮ cannot answer, your own models answer instead.‬`;
+    }
+    return `Each call counts against your ${provider} allowance at list price, $${price} per million input tokens; output is free. If ${model} cannot answer, your own models answer instead.`;
+  }
+  function settingsDecisionsProviderModels(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نماذج القرارات من ${provider}`;
+      case "de":
+        return `Entscheidungsmodelle von ${provider}`;
+      case "es":
+        return `Modelos de decisiones de ${provider}`;
+      case "fr":
+        return `Modèles de décision ${provider}`;
+      case "ja":
+        return `${provider} の判断用モデル`;
+      case "ko":
+        return `${provider} 결정 모델`;
+      case "pt-BR":
+        return `Modelos de decisão do ${provider}`;
+      case "zh-Hans":
+        return `${provider} 决定模型`;
+      case "zh-Hant":
+        return `${provider} 決定模型`;
+      case "en-XA":
+        return `[${provider} ðéçîšîöñ ɱöðéļš ~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ decision models‬`;
+    }
+    return `${provider} decision models`;
+  }
+  function settingsDecisionsProviderShared(input2) {
+    const model = input2.model;
+    const provider = input2.provider;
+    const vendor = input2.vendor;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجيب ${model} (${vendor}) عن أسئلة القرارات في Infinitary عبر ${provider}، مثل نماذجك الأخرى. قد تتضمن الأسئلة تفاصيل المهام وردودك والمحادثة المجاورة والشيفرة.`;
+      case "de":
+        return `${model} (${vendor}) beantwortet die Entscheidungsfragen von Infinitary über ${provider}, wie deine anderen Modelle. Fragen können Aufgabendetails, deine Antworten, das Gespräch drumherum und Code enthalten.`;
+      case "es":
+        return `${model} (${vendor}) responde las preguntas de decisión de Infinitary a través de ${provider}, como tus otros modelos. Las preguntas pueden incluir detalles de tareas, tus respuestas, la conversación cercana y código.`;
+      case "fr":
+        return `${model} (${vendor}) répond aux questions de décision d’Infinitary via ${provider}, comme vos autres modèles. Les questions peuvent inclure les détails des tâches, vos réponses, la conversation autour et du code.`;
+      case "ja":
+        return `${model}（${vendor}）は、ほかのモデルと同じように ${provider} 経由で Infinitary の判断の質問に答えます。質問にはタスクの詳細、あなたの返信、周辺の会話、コードが含まれることがあります。`;
+      case "ko":
+        return `${model}(${vendor})은 다른 모델처럼 ${provider}를 통해 Infinitary의 결정 질문에 답해요. 질문에는 작업 세부 사항, 선장님의 답장, 주변 대화와 코드가 들어갈 수 있어요.`;
+      case "pt-BR":
+        return `${model} (${vendor}) responde às perguntas de decisão do Infinitary pelo ${provider}, como seus outros modelos. As perguntas podem incluir detalhes de tarefas, suas respostas, a conversa ao redor e código.`;
+      case "zh-Hans":
+        return `${model}（${vendor}）像你的其他模型一样，通过 ${provider} 回答 Infinitary 的决定问题。问题可能包含任务详情、你的回复、附近的对话和代码。`;
+      case "zh-Hant":
+        return `${model}（${vendor}）像你的其他模型一樣，透過 ${provider} 回答 Infinitary 的決定問題。問題可能包含任務詳情、你的回覆、附近的對話和程式碼。`;
+      case "en-XA":
+        return `[${model} (${vendor}) áñšŵéŕš Îñƒîñîţáŕý'š ðéçîšîöñ ǫûéšţîöñš ţĥŕöûĝĥ ${provider}, ļîķé ýöûŕ öţĥéŕ ɱöðéļš. Ǫûéšţîöñš çáñ îñçļûðé ţášķ ðéţáîļš, ýöûŕ ŕéþļîéš, ñéáŕƀý çöñṽéŕšáţîöñ áñð çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${model}‮ (‬${vendor}‮) answers Infinitary's decision questions through ‬${provider}‮, like your other models. Questions can include task details, your replies, nearby conversation and code.‬`;
+    }
+    return `${model} (${vendor}) answers Infinitary's decision questions through ${provider}, like your other models. Questions can include task details, your replies, nearby conversation and code.`;
+  }
+  function settingsDecisionsProviderUnavailable(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${provider} غير متاح · يُستخدم أحد نماذجك`;
+      case "de":
+        return `${provider} nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
+      case "es":
+        return `${provider} no disponible · se usa uno de tus propios modelos`;
+      case "fr":
+        return `${provider} indisponible · un de vos propres modèles est utilisé`;
+      case "ja":
+        return `${provider} を利用できません · 自分のモデルの1つを使用中`;
+      case "ko":
+        return `${provider} 사용 불가 · 선장님의 모델 중 하나 사용 중`;
+      case "pt-BR":
+        return `${provider} indisponível · usando um dos seus próprios modelos`;
+      case "zh-Hans":
+        return `${provider} 不可用 · 正在使用你自己的一个模型`;
+      case "zh-Hant":
+        return `無法使用 ${provider} · 正在使用你自己的一個模型`;
+      case "en-XA":
+        return `[${provider} ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ unavailable · using one of your own models‬`;
+    }
+    return `${provider} unavailable · using one of your own models`;
   }
   function settingsDecisionsRemove(input2) {
     const model = input2.model;
@@ -68327,33 +68446,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Turn off ${model}`;
   }
-  function settingsDecisionsTurnOnOpenRouter(input2) {
+  function settingsDecisionsTurnOnThrough(input2) {
     const model = input2.model;
+    const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `تفعيل ${model} عبر OpenRouter`;
+        return `تفعيل ${model} عبر ${provider}`;
       case "de":
-        return `${model} über OpenRouter einschalten`;
+        return `${model} über ${provider} einschalten`;
       case "es":
-        return `Activar ${model} a través de OpenRouter`;
+        return `Activar ${model} a través de ${provider}`;
       case "fr":
-        return `Activer ${model} via OpenRouter`;
+        return `Activer ${model} via ${provider}`;
       case "ja":
-        return `OpenRouter 経由で ${model} をオンにする`;
+        return `${provider} 経由で ${model} をオンにする`;
       case "ko":
-        return `OpenRouter로 ${model} 켜기`;
+        return `${provider}로 ${model} 켜기`;
       case "pt-BR":
-        return `Ativar ${model} pelo OpenRouter`;
+        return `Ativar ${model} pelo ${provider}`;
       case "zh-Hans":
-        return `通过 OpenRouter 打开 ${model}`;
+        return `通过 ${provider} 打开 ${model}`;
       case "zh-Hant":
-        return `透過 OpenRouter 開啟 ${model}`;
+        return `透過 ${provider} 開啟 ${model}`;
       case "en-XA":
-        return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ÖþéñŔöûţéŕ ~~~~~~~~~]`;
+        return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ${provider} ~~~~~~]`;
       case "ar-XB":
-        return `‮Turn on ‬${model}‮ through OpenRouter‬`;
+        return `‮Turn on ‬${model}‮ through ‬${provider}`;
     }
-    return `Turn on ${model} through OpenRouter`;
+    return `Turn on ${model} through ${provider}`;
   }
   function settingsDecisionsUseAuto() {
     switch (currentLanguage()) {
@@ -68411,32 +68531,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Use ${model} (${vendor})`;
   }
-  function settingsDecisionsUseOpenRouter() {
+  function settingsDecisionsUseProvider(input2) {
+    const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `استخدام نموذج قرارات من OpenRouter`;
+        return `استخدام نموذج قرارات من ${provider}`;
       case "de":
-        return `Ein Entscheidungsmodell von OpenRouter verwenden`;
+        return `Ein Entscheidungsmodell von ${provider} verwenden`;
       case "es":
-        return `Usar un modelo de decisiones de OpenRouter`;
+        return `Usar un modelo de decisiones de ${provider}`;
       case "fr":
-        return `Utiliser un modèle de décision OpenRouter`;
+        return `Utiliser un modèle de décision ${provider}`;
       case "ja":
-        return `OpenRouter の判断用モデルを使う`;
+        return `${provider} の判断用モデルを使う`;
       case "ko":
-        return `OpenRouter 결정 모델 사용`;
+        return `${provider} 결정 모델 사용`;
       case "pt-BR":
-        return `Usar um modelo de decisão do OpenRouter`;
+        return `Usar um modelo de decisão do ${provider}`;
       case "zh-Hans":
-        return `使用 OpenRouter 决定模型`;
+        return `使用 ${provider} 决定模型`;
       case "zh-Hant":
-        return `使用 OpenRouter 決定模型`;
+        return `使用 ${provider} 決定模型`;
       case "en-XA":
-        return `[Ûšé áñ ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļ ~~~~~~~~~~~]`;
+        return `[Ûšé á ðéçîšîöñ ɱöðéļ ƒŕöɱ ${provider} ~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Use an OpenRouter decision model‬`;
+        return `‮Use a decision model from ‬${provider}`;
     }
-    return `Use an OpenRouter decision model`;
+    return `Use a decision model from ${provider}`;
   }
   function settingsDecisionsUseSpecific() {
     switch (currentLanguage()) {
@@ -118008,18 +118129,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDecisionsKeysFrom,
     settingsDecisionsLastAnswer,
     settingsDecisionsLineNative,
-    settingsDecisionsOpenRouterModels,
-    settingsDecisionsOpenRouterPrice,
-    settingsDecisionsOpenRouterUnavailable,
+    settingsDecisionsModelPrice,
     settingsDecisionsPicker,
+    settingsDecisionsProviderChoice,
+    settingsDecisionsProviderCostAccount,
+    settingsDecisionsProviderCostAllowance,
+    settingsDecisionsProviderModels,
+    settingsDecisionsProviderShared,
+    settingsDecisionsProviderUnavailable,
     settingsDecisionsRemove,
     settingsDecisionsReplaceKey,
     settingsDecisionsSubtitle,
     settingsDecisionsTurnOff,
-    settingsDecisionsTurnOnOpenRouter,
+    settingsDecisionsTurnOnThrough,
     settingsDecisionsUseAuto,
     settingsDecisionsUseNative,
-    settingsDecisionsUseOpenRouter,
+    settingsDecisionsUseProvider,
     settingsDecisionsUseSpecific,
     settingsDecisionsUses,
     settingsDecisionsUsesAllow,
@@ -121718,18 +121843,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDecisionsKeysFrom": ["url"],
     "settingsDecisionsLastAnswer": ["tokens", "value"],
     "settingsDecisionsLineNative": ["model", "vendor"],
-    "settingsDecisionsOpenRouterModels": [],
-    "settingsDecisionsOpenRouterPrice": ["model", "price", "vendor"],
-    "settingsDecisionsOpenRouterUnavailable": [],
+    "settingsDecisionsModelPrice": ["model", "price", "vendor"],
     "settingsDecisionsPicker": [],
+    "settingsDecisionsProviderChoice": [],
+    "settingsDecisionsProviderCostAccount": ["model", "price", "provider"],
+    "settingsDecisionsProviderCostAllowance": ["model", "price", "provider"],
+    "settingsDecisionsProviderModels": ["provider"],
+    "settingsDecisionsProviderShared": ["model", "provider", "vendor"],
+    "settingsDecisionsProviderUnavailable": ["provider"],
     "settingsDecisionsRemove": ["model"],
     "settingsDecisionsReplaceKey": ["model"],
     "settingsDecisionsSubtitle": [],
     "settingsDecisionsTurnOff": ["model"],
-    "settingsDecisionsTurnOnOpenRouter": ["model"],
+    "settingsDecisionsTurnOnThrough": ["model", "provider"],
     "settingsDecisionsUseAuto": [],
     "settingsDecisionsUseNative": ["model", "vendor"],
-    "settingsDecisionsUseOpenRouter": [],
+    "settingsDecisionsUseProvider": ["provider"],
     "settingsDecisionsUseSpecific": [],
     "settingsDecisionsUses": [],
     "settingsDecisionsUsesAllow": [],

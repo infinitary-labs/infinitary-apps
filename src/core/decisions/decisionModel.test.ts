@@ -634,10 +634,13 @@ describe("the uses' switches", () => {
         egress: { openrouter: { enabled: true, consentedVersion: DECISION_APPROVAL_VERSION } },
       }),
       adapted,
-      openrouter: { models: () => [offering], signedIn: () => true, create },
+      providers: {
+        signedIn: () => [{ provider: "openrouter", models: [offering] }],
+        create,
+      },
     });
     expect((await ask(service)).q).toMatchObject({ source: "adapted/v1", outcome: "answered" });
-    expect(create).toHaveBeenCalledExactlyOnceWith(offering.id);
+    expect(create).toHaveBeenCalledExactlyOnceWith("openrouter", offering.id);
   });
 
   it("does not send a new fallback call after reply checks are turned off during the first call", async () => {

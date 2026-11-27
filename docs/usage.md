@@ -38,7 +38,7 @@ Usage subscribers refresh on these completions as well as ordinary replies.
   Without a statement, a reported total below its previously reported value means the client started counting over for that model, so its reported figures are the turn's own and its old baselines are discarded; a result reported twice spends nothing.
   An omitted field stays unknown for that result and retains its last known baseline until it returns, rather than resetting or charging its previous total again.
   Pi names the model the session asked for, so its rows carry `model_source = 'requested'`.
-  An OpenRouter decision is the exception: its reply names the model that answered, recorded as `served` (`docs/decision-models.md`).
+  A decision from a provider's decision model, such as OpenRouter's or OpenCode Go's, is the exception: its reply names the model that answered, recorded as `served` (`docs/decision-models.md`).
   A row written before migration 66 has no source: it names the model recorded then, and an older Claude row may sum several models.
   The app never splits such a row after the fact.
 - **Known and missing.**
@@ -46,7 +46,7 @@ Usage subscribers refresh on these completions as well as ordinary replies.
   Custom-provider turns carry an empty usage object when the server reports nothing, so the record still contributes to coverage.
 - **Estimates.**
   `cost` is the session's own estimate in US dollars: Pi prices a message from the model's listed per-category rates (`cost_source = 'listed-prices'`, with `cost_input`, `cost_output`, `cost_cache_read` and `cost_cache_write`), and Claude makes its own estimate per model and turn (`cost_source = 'claude'`, no split).
-  An OpenRouter decision records the cost its reply states for the call (`cost_source = 'reported'`, no split).
+  A provider's decision records the cost its reply states for the call (`cost_source = 'reported'`, no split).
   A model with no listed rates prices a message at zero, which proves nothing, so Pi's normalizer records no cost at all for it.
   The summary and the cost limit count a record as priced only when its cost is above zero, or zero from listed prices on a custom connection, so an older zero is never read as free (`PRICED_RECORD`, `src/core/storage/usageDays.ts`).
   That listed zero comes only from a custom model the person stated as free, since a catalog entry listing every rate at zero counts as no price; Pi's normalizer records it only when the turn measured tokens.

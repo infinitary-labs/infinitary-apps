@@ -622,3 +622,10 @@ Dropping both tables and removing the migration's history row undoes it; a task'
 
 Automatic tagging adds no table and no migration: it keeps where its reads of new tasks start in the `tag-auto-since` settings row and the check under way in the `tag-check` row, and writes ordinary `task_tags` rows, a carried judgment with revision 0, which an older side reads as a description no tag has (`docs/task-tags.md`, "Automatic tagging").
 Its two query indexes, `tasks_created_at` and `task_tags_unjudged`, are created at the start like the other optional query indexes, and an older build ignores them and both rows.
+
+## A decision model from any provider
+
+The `decisions` settings row saves a provider's decision model as `{ kind: "provider", provider, model }` (`docs/decision-models.md`, "Decision models from a provider"), and its egress approvals stay keyed by provider id.
+A row saved as `{ kind: "openrouter", model }` reads as the provider `openrouter` with that model, and the next save writes the new shape; nothing asks the person for a step.
+An older build reads a provider pick as a row it cannot parse and answers with its default, the adapted model, leaving the row as it is until it saves the Decisions row itself.
+A view from before the change reads a Go pick as Auto and an OpenRouter pick in its old shape; a newer view on an older home writes the old shape.

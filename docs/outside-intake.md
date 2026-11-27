@@ -52,6 +52,7 @@ An item is listed when one of these holds:
 - it is an outside pull request labeled `accepted` whose newest version has runs waiting for approval, or on which every check passed and the crew's review has not yet published its story comment there ("The review");
 - it is an outside pull request labeled `accepted` and not `edits checks` whose newest version waits on `main`, once `main` passes ("Once main passes").
 
+A version the crew pushed itself, the `to` of a crew-update mark ("Carrying it to the merge"), is not the author's push.
 Comments from the crew and from GitHub's bot account never move the clock: the check-file flag, the agreement and Careful review checks and the timer's reminder all leave it where it was.
 A bug's first reply carries the crewmate line, so the bug stays off the list while its reproduce step runs, and comes back when that step finishes.
 A reply the maintainer leaves unticked never reached GitHub, so the item comes back next round and its reply is drafted again.
@@ -219,6 +220,33 @@ The first mate reads none of the pull request's words, so the review's goal carr
 The review's crewmate first confirms on GitHub that the pull request carries `accepted` and that every check passed on its newest version; if not, it shows a note saying which, and stops.
 It reads the code and GitHub's runs, runs nothing from the change on the project's machines or the maintainer's computers, and shows a merge card with `asks_first` (`docs/public-ci.md`, "How an outside pull request moves").
 For a pull request labeled `edits checks`, it first shows the maintainer those check files on a card, since that pull request's runs wait for the maintainer's approval on GitHub.
+
+### Carrying it to the merge
+
+A pull request the review finds good to go is the crew's to carry to the maintainer's click, even when GitHub cannot merge it as it stands, such as a conflict with `main` or a check that needs `main`'s change.
+The crew carries it on the author's own branch, so the pull request merges as theirs, and only when two things hold:
+
+- GitHub says the author allows edits by maintainers (`maintainer_can_modify`; `check_change pull`'s answer names their branch when it does);
+- the update leaves the reviewed behavior as it was, such as keeping both sides of an import list.
+
+Otherwise the review shows the maintainer a `changes-requested` reply on a card, naming what the author needs to change, and sends it only on their click.
+When both hold, the review's crewmate:
+
+1. Merges the current `main` into the reviewed version in its working copy, a merge and never a rebase, so the author's commits stay as they are, and resolves only what the merge needs.
+   It runs nothing from the change, before or after the merge; the checks run on GitHub's machines.
+2. Posts one comment on the pull request before it pushes, through `github_write`: the crewmate line, what the update changed and why, and the hidden last line `<!-- infinitary-crew-update v1 from=<reviewed version> to=<update's version> -->` with both full commit ids.
+   The Careful review check reads that line, from an account that can write, as the crew's update and passes the author's record for the version it starts from (`docs/public-ci.md`, "The Careful review check"); the comment goes first so the run the push starts finds it.
+   The comment carries no triage mark, so it changes no label.
+3. Pushes the merge to the author's branch at the pull request's head repository, never with force.
+4. Reviews only the update: `check_change pull` again stores a review of the new version, and the crewmate reads what the update adds beyond the reviewed version and `main`, the files the merge resolved by hand.
+5. Reads the new version's runs.
+   A run GitHub holds for approval is the crew's to approve (`POST /repos/{owner}/{repo}/actions/runs/{run_id}/approve`) when the pull request carries no `edits checks` and the update's own resolution edits no check file; otherwise the maintainer approves it on GitHub after reading the check files.
+   A check that fails because of the update is the crew's to fix the same way; one that fails because of the author's change sends the pull request back to its author ("Check starts").
+6. Once every check passed, publishes the story at the new version, saying that the crew brought it up to date and what that changed, and shows one merge card with `asks_first`.
+
+If `main` moves again after the maintainer's click and GitHub refuses the merge, the crewmate repeats steps 1 to 3 and declares the update with `check_change` `conflictRepair` and impact `none`: the host keeps the click's approval for that update and merges it once its checks pass (`docs/forge.md`, "A requested merge").
+An author's own later push needs a new review and a new click.
+Run approvals for an author's own new versions stay on the intake round's card ("Check starts"), and every merge stays the maintainer's click.
 
 ## When the work ends
 

@@ -321,6 +321,8 @@ extension PhoneJourney {
         _ = try await home("own-theme-remove")
         XCTAssertTrue(terminal.waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertFalse(yours.exists, "The last own theme removed takes Yours away")
+        // The tiles are drawn lazily, so Dark exists only once the list is back at its top.
+        bringDown()
         XCTAssertTrue(theme.buttons["Dark"].isSelected, "A removed pick goes back to its base")
         try drawn("phone-theme-own-removed", dark: true)
         tapOnPhone(theme.buttons["Device"])

@@ -51,7 +51,7 @@ Any interruption (the crewmate closes or leaves, its color changes, a card cover
 No tour, legend, setting or dismiss control; colors, motion, the summary and the Tasks dots do not change.
 Under reduced motion the fade is opacity only.
 
-While the window is focused on one project, or a rest lights a project's pill in the top bar's row, every crewmate of another project keeps a quarter of its light, its name and state word with it (`components/core/ProjectFocus`).
+While the window is focused on one project, a rest lights a project's pill in the top bar's row, or a crewmate's summary is open (its project, on every computer, in place of the focus), every crewmate of another project keeps a quarter of its light, its name and state word with it (`components/core/ProjectFocus`).
 It keeps its slot, speed, colour and solid; nothing hides or moves for it, and the light eases over `--dur-med` each way, a cut under reduced motion.
 
 Reading a crewmate (captain, FI3-398, 2026-10-01; replaces "inspecting never pauses or changes the animation"): the character and its crew read ONE stage clock, so they slow and stop together and stay one coherent picture.

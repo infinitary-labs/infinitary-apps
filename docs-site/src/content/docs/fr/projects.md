@@ -1,5 +1,5 @@
 ---
-source: d2c121d3a9fe9728
+source: c51b6ca36743cf77
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -136,6 +136,10 @@ Tant qu’un projet a le focus :
 - Une courte ligne à côté de la pastille indique combien de tâches vous attendent ailleurs, comme « 2 en attente ailleurs ».
 - Votre second connaît le focus à chaque message que vous envoyez.
   Sauf si vous nommez un autre projet, il place le nouveau travail dans ce projet, et ses réponses et ses actions sur de nombreuses tâches ne couvrent que ce projet et disent ce qu'elles ont laissé de côté.
+
+Pour voir où tourne le travail d’un projet sans vous concentrer dessus, pointez un équipier au centre de la fenêtre, ou touchez-le sur votre téléphone.
+Tant que son résumé est ouvert, chaque équipier d’un autre projet garde un quart de sa lumière, sur chaque ordinateur, et personne ne bouge.
+Fermez le résumé et la lumière revient.
 
 Appuyez sur le **×** à côté de la pastille (**Afficher tous les projets**), ou choisissez **Tous les projets** dans la rangée, pour tout revoir.
 Infinitary se souvient de votre focus quand vous le redémarrez.

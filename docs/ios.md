@@ -611,6 +611,9 @@ The crew summary shows a filled pin beside a pinned task's key.
 `PhoneFixedStarsTests` replays the desktop's own star places and settled stages, recorded the same way.
 `PhoneCardDepartureTests` replays the desktop stack's own choice of the card that comes up after a close, recorded the same way.
 Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
+While a crewmate's summary sheet is open, or browsing selects a crewmate, the scene lights that crewmate's project on every computer: every other project's crewmate keeps a quarter of its light, as on the desktop's stage, and nothing moves (INF-6951, `PhoneFocusLight`, a port of the desktop's `focusLight.ts`).
+The quarter comes from the desktop's `OUT_OF_FOCUS_LIGHT` through `scripts/generate-phone-scene.ts`, the light eases over the surface move (`PhoneTheme.surfaceSeconds`, `--dur-med`) on the display's clock even while the open summary holds the scene's clock, and it is a cut under Reduce Motion; `PhoneFocusLightTests` replays the desktop's own light for one board.
+The phone has no project focus of its own, so closing the summary lights every crewmate again.
 While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.
 Each crewmate and program answers touch across its 44-point square, not only the drawn circle.
 One UIKit view under the scene (`PhoneSceneTouches`) answers touch and accessibility from the frame the render thread last drew, read only when a touch or an accessibility query arrives, rather than a SwiftUI button laid out for each crewmate on every frame.

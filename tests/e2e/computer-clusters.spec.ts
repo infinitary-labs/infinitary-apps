@@ -1,7 +1,10 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
+import { TaskService } from "../../src/core/tasks/taskService";
+import { seedProject } from "../../src/core/workspace/seedProject";
 import { COMPUTERS_PER_PAGE } from "../../src/renderer/src/character/crew/computers";
 import type { DeviceGrant } from "../../src/shared/devices";
 import { connectClient } from "../helpers/connectionClient";
@@ -263,6 +266,81 @@ test("a wait and a review between computers draw their arrows across the stage",
           "review:review>sample-0-1",
         ].sort(),
       );
+  } finally {
+    await app.close();
+  }
+});
+
+/**
+ * Two projects' crew on two computers: this Mac and another, each running
+ * one task of the website and one or two of the shop.
+ */
+function twoProjectFixture(): string {
+  let ids: (string | undefined)[] = [];
+  const dir = clusterFixture([0, 0], undefined, (_tasks, deviceIds) => {
+    ids = deviceIds;
+  });
+  const db = openDatabase(dir);
+  seedProject(db, { id: "repo-web", name: "website", path: join(dir, "website"), addedAt: 1 });
+  seedProject(db, { id: "repo-shop", name: "shop", path: join(dir, "shop"), addedAt: 2 });
+  const tasks = new TaskService({ db, strict: true });
+  for (const [id, repoId, computer] of [
+    ["web-home", "repo-web", 0],
+    ["shop-home", "repo-shop", 0],
+    ["web-studio", "repo-web", 1],
+    ["shop-studio", "repo-shop", 1],
+  ] as const) {
+    const worktreeDir = join(dir, "crew", id);
+    mkdirSync(worktreeDir, { recursive: true });
+    seedTask(tasks, {
+      id,
+      title: `Work ${id}`,
+      status: "idle",
+      repoId,
+      worktreeDir,
+      deviceId: ids[computer],
+      sessionFile: ids[computer] ? `placed-${id}.jsonl` : undefined,
+      outcome: "Waiting for the captain.",
+    });
+  }
+  db.close();
+  return dir;
+}
+
+/** How lit a crewmate is on the stage as painted: its name anchor's opacity. */
+function crewLight(page: Page, taskId: string): Promise<number> {
+  return page
+    .locator(`[data-crew-model-anchor="${taskId}"]`)
+    .evaluate((anchor) => Number((anchor as HTMLElement).style.opacity || "1"));
+}
+
+// INF-6951, the captain's approved plan: while a crewmate's summary is open
+// the stage lights its project on every computer with the project focus's
+// light; letting the summary go puts the window's own light back.
+test("a crewmate's open summary lights its project's crew on another computer", async () => {
+  const app = await launchApp({ userDataDir: twoProjectFixture(), withMockProvider: true });
+  try {
+    const { page } = app;
+    await expect(page.locator("[data-computer-cluster]")).toHaveCount(2);
+    // The other computer is out of reach, which draws its crew fainter on
+    // its own, so each crewmate is read against its light before the summary.
+    const before = new Map<string, number>();
+    for (const id of ["web-studio", "shop-studio", "shop-home"]) {
+      await expect.poll(() => crewLight(page, id)).toBeGreaterThan(0.05);
+      before.set(id, await crewLight(page, id));
+    }
+    const was = (id: string) => before.get(id) ?? 0;
+    const target = page.locator('[data-crew-model-name="web-home"]');
+    await focusOn(target);
+    await expect(crewSummary(page)).toHaveAttribute("data-crew-summary", "web-home");
+    await expect.poll(() => crewLight(page, "shop-studio")).toBeLessThan(was("shop-studio") * 0.4);
+    await expect.poll(() => crewLight(page, "shop-home")).toBeLessThan(was("shop-home") * 0.4);
+    expect(await crewLight(page, "web-studio")).toBeGreaterThan(was("web-studio") * 0.7);
+    await pressKey(target, "Escape");
+    await expect(crewSummary(page)).toHaveCount(0);
+    await expect
+      .poll(() => crewLight(page, "shop-studio"))
+      .toBeGreaterThan(was("shop-studio") * 0.7);
   } finally {
     await app.close();
   }

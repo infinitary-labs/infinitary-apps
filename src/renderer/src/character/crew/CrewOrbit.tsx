@@ -8,6 +8,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -36,7 +37,7 @@ import {
   drawStarJoin,
   type Rgb,
 } from "./crewmate";
-import { type FocusLightInput, type FocusLightState, lightFrame } from "./focusLight";
+import { type FocusLightInput, type FocusLightState, lightFrame, restedLight } from "./focusLight";
 import {
   type Box,
   CREW_HOVER,
@@ -130,6 +131,8 @@ export type CrewOrbitProps = {
    */
   focus?: FocusLightInput;
 };
+
+const NO_FOCUS: FocusLightInput = { project: null, projectOf: () => undefined };
 
 /** Clear air between a summary and the edge of where it may sit, px. */
 const SUMMARY_MARGIN_PX = 8;
@@ -749,9 +752,15 @@ export function CrewOrbit({
   }, [interactive, setHovered]);
 
   // The project focus's light per crewmate, eased in real time over the
-  // surface move, whatever the stage's own rate.
-  const focusRef = useRef(focus);
-  focusRef.current = focus;
+  // surface move, whatever the stage's own rate. An open summary lights its
+  // crewmate's project in place of the window's light; it follows the
+  // summary, not the pointer, so a sweep across the crew waits its beat.
+  const lit = useMemo(
+    () => restedLight(focus ?? NO_FOCUS, shown !== null && !leaving ? shown : null),
+    [focus, shown, leaving],
+  );
+  const focusRef = useRef(lit);
+  focusRef.current = lit;
   const lightRef = useRef<{ state: FocusLightState; at: number; duration: number | null }>({
     state: new Map(),
     at: 0,
@@ -770,7 +779,7 @@ export function CrewOrbit({
       const supernova = reducedMotion ? null : crewSupernova.frame(now);
       const frame = lightFrame(
         model.update(now, reducedMotion, crewRush.level(now), warp, supernova),
-        focusRef.current ?? { project: null, projectOf: () => undefined },
+        focusRef.current,
         light.state,
         light.at === 0 ? 0 : real - light.at,
         reducedMotion ? 0 : light.duration,
@@ -1040,7 +1049,7 @@ export function CrewOrbit({
         supernova,
       );
     },
-    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${shownColors}:${focus?.project ?? ""}`,
+    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${shownColors}:${lit.project ?? ""}`,
   );
 
   // A move to another display, or the size control's zoom, changes the pixel

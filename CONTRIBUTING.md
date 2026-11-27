@@ -18,7 +18,7 @@ Only the pull request's author can accept, and a new version of the agreement as
 
 Material that is not your own work goes in a separate submission (section 3 of the agreement): keep the copyright and license information it came with, and in the pull request's description write "Submission containing materials of a third party:" followed by the third party's name and any licenses or other restrictions you know of.
 
-A maintainer approves each run of the project's checks on an outside pull request before it starts, and every one of them runs on GitHub's machines; how an outside pull request is checked and merged is in `docs/public-ci.md`, "Outside contributors".
+Each run of the project's checks on an outside pull request is approved before it starts, by a maintainer, or by the maintainers' crew under the maintainer's standing direction for an author whose checks already ran here and a change that leaves the check files alone, and every one of them runs on GitHub's machines; how an outside pull request is checked and merged is in `docs/public-ci.md`, "Outside contributors".
 A pull request adds a release note under `release-notes/changes/` when people using the app will notice the change, or an exclusion with a reason when they will not; a note for a feature, improvement or removal also names the docs site pages the pull request updated in `docsSite`, or says why none needs to in `noDocsSite`. The release-note check fails until it has them (`docs/release-notes.md`).
 
 ## Infinitary's Careful review
@@ -32,7 +32,7 @@ A record written by another tool does not count (`docs/public-ci.md`, "The Caref
 
 Open an issue from one of its forms: a problem, an idea or a question.
 Inside the app, `/feedback` in the message box writes a problem or an idea for you, with the app's diagnostics and no personal details.
-An issue opened from a form or with `/feedback`, and a new pull request from your own copy of the project, is labeled `needs triage` until a maintainer answers, usually within two working days.
+An issue opened from a form or with `/feedback`, and a new pull request from your own copy of the project, is labeled `needs triage` until the maintainers' crew answers, usually within two working days. Each answer opens with a line saying an AI agent working for the project's maintainer wrote it; a plain answer goes out under the maintainer's standing direction, and anything unusual waits for the maintainer.
 
 The answer says what happens next, with a label:
 

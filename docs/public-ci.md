@@ -48,9 +48,11 @@ Its merge starts no main check and no alpha of its own: main's check leaves it t
 2. **An intake round reads it.**
    Twice each day an intake round reads what changed since the crew last answered and drafts a reply for each item (`docs/outside-intake.md`).
    While either required check fails the pull request waits on its author unread.
-   Once both pass, the round judges it against five criteria, among them its size and how it fits `STRATEGY.md` ("Which pull requests reach the tick"), and drafts the reply that fits; one that passes all five also gets a row for each run waiting for approval, one pull request a round.
-3. **The captain ticks the round's card.**
-   The ticked replies go out and each ticked row approves its run on GitHub.
+   Once both pass, the round judges it against five criteria, among them its size and how it fits `STRATEGY.md` ("Which pull requests reach the tick"), and drafts the reply that fits; one that passes all five also gets a run approval drafted for each run waiting for approval, one pull request a round, unless the project's own batch or alpha checks are running.
+3. **A send task sends the plain ones, and the captain ticks the rest.**
+   A reply or run approval that plainly follows the method goes to a send task that never reads the pull request's words: it checks each draft, and sends the ones the captain's intake direction covers with no click (`docs/outside-intake.md`, "The send task").
+   It approves a run only for an author whose checks GitHub ran here before and a change that leaves the check files alone.
+   Anything odd, or that no direction covers, waits on a card: the ticked replies go out and each ticked row approves its run on GitHub.
    A pull request labeled `edits checks` gets no run rows: the captain approves its runs on GitHub after its review shows the check files, since a pull request runs the check files it carries.
 4. **GitHub's machines run them.**
    The checks in the list above run on the pull request's own version, merged with the current `main`.

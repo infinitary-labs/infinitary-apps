@@ -170,7 +170,25 @@ export type IntegrationAnswer = {
    * an agent's words or cross the connection.
    */
   file?: { name: string; type?: string; bytes: Buffer };
+  /**
+   * The place stopped the call to ask the person first (Google's
+   * confirmation, docs/integrations.md, "Google"): its own words and
+   * choices, which the service puts to the captain on a card, and the state
+   * the same call takes back with the captain's pick (`IntegrationConfirmed`).
+   * Nothing ran yet, and no agent reads it.
+   */
+  confirm?: IntegrationConfirm;
 };
+
+/** A place's question for the person about one call: its words, its choices, and the state to answer it with. */
+export type IntegrationConfirm = {
+  message: string;
+  options: { value: string; label: string }[];
+  state: string;
+};
+
+/** The captain's pick for a place's question, with the state the question came with. */
+export type IntegrationConfirmed = { state: string; choice: string };
 
 /**
  * What a binding's `call` throws when it failed after the request left for
@@ -270,12 +288,16 @@ export type IntegrationBinding = {
   remove: (id: string) => void | Promise<void>;
   /** Refresh action facts before the service checks a grant (MCP can change tools). */
   prepare?: (id: string) => Promise<void>;
-  /** Run one action whose input already passed its schema. */
+  /**
+   * Run one action whose input already passed its schema; `confirmed`
+   * answers the question an earlier run of the same call asked (`confirm`).
+   */
   call: (
     id: string,
     action: string,
     input: unknown,
     caller: IntegrationCaller,
+    confirmed?: IntegrationConfirmed,
   ) => Promise<IntegrationAnswer>;
   /** Look for one event since the cursor (null: start from now). */
   look?: (

@@ -452,11 +452,14 @@ export type CrewSupervisorOptions = {
   /**
    * Run the first mate's integration ask its card's click already took from
    * the row the host filed for it (INF-1108), once, as the first mate's call.
+   * `picked` is the captain's answer to a place's question on a
+   * confirmation card (`IntegrationAsk.confirm`).
    */
   sendTakenIntegrationAsk?: (
     rowId: string,
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
+    picked?: string,
   ) => Promise<WriteAskSent>;
   /**
    * What the captain chose on a panel's approval card (docs/integrations.md,

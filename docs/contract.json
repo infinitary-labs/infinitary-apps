@@ -33585,6 +33585,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -33648,6 +33680,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -34089,6 +34153,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -34152,6 +34248,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -34569,6 +34697,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -34632,6 +34792,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -35042,6 +35234,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -35105,6 +35329,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -35515,6 +35771,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -35578,6 +35866,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -36004,6 +36324,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -36067,6 +36419,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -36491,6 +36875,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -36554,6 +36970,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -37000,6 +37448,38 @@
                         },
                         "endsAt": {
                           "type": "number"
+                        },
+                        "mcp": {
+                          "type": "object",
+                          "properties": {
+                            "refused": {
+                              "type": "string",
+                              "enum": [
+                                "agent",
+                                "service"
+                              ]
+                            },
+                            "services": {
+                              "minItems": 1,
+                              "maxItems": 2,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar"
+                                ]
+                              }
+                            },
+                            "link": {
+                              "type": "string",
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "refused",
+                            "link"
+                          ]
                         }
                       },
                       "required": [
@@ -37063,6 +37543,38 @@
                         },
                         "endsAt": {
                           "type": "number"
+                        },
+                        "mcp": {
+                          "type": "object",
+                          "properties": {
+                            "refused": {
+                              "type": "string",
+                              "enum": [
+                                "agent",
+                                "service"
+                              ]
+                            },
+                            "services": {
+                              "minItems": 1,
+                              "maxItems": 2,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar"
+                                ]
+                              }
+                            },
+                            "link": {
+                              "type": "string",
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "refused",
+                            "link"
+                          ]
                         }
                       },
                       "required": [
@@ -37479,6 +37991,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -37542,6 +38086,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -37945,6 +38521,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -38008,6 +38616,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -38447,6 +39087,38 @@
                         },
                         "endsAt": {
                           "type": "number"
+                        },
+                        "mcp": {
+                          "type": "object",
+                          "properties": {
+                            "refused": {
+                              "type": "string",
+                              "enum": [
+                                "agent",
+                                "service"
+                              ]
+                            },
+                            "services": {
+                              "minItems": 1,
+                              "maxItems": 2,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar"
+                                ]
+                              }
+                            },
+                            "link": {
+                              "type": "string",
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "refused",
+                            "link"
+                          ]
                         }
                       },
                       "required": [
@@ -38510,6 +39182,38 @@
                         },
                         "endsAt": {
                           "type": "number"
+                        },
+                        "mcp": {
+                          "type": "object",
+                          "properties": {
+                            "refused": {
+                              "type": "string",
+                              "enum": [
+                                "agent",
+                                "service"
+                              ]
+                            },
+                            "services": {
+                              "minItems": 1,
+                              "maxItems": 2,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar"
+                                ]
+                              }
+                            },
+                            "link": {
+                              "type": "string",
+                              "maxLength": 2048
+                            }
+                          },
+                          "required": [
+                            "refused",
+                            "link"
+                          ]
                         }
                       },
                       "required": [
@@ -38969,6 +39673,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -39032,6 +39768,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -39435,6 +40203,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -39498,6 +40298,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -114179,6 +115011,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [
@@ -114242,6 +115106,38 @@
                     },
                     "endsAt": {
                       "type": "number"
+                    },
+                    "mcp": {
+                      "type": "object",
+                      "properties": {
+                        "refused": {
+                          "type": "string",
+                          "enum": [
+                            "agent",
+                            "service"
+                          ]
+                        },
+                        "services": {
+                          "minItems": 1,
+                          "maxItems": 2,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar"
+                            ]
+                          }
+                        },
+                        "link": {
+                          "type": "string",
+                          "maxLength": 2048
+                        }
+                      },
+                      "required": [
+                        "refused",
+                        "link"
+                      ]
                     }
                   },
                   "required": [

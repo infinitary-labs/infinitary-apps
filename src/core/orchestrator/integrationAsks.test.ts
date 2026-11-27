@@ -11,9 +11,13 @@ import {
   cardReaderPagesLead,
   cardReaderPagesTitle,
   cardReaderWritesLead,
+  integrationsConfirmNotNow,
+  integrationsConfirmSend,
+  integrationsConfirmTitle,
 } from "@shared/i18n/messages.generated";
 import { INTEGRATION_APPROVAL_WORDS, integrationApprovalsTitle } from "@shared/integrations";
 import {
+  confirmFieldOf,
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
@@ -419,5 +423,99 @@ describe("a reader's web pages on its approval card", () => {
       `${WRITE_ANSWERED_LEAD} ${page.id} (GET ${page.url}): the page opened once, signed out, and answered 200.`,
     );
     expect(heard).toContain("web_read part 1 of 1");
+  });
+});
+
+// INF-7012's approved plan, piece 1: "Google's elicitation prompt is relayed
+// to the captain on a card and never answered by the host".
+describe("a place's own question on its confirmation card", () => {
+  const ask = (id: string, at: number): IntegrationAsk => ({
+    id,
+    kind: "integration",
+    integration: "google",
+    connection: "google#1",
+    place: "Google",
+    action: "send_message",
+    label: "Send an email",
+    effect: "sends",
+    signature: '["Send an email","sends"]',
+    reason: "Tell Lena the invoice is paid.",
+    input: JSON.stringify({ to: ["lena@ortiz-studio.com"], body: "Sent the payment today." }),
+    at,
+  });
+  const question = {
+    message: "**Send an email** to lena@ortiz-studio.com?\n\nSubject: Paid <invoice 2214>",
+    options: [
+      { value: "ALLOW_ONCE", label: "Allow once" },
+      { value: "DENY_ONCE", label: "Deny" },
+    ],
+    state: '{"tool":"send_message"}',
+  };
+
+  it("raises its own card with the place's words and choices, none picked, and the click carries the pick once", async () => {
+    const crewmate = fakeCrewmate();
+    const sent: { askId: string | null; choice: string; picked?: string }[] = [];
+    const h = setup(crewmate, {
+      sendTakenIntegrationAsk: async (_taskId, taken, choice, picked) => {
+        sent.push({ askId: "ask" in taken ? taken.ask.id : null, choice, picked });
+        return { ok: false, call: "", place: "", outcome: { kind: "refused", why: "unused" } };
+      },
+    });
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Answer Lena",
+      intent: intentOf("answer Lena"),
+    });
+    await tick();
+    // An ordinary ask to the same connection waits on its card already.
+    const waiting = ask("ia-label", 1);
+    h.tasks.delivery.keepWriteAsk(taskId, waiting);
+    h.supervisor.integrationAsks.askIntegration(taskId, waiting);
+    const confirm = { ...ask("ia-send", 2), confirm: question };
+    h.tasks.delivery.keepWriteAsk(taskId, confirm);
+    expect(h.supervisor.integrationAsks.askIntegration(taskId, confirm)).toBe(false);
+    // A later ordinary ask joins the waiting card, never the question's.
+    const later = ask("ia-later", 3);
+    h.tasks.delivery.keepWriteAsk(taskId, later);
+    expect(h.supervisor.integrationAsks.askIntegration(taskId, later)).toBe(true);
+    await endTurn(crewmate, taskId, "Google's question waits on the captain.");
+
+    const cardId = `integration-ask-${confirm.id}`;
+    const card = h.supervisor.cards.get(cardId);
+    expect(h.supervisor.cards.get(`integration-ask-${waiting.id}`)?.body).toContain(
+      `data-inf-ask-row="${later.id}"`,
+    );
+    expect(card?.body).not.toContain("data-inf-ask-row");
+    expect(card?.title).toBe(
+      integrationsConfirmTitle({ place: "Google", action: "Send an email" }),
+    );
+    // Google's Markdown bold shows as bold, and its other words as text, never markup.
+    expect(card?.body).toContain(
+      "<strong>Send an email</strong> to lena@ortiz-studio.com?\n\nSubject: Paid &lt;invoice 2214&gt;",
+    );
+    const radios = [...(card?.body ?? "").matchAll(/<input type="radio"[^>]*>/g)].map(
+      (match) => match[0],
+    );
+    expect(radios.map((radio) => /name="([^"]+)"/.exec(radio)?.[1])).toEqual([
+      confirmFieldOf(confirm.id),
+      confirmFieldOf(confirm.id),
+    ]);
+    expect(radios.map((radio) => /value="([^"]+)"/.exec(radio)?.[1])).toEqual([
+      "ALLOW_ONCE",
+      "DENY_ONCE",
+    ]);
+    expect(radios.some((radio) => radio.includes("checked"))).toBe(false);
+    expect(
+      card?.actions.map((action) => `${action.label}${action.default ? " (default)" : ""}`),
+    ).toEqual([
+      integrationsConfirmNotNow(),
+      `${integrationsConfirmSend({ place: "Google" })} (default)`,
+    ]);
+
+    h.supervisor.cardActions.act(cardId, "once", "chrome", {
+      answers: [{ name: confirmFieldOf(confirm.id), values: ["ALLOW_ONCE"], changed: true }],
+    });
+    await tick();
+    await tick();
+    expect(sent).toEqual([{ askId: confirm.id, choice: "once", picked: "ALLOW_ONCE" }]);
   });
 });

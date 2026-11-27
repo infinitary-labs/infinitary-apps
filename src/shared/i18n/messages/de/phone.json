@@ -171,7 +171,13 @@
   "phoneFormatMinutes": "{minutes} Min.",
   "phoneFormatNow": "jetzt",
   "phoneFormatUnderMinute": "unter 1 Min.",
+  "phoneGoogleAgentRefusedDetail": "Die Gmail- und Kalender-Server von Google nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist. Öffne deinen Client in Google Cloud, setz das Häkchen bei „Use this client for an AI-powered agent“ und speichere. Wähl dann auf {computer} unter Einstellungen → Integrationen in der Google-Zeile „Jetzt prüfen“.",
   "phoneGoogleInvite": "Lass deinen ersten Offizier auf {computer} Gmail und Kalender lesen. Die Anmeldung bleibt auf {computer}.",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "one": "Der MCP-Dienst für {services} ist in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary ihn nicht. Schalt ihn in Google Cloud ein und wähl dann auf {computer} unter Einstellungen → Integrationen in der Google-Zeile „Jetzt prüfen“.",
+    "other": "Die MCP-Dienste für {services} sind in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary sie nicht. Schalt sie in Google Cloud ein und wähl dann auf {computer} unter Einstellungen → Integrationen in der Google-Zeile „Jetzt prüfen“."
+  },
   "phoneGoogleSetupStays": "Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf {computer} auf. Dein erster Offizier und deine Crew sehen es nie.",
   "phoneGoogleSetupStepFile": "Lade die Client-Datei, die Google zeigt, mit Download JSON herunter. Wähle sie dann hier aus oder füge ihren Inhalt ein.",
   "phoneGoogleSignIn": "Anmelden",

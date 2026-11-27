@@ -191,10 +191,31 @@ export type IntegrationAsk = {
    * several, whose card is `integration-ask-<id>`.
    */
   card?: string;
+  /**
+   * The place stopped this call to ask the captain first (Google's
+   * confirmation, docs/integrations.md, "Google"): its own words and
+   * choices, shown on a card of its own that no other ask joins, and the
+   * state the same call takes back with the captain's pick. Its card offers
+   * only sending that pick once, or Not now.
+   */
+  confirm?: { message: string; options: { value: string; label: string }[]; state: string };
   at: number;
   sentAt?: number;
   outcome?: WriteAskOutcome;
 };
+
+/** The field a confirmation card's choices answer under, one per ask. */
+export function confirmFieldOf(askId: string): string {
+  return `confirm-${askId}`;
+}
+
+/** The captain's pick on a confirmation card, as the click carried it. */
+export function confirmPickOf(
+  answers: readonly { name: string; values: readonly string[] }[] | undefined,
+  askId: string,
+): string | undefined {
+  return answers?.find((answer) => answer.name === confirmFieldOf(askId))?.values[0];
+}
 
 /**
  * The calls one allowance covers (`IntegrationActionSpec.scope`): `key`
@@ -244,7 +265,16 @@ export type WriteAskOutcome =
   /** An integration's action ran and answered. */
   | { kind: "ran" }
   | { kind: "unknown"; why: string }
-  | { kind: "refused"; why: string }
+  | {
+      kind: "refused";
+      why: string;
+      /**
+       * The place asked the captain first (`IntegrationAsk.confirm`): the
+       * new ask holding its question, whose outcome the asker hears once.
+       * Nothing ran yet, so the asker waits for it and never calls again.
+       */
+      confirming?: string;
+    }
   /** A Build row's task was filed, and started on Start now. */
   | {
       kind: "filed";

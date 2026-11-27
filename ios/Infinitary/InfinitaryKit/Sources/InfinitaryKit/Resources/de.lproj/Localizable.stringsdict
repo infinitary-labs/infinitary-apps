@@ -883,6 +883,22 @@
       <string>%1$ld Dateipfade als Text hinzugefügt</string>
     </dict>
   </dict>
+  <key>integrationsGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Der MCP-Dienst für %2$@ ist in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary ihn nicht. Schalt ihn in Google Cloud ein und wähl dann „Jetzt prüfen“ im Menü dieser Zeile.</string>
+      <key>other</key>
+      <string>Die MCP-Dienste für %2$@ sind in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary sie nicht. Schalt sie in Google Cloud ein und wähl dann „Jetzt prüfen“ im Menü dieser Zeile.</string>
+    </dict>
+  </dict>
   <key>knowledgePanelAllDirections</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1409,6 +1425,22 @@
       <string>%1$ld %2$@</string>
       <key>other</key>
       <string>%1$ld %2$@</string>
+    </dict>
+  </dict>
+  <key>phoneGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>Der MCP-Dienst für %3$@ ist in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary ihn nicht. Schalt ihn in Google Cloud ein und wähl dann auf %1$@ unter Einstellungen → Integrationen in der Google-Zeile „Jetzt prüfen“.</string>
+      <key>other</key>
+      <string>Die MCP-Dienste für %3$@ sind in deinem Google-Cloud-Projekt ausgeschaltet, daher erreicht Infinitary sie nicht. Schalt sie in Google Cloud ein und wähl dann auf %1$@ unter Einstellungen → Integrationen in der Google-Zeile „Jetzt prüfen“.</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>

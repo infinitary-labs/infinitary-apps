@@ -176,7 +176,14 @@
   "phoneFormatMinutes": "{minutes} min",
   "phoneFormatNow": "ahora",
   "phoneFormatUnderMinute": "menos de 1 min",
+  "phoneGoogleAgentRefusedDetail": "Los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en la fila de Google de Configuración → Integraciones en {computer}.",
   "phoneGoogleInvite": "Deja que tu primer oficial en {computer} lea Gmail y Calendar. El inicio de sesión se queda en {computer}.",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "one": "El servicio MCP de {services} está desactivado en tu proyecto de Google Cloud, así que Infinitary no puede acceder a él. Actívalo en Google Cloud y luego elige Comprobar ahora en la fila de Google de Configuración → Integraciones en {computer}.",
+    "many": "Los servicios MCP de {services} están desactivados en tu proyecto de Google Cloud, así que Infinitary no puede acceder a ellos. Actívalos en Google Cloud y luego elige Comprobar ahora en la fila de Google de Configuración → Integraciones en {computer}.",
+    "other": "Los servicios MCP de {services} están desactivados en tu proyecto de Google Cloud, así que Infinitary no puede acceder a ellos. Actívalos en Google Cloud y luego elige Comprobar ahora en la fila de Google de Configuración → Integraciones en {computer}."
+  },
   "phoneGoogleSetupStays": "Infinitary guarda el secreto del cliente en Secretos en {computer}. Tu primer oficial y tu tripulación nunca lo ven.",
   "phoneGoogleSetupStepFile": "Descarga con Download JSON el archivo de cliente que muestra Google y luego elígelo aquí o pega su contenido.",
   "phoneGoogleSignIn": "Iniciar sesión",

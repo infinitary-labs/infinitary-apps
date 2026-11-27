@@ -7,7 +7,9 @@ import { googleClientState } from "./GoogleClientSetup";
 /**
  * The Google row's client state (docs/integrations.md, "Google"), which the
  * phone's `PhoneGoogleClientState` says in the same order: a refused client,
- * then a refused sign-in as every row shows it, then a sign-in that ends.
+ * then a refused sign-in as every row shows it, then Google's MCP servers
+ * refusing the client or a service (`tests/e2e/integrations-google.spec.ts`),
+ * then a sign-in that ends.
  */
 describe("the Google row's client state", () => {
   it("names a client Google refused, even on a sign-in it refused", () => {
@@ -16,6 +18,7 @@ describe("the Google row's client state", () => {
       words: m.integrationsGoogleStopped(),
       tone: "danger",
       detail: m.integrationsGoogleStoppedDetail(),
+      next: "set-up-again",
     });
   });
 
@@ -26,6 +29,7 @@ describe("the Google row's client state", () => {
       words: m.integrationsGoogleStops({ date }),
       tone: "warn",
       detail: m.integrationsGoogleStopsDetail({ date }),
+      next: "set-up-again",
     });
     expect(googleClientState({ kept: true, endsAt }, "needs_reauth")).toBeUndefined();
   });

@@ -993,6 +993,24 @@
       <string>%1$ld caminhos de arquivo adicionados como texto</string>
     </dict>
   </dict>
+  <key>integrationsGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>O serviço MCP de %2$@ está desativado no seu projeto do Google Cloud, então o Infinitary não consegue acessá-lo. Ative-o no Google Cloud e depois escolha Verificar agora no menu desta linha.</string>
+      <key>many</key>
+      <string>Os serviços MCP de %2$@ estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora no menu desta linha.</string>
+      <key>other</key>
+      <string>Os serviços MCP de %2$@ estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora no menu desta linha.</string>
+    </dict>
+  </dict>
   <key>knowledgePanelAllDirections</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1585,6 +1603,24 @@
       <string>%2$@: %1$ld</string>
       <key>other</key>
       <string>%2$@: %1$ld</string>
+    </dict>
+  </dict>
+  <key>phoneGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>one</key>
+      <string>O serviço MCP de %3$@ está desativado no seu projeto do Google Cloud, então o Infinitary não consegue acessá-lo. Ative-o no Google Cloud e depois escolha Verificar agora na linha do Google em Ajustes → Integrações em %1$@.</string>
+      <key>many</key>
+      <string>Os serviços MCP de %3$@ estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora na linha do Google em Ajustes → Integrações em %1$@.</string>
+      <key>other</key>
+      <string>Os serviços MCP de %3$@ estão desativados no seu projeto do Google Cloud, então o Infinitary não consegue acessá-los. Ative-os no Google Cloud e depois escolha Verificar agora na linha do Google em Ajustes → Integrações em %1$@.</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>

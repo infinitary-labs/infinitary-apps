@@ -5,6 +5,7 @@ import { eventsWords } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import {
   GOOGLE_CLIENT_SETUP_PAGE,
+  GOOGLE_CLIENTS_PAGE,
   GOOGLE_DATA_KEPT,
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
@@ -19,12 +20,13 @@ import {
   CALENDAR_CHANGED_EVENT,
   GMAIL_MESSAGE_EVENT,
   GOOGLE_DATA_FENCE,
+  gmailNewMail,
 } from "../../src/core/integrations";
 import { NOTICE_WORDS } from "../../src/core/orchestrator/noticeWakes";
 import type { CustodySlot } from "../../src/core/secrets/custody";
 import * as m from "../../src/shared/i18n/messages.generated";
 import { SECRETS_WORDS } from "../../src/shared/secrets";
-import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
+import { STUDIO_CALENDAR, shootEventAt } from "../helpers/calendarStandIn";
 import {
   type GoogleStandIn,
   OWN_CLIENT_ID,
@@ -32,6 +34,7 @@ import {
   STAND_IN_ACCOUNT,
   STAND_IN_CLIENT_ID,
   STAND_IN_CLIENT_SECRET,
+  STAND_IN_PROJECT,
   startGoogleStandIn,
 } from "../helpers/googleStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
@@ -58,12 +61,12 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  *   opens Google's consent page in the browser and says to finish there; once the browser
  *   comes back the Google row shows who it is signed in as, with its Gmail
  *   all actions asking; a rule listening for "A message
- *   arrives" then reaches the first mate with the message that arrived;
+ *   arrives" then reaches the first mate naming the conversation that got it;
  *   the delete in Settings → Integrations' Data section, by keys (the
  *   captain: "maybe all data deletion stuff gets put into another "Data"
  *   section at the bottom of the integrations tab"), then puts a note where
- *   its sender and subject were in the first mate's saved conversation and
- *   the rule's run, and the conversation stays (INF-952: "A person can
+ *   Gmail's words were in the first mate's saved conversation and the
+ *   rule's run, and the conversation stays (INF-952: "A person can
  *   delete the Gmail and Calendar content Infinitary saved without purging
  *   every task").
  * - Data: the stand-in Google (`tests/helpers/googleStandIn.ts`), answering
@@ -379,6 +382,42 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
     await expect(next(m.integrationsGoogleSetUpAgain())).toBeVisible();
   });
 
+  // INF-7012's approved plan, piece 1: "a row line with a link appears when
+  // Google refuses an unmarked client or a service is off"; the row keeps its sign-in.
+  await test.step("Google's refusals of an unmarked client and a service turned off say so, and open Google Cloud by keys", async () => {
+    const opened = (await opening(app)).length;
+    stand.knobs.agentRefused = true;
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(state).toHaveText(m.integrationsGoogleAgentRefused());
+    await expect(detail).toHaveText(m.integrationsGoogleAgentRefusedDetail());
+    await expect(row).toHaveAttribute("data-integration-state", "ok");
+    await pressKey(next(m.integrationsGoogleOpenCloud()), "Enter");
+    await expect
+      .poll(async () => (await opening(app)).slice(opened))
+      .toEqual([`${GOOGLE_CLIENTS_PAGE}/${OWN_CLIENT_ID}?project=${STAND_IN_PROJECT}`]);
+
+    stand.knobs.agentRefused = false;
+    stand.knobs.off.add("calendar");
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(state).toHaveText(m.integrationsGoogleServiceOff());
+    await expect(detail).toHaveText(
+      m.integrationsGoogleServiceOffDetail({
+        count: 1,
+        services: m.integrationsGoogleServiceCalendar(),
+      }),
+    );
+    await pressKey(next(m.integrationsGoogleOpenCloud()), "Enter");
+    await expect
+      .poll(async () => (await opening(app)).slice(opened + 1))
+      .toEqual([
+        `https://console.developers.google.com/apis/api/calendarmcp.googleapis.com/overview?project=${STAND_IN_PROJECT}`,
+      ]);
+
+    stand.knobs.off.clear();
+    await page.evaluate(() => window.infinitary.integrations.check("google"));
+    await expect(next(m.integrationsGoogleSetUpAgain())).toBeVisible();
+  });
+
   await test.step("a client Google refused reads as stopped and sets up again by keys", async () => {
     stand.knobs.deleted.add(OWN_CLIENT_ID);
     stand.lapse();
@@ -415,6 +454,9 @@ test("the Google row moves a sign-in to the person's own client by keys", async 
 });
 
 test("one Google sign-in from Settings by keys, and a message arriving fires a rule", async () => {
+  // The Gmail look tells mail only once it is a minute old (gmail.ts, SETTLE_SECONDS), so the
+  // rule's turn comes over a minute after its first look, past the default test limit.
+  test.setTimeout(3 * 60_000);
   const userDataDir = scratchDir("infinitary-google-");
   google = await startGoogleStandIn();
   const seen: AutomationEventsSeen = { turns: [] };
@@ -432,6 +474,7 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
   });
   const { app, page } = launched;
   const stand = google;
+  let told = "";
   // The system browser, replaced by a recorder: the test follows the page itself.
   await app.evaluate(({ shell }) => {
     const opened: string[] = [];
@@ -551,18 +594,22 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
       )
       .not.toBeNull();
 
-    const from = "Lena Ortiz <lena@ortiz-studio.com>";
-    const subject = "Invoice 2214 for the October shoot";
-    const id = stand.deliver({
-      from,
-      subject,
+    const message = stand.deliver({
+      from: "Lena Ortiz <lena@ortiz-studio.com>",
+      subject: "Invoice 2214 for the October shoot",
       text: "Hi Ada, the invoice for the October shoot is attached.",
     });
-    await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
-    // INF-951: the sender and subject anyone can write arrive fenced as data from outside.
+    // A look counts mail a minute old, which Gmail's search holds, so the turn comes a minute on.
+    await expect.poll(() => seen.turns.length, { timeout: 120_000 }).toBe(1);
+    // The rule hears which conversation got mail, never the sender's words (the captain's
+    // pick on INF-7017's plan-mismatch card), fenced as data from outside (INF-951).
+    told = gmailNewMail(stand.mail.get(message)?.threadId ?? "");
     const [span] = fencedSpans(seen.turns[0] ?? "");
     expect(span).toMatchObject({ label: GOOGLE_DATA_FENCE, closed: true });
-    const summary = fenced(`From ${from}: ${subject}`, {
+    // An item's id names the conversation in one look's window, which gmail.test.ts owns,
+    // so the turn's own id stands in the expected words.
+    const id = /\(id ([0-9a-f]{64})\)/.exec(seen.turns[0] ?? "")?.[1] ?? "";
+    const summary = fenced(told, {
       label: GOOGLE_DATA_FENCE,
       value: span?.value ?? "",
       at: span?.at ?? 0,
@@ -587,7 +634,6 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
   });
 
   await test.step("Integrations' Data section deletes what the first mate read, by keys, and keeps its conversation", async () => {
-    const subject = "Invoice 2214 for the October shoot";
     const sessions = join(userDataDir, "firstmate", "sessions");
     const saved = () =>
       readdirSync(sessions, { recursive: true, encoding: "utf8" })
@@ -600,7 +646,7 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
           (run) => run.prompt,
         ),
       );
-    // The turn that read the subject has ended: its conversation is saved, and free to rewrite.
+    // The turn that heard of the mail has ended: its conversation is saved, and free to rewrite.
     // The first mate is drawn outside Settings.
     await pressKey(page.getByRole("tab", { selected: true }), "Escape");
     await expect(page.locator("[data-screen-label]")).not.toHaveAttribute(
@@ -608,8 +654,8 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
       "Settings",
     );
     await waitForFirstmateIdle(page);
-    expect(saved()).toContain(subject);
-    expect((await runs()).join("\n")).toContain(subject);
+    expect(saved()).toContain(told);
+    expect((await runs()).join("\n")).toContain(told);
 
     await runFromSearch(app, page, "settings.integrations");
     const data = settingsSection(page, "integrations").locator("[data-integrations-data]");
@@ -633,22 +679,22 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
 
     const note = outsideDataDeletedNote(GOOGLE_DATA_KEPT.what);
     const after = saved();
-    expect(after).not.toContain(subject);
+    expect(after).not.toContain(told);
     expect(after).toContain(note);
     // The rest of the conversation stays: the rule's own words and the first mate's answer.
     expect(after).toContain("Sort these by urgency:");
     expect(after).toContain(AUTOMATION_EVENTS_ANSWER);
     const [prompt = ""] = await runs();
-    expect(prompt).not.toContain(subject);
+    expect(prompt).not.toContain(told);
     expect(prompt).toContain(note);
   });
 });
 
 /**
  * INF-786 / accepted INF-775 piece 6: one Google row, Calendar actions and
- * selected-calendar changes fire Automation. The data is Calendar v3-shaped
- * stand-in responses, with one event present before listening and a later
- * revision of it. The completion signal is the persisted filter and cursor,
+ * selected-calendar changes fire Automation. The data is the stand-in
+ * Calendar MCP server's answers, with one event present before listening
+ * and a later revision of it. The completion signal is the persisted filter and cursor,
  * then the first mate's turn containing that revision, not a private event
  * in another calendar. No platform prerequisite or shared resource beyond
  * the hermetic launcher with disposable Secrets: isolated HOME, data, key
@@ -658,7 +704,8 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
   const userDataDir = scratchDir("infinitary-calendar-");
   google = await startGoogleStandIn();
   const stand = google;
-  const existing = stand.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+  const shoot = shootEventAt(Date.now() + 3 * 24 * 60 * 60 * 1000);
+  const existing = stand.calendar.change(STUDIO_CALENDAR, shoot);
   const seen: AutomationEventsSeen = { turns: [] };
   // The sign-in's lasting key is kept in Secrets (INF-785), here on disposable custody.
   launched = await launchSecrets({
@@ -737,12 +784,12 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
     )
     .not.toBeNull();
   expect(seen.turns).toEqual([]);
-  stand.calendar.change("primary", { ...SHOOT_EVENT, summary: "Private appointment" });
+  stand.calendar.change("primary", { ...shoot, summary: "Private appointment" });
   stand.calendar.change(STUDIO_CALENDAR, { id: existing.id, summary: "Shot list confirmed" });
   await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
   expect(seen.turns[0]).toContain("Shot list confirmed");
-  expect(seen.turns[0]).toContain(SHOOT_EVENT.start.dateTime);
+  expect(seen.turns[0]).toContain(shoot.start.dateTime);
   expect(seen.turns[0]).not.toContain("Private appointment");
-  expect(seen.turns[0]).not.toContain(SHOOT_EVENT.description);
+  expect(seen.turns[0]).not.toContain(shoot.description);
   expect(seen.turns[0]).toContain(CALENDAR_CHANGED_EVENT.label);
 });

@@ -191,7 +191,17 @@
   "phoneFormatMinutes": "{minutes} د",
   "phoneFormatNow": "الآن",
   "phoneFormatUnderMinute": "أقل من 1 د",
+  "phoneGoogleAgentRefusedDetail": "لا تقبل خوادم Gmail والتقويم من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}.",
   "phoneGoogleInvite": "اسمح لنائب القبطان على {computer} بقراءة Gmail وCalendar. يبقى تسجيل الدخول على {computer}.",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "zero": "خدمات MCP الخاصة بـ {services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}.",
+    "one": "خدمة MCP الخاصة بـ {services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}.",
+    "two": "خدمتا MCP الخاصتان بـ {services} معطّلتان في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليهما. فعّلهما في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}.",
+    "few": "خدمات MCP الخاصة بـ {services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}.",
+    "many": "خدمات MCP الخاصة بـ {services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}.",
+    "other": "خدمات MCP الخاصة بـ {services} معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على {computer}."
+  },
   "phoneGoogleSetupStays": "يحفظ Infinitary سرّ العميل في الأسرار على {computer}. لا يراه نائب القبطان ولا الطاقم أبدًا.",
   "phoneGoogleSetupStepFile": "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم اختره هنا أو الصق محتواه.",
   "phoneGoogleSignIn": "تسجيل الدخول",

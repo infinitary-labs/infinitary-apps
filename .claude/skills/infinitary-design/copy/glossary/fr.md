@@ -16,6 +16,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | a stronger model | un modèle plus puissant | "Passée à un modèle plus puissant". |
 | account | compte | |
 | agent plugins | plugins d’agent | Only the plugins turned on in the person's coding agent; a panel stays "panneau". |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | agent basé sur l’IA | "agents d’IA" for AI agents in general. |
 | Allow (secrets approval button) | « Autoriser » |  |
 | allowance left | restant | "40 % restant". |
 | Appearance | Apparence | |
@@ -29,6 +30,8 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | branch | branche | |
 | bring up to date | mettre à jour | "l’aura mise à jour"; never "rebaser" and never "conflit". |
 | built in place | construit sur place | |
+| Calendar, Drive, Docs, Sheets (Google's products) | Agenda, Drive, Docs, Sheets | Google's own French names; Gmail stays Gmail. |
+| call (one request an integration action sends) | appel | Masculine; "{place} a arrêté l’appel". |
 | captain | capitaine | The word a ship's crew uses; masculine default form, lowercase mid-sentence ("Bienvenue à bord d’Infinitary, capitaine"). |
 | card | carte | Feminine. |
 | claim (a recorded relationship) | affirmation | "Affirmation enregistrée". |
@@ -90,6 +93,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | machine (never said) | ordinateur | "Il fonctionne sur cet ordinateur" in the voice consent line. |
 | main message | message principal | |
 | mark (a place marked on a picture or a page) | repère | Masculine: "repère {mark}", "Image avec ses repères". |
+| MCP service (one turned on in a Google Cloud project) | service MCP | "le service MCP pour Gmail", which avoids eliding before Agenda; off is "désactivé", turn on is "activer". |
 | median (Usage, Cost per task) | médiane | The middle task of a week's finished tasks; never "average". |
 | merge | fusionner, fusion | GitHub's French docs say "fusionner"; "Fusion impossible" for "Cannot merge". |
 | merge queue (the host's own) | file de fusion | |
@@ -172,6 +176,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | unsafe data reader | lecteur de données non sûres | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Utilisation | The section's name, as in "Ouvrir Utilisation". |
 | usage record | entrée | One recorded model response in Usage ("entrées avec prix"); "fiche" stays for a task's record and "enregistrement" for a recording. |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | « Use this client for an AI-powered agent » | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | utilisateur | "as {user}" is "sous l’utilisateur {user}", as in "Sous un autre utilisateur". |
 | where the project lives | là où le projet est hébergé | |
 | window wash | voile de la fenêtre | The theme color laid over the blurred background. |

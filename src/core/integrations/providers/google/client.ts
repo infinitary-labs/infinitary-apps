@@ -37,9 +37,16 @@ export type GoogleEndpoints = {
   auth: string;
   token: string;
   revoke: string;
-  /** Gmail's API, before `/gmail/v1/`. */
+  /**
+   * Gmail's API, before `/gmail/v1/`: its profile, which names the account
+   * signed in, and an attached file's bytes, which Gmail's MCP server never
+   * hands (`GMAIL_FILES_END`).
+   */
   gmail: string;
-  calendar: string;
+  /** Gmail's MCP server, where every other Gmail action and the look go. */
+  gmailMcp: string;
+  /** Google Calendar's MCP server, where every Calendar action and look goes. */
+  calendarMcp: string;
 };
 
 const GOOGLE_ENDPOINTS: GoogleEndpoints = {
@@ -47,7 +54,8 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
   token: "https://oauth2.googleapis.com/token",
   revoke: "https://oauth2.googleapis.com/revoke",
   gmail: "https://gmail.googleapis.com",
-  calendar: "https://www.googleapis.com",
+  gmailMcp: "https://gmailmcp.googleapis.com/mcp/v1",
+  calendarMcp: "https://calendarmcp.googleapis.com/mcp/v1",
 };
 
 /**
@@ -77,7 +85,8 @@ export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEn
       token: `${root}/token`,
       revoke: `${root}/revoke`,
       gmail: root,
-      calendar: root,
+      gmailMcp: `${root}/gmailmcp/mcp/v1`,
+      calendarMcp: `${root}/calendarmcp/mcp/v1`,
     },
   };
 }

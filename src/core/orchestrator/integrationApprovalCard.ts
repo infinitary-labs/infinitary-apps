@@ -11,6 +11,7 @@ import {
 import type { IntegrationAsk } from "@shared/writeAsk";
 import { escapeCardText } from "./cardText";
 import { HOST_CARD_PRIORITY } from "./hostCards";
+import { integrationConfirmCard } from "./integrationConfirmCard";
 import { writeAskStrip } from "./requestStrips";
 
 /** The label every host approval card for a held call carries. */
@@ -31,6 +32,8 @@ export function integrationApprovalCard(
     : [asked as IntegrationAsk];
   const ask = listed[0];
   if (!ask) throw new Error("An approval card lists at least one ask.");
+  // A place's question stands alone on its own card, which no other ask joins.
+  if (ask.confirm) return integrationConfirmCard({ ...ask, confirm: ask.confirm }, task, options);
   if (task && listed.length > 1) return integrationApprovalsCard(listed, task, options);
   const text = escapeCardText;
   const preferred = ask.effect === "reads" ? "always" : "once";

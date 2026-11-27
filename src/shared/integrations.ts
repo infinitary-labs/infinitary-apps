@@ -216,18 +216,58 @@ export const integrationClientViewSchema = z
      * client not in Google's Personal mode, whose sign-ins last 7 days.
      */
     endsAt: z.number().optional(),
+    /**
+     * Google refused the sign-in's calls to its MCP servers, though the
+     * sign-in stands: the client is not marked for an AI-powered agent
+     * (`agent`), or the MCP service of `services` is off in the person's
+     * Google Cloud project (`service`). `link` is the Google Cloud page that
+     * fixes it, only ever on Google's console. The next answer from Google
+     * clears it.
+     */
+    mcp: z
+      .object({
+        refused: z.enum(["agent", "service"]),
+        services: z
+          .array(z.enum(["gmail", "calendar"]))
+          .min(1)
+          .max(2)
+          .optional(),
+        link: z.string().max(2048).refine(googleConsoleLink),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 export type IntegrationClientView = z.infer<typeof integrationClientViewSchema>;
 
+const GOOGLE_CONSOLE_HOSTS = new Set(["console.cloud.google.com", "console.developers.google.com"]);
+
+/** An https page on Google's Cloud console: the only place the row's Google links open. */
+export function googleConsoleLink(link: string): boolean {
+  try {
+    const url = new URL(link);
+    return url.protocol === "https:" && GOOGLE_CONSOLE_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The page where a person makes their own Google client in Personal mode,
- * with a Desktop app client and the Workspace APIs filled in: only the
- * account that makes it can sign in with it, and Google neither reviews it
- * nor ends its sign-ins after 7 days (INF-6340's proof run).
+ * with a Desktop app client marked for an AI-powered agent, and the
+ * Workspace APIs and their MCP servers filled in: only the account that
+ * makes it can sign in with it, and Google neither reviews it nor ends its
+ * sign-ins after 7 days (INF-6340's proof run).
  */
 export const GOOGLE_CLIENT_SETUP_PAGE =
-  "https://console.cloud.google.com/auth/overview/personal?apis=ws&clientType=desktop";
+  "https://console.cloud.google.com/auth/overview/personal?apis=ws,wsmcp,tasksmcp&clientType=desktop&isAgent=true";
+
+/** Google Cloud's list of the person's clients, where "Use this client for an AI-powered agent" is ticked on one. */
+export const GOOGLE_CLIENTS_PAGE = "https://console.cloud.google.com/auth/clients";
+
+/** The page that turns on Gmail's and Calendar's MCP servers, when Google names none. */
+export const GOOGLE_MCP_ENABLE_PAGE =
+  "https://console.cloud.google.com/flows/enableapi?apiid=gmailmcp.googleapis.com,calendarmcp.googleapis.com";
 
 /** A client file as the person drops or pastes it: Google's JSON is a few hundred bytes. */
 export const integrationClientFileSchema = z

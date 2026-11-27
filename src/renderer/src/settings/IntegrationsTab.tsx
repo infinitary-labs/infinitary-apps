@@ -51,7 +51,12 @@ import "./integrations.css";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { DeviceForgeRows } from "./DeviceForgeRows";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
-import { GoogleClientSetup, type GoogleClientState, googleClientState } from "./GoogleClientSetup";
+import {
+  GoogleClientSetup,
+  type GoogleClientState,
+  googleClientState,
+  googleNextWords,
+} from "./GoogleClientSetup";
 import { OutsideDataRow } from "./OutsideDataRow";
 import { PrivateSitesSection } from "./PrivateSitesSection";
 import {
@@ -493,7 +498,11 @@ export function IntegrationsTab() {
               <IntegrationRow
                 integration={integration}
                 client={client}
-                onClient={openSetup}
+                onClient={
+                  client?.next === "open" && client.link
+                    ? () => void window.infinitary.app.openExternal(client.link ?? "")
+                    : openSetup
+                }
                 way={
                   integration.kind === "github" || integration.host
                     ? forges.signIns.find(
@@ -1000,9 +1009,10 @@ function IntegrationRow({
             size="sm"
             pending={busy}
             pendingLabel={m.settingsIntegrationsStarting()}
+            data-integration-client-next={client.next}
             onClick={onClient}
           >
-            {m.integrationsGoogleSetUpAgain()}
+            {googleNextWords(client.next)}
           </Button>
         )}
         {!client && row.reauth && way === "cli" && (

@@ -1328,17 +1328,33 @@ public enum PhoneMessages {
     public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
     public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
     public static func `integrationsClientFileNotTaken`(`name`: String) -> String { PhoneWords.format("integrationsClientFileNotTaken", [`name`]) }
+    public static func `integrationsConfirmChoice`(`place`: String) -> String { PhoneWords.format("integrationsConfirmChoice", [`place`]) }
+    public static func `integrationsConfirmLeadFirstmate`(`place`: String) -> String { PhoneWords.format("integrationsConfirmLeadFirstmate", [`place`]) }
+    public static func `integrationsConfirmLeadPanel`(`panel`: String, `place`: String) -> String { PhoneWords.format("integrationsConfirmLeadPanel", [`panel`, `place`]) }
+    public static func `integrationsConfirmLeadTask`(`place`: String, `task`: String) -> String { PhoneWords.format("integrationsConfirmLeadTask", [`place`, `task`]) }
+    public static func `integrationsConfirmNotNow`() -> String { PhoneWords.format("integrationsConfirmNotNow", []) }
+    public static func `integrationsConfirmSend`(`place`: String) -> String { PhoneWords.format("integrationsConfirmSend", [`place`]) }
+    public static func `integrationsConfirmTitle`(`action`: String, `place`: String) -> String { PhoneWords.format("integrationsConfirmTitle", [`action`, `place`]) }
+    public static func `integrationsConfirmWays`(`place`: String) -> String { PhoneWords.format("integrationsConfirmWays", [`place`]) }
+    public static func `integrationsConfirmWords`(`place`: String) -> String { PhoneWords.format("integrationsConfirmWords", [`place`]) }
     public static func `integrationsConnectOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferBody", [`name`]) }
     public static func `integrationsConnectOfferButton`() -> String { PhoneWords.format("integrationsConnectOfferButton", []) }
     public static func `integrationsConnectOfferNotNow`() -> String { PhoneWords.format("integrationsConnectOfferNotNow", []) }
     public static func `integrationsConnectOfferOpen`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferOpen", [`name`]) }
     public static func `integrationsConnectOfferTitle`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferTitle", [`name`]) }
+    public static func `integrationsGoogleAgentRefused`() -> String { PhoneWords.format("integrationsGoogleAgentRefused", []) }
+    public static func `integrationsGoogleAgentRefusedDetail`() -> String { PhoneWords.format("integrationsGoogleAgentRefusedDetail", []) }
     public static func `integrationsGoogleClientFileIncomplete`() -> String { PhoneWords.format("integrationsGoogleClientFileIncomplete", []) }
     public static func `integrationsGoogleClientFileNotJson`() -> String { PhoneWords.format("integrationsGoogleClientFileNotJson", []) }
     public static func `integrationsGoogleClientFileWeb`() -> String { PhoneWords.format("integrationsGoogleClientFileWeb", []) }
     public static func `integrationsGoogleExchangeOperation`() -> String { PhoneWords.format("integrationsGoogleExchangeOperation", []) }
     public static func `integrationsGoogleExchangeReason`() -> String { PhoneWords.format("integrationsGoogleExchangeReason", []) }
     public static func `integrationsGoogleExchangeResult`() -> String { PhoneWords.format("integrationsGoogleExchangeResult", []) }
+    public static func `integrationsGoogleOpenCloud`() -> String { PhoneWords.format("integrationsGoogleOpenCloud", []) }
+    public static func `integrationsGoogleServiceCalendar`() -> String { PhoneWords.format("integrationsGoogleServiceCalendar", []) }
+    public static func `integrationsGoogleServiceGmail`() -> String { PhoneWords.format("integrationsGoogleServiceGmail", []) }
+    public static func `integrationsGoogleServiceOff`() -> String { PhoneWords.format("integrationsGoogleServiceOff", []) }
+    public static func `integrationsGoogleServiceOffDetail`(`count`: Int, `services`: String) -> String { PhoneWords.format("integrationsGoogleServiceOffDetail", [`count`, `services`]) }
     public static func `integrationsGoogleSetUp`() -> String { PhoneWords.format("integrationsGoogleSetUp", []) }
     public static func `integrationsGoogleSetUpAgain`() -> String { PhoneWords.format("integrationsGoogleSetUpAgain", []) }
     public static func `integrationsGoogleSetUpFirst`() -> String { PhoneWords.format("integrationsGoogleSetUpFirst", []) }
@@ -2095,7 +2111,9 @@ public enum PhoneMessages {
     public static func `phoneFormatMinutes`(`minutes`: String) -> String { PhoneWords.format("phoneFormatMinutes", [`minutes`]) }
     public static func `phoneFormatNow`() -> String { PhoneWords.format("phoneFormatNow", []) }
     public static func `phoneFormatUnderMinute`() -> String { PhoneWords.format("phoneFormatUnderMinute", []) }
+    public static func `phoneGoogleAgentRefusedDetail`(`computer`: String) -> String { PhoneWords.format("phoneGoogleAgentRefusedDetail", [`computer`]) }
     public static func `phoneGoogleInvite`(`computer`: String) -> String { PhoneWords.format("phoneGoogleInvite", [`computer`]) }
+    public static func `phoneGoogleServiceOffDetail`(`computer`: String, `count`: Int, `services`: String) -> String { PhoneWords.format("phoneGoogleServiceOffDetail", [`computer`, `count`, `services`]) }
     public static func `phoneGoogleSetupStays`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSetupStays", [`computer`]) }
     public static func `phoneGoogleSetupStepFile`() -> String { PhoneWords.format("phoneGoogleSetupStepFile", []) }
     public static func `phoneGoogleSignIn`() -> String { PhoneWords.format("phoneGoogleSignIn", []) }
@@ -6185,17 +6203,33 @@ extension PhoneWords {
         "handoverWontStopText": ["to"],
         "handoverWontStopTitle": ["from"],
         "integrationsClientFileNotTaken": ["name"],
+        "integrationsConfirmChoice": ["place"],
+        "integrationsConfirmLeadFirstmate": ["place"],
+        "integrationsConfirmLeadPanel": ["panel", "place"],
+        "integrationsConfirmLeadTask": ["place", "task"],
+        "integrationsConfirmNotNow": [],
+        "integrationsConfirmSend": ["place"],
+        "integrationsConfirmTitle": ["action", "place"],
+        "integrationsConfirmWays": ["place"],
+        "integrationsConfirmWords": ["place"],
         "integrationsConnectOfferBody": ["name"],
         "integrationsConnectOfferButton": [],
         "integrationsConnectOfferNotNow": [],
         "integrationsConnectOfferOpen": ["name"],
         "integrationsConnectOfferTitle": ["name"],
+        "integrationsGoogleAgentRefused": [],
+        "integrationsGoogleAgentRefusedDetail": [],
         "integrationsGoogleClientFileIncomplete": [],
         "integrationsGoogleClientFileNotJson": [],
         "integrationsGoogleClientFileWeb": [],
         "integrationsGoogleExchangeOperation": [],
         "integrationsGoogleExchangeReason": [],
         "integrationsGoogleExchangeResult": [],
+        "integrationsGoogleOpenCloud": [],
+        "integrationsGoogleServiceCalendar": [],
+        "integrationsGoogleServiceGmail": [],
+        "integrationsGoogleServiceOff": [],
+        "integrationsGoogleServiceOffDetail": ["count", "services"],
         "integrationsGoogleSetUp": [],
         "integrationsGoogleSetUpAgain": [],
         "integrationsGoogleSetUpFirst": [],
@@ -6952,7 +6986,9 @@ extension PhoneWords {
         "phoneFormatMinutes": ["minutes"],
         "phoneFormatNow": [],
         "phoneFormatUnderMinute": [],
+        "phoneGoogleAgentRefusedDetail": ["computer"],
         "phoneGoogleInvite": ["computer"],
+        "phoneGoogleServiceOffDetail": ["computer", "count", "services"],
         "phoneGoogleSetupStays": ["computer"],
         "phoneGoogleSetupStepFile": [],
         "phoneGoogleSignIn": [],
@@ -9772,6 +9808,7 @@ extension PhoneWords {
         "feedTagCheckFinished": "count",
         "feedTagCheckFinishedMissed": "count",
         "filePathsAnnounce": "count",
+        "integrationsGoogleServiceOffDetail": "count",
         "knowledgePanelAllDirections": "count",
         "knowledgePanelCheckCount": "count",
         "knowledgePanelConceptCount": "count",
@@ -9805,6 +9842,7 @@ extension PhoneWords {
         "phoneCardFiles": "count",
         "phoneCardsReplyTooLong": "count",
         "phoneChecksCounted": "count",
+        "phoneGoogleServiceOffDetail": "count",
         "phoneMediaPicturePosition": "count",
         "phoneRecordCrewEarlier": "count",
         "phoneRecordDropPartsPlanned": "count",

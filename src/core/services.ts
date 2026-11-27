@@ -822,6 +822,7 @@ export async function createServices(
     tasks,
     panelOutside,
     crew: () => supervisor,
+    deleteOutside: () => savedOutsideData.deleteNow(),
     now: ticker.now,
     emit,
   });
@@ -1324,9 +1325,8 @@ export async function createServices(
   });
   holdSeat = (accountId) => firstmate.holdSeatFor(accountId);
   if (!options.paused) scheduler.start(ticker);
-  // Words from outside go from saved conversations once past their days,
-  // or now on the captain's delete (docs/task-retention.md, "Words from
-  // outside"). A conversation is written again only between its turns.
+  // Words from outside go once past their days, or now on the captain's delete or Google's removal
+  // (docs/task-retention.md, "Words from outside"); a conversation is rewritten only between turns.
   const savedOutsideData = new SavedOutsideData({
     paths,
     reads: outsideReads,

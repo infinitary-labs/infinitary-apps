@@ -627,6 +627,11 @@ Its Activity lines name the holds it passes as a list fill (`docs/i18n.md`, "Sav
 A task's kept `ForgeWriteAsk` may carry `yes`, the captain's yes it was sent on with no card (`docs/forge.md`, "A write that asks"); it rides the existing delivery JSON and adds no migration.
 Such an ask is saved already taken, so an older build ignores the field and never sends it again, the same as an ask a click took.
 
+## Google's question about a call
+
+An integration ask among a task's `writeAsks` may carry an optional `confirm`: a place's own question about that call, its choices and the state that answers it (`docs/integrations.md`, "Google"); it rides the existing JSON and adds no migration.
+An older build shows such an ask as an ordinary approval card, and its Only this time runs the call without the answer, so Google asks again and the call stays unrun.
+
 ## Task tags
 
 A migration adds `project_tags`, each project's own tags, and `task_tags`, the tags each task carries with who set each (`docs/task-tags.md`); both start empty, so every project starts with no tags and every task carries none.

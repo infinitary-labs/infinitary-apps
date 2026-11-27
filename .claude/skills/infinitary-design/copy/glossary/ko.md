@@ -17,6 +17,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | account | 계정 | |
 | action (an integration action) | 동작 | Kept apart from 작업 (task) |
 | agent plugins | 에이전트 플러그인 | Only the plugins turned on in the person's coding agent; a panel stays 패널. |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | AI 기반 에이전트 | "AI 에이전트" for AI agents in general. |
 | Always use | 항상 사용 | The model setting that skips levels |
 | Appearance | 모양 | As macOS's Korean System Settings names it |
 | Approves secret uses (switch) | 비밀 정보 사용 승인 | The computer's Settings → Devices should show the same words. |
@@ -28,6 +29,8 @@ Particles after a filled value are avoided by word order, or written in the pair
 | branch | 분기 | GitHub's Korean docs say 분기; the main branch is 기본 분기 |
 | bring up to date | 최신 상태로 맞추다 | Replaces rebase and conflict; "conflicts with newer work" is 더 새로운 작업과 겹쳐요 |
 | built in place | 그 자리에서 만듦 | |
+| Calendar, Drive, Docs, Sheets (Google's products) | 캘린더, 드라이브, 문서, 스프레드시트 | Google's own Korean names; Gmail stays Gmail. |
+| call (one request an integration action sends) | 호출 | "호출을 중지". |
 | captain | 선장, 선장님 | 선장님 when addressed in a sentence, 선장 in a label or the feed |
 | card | 카드 | |
 | certificate | 인증서 | An organization CA certificate in the custom API form |
@@ -93,6 +96,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | log (a check's kept output) | 로그 | Plain loanword, distinct from the record, 기록. |
 | machine | (not used) | 컴퓨터 instead |
 | mark (a place marked on a picture or a page) | 표시 | "표시 {mark}", "표시한 사진". |
+| MCP service (one turned on in a Google Cloud project) | MCP 서비스 | "Gmail MCP 서비스"; off is 꺼져 있음, turn on is 켜다. |
 | median (Usage, Cost per task) | 중앙값 | The middle task of a week's finished tasks; never "average". |
 | merge | 병합, 병합하다 | GitHub's Korean docs; "Cannot merge" is 병합할 수 없어요 |
 | merge queue (the host's own) | 병합 대기열 | |
@@ -180,6 +184,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | token, OAuth, credential | (not used) | 로그인 or 키 instead; "billable tokens" stays 토큰 where English names them |
 | unsafe data reader | 안전하지 않은 데이터 읽기 작업 | A crewmate that reads words anyone can write. |
 | Usage | 사용량 | |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | “Use this client for an AI-powered agent” | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | 사용자 | "as {user}" is "{user}(으)로", as in "다른 사용자로 실행" |
 | version | 버전 | Replaces SHA and hash |
 | Waiting on you (board lane) | 선장님을 기다림 | |

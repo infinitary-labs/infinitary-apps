@@ -67,7 +67,7 @@ import { KEEP_AS_ANOTHER_USER } from "../tasks/taskStops";
 
 /**
  * A task that runs on a computer that runs work (`tests/helpers/placedWorld.ts`):
- * the integrations command there, Gmail and Calendar content kept there, and
+ * the integrations command there, Google content kept there, and
  * the files command between this Mac and that computer.
  */
 
@@ -938,14 +938,14 @@ describe("bringing secrets from a tool on a computer that runs work", () => {
   });
 });
 
-describe("Gmail and Calendar content on a computer that runs work", () => {
+describe("Google content on a computer that runs work", () => {
   // INF-1094: "Gmail and Calendar content a crewmate read on another
   // computer that runs work is replaced with the same note after 30 days
   // and when the captain uses Delete Gmail and Calendar content, and the
   // row's answer counts those conversations." The captain's INF-952
   // answers hold there too: the passage is replaced and the conversation
   // stays, 30 days after it was read.
-  const NOTE = outsideDataDeletedNote("Gmail and Calendar content");
+  const NOTE = outsideDataDeletedNote(GOOGLE_DATA_KEPT.what);
   const DAY = 24 * 60 * 60 * 1000;
   const LENA = {
     from: "Lena Ortiz <lena@ortiz-studio.com>",
@@ -1019,7 +1019,7 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
 
   // INF-2466, the captain's approved plan: a crewmate saves a Gmail
   // attachment "into the task's hand-over folder, kept until day 30 or the
-  // task closes", and Delete Gmail and Calendar content removes it at once.
+  // task closes", and Delete Google content removes it at once.
   it("saves an attachment into the task's hand-over folder there byte for byte, and the captain's delete removes it there", async () => {
     const { google, at, home, outsideData } = await withGoogle();
     const pdf = randomBytes(48_211);

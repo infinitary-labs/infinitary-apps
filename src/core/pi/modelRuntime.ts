@@ -2,7 +2,7 @@ import { dirname, join } from "node:path";
 import { InMemoryCredentialStore, type ThinkingLevelMap } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-import { BEDROCK_PROVIDER_ID, OPENCODE_GO_PROVIDER_ID } from "@shared/providers";
+import { BEDROCK_PROVIDER_ID, PROVIDER_CATALOG } from "@shared/providers";
 import { bedrockAccountProvider } from "./bedrock";
 import { storedKeyOnly } from "./storedKeyOnly";
 
@@ -116,7 +116,7 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   // provider fires one), and it calls them through this property, so it is
   // wrapped before any registration below and every refresh is tracked.
   const refresh = runtime.refresh?.bind(runtime);
-  let lastRefresh: Promise<unknown> = Promise.resolve();
+  let registering: Promise<unknown>[] | undefined;
   if (refresh)
     runtime.refresh = (refreshOptions) => {
       const work = tracked(
@@ -126,7 +126,7 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
             : refreshOptions,
         ),
       );
-      lastRefresh = work;
+      registering?.push(work);
       return work;
     };
   const snapshot = runtime.getAvailableSnapshot.bind(runtime);
@@ -147,18 +147,17 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   // Registering a provider and refreshing one provider both reset Pi's
   // available list to every model of each signed-in provider; only an
   // unscoped refresh's availability pass narrows them again (Copilot to the
-  // ids stored at its sign-in, OpenCode Go to a stored key). Registering
-  // fires exactly that refresh, so it alone is awaited: a second refresh
-  // racing it can leave the reset list standing. A Bedrock account's
-  // runtime, which never serves OpenCode Go and keeps only its checked list
-  // above, does not register it at all.
-  const openCodeGo =
-    options.connectionProvider || options.bedrockAccount
-      ? undefined
-      : runtime.getProvider(OPENCODE_GO_PROVIDER_ID);
-  if (openCodeGo) {
-    runtime.registerNativeProvider(storedKeyOnly(openCodeGo));
-    await lastRefresh;
+  // ids stored at its sign-in, a key provider to a stored key). Registering
+  // fires exactly that refresh, so only the refreshes the registrations fire
+  // are awaited: another refresh racing them can leave the reset list
+  // standing. A Bedrock account's runtime, which serves no other provider and
+  // keeps only its checked list above, registers none of them.
+  if (!options.connectionProvider && !options.bedrockAccount) {
+    registering = [];
+    keepKeysInTheStore(runtime);
+    const fired = registering;
+    registering = undefined;
+    await Promise.all(fired);
   }
   const getAuth = runtime.getAuth.bind(runtime);
   runtime.getAuth = ((model, overrides) => {
@@ -190,6 +189,20 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
   if (!options.connectionProvider && !options.bedrockAccount)
     void tracked(refreshInBackground(runtime, options.onCatalogRefreshed));
   return runtime;
+}
+
+/**
+ * Every offered Pi provider signed in with a key takes it from the account's
+ * own store alone (`storedKeyOnly`). Amazon Bedrock is left out: its account
+ * runtime registers its own sign-in (`bedrock.ts`), and no other runtime
+ * serves it.
+ */
+function keepKeysInTheStore(runtime: ModelRuntime): void {
+  for (const entry of PROVIDER_CATALOG) {
+    if (entry.backend !== "pi" || entry.id === BEDROCK_PROVIDER_ID) continue;
+    const stock = runtime.getProvider(entry.id);
+    if (stock?.auth.apiKey) runtime.registerNativeProvider(storedKeyOnly(stock));
+  }
 }
 
 /**

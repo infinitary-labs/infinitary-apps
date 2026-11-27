@@ -1272,7 +1272,7 @@
 "integrationsGoogleSetupOpenPage" = "Abrir a página do Google";
 "integrationsGoogleSetupStays" = "O Infinitary guarda a chave secreta do cliente em Segredos neste computador. Seu imediato e sua tripulação nunca a veem.";
 "integrationsGoogleSetupStepFile" = "Baixe com Download JSON o arquivo de cliente que o Google mostra e depois solte-o aqui, escolha-o ou cole o conteúdo dele.";
-"integrationsGoogleSetupStepPage" = "Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, aceite a política do Google e pressione Continue.";
+"integrationsGoogleSetupStepPage" = "Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.";
 "integrationsGoogleSetupTitle" = "Configure sua própria conexão com o Google";
 "integrationsGoogleSignIn" = "Fazer login";
 "integrationsGoogleSignInHint" = "Faça login com a conta do Google que criou seu cliente: ele só atende essa conta.";

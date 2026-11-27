@@ -1,5 +1,5 @@
 ---
-source: 73e387523c5a3dd9
+source: e71da6c9134d6753
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -60,7 +60,8 @@ Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht n
 
 1. Drück **Google**, dann öffnet sich **Deine eigene Google-Verbindung einrichten**.
 2. Drück **Googles Seite öffnen** und melde dich dort mit dem Google-Konto an, das du verbinden willst.
-   Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drück Continue.
+   Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen.
+   Akzeptiere dann Googles Richtlinie und drück Continue.
 3. Lade die Client-Datei, die Google zeigt, mit Download JSON herunter.
 4. Leg diese Datei auf **Client-Datei hier ablegen** ab, wähl sie mit **Datei auswählen** aus oder füg ihren Inhalt in **Client-Datei** ein.
 5. Drück **Aufbewahren und anmelden**.

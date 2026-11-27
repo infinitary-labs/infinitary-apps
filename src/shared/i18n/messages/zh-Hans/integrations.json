@@ -27,7 +27,7 @@
   "integrationsGoogleSetupOpenPage": "打开 Google 的页面",
   "integrationsGoogleSetupStays": "Infinitary 把客户端的密钥保存在这台电脑的机密中。你的大副和船员永远看不到它。",
   "integrationsGoogleSetupStepFile": "用 Download JSON 下载 Google 显示的客户端文件，然后拖到这里、选择它，或粘贴它的内容。",
-  "integrationsGoogleSetupStepPage": "打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，接受 Google 的政策，然后按 Continue。",
+  "integrationsGoogleSetupStepPage": "打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。然后接受 Google 的政策，按 Continue。",
   "integrationsGoogleSetupTitle": "设置你自己的 Google 连接",
   "integrationsGoogleSignIn": "登录",
   "integrationsGoogleSignInHint": "请用创建客户端的 Google 账号登录：它只为该账号服务。",

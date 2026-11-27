@@ -25,7 +25,7 @@ import {
 import { COPILOT_PROVIDER_ID, copilotEnterpriseHost, copilotGitHubLogin } from "./copilotMeter";
 import { CustomApiAccountOwner } from "./customApiAccounts";
 import { CustomApiCatalog, customCatalog } from "./customApiModels";
-import { createModelRuntime } from "./modelRuntime";
+import { createModelRuntime, refreshCatalogInBackground } from "./modelRuntime";
 import { buildAuthInteraction } from "./piAuthInteraction";
 
 /**
@@ -308,6 +308,9 @@ export class PiAccountBackend implements AccountBackend {
         if (login) this.signedInAs.set(request.accountId, login);
         else this.signedInAs.delete(request.accountId);
       }
+      // The runtime was created, and ran its one pi.dev refresh, before this
+      // credential existed, so that refresh skipped the provider.
+      if (!bedrock) void refreshCatalogInBackground(runtime, this.onCatalogRefreshed);
     })();
     const swallowed = work.then(
       () => undefined,

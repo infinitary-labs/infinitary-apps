@@ -13,9 +13,11 @@ import { PiAccountBackend } from "./piAccountBackend";
 export function appPiAccountBackend(
   modelsPath: string,
   standIns: Pick<StandIns, "bedrockUrl" | "awsCli">,
+  onCatalogRefreshed?: () => void,
 ): PiAccountBackend {
   return new PiAccountBackend({
     modelsPath,
+    ...(onCatalogRefreshed ? { onCatalogRefreshed } : {}),
     bedrockUrl: standIns.bedrockUrl,
     awsCli: standIns.awsCli,
     bedrockClaudeSetup: () => readClaudeBedrockSetup(),

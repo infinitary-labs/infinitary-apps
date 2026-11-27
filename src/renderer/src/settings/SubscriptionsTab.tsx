@@ -779,7 +779,7 @@ export function SubscriptionsTab() {
     });
     const offPrompt = window.infinitary.auth.onPrompt((incoming) => {
       setPrompt(incoming);
-      setPromptValue("");
+      setPromptValue(incoming.kind === "text" ? (incoming.value ?? "") : "");
     });
     const offNotice = window.infinitary.auth.onNotice((notice) => {
       setNotices((current) => ({ ...current, [notice.providerId]: notice }));

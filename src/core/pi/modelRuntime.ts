@@ -3,7 +3,9 @@ import { InMemoryCredentialStore, type ThinkingLevelMap } from "@earendil-works/
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
 import { BEDROCK_PROVIDER_ID, OPENCODE_GO_PROVIDER_ID, PROVIDER_CATALOG } from "@shared/providers";
+import type { BedrockClaudeSetup } from "../claude/claudeAccess";
 import { bedrockAccountProvider } from "./bedrock";
+import type { BedrockResolver } from "./bedrockConnection";
 import { withOpenCodeGoDecisions } from "./openCodeGoDecisions";
 import { storedKeyOnly } from "./storedKeyOnly";
 
@@ -76,6 +78,10 @@ export type ModelRuntimeOptions = {
   bedrockUrl?: string;
   bedrockRecheckPending?: () => boolean;
   bedrockProfileUnavailable?: (unavailable: boolean) => void;
+  /** How an organization address's name is looked up; tests stand in for DNS. */
+  bedrockResolve?: BedrockResolver;
+  /** Claude Code's Bedrock settings, which the sign-in starts from. */
+  bedrockClaudeSetup?: () => Promise<BedrockClaudeSetup | undefined>;
 };
 
 /**
@@ -141,7 +147,12 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
     const stock = runtime.getProvider(BEDROCK_PROVIDER_ID);
     if (!stock) throw new Error("Amazon Bedrock models could not be loaded.");
     runtime.registerNativeProvider(
-      bedrockAccountProvider(stock, options.bedrockUrl, options.bedrockProfileUnavailable),
+      bedrockAccountProvider(stock, {
+        test: options.bedrockUrl,
+        profileUnavailable: options.bedrockProfileUnavailable,
+        ...(options.bedrockResolve ? { resolve: options.bedrockResolve } : {}),
+        ...(options.bedrockClaudeSetup ? { claudeSetup: options.bedrockClaudeSetup } : {}),
+      }),
     );
     await runtime.refresh({ allowNetwork: false, providers: [BEDROCK_PROVIDER_ID] });
   }

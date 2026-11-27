@@ -54,6 +54,11 @@ export const authPromptSchema = z.object({
   kind: z.enum(["text", "secret", "select", "manual_code"]),
   message: z.string(),
   placeholder: z.string().optional(),
+  /**
+   * What a text prompt's field starts with, such as a value read from the
+   * person's own settings. Absent, the field starts empty.
+   */
+  value: z.string().optional(),
   options: z
     .array(z.object({ id: z.string(), label: z.string(), description: z.string().optional() }))
     .optional(),

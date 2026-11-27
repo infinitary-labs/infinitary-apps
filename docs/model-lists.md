@@ -283,5 +283,6 @@ A reasoning effort the captain names for one task (`spawn_crewmate.shape.overrid
 
 The built-in agent lists Claude offerings only after the connected Bedrock account can use them in its chosen AWS region.
 A profile is resolved by the AWS SDK; a pasted key belongs to its own Bedrock account.
+An account sent through an organization's address checks and serves its models there (`docs/subscriptions-tab.md`, "Amazon Bedrock"); the models listed are still the Claude offerings the account can use in its region.
 Inherited AWS variables never offer Bedrock models on another account or the account-less agent.
 AWS Bedrock settings do not turn the Claude subscription into a Bedrock account.

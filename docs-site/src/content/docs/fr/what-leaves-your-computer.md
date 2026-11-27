@@ -1,5 +1,5 @@
 ---
-source: 2bc19810a789f3f6
+source: b36cddf31c037a39
 title: Ce qui quitte votre ordinateur
 description: Ce qu’envoie Infinitary, où cela va, et le seul interrupteur qui nous envoie quoi que ce soit.
 ---
@@ -14,6 +14,7 @@ Votre second et votre équipage réfléchissent avec les abonnements d’IA auxq
 Vos messages, et ce qu’un équipier lit de votre projet pour faire sa tâche, vont à ce fournisseur par votre abonnement.
 Avec Claude, Infinitary utilise le Claude Code que vous avez installé, connecté à votre propre compte.
 Avec un fournisseur personnalisé, cela va à l’adresse que vous avez saisie.
+Avec Amazon Bedrock envoyé via l’adresse de votre organisation, cela va à cette adresse au lieu d’AWS.
 
 Vos connexions restent sur votre ordinateur.
 

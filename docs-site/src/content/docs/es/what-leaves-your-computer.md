@@ -1,5 +1,5 @@
 ---
-source: 2bc19810a789f3f6
+source: b36cddf31c037a39
 title: Lo que sale de tu computadora
 description: Lo que envía Infinitary, adónde va, y el único interruptor que nos envía algo a nosotros.
 ---
@@ -14,6 +14,7 @@ Tu primer oficial y tu tripulación piensan a través de las suscripciones de IA
 Tus mensajes, y lo que un tripulante lee de tu proyecto para hacer su tarea, van a ese proveedor a través de tu suscripción.
 Con Claude, Infinitary usa el Claude Code que instalaste, con la sesión iniciada en tu propia cuenta.
 Con un proveedor personalizado, va a la dirección que escribiste.
+Con Amazon Bedrock enviado a través de la dirección de tu organización, va a esa dirección en lugar de a AWS.
 
 Tus inicios de sesión se quedan en tu computadora.
 

@@ -12445,6 +12445,34 @@ ${events}` : prompt;
         return `${count} saved resets · use one on ${site}`;
     }
   }
+  function settingsSubscriptionsSentThrough(input) {
+    const host = input.host;
+    switch (currentLanguage()) {
+      case "ar":
+        return `مُرسَل عبر ${host}`;
+      case "de":
+        return `gesendet über ${host}`;
+      case "es":
+        return `enviado a través de ${host}`;
+      case "fr":
+        return `envoyé via ${host}`;
+      case "ja":
+        return `${host} 経由で送信`;
+      case "ko":
+        return `${host}을(를) 거쳐 전송`;
+      case "pt-BR":
+        return `enviado por ${host}`;
+      case "zh-Hans":
+        return `经由 ${host} 发送`;
+      case "zh-Hant":
+        return `經由 ${host} 傳送`;
+      case "en-XA":
+        return `[šéñţ ţĥŕöûĝĥ ${host} ~~~~~]`;
+      case "ar-XB":
+        return `‮sent through ‬${host}`;
+    }
+    return `sent through ${host}`;
+  }
   function settingsSubscriptionsSignInAgainState() {
     switch (currentLanguage()) {
       case "ar":
@@ -14455,6 +14483,11 @@ ${events}` : prompt;
     kind: _enum(["text", "secret", "select", "manual_code"]),
     message: string(),
     placeholder: string().optional(),
+    /**
+     * What a text prompt's field starts with, such as a value read from the
+     * person's own settings. Absent, the field starts empty.
+     */
+    value: string().optional(),
     options: array(object({ id: string(), label: string(), description: string().optional() })).optional()
   });
   const authNoticeSchema = object({
@@ -16178,6 +16211,11 @@ ${events}` : prompt;
      * Code's settings name an address and no token command. Absent otherwise.
      */
     gateway: _enum(CLAUDE_ACCESS_SOURCES).optional(),
+    /**
+     * The host an Amazon Bedrock account's requests are sent through, when its
+     * sign-in saved an organization address. Absent when they go to AWS.
+     */
+    sentThrough: string().optional(),
     /**
      * Why this account cannot serve right now although its credential is
      * fine, in the backend's own sentence: a Claude account whose machine has
@@ -18935,7 +18973,8 @@ ${events}` : prompt;
     const sub = account.access ? CLAUDE_ACCESS_LABEL[account.access] : [
       plan ?? kindCopy(account.kind),
       identity,
-      account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : void 0
+      account.gateway ? CLAUDE_GATEWAY_LABEL[account.gateway] : void 0,
+      account.sentThrough ? settingsSubscriptionsSentThrough({ host: account.sentThrough }) : void 0
     ].filter(Boolean).join(" · ");
     const signedIn = account.kind === "api_key" ? settingsSubscriptionsApiKeySet({ apiKey: API_KEY_LABEL }) : settingsSubscriptionsSignedIn();
     const claudeFirstRun = kind === "disconnected" && account.providerId === CLAUDE_PROVIDER_ID;

@@ -1648,6 +1648,16 @@
       "why": "trusts the computer's certificates for a company collector"
     },
     {
+      "from": "pi",
+      "to": "the system",
+      "why": "trusts the computer's certificates for every Amazon Bedrock connection"
+    },
+    {
+      "from": "usageReport",
+      "to": "the system",
+      "why": "trusts the computer's certificates for the reporting connection"
+    },
+    {
       "from": "claude",
       "to": "usage collectors",
       "why": "passes Claude's usage reports on, over OTLP/HTTP or gRPC"
@@ -1910,7 +1920,7 @@
     {
       "from": "usageReport",
       "to": "claude",
-      "why": "reads the company's Claude Code setup, its headers and the login's email, sends through the forward's secure connection, and checks the reporting connection against its trusted list"
+      "why": "reads the company's Claude Code setup, its headers and the login's email, and sends through the forward's secure connection"
     },
     {
       "from": "usageReport",

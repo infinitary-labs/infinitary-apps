@@ -86,8 +86,8 @@ import { startHomePersonal } from "./personal/homePersonal";
 import { PanelOutsideData } from "./personal/panelOutsideData";
 import { PersonalStore } from "./personal/personalStore";
 import { LaunchWatch } from "./personal/safeMode";
+import { appPiAccountBackend } from "./pi/appPiAccountBackend";
 import { CREWMATE_TOOLS } from "./pi/crewmateTaskTools";
-import { PiAccountBackend } from "./pi/piAccountBackend";
 import { PiAuthService } from "./pi/piAuth";
 import { createPiSessionFactory } from "./pi/sessionFactory";
 import { readKeptValidationEvidence } from "./pi/validationEvidence";
@@ -192,13 +192,7 @@ export async function createServices(
   // The registered account backends (broker phase 7). Pi serves everything
   // it can reach; a subscription it cannot reach gets its own first-party
   // client, and the vault owns the store matrix over both.
-  // Every account runtime reads the app's one models.json (custom providers
-  // and per-provider overrides), keeping its own pi.dev overlay store.
-  const piBackend = new PiAccountBackend({
-    modelsPath: paths.modelsPath,
-    bedrockUrl: standIns.bedrockUrl,
-    awsCli: standIns.awsCli,
-  });
+  const piBackend = appPiAccountBackend(paths.modelsPath, standIns);
   // Learn where the machine's Claude Code is before anything asks (F14),
   // on the person's own search path once it is known, so the Claude chip
   // and the first health read never wait on it.

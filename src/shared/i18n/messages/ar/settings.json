@@ -1509,6 +1509,7 @@
     "many": "إعادات تعيين محفوظة: {count} · استخدم واحدة على {site}",
     "other": "إعادات تعيين محفوظة: {count} · استخدم واحدة على {site}"
   },
+  "settingsSubscriptionsSentThrough": "مُرسَل عبر {host}",
   "settingsSubscriptionsSignIn": "تسجيل الدخول",
   "settingsSubscriptionsSignInAgainState": "سجّل الدخول مجددًا.",
   "settingsSubscriptionsSignedIn": "مسجّل الدخول",

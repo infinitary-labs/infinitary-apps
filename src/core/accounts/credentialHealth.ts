@@ -74,6 +74,8 @@ export type CredentialHealth = {
    * Code's settings name one and no token command (`ClaudeAccessRead.gateway`).
    */
   gateway?: ClaudeAccessSource;
+  /** The host an Amazon Bedrock account's requests go through, when it saved an organization address. */
+  sentThrough?: string;
   /**
    * What the store and its client look like from outside, when the backend
    * can say: the stamp a cut-off is recorded under, so it clears only when

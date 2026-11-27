@@ -13,6 +13,7 @@ Your first mate and your crew think through the AI subscriptions you signed in t
 Your messages, and what a crewmate reads of your project to do its task, go to that provider through your subscription.
 With Claude, Infinitary uses the Claude Code you installed, signed in to your own account.
 With a custom provider, it goes to the address you entered.
+With Amazon Bedrock sent through your organization's address, it goes to that address instead of AWS.
 
 Your sign-ins stay on your computer.
 

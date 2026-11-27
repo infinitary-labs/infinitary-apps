@@ -1,5 +1,5 @@
 ---
-source: 2bc19810a789f3f6
+source: b36cddf31c037a39
 title: 컴퓨터 밖으로 나가는 것
 description: Infinitary가 무엇을 보내는지, 어디로 가는지, 그리고 저희에게 무언가를 보내는 단 하나의 스위치예요.
 ---
@@ -14,6 +14,7 @@ Infinitary는 이미 가지고 있는 구독으로 내 컴퓨터에서 실행돼
 선장님의 메시지와, 선원이 작업을 하려고 읽는 프로젝트 내용은 구독을 통해 그 제공자에게 가요.
 Claude를 쓰면 Infinitary는 설치된 Claude Code를 사용하고, 그 Claude Code는 선장님의 계정으로 로그인되어 있어요.
 사용자 지정 제공자를 쓰면 입력한 주소로 가요.
+조직의 주소를 거치는 Amazon Bedrock을 쓰면 AWS 대신 그 주소로 가요.
 
 로그인 정보는 컴퓨터에 남아 있어요.
 

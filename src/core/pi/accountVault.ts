@@ -364,6 +364,7 @@ export class AccountVault {
           ...(status.identity?.plan ? { plan: status.identity.plan } : {}),
           ...(status.access ? { access: status.access } : {}),
           ...(status.gateway ? { gateway: status.gateway } : {}),
+          ...(status.sentThrough ? { sentThrough: status.sentThrough } : {}),
           ...(status.detail && isClientIssueReason(status.reason) ? { detail: status.detail } : {}),
           ...(cutOff
             ? {

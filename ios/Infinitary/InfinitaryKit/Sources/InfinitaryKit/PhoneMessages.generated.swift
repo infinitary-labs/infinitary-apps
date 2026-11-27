@@ -371,6 +371,26 @@ public enum PhoneMessages {
     public static func `batchesPanelWhoRule`() -> String { PhoneWords.format("batchesPanelWhoRule", []) }
     public static func `batchesPanelWhoSentBack`(`key`: String) -> String { PhoneWords.format("batchesPanelWhoSentBack", [`key`]) }
     public static func `batchesReadWords`() -> String { PhoneWords.format("batchesReadWords", []) }
+    public static func `bedrockAddressInvalid`() -> String { PhoneWords.format("bedrockAddressInvalid", []) }
+    public static func `bedrockAddressMoved`(`host`: String) -> String { PhoneWords.format("bedrockAddressMoved", [`host`]) }
+    public static func `bedrockAddressNotFound`(`host`: String) -> String { PhoneWords.format("bedrockAddressNotFound", [`host`]) }
+    public static func `bedrockAddressPlainHttp`() -> String { PhoneWords.format("bedrockAddressPlainHttp", []) }
+    public static func `bedrockAddressRefused`(`host`: String) -> String { PhoneWords.format("bedrockAddressRefused", [`host`]) }
+    public static func `bedrockSecureConnectionFailed`(`host`: String) -> String { PhoneWords.format("bedrockSecureConnectionFailed", [`host`]) }
+    public static func `bedrockSignInAddress`() -> String { PhoneWords.format("bedrockSignInAddress", []) }
+    public static func `bedrockSignInApproveLocal`(`host`: String) -> String { PhoneWords.format("bedrockSignInApproveLocal", [`host`]) }
+    public static func `bedrockSignInApprovePrivate`(`host`: String) -> String { PhoneWords.format("bedrockSignInApprovePrivate", [`host`]) }
+    public static func `bedrockSignInApprovePublic`(`host`: String) -> String { PhoneWords.format("bedrockSignInApprovePublic", [`host`]) }
+    public static func `bedrockSignInChooseWhere`() -> String { PhoneWords.format("bedrockSignInChooseWhere", []) }
+    public static func `bedrockSignInFromClaudeSettings`() -> String { PhoneWords.format("bedrockSignInFromClaudeSettings", []) }
+    public static func `bedrockSignInFromOrganization`() -> String { PhoneWords.format("bedrockSignInFromOrganization", []) }
+    public static func `bedrockSignInNoKey`() -> String { PhoneWords.format("bedrockSignInNoKey", []) }
+    public static func `bedrockSignInOrganization`() -> String { PhoneWords.format("bedrockSignInOrganization", []) }
+    public static func `bedrockSignInSend`() -> String { PhoneWords.format("bedrockSignInSend", []) }
+    public static func `bedrockSignInSettingsNoKey`() -> String { PhoneWords.format("bedrockSignInSettingsNoKey", []) }
+    public static func `bedrockSignInStraightToAws`() -> String { PhoneWords.format("bedrockSignInStraightToAws", []) }
+    public static func `bedrockSignInWhere`() -> String { PhoneWords.format("bedrockSignInWhere", []) }
+    public static func `bedrockUnreachable`(`host`: String) -> String { PhoneWords.format("bedrockUnreachable", [`host`]) }
     public static func `cardAfterMergeDoerCrewmate`() -> String { PhoneWords.format("cardAfterMergeDoerCrewmate", []) }
     public static func `cardAfterMergeDoerFirstmate`() -> String { PhoneWords.format("cardAfterMergeDoerFirstmate", []) }
     public static func `cardAfterMergeLead`() -> String { PhoneWords.format("cardAfterMergeLead", []) }
@@ -4160,6 +4180,7 @@ public enum PhoneMessages {
     public static func `settingsSubscriptionsRetrying`() -> String { PhoneWords.format("settingsSubscriptionsRetrying", []) }
     public static func `settingsSubscriptionsRowActions`(`account`: String) -> String { PhoneWords.format("settingsSubscriptionsRowActions", [`account`]) }
     public static func `settingsSubscriptionsSavedResets`(`count`: Int, `site`: String) -> String { PhoneWords.format("settingsSubscriptionsSavedResets", [`count`, `site`]) }
+    public static func `settingsSubscriptionsSentThrough`(`host`: String) -> String { PhoneWords.format("settingsSubscriptionsSentThrough", [`host`]) }
     public static func `settingsSubscriptionsSignIn`() -> String { PhoneWords.format("settingsSubscriptionsSignIn", []) }
     public static func `settingsSubscriptionsSignInAgainState`() -> String { PhoneWords.format("settingsSubscriptionsSignInAgainState", []) }
     public static func `settingsSubscriptionsSignedIn`() -> String { PhoneWords.format("settingsSubscriptionsSignedIn", []) }
@@ -5204,6 +5225,26 @@ extension PhoneWords {
         "batchesPanelWhoRule": [],
         "batchesPanelWhoSentBack": ["key"],
         "batchesReadWords": [],
+        "bedrockAddressInvalid": [],
+        "bedrockAddressMoved": ["host"],
+        "bedrockAddressNotFound": ["host"],
+        "bedrockAddressPlainHttp": [],
+        "bedrockAddressRefused": ["host"],
+        "bedrockSecureConnectionFailed": ["host"],
+        "bedrockSignInAddress": [],
+        "bedrockSignInApproveLocal": ["host"],
+        "bedrockSignInApprovePrivate": ["host"],
+        "bedrockSignInApprovePublic": ["host"],
+        "bedrockSignInChooseWhere": [],
+        "bedrockSignInFromClaudeSettings": [],
+        "bedrockSignInFromOrganization": [],
+        "bedrockSignInNoKey": [],
+        "bedrockSignInOrganization": [],
+        "bedrockSignInSend": [],
+        "bedrockSignInSettingsNoKey": [],
+        "bedrockSignInStraightToAws": [],
+        "bedrockSignInWhere": [],
+        "bedrockUnreachable": ["host"],
         "cardAfterMergeDoerCrewmate": [],
         "cardAfterMergeDoerFirstmate": [],
         "cardAfterMergeLead": [],
@@ -8993,6 +9034,7 @@ extension PhoneWords {
         "settingsSubscriptionsRetrying": [],
         "settingsSubscriptionsRowActions": ["account"],
         "settingsSubscriptionsSavedResets": ["count", "site"],
+        "settingsSubscriptionsSentThrough": ["host"],
         "settingsSubscriptionsSignIn": [],
         "settingsSubscriptionsSignInAgainState": [],
         "settingsSubscriptionsSignedIn": [],

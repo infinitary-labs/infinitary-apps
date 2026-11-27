@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { PANEL_BYTES_CAP, PANEL_FILE_CAP } from "@core/personal/panelGraph";
-import type { PanelFiles, PanelFilesRequest } from "@shared/personal/panelFiles";
+import type { PanelFiles, PanelFilesRequest, PanelLibrary } from "@shared/personal/panelFiles";
 import { frameCsp, panelFrameCsp } from "@shared/plugins/containment";
 import {
   buildFrameDocument,
@@ -18,8 +18,11 @@ import {
 import {
   builtinPanelFile,
   FRAME_LIB_BOOT,
+  FRAME_LIB_HOST,
+  FRAME_LIB_VERSION_HOST_PREFIX,
   type FrameLibPins,
   frameLibUrl,
+  isFrameLibPath,
 } from "@shared/plugins/frameLib";
 import { panelCardViewModule } from "@shared/plugins/panelCards";
 import { ElementType, parseDocument } from "htmlparser2";
@@ -108,16 +111,63 @@ export function bytesHash(bytes: Uint8Array): string {
  */
 export type PanelSources = {
   libPins: FrameLibPins;
-  /** This build's version, which the files' own must match: they were built for its panel library. */
+  /** This build's version: files built for it import this build's own panel library. */
   version: string;
   panelFiles: (request: PanelFilesRequest) => Promise<PanelFiles>;
+  /**
+   * The first mate's panel library at the version a panel's files were
+   * built for, when that is not this build's; absent, such a panel is
+   * refused as `other-version`.
+   */
+  panelLibrary?: (version: string) => Promise<PanelLibrary>;
 };
 
 type HeldDocument = ServedFrameDocument & {
   kind: Kind;
   /** A panel mount's own modules, by path under its host, read and hashed at mount. */
   files?: ReadonlyMap<string, Uint8Array>;
+  /** The version of the first mate's panel library this mount draws from, when not this build's. */
+  library?: string;
 };
+
+/** Another version's panel library as the window holds it, served at its own host. */
+type HeldLibrary = {
+  version: string;
+  host: string;
+  pins: FrameLibPins;
+  files: ReadonlyMap<string, Uint8Array>;
+};
+
+/** The host another version's library is served at: `lib-<16 hex of the SHA-256 of the version>`. */
+export function frameLibVersionHost(version: string): string {
+  const hash = createHash("sha256").update(version, "utf8").digest("hex");
+  return `${FRAME_LIB_VERSION_HOST_PREFIX}${hash.slice(0, 16)}`;
+}
+
+/**
+ * The first mate's library as it answered it, held only whole: every file
+ * a lib path, each one's bytes matching the pin the answer named, the boot
+ * among them, and within the bounds a panel's own files keep, since the
+ * window holds it in memory. One file that fails refuses all of it, so a
+ * frame never runs half of one library. Null otherwise.
+ */
+function heldLibrary(answer: NonNullable<PanelLibrary>, version: string): HeldLibrary | null {
+  if (answer.version !== version) return null;
+  const files = new Map<string, Uint8Array>();
+  const pins: Record<string, string> = {};
+  let total = 0;
+  for (const file of answer.files) {
+    if (!isFrameLibPath(file.path) || files.has(file.path)) return null;
+    const bytes = new Uint8Array(Buffer.from(file.data, "base64"));
+    total += bytes.byteLength;
+    if (files.size + 1 > PANEL_FILE_CAP || total > PANEL_BYTES_CAP) return null;
+    if (bytesHash(bytes) !== file.integrity) return null;
+    files.set(file.path, bytes);
+    pins[file.path] = file.integrity;
+  }
+  if (!pins[FRAME_LIB_BOOT]) return null;
+  return { version, host: frameLibVersionHost(version), pins, files };
+}
 
 /**
  * A panel's built files as the first mate answered them, by path: the
@@ -165,6 +215,10 @@ export function inlineScripts(html: string): string[] {
 
 export class FrameMountRegistry {
   private readonly documents = new Map<string, HeldDocument>();
+  /** Other versions' libraries, by version: one copy each, while a mount draws from it. */
+  private readonly libraries = new Map<string, HeldLibrary>();
+  /** A library still being asked for, so mounts at once ask the first mate once. */
+  private readonly asking = new Map<string, Promise<HeldLibrary | null>>();
 
   constructor(
     private readonly options: {
@@ -241,6 +295,11 @@ export class FrameMountRegistry {
    * serve - the lib by the pins baked into this build, an added panel's
    * compiled files by the hashes of the bytes read here, which are the
    * only bytes the mount will ever serve.
+   *
+   * Files built for another version import that version's library: the
+   * window asks the first mate for it, holds it whole and serves it at that
+   * version's own host, which then takes `lib/`'s place in the document,
+   * its policy and its import map (docs/view.md, "Panels in every window").
    */
   async mountPanel(request: PanelMountRequest): Promise<FrameMount | FrameMountRefused> {
     if (this.full("panel")) return { refused: "too-many-open" };
@@ -252,6 +311,7 @@ export class FrameMountRegistry {
     const host = panelMountHost(mountId);
     let module: string;
     let files: Map<string, Uint8Array> | undefined;
+    let library: HeldLibrary | undefined;
     if (request.panel.source === "builtin") {
       const file = builtinPanelFile(request.panel.id, request.panel.view);
       if (!sources.libPins[file]) throw new PanelMountError(`this build has no "${file}"`);
@@ -276,8 +336,6 @@ export class FrameMountRegistry {
         return { refused: "first-mate-out-of-reach" };
       }
       if (!answer) return { refused: "not-served-now" };
-      // Built for the first mate's panel library: only a window on its version serves that one.
-      if (answer.builtFor !== sources.version) return { refused: "other-version" };
       const held = heldPanelFiles(answer);
       if (!held) return { refused: "too-large" };
       files = held;
@@ -287,16 +345,29 @@ export class FrameMountRegistry {
         request.panel.view === undefined ? "panel.mjs" : panelCardViewModule(request.panel.view);
       if (!files.has(entry)) return { refused: "no-entry" };
       module = `${panelMountUrl(mountId)}${entry}`;
+      if (answer.builtFor !== sources.version) {
+        library = (await this.libraryAt(answer.builtFor)) ?? undefined;
+        if (!library) return { refused: "other-version" };
+      }
     }
     // The cap again: the read above awaited, and a sibling may have landed.
     if (this.full("panel")) return { refused: "too-many-open" };
+    const libHost = library?.host ?? FRAME_LIB_HOST;
+    const libPins = library?.pins ?? sources.libPins;
+    const imports: Record<string, string> = {};
     const integrity: Record<string, string> = {};
-    for (const [file, pin] of Object.entries(sources.libPins)) integrity[frameLibUrl(file)] = pin;
+    for (const [file, pin] of Object.entries(libPins)) {
+      integrity[frameLibUrl(file, libHost)] = pin;
+      // The compiler rewrote the panel's imports to `lib/`. Each file needs
+      // an exact key: a `lib/` prefix key does not remap this scheme's URLs
+      // in Chromium (INF-7113's lab).
+      if (library) imports[frameLibUrl(file)] = frameLibUrl(file, libHost);
+    }
     for (const [path, bytes] of files ?? []) {
       integrity[`${panelMountUrl(mountId)}${path}`] = bytesHash(bytes);
     }
-    const importMap = scriptSafeJson({ imports: {}, integrity });
-    const csp = panelFrameCsp([scriptHash(importMap)], host);
+    const importMap = scriptSafeJson({ imports, integrity });
+    const csp = panelFrameCsp([scriptHash(importMap)], host, libHost);
     const body = buildPanelDocument({
       csp,
       theme: request.theme,
@@ -304,14 +375,62 @@ export class FrameMountRegistry {
       style: request.style,
       importMap,
       config: { ...request.config, module },
-      bootIntegrity: boot,
+      bootIntegrity: library?.pins[FRAME_LIB_BOOT] ?? boot,
+      ...(library ? { libHost } : {}),
     });
-    this.documents.set(mountId, { body, csp, kind: "panel", ...(files ? { files } : {}) });
+    this.documents.set(mountId, {
+      body,
+      csp,
+      kind: "panel",
+      ...(files ? { files } : {}),
+      ...(library ? { library: library.version } : {}),
+    });
+    if (library) this.libraries.set(library.version, library);
     return { mountId, url: panelMountUrl(mountId) };
   }
 
+  /** The library at a version, held already or asked of the first mate; null when it cannot be had. */
+  private libraryAt(version: string): Promise<HeldLibrary | null> {
+    const held = this.libraries.get(version);
+    if (held) return Promise.resolve(held);
+    let asking = this.asking.get(version);
+    if (!asking) {
+      asking = this.askLibrary(version).finally(() => this.asking.delete(version));
+      this.asking.set(version, asking);
+    }
+    return asking;
+  }
+
+  private async askLibrary(version: string): Promise<HeldLibrary | null> {
+    const ask = this.options.panels?.panelLibrary;
+    if (!ask) return null;
+    try {
+      const answer = await ask(version);
+      return answer ? heldLibrary(answer, version) : null;
+    } catch (error) {
+      // The window words the reason as other-version; the detail is for the log.
+      console.warn(`asking the first mate for its panel library at ${version} failed:`, error);
+      return null;
+    }
+  }
+
   unmount(mountId: string): boolean {
-    return this.documents.delete(mountId);
+    const document = this.documents.get(mountId);
+    if (!document) return false;
+    this.documents.delete(mountId);
+    const version = document.library;
+    if (version && ![...this.documents.values()].some((held) => held.library === version)) {
+      this.libraries.delete(version);
+    }
+    return true;
+  }
+
+  /** A file of another version's library, at that version's host, while a mount draws from it. */
+  libraryFile(host: string, path: string): Uint8Array | undefined {
+    for (const library of this.libraries.values()) {
+      if (library.host === host) return library.files.get(path);
+    }
+    return undefined;
   }
 
   /** A panel mount's document, served at its own `panel-<id>` host. */
@@ -338,6 +457,7 @@ export class FrameMountRegistry {
   /** Every mount at once - the renderer that owned them is gone. */
   clear(): void {
     this.documents.clear();
+    this.libraries.clear();
   }
 
   private served(mountId: string, kind: Kind): ServedFrameDocument | undefined {

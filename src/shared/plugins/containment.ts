@@ -1,4 +1,5 @@
 import { APP_FRAME_SCHEME } from "../csp";
+import { FRAME_LIB_HOST } from "./frameLib";
 import { FRAME_BRIDGE_SHA256 } from "./frameScript";
 
 /**
@@ -116,16 +117,18 @@ export const SRCDOC_FRAME_CSP = frameCsp([], SRCDOC_FONT_SOURCE);
 
 /**
  * The script sources a PANEL mount may load modules from (one plugin
- * vehicle, Phase A item 4; the frame realm): the app's own lib, and that
- * mount's own host, which serves exactly the compiled files the host read
- * and hashed when it mounted the panel. Both are paths of the host's own
+ * vehicle, Phase A item 4; the frame realm): the panel library its files
+ * were built for - the app's own lib, or the first mate's at a host of its
+ * version's own (`frameLibVersionHost`) when the window is on another
+ * version - and that mount's own host, which serves exactly the compiled
+ * files the host read and hashed when it mounted the panel. Both are paths of the host's own
  * frame scheme, served in-process; neither is a network path. This is the
  * ONE place a frame policy names a script source rather than a hash, and
  * only `panelFrameCsp` uses it - card bodies and template mounts keep
  * `frameCsp`, where every script runs by hash.
  */
-export function panelScriptSources(mountHost: string): string[] {
-  return [`${APP_FRAME_SCHEME}://lib/`, `${APP_FRAME_SCHEME}://${mountHost}/`];
+export function panelScriptSources(mountHost: string, libHost: string = FRAME_LIB_HOST): string[] {
+  return [`${APP_FRAME_SCHEME}://${libHost}/`, `${APP_FRAME_SCHEME}://${mountHost}/`];
 }
 
 /**
@@ -138,10 +141,14 @@ export function panelScriptSources(mountHost: string): string[] {
  * the host hashed. No `'unsafe-eval'`: `eval` and `new Function` stay
  * refused inside a panel as everywhere else.
  */
-export function panelFrameCsp(inlineHashes: readonly string[], mountHost: string): string {
+export function panelFrameCsp(
+  inlineHashes: readonly string[],
+  mountHost: string,
+  libHost: string = FRAME_LIB_HOST,
+): string {
   const scripts = [
     ...[FRAME_BRIDGE_SHA256, ...inlineHashes].map((hash) => `'${hash}'`),
-    ...panelScriptSources(mountHost),
+    ...panelScriptSources(mountHost, libHost),
   ].join(" ");
   return `default-src 'none'; style-src 'unsafe-inline'; font-src ${FRAME_FONT_SOURCE}; img-src ${FRAME_IMAGE_SOURCE}; script-src ${scripts}`;
 }

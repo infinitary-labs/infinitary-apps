@@ -353,6 +353,8 @@ export type PanelDocumentParts = {
   config: PanelDocumentConfig;
   /** The boot module's own pin, for its script element's `integrity`. */
   bootIntegrity: string;
+  /** The host the boot module is served from: this build's lib unless named. */
+  libHost?: string;
   /** The language the document speaks, the app's own unless named. */
   language?: string;
 };
@@ -385,7 +387,7 @@ export function buildPanelDocument(parts: PanelDocumentParts): string {
     `<script>${FRAME_BRIDGE_SCRIPT}</script>`,
     `<script type="importmap">${parts.importMap}</script>`,
     `<script type="application/json" id="${PANEL_CONFIG_ID}">${scriptSafeJson(parts.config)}</script>`,
-    `<script type="module" src="${frameLibUrl(FRAME_LIB_BOOT)}" integrity="${escapeAttribute(parts.bootIntegrity)}"></script>`,
+    `<script type="module" src="${frameLibUrl(FRAME_LIB_BOOT, parts.libHost)}" integrity="${escapeAttribute(parts.bootIntegrity)}"></script>`,
     "</head>",
     `<body data-theme="${theme}">`,
     `<div id="${PANEL_ROOT_ID}"></div>`,

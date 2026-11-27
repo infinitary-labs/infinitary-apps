@@ -236,8 +236,8 @@ This is the one frame whose policy names a script SOURCE rather than a hash, so 
 
 The containment definition (`src/shared/plugins/containment.ts`) is:
 
-- `panelScriptSources(mountHost)` = `app-frame://lib/` and `app-frame://panel-<mount id>/`.
-- `panelFrameCsp(inlineHashes, mountHost)`: `default-src 'none'; style-src 'unsafe-inline'; font-src app-frame:; img-src data: app-frame:; script-src '<bridge hash>' '<import map hash>' app-frame://lib/ app-frame://panel-<mount id>/`.
+- `panelScriptSources(mountHost, libHost)` = `app-frame://<libHost>/` and `app-frame://panel-<mount id>/`, where `libHost` is `lib` unless the panel's files were built for another version's library, which the window serves at `lib-<16 hex of the version's SHA-256>`.
+- `panelFrameCsp(inlineHashes, mountHost, libHost)`: `default-src 'none'; style-src 'unsafe-inline'; font-src app-frame:; img-src data: app-frame:; script-src '<bridge hash>' '<import map hash>' app-frame://<libHost>/ app-frame://panel-<mount id>/`.
   Every directive but `script-src` is `frameCsp`'s, character for character; `connect-src`, `frame-src`, `worker-src`, `media-src` and `object-src` stay absent (so `'none'`); there is no `'unsafe-eval'`, no `'unsafe-inline'` for scripts, and no scheme-wide `app-frame:` source.
 - Unchanged for every other frame: `FRAME_SANDBOX` (`allow-scripts` alone), `frameCsp` and `FRAME_CSP` (every card body and template mount still runs scripts by hash only), the app's own CSP, `STRUCTURALLY_IMPOSSIBLE`.
 - The bridge gained one request verb, `store` (op + key; the slice is the host's to bind), one host message, `store`, and now reports a body's exact height; `FRAME_BRIDGE_SHA256` moved with it.
@@ -250,7 +250,10 @@ So the two sources are paths of the shell's own scheme, answered in-process, and
    `app-frame://lib/` answers only a file named in the pins the main build baked in when it built the lib (`scripts/frame-lib.ts` -> `virtual:fm-frame-lib`), and only while that file's bytes still hash to the pin; any other name, a traversal, or drifted bytes is a 404.
    In a packaged app the lib and the pins are both inside the integrity-checked archive.
    `app-frame://panel-<id>/` answers only the `.mjs` files the registry read and hashed when it mounted that panel - bytes held in memory, so a file written to the cache afterwards reaches no frame - and the registry asks the first mate for the graph's files by source, id and version (`inf:plugins:files`), which answers only for a panel of the mount's source it serves right now at exactly that version (`PersonalExtensions.framePanelDir`): never a removed panel's, a stale version, an added panel's graph under the captain's name or the other way round, a crewmate's draft unless the mount asked for that draft and the window is on the first mate's own computer, or anything while the switch is off.
-   The answer crosses the connection to a window on another computer as bytes, never a folder's name; the registry holds them under the bounds the first mate's own read keeps (`PANEL_FILE_CAP`, `PANEL_BYTES_CAP`), and refuses files built for another version of the app than its own.
+   The answer crosses the connection to a window on another computer as bytes, never a folder's name; the registry holds them under the bounds the first mate's own read keeps (`PANEL_FILE_CAP`, `PANEL_BYTES_CAP`).
+   Files built for another version of the app than the window's import the first mate's panel library at that version (`inf:plugins:library`): the registry holds it in memory only whole - every path a lib path, every file's bytes matching the pin the answer names, the boot among them, under the same bounds - and serves `app-frame://lib-<16 hex>/` only from that copy, only while a mount draws from it.
+   Those pins come from the first mate, as the panel's own files do: the window trusts the first mate's build for that library exactly as far as it trusts it for the panel, and the pins only keep a frame from running bytes other than the ones the answer named.
+   Such a mount's policy admits the version host instead of `app-frame://lib/`, so the window's own lib and the first mate's never mix in one frame.
 2. Client side.
    The document's inline import map (itself admitted by hash) carries `integrity` for every lib file and every one of the mount's files, and the boot script element carries its own; Chromium refuses a module whose bytes differ (verified in Electron 43 during the build).
 

@@ -26,6 +26,16 @@ import { panelCardViewModule } from "./panelCards";
 /** The host the lib is served from: `app-frame://lib/<file>`. */
 export const FRAME_LIB_HOST = "lib";
 
+/**
+ * The host prefix of another version's panel library, which a window on a
+ * different version from its first mate serves for a panel built for the
+ * first mate's (docs/view.md, "Panels in every window"): the rest of the
+ * host is 16 hex of the SHA-256 of that version, minted by the main process
+ * (`frameMounts.ts`), so each version has a site of its own and none is
+ * `lib/`, whose files only this build made.
+ */
+export const FRAME_LIB_VERSION_HOST_PREFIX = "lib-";
+
 /** The module every panel document boots from. */
 export const FRAME_LIB_BOOT = "boot.mjs";
 
@@ -88,8 +98,9 @@ export function builtinPanelFile(id: BuiltinFramePanel, view?: string): string {
 /** File -> `sha256-<base64>`, every file the lib serves and nothing else. */
 export type FrameLibPins = Readonly<Record<string, string>>;
 
-export function frameLibUrl(file: string): string {
-  return `${APP_FRAME_SCHEME}://${FRAME_LIB_HOST}/${file}`;
+/** A lib file's URL: this build's own lib, or another version's at its own host. */
+export function frameLibUrl(file: string, host: string = FRAME_LIB_HOST): string {
+  return `${APP_FRAME_SCHEME}://${host}/${file}`;
 }
 
 /** The URL an added panel's host import is rewritten to for the frame realm. */

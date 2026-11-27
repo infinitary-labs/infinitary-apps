@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panels-across-versions",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Your panels open on a computer with a different Infinitary version",
+      "body": "When Infinitary on another computer is on a different version from the computer where your first mate lives, your own and added panels now open there instead of asking you to match versions. That computer gets what the panels need from your first mate, the way your phone does. If it cannot, the panel says so in one plain sentence, as before.",
+      "picture": {
+        "dark": "panels-across-versions-dark.png",
+        "light": "panels-across-versions-light.png",
+        "alt": "The Knowledge panel drawn on a computer whose Infinitary version differs from the first mate's, showing its own words"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

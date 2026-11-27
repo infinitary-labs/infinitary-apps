@@ -131006,8 +131006,17 @@ ${FRAME_KEYBOARD_SCRIPT}
     }
     return theme;
   }
-  function shownTheme(saved, base) {
-    return isBuiltInTheme(saved) && builtInTheme(saved).base === base ? saved : null;
+  const ownWorked = /* @__PURE__ */ new WeakMap();
+  function themeOf(saved, own2 = []) {
+    if (isBuiltInTheme(saved)) return builtInTheme(saved);
+    const mine = own2.find((theme2) => theme2.id === saved);
+    if (!mine) return null;
+    let theme = ownWorked.get(mine.colors);
+    if (!theme) {
+      theme = workOutTheme(mine.colors);
+      ownWorked.set(mine.colors, theme);
+    }
+    return theme;
   }
   function shippedTokens(base) {
     return Object.fromEntries(COLOR_TOKENS.map((token) => [token.name, token[base]]));
@@ -131016,9 +131025,9 @@ ${FRAME_KEYBOARD_SCRIPT}
     const declarations = Object.entries(tokens).map(([name, value]) => `${name}: ${value};`).join(" ");
     return `:root, [data-theme="light"], [data-theme="dark"] { ${declarations} }`;
   }
-  function frameThemeRule(base, saved) {
-    const id2 = shownTheme(saved, base);
-    return themeRule(id2 ? builtInTheme(id2).tokens : shippedTokens(base));
+  function frameThemeRule(base, saved, own2 = []) {
+    const theme = themeOf(saved, own2);
+    return themeRule(theme?.base === base ? theme.tokens : shippedTokens(base));
   }
   const PANEL_DRAFT_MAX = 500;
   const PANEL_CARD_ACTIONS = ["cards.emit", "cards.close", "cards.open"];

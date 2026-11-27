@@ -1216,6 +1216,9 @@
 "feedUndelivered" = "Mensagem não entregue: %1$@";
 "feedUnsafeDataReaderReported" = "O leitor de dados não seguros relatou; as palavras dele estão no registro.";
 "feedUpdated" = "Atualizada: %1$@";
+"feedWriteNotSentOnWords" = "%1$@ não foi enviado para %2$@ com base nas suas palavras “%4$@”: %3$@";
+"feedWriteSentOnWords" = "%1$@ enviado uma vez para %2$@ sem cartão, com base nas suas palavras “%4$@”: a resposta foi %3$@.";
+"feedWriteUnknownOnWords" = "%1$@ enviado uma vez para %2$@ sem cartão, com base nas suas palavras “%3$@”; não se sabe o resultado, e ele nunca é enviado de novo.";
 "feedYouChose" = "Você escolheu “%1$@”";
 "feedbackStripAccount" = "Nada é enviado antes do seu clique. Vai com a sua conta do GitHub %1$@.";
 "feedbackStripBug" = "Um novo relato de problema";

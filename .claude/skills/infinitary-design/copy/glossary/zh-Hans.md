@@ -79,6 +79,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | How to get it (an ask for a secret) | 获取方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 检查器 | The Knowledge pane that reads one entry, as Apple's apps say. |
+| intake round (a docs site guide) | 受理轮次 | A scheduled task that reads new issues and pull requests and drafts replies; 受理 as an office takes in what arrives. |
 | Integrations / integration | 集成 | |
 | Intelligence | 智能 | |
 | issue (where the project lives) | 议题 | |

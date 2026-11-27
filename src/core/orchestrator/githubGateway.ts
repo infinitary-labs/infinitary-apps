@@ -3,6 +3,7 @@ import { createReadStream, lstatSync } from "node:fs";
 import { Readable } from "node:stream";
 import { type ForgeKind, forgeOf } from "@shared/forge";
 import { CHANGE_REQUEST_HOSTS, changeHostOf, changeRequestKind } from "@shared/forgeKinds";
+import { softHoldWords } from "@shared/holds";
 import { INTEGRATION_KIND_NAMES, type IntegrationApprovalChoice } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import { fencedAnswer } from "@shared/outsideData";
@@ -35,10 +36,19 @@ import {
 import { type ApiDialect, apiDialectAt, rawApiKind } from "../forge/api";
 import { guardApiWrite } from "../forge/apiWriteGuard";
 import { IntegrationOutcomeUnknown } from "../integrations";
+import type { StandingDirections } from "../knowledge/directions";
 import { ANSWER_WHOLE_MAX_CHARACTERS } from "../session/answerFiles";
 import { storyLedgers } from "../storage/changeProjection";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
+import {
+  type KeepReason,
+  notStandingWords,
+  passedNothingWords,
+  sentOnYesLine,
+  sentOnYesWords,
+  standingYes,
+} from "./keptWriteYes";
 import { projectReadHeld, publicProjectRead } from "./readerPublicReads";
 
 /** Thrown before a release file is sent, so an ask records it as nothing sent. */
@@ -64,8 +74,10 @@ const REREAD_DELAY_MS = 2000;
  * A write to the task's own project from a task that ships a change goes
  * at once, and so does a start or rerun of a run there from a task that only
  * answers (INF-729 way D); every other write is kept on the task as an ask
- * (FI3-1571 piece 4), which only the captain's click on its card sends, once
- * (`sendAsk`). The host caps request, answer and calls, and never lets the
+ * (FI3-1571 piece 4), which the captain's click on its card sends, once
+ * (`sendAsk`), or, for a kept write the soft hold `kept-write` holds, a
+ * yes of the captain's that still stands when the crewmate names it
+ * (`passOnYes`). The host caps request, answer and calls, and never lets the
  * caller name a host, token or header. A rerun of a workflow run or job - a
  * pipeline or job retry on GitLab - records an existing reservation and
  * takes a check reading when this task has a pull request. Accepted starts
@@ -181,6 +193,8 @@ export class GithubGatewayService {
         write: ValidationForgeWrite,
       ) => Promise<void>;
       sleep?: (ms: number) => Promise<void>;
+      /** The standing directions, whose heard captain-origin rows a kept write may name as its yes. */
+      directions?: Pick<StandingDirections, "standing">;
     },
   ) {}
 
@@ -515,12 +529,15 @@ export class GithubGatewayService {
           await guardApiWrite(kind, route, parsed, () => forge.defaultBranch());
         }
         this.guardPresentationWrite(taskId, forge, route, parsed);
-        const why =
+        const keep =
           integrationAllowed && target.integration && !reader
             ? undefined
             : this.askReason(taskId, route, target);
-        if (why)
-          return this.keepAsk(taskId, target, route, body, why, undefined, input.validationEffect);
+        if (keep)
+          return this.keepOrPass(taskId, target, route, keep, input.allowance, {
+            body,
+            validationEffect: input.validationEffect,
+          });
         const dispatched = await this.dispatchBaseline(taskId, target, route, parsed);
         const response = await this.send(
           taskId,
@@ -569,8 +586,9 @@ export class GithubGatewayService {
     if ((route.own || target.via === "account") && kind) {
       await guardApiWrite(kind, route, undefined, () => forge.defaultBranch());
     }
-    const why = this.askReason(taskId, route, target);
-    if (why) return this.keepAsk(taskId, target, route, undefined, why, located.rel);
+    const keep = this.askReason(taskId, route, target);
+    if (keep)
+      return this.keepOrPass(taskId, target, route, keep, input.allowance, { file: located.rel });
     const response = await this.sendFile(taskId, api, route, located);
     return `${render(response, api)}${await this.afterWrite(taskId, target, route, response)}`;
   }
@@ -842,32 +860,105 @@ export class GithubGatewayService {
    * when it goes: it reaches past the task's own project, the task only
    * answers or does an outside action and the write is not a run start or
    * rerun on its own project (INF-729 way D), or it goes through the
-   * github.com sign-in.
+   * github.com sign-in. It is soft (`kept-write`) where the captain's yes may
+   * stand in for the click: a write on the task's own project, or through the
+   * github.com sign-in, from a task that is no unsafe data reader. A reader's
+   * writes, the GitHub integration's and a write to another project through
+   * the project's own API keep the click alone (INF-6987's picks: the
+   * reader's route A, and each integration action keeps its Settings rule).
    */
-  private askReason(taskId: string, route: ApiRoute, target: Target): string | undefined {
+  private askReason(taskId: string, route: ApiRoute, target: Target): KeepReason | undefined {
     if (this.isReader(taskId))
-      // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
-      return "this task reads words strangers can write, so every write it makes, run starts included, waits for the captain";
+      return {
+        // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+        why: "this task reads words strangers can write, so every write it makes, run starts included, waits for the captain",
+        soft: false,
+      };
     if (target.integration) {
-      return `it goes through the ${integrationName(target.forge)} integration, and every change there asks the captain`;
+      return {
+        why: `it goes through the ${integrationName(target.forge)} integration, and every change there asks the captain`,
+        soft: false,
+      };
     }
     if (target.via === "account") {
-      return this.options.tasks.get(taskId)?.repoId
-        ? "this task's project has no API where it lives, so its writes go through the captain's github.com sign-in, and each one asks the captain"
-        : "this task has no project, so its writes go through the captain's github.com sign-in, and each one asks the captain";
+      return {
+        why: this.options.tasks.get(taskId)?.repoId
+          ? "this task's project has no API where it lives, so its writes go through the captain's github.com sign-in, and each one asks the captain"
+          : "this task has no project, so its writes go through the captain's github.com sign-in, and each one asks the captain",
+        soft: true,
+      };
     }
     const shape = this.options.tasks.get(taskId)?.shape;
     if (shape?.deliverable === "answer" && !startsRun(target.forge, route)) {
-      return "this task only answers, so every write it makes but a run start or rerun on its own project asks the captain";
+      return {
+        why: "this task only answers, so every write it makes but a run start or rerun on its own project asks the captain",
+        soft: route.own,
+      };
     }
     // An outside action's reply or close is the captain's to send (docs/task-graph.md,
     // "A side-effect task"), whatever constraint the task was filed with.
     if (shape?.side_effect && !startsRun(target.forge, route)) {
-      // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
-      return "this task does an outside action, so every write it makes but a run start or rerun on its own project asks the captain";
+      return {
+        // i18n-exempt: served to the crewmate as a tool answer or write-answered outcome
+        why: "this task does an outside action, so every write it makes but a run start or rerun on its own project asks the captain",
+        soft: route.own,
+      };
     }
-    if (!route.own) return "it goes outside this task's own project, so it asks the captain";
+    if (!route.own)
+      return {
+        why: "it goes outside this task's own project, so it asks the captain",
+        soft: false,
+      };
     return undefined;
+  }
+
+  /**
+   * A write the task keeps for the captain: kept for their click, or, when
+   * the crewmate names a yes for a soft keep, sent once on that yes while it
+   * still stands. The ask is kept first and taken before anything is sent,
+   * so like a clicked ask it is never sent again; a named yes that no longer
+   * stands keeps and sends nothing, and on a keep that is not soft it passes
+   * nothing and the write is kept as without it.
+   */
+  private keepOrPass(
+    taskId: string,
+    target: Target,
+    route: ApiRoute,
+    keep: KeepReason,
+    allowance: string | undefined,
+    call: { body?: string; file?: string; validationEffect?: string },
+  ): Promise<string> | string {
+    if (allowance !== undefined && keep.soft)
+      return this.passOnYes(taskId, target, route, allowance, call);
+    const kept = this.keepAsk(taskId, target, route, keep, call);
+    return allowance === undefined ? kept : `${kept}\n${passedNothingWords(allowance)}`;
+  }
+
+  private async passOnYes(
+    taskId: string,
+    target: Target,
+    route: ApiRoute,
+    allowance: string,
+    call: { body?: string; file?: string; validationEffect?: string },
+  ): Promise<string> {
+    const yes = standingYes(this.options.tasks, taskId, allowance, this.options.directions);
+    if (!yes) return notStandingWords(allowance);
+    const ask = this.askOf(target, route, call, yes.card);
+    this.options.tasks.delivery.keepWriteAsk(taskId, ask);
+    const sent = await this.sendTaken(
+      taskId,
+      this.options.tasks.delivery.takeWriteAsk(taskId, ask.id),
+    );
+    if (sent.ask) {
+      const line = sentOnYesLine(sent, yes.words);
+      this.options.tasks.note(taskId, line.text, {
+        news: false,
+        feed: true,
+        actor: "host",
+        data: { said: line.said },
+      });
+    }
+    return sentOnYesWords(sent, yes.card);
   }
 
   /**
@@ -898,17 +989,14 @@ export class GithubGatewayService {
     return ask.id;
   }
 
-  /** Keep a write for the captain's click and tell the crewmate how to ask. */
-  private keepAsk(
-    taskId: string,
+  /** The exact call a write keeps, named by a fresh ask id, and the yes it was sent on. */
+  private askOf(
     target: Target,
     route: ApiRoute,
-    body: string | undefined,
-    why: string,
-    file?: string,
-    validationEffect?: string,
-  ): string {
-    const ask: ForgeWriteAsk = {
+    call: { body?: string; file?: string; validationEffect?: string },
+    yes?: string,
+  ): ForgeWriteAsk {
+    return {
       id: `wa${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       kind: changeRequestKind(target.forge.kind) ?? "github",
       host: target.forge.host ?? GITHUB_HOST,
@@ -916,11 +1004,24 @@ export class GithubGatewayService {
       via: target.via,
       method: route.method as ForgeWriteAsk["method"],
       path: route.path,
-      ...(body !== undefined ? { body } : {}),
-      ...(file !== undefined ? { file } : {}),
-      ...(validationEffect ? { validationEffect } : {}),
+      ...(call.body !== undefined ? { body: call.body } : {}),
+      ...(call.file !== undefined ? { file: call.file } : {}),
+      ...(call.validationEffect ? { validationEffect: call.validationEffect } : {}),
+      ...(yes !== undefined ? { yes } : {}),
       at: this.options.now(),
     };
+  }
+
+  /** Keep a write for the captain's click and tell the crewmate how to ask. */
+  private keepAsk(
+    taskId: string,
+    target: Target,
+    route: ApiRoute,
+    keep: KeepReason,
+    call: { body?: string; file?: string; validationEffect?: string },
+  ): string {
+    const { why } = keep;
+    const ask = this.askOf(target, route, call);
     const dropped = this.options.tasks.delivery.keepWriteAsk(taskId, ask);
     if (this.isReader(taskId) && this.presentReaderAsk) {
       this.presentReaderAsk(taskId, ask, dropped);
@@ -942,7 +1043,10 @@ export class GithubGatewayService {
     return [
       `Not sent: ${why}. Kept as ask ${ask.id}: ${ask.method} ${ask.path} on ${ask.place}.${byNumber}`,
       `To ask, emit_card with one action whose effect is {"kind":"request_write","ask":"${ask.id}"} and no label - the app adds the exact call and names the button - beside your own Not now, and say in the body why it is needed.`,
-      `Only the captain's click sends it, once, and you then hear ${ask.place}'s answer. Never send it another way.`,
+      // i18n-exempt: served to the crewmate as a tool answer
+      keep.soft
+        ? `The captain's click sends it once, and you then hear ${ask.place}'s answer; never send it around the app. ${softHoldWords("kept-write", "crewmate")}`
+        : `Only the captain's click sends it, once, and you then hear ${ask.place}'s answer. Never send it another way.`,
     ].join("\n");
   }
 

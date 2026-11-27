@@ -1216,6 +1216,9 @@
 "feedUndelivered" = "訊息未送達：%1$@";
 "feedUnsafeDataReaderReported" = "不安全資料讀取者已回報；內容在它的紀錄裡。";
 "feedUpdated" = "已更新：%1$@";
+"feedWriteNotSentOnWords" = "依照你的話「%4$@」，未將 %1$@ 傳送到 %2$@：%3$@";
+"feedWriteSentOnWords" = "依照你的話「%4$@」，已不經卡片將 %1$@ 傳送到 %2$@ 一次：回應 %3$@。";
+"feedWriteUnknownOnWords" = "依照你的話「%3$@」，已不經卡片將 %1$@ 傳送到 %2$@ 一次；結果不明，且不會再次傳送。";
 "feedYouChose" = "你選了「%1$@」";
 "feedbackStripAccount" = "按下之前不會傳送任何內容。它會以你的 GitHub 帳號 %1$@ 發布。";
 "feedbackStripBug" = "一份新的問題回報";

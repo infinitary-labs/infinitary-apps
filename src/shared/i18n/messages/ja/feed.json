@@ -127,5 +127,8 @@
   "feedUndelivered": "メッセージ未送達：{why}",
   "feedUnsafeDataReaderReported": "安全でないデータの読み手が報告しました。その内容は記録にあります。",
   "feedUpdated": "更新：{text}",
+  "feedWriteNotSentOnWords": "あなたの言葉「{words}」に基づく {call} は {place} に送信しませんでした：{why}",
+  "feedWriteSentOnWords": "あなたの言葉「{words}」に基づき、カードなしで {call} を {place} に1回送信しました。応答は {status} です。",
+  "feedWriteUnknownOnWords": "あなたの言葉「{words}」に基づき、カードなしで {call} を {place} に1回送信しました。結果は不明で、再送信されることはありません。",
   "feedYouChose": "「{choice}」を選びました"
 }

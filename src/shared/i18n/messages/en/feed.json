@@ -132,5 +132,8 @@
   "feedUndelivered": "Message undelivered: {why}",
   "feedUnsafeDataReaderReported": "The unsafe data reader reported; its words are on its record.",
   "feedUpdated": "Updated: {text}",
+  "feedWriteNotSentOnWords": "Did not send {call} to {place} on your words “{words}”: {why}",
+  "feedWriteSentOnWords": "Sent {call} to {place} once without a card, on your words “{words}”: it answered {status}.",
+  "feedWriteUnknownOnWords": "Sent {call} to {place} once without a card, on your words “{words}”; what came of it is unknown, and it is never sent again.",
   "feedYouChose": "You chose \"{choice}\""
 }

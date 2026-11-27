@@ -163,7 +163,7 @@ A click whose answers name directions by `d:` id heard only the ones it names, a
 A change the captain makes in the window is heard from the window; the dispatcher drops any `heard` a request carries, so only the core sets it.
 A change with no `from` still saves, on the first mate's own judgment: it guides work as an instruction, but it is no yes and passes no hold.
 A revision is heard only from what its own change carried, so a later revision with no cited words is not heard, even when an earlier one was.
-Only a heard current revision is consent: `keptYeses` (`src/core/tasks/alreadyAllowed.ts`) lists a project direction for a check approval or a visible validation effect only then, so an approval that rests on one waits for a click once its current revision is not heard.
+Only a heard current revision is consent: `keptYeses` (`src/core/tasks/alreadyAllowed.ts`) lists a project direction for a check approval, a visible validation effect or a kept write (`docs/forge.md`, "A write that asks") only then, so an approval that rests on one waits for a click once its current revision is not heard.
 `renderDirections` serves each direction's `heard`, where it was heard or `false`, and Knowledge's inspector says it for the current revision and for each one in the history.
 A heard current project direction can also pass a task's soft holds, when the first mate cites it by its `d:` id for that task's override; the host ends the override once the direction is revised or retired (`docs/delivery-rigor.md`, "The override").
 

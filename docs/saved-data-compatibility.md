@@ -622,6 +622,11 @@ An older build ignores `direction` and reads such an override as one the captain
 The next start of a build that knows the field ends it if the direction changed meanwhile.
 Its Activity lines name the holds it passes as a list fill (`docs/i18n.md`, "Saved facts"), which an older build or phone cannot word, so it shows those lines in their saved English.
 
+## A kept write's yes
+
+A task's kept `ForgeWriteAsk` may carry `yes`, the captain's yes it was sent on with no card (`docs/forge.md`, "A write that asks"); it rides the existing delivery JSON and adds no migration.
+Such an ask is saved already taken, so an older build ignores the field and never sends it again, the same as an ask a click took.
+
 ## Task tags
 
 A migration adds `project_tags`, each project's own tags, and `task_tags`, the tags each task carries with who set each (`docs/task-tags.md`); both start empty, so every project starts with no tags and every task carries none.

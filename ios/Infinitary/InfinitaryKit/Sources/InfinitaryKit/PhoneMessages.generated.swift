@@ -1275,6 +1275,9 @@ public enum PhoneMessages {
     public static func `feedUndelivered`(`why`: String) -> String { PhoneWords.format("feedUndelivered", [`why`]) }
     public static func `feedUnsafeDataReaderReported`() -> String { PhoneWords.format("feedUnsafeDataReaderReported", []) }
     public static func `feedUpdated`(`text`: String) -> String { PhoneWords.format("feedUpdated", [`text`]) }
+    public static func `feedWriteNotSentOnWords`(`call`: String, `place`: String, `why`: String, `words`: String) -> String { PhoneWords.format("feedWriteNotSentOnWords", [`call`, `place`, `why`, `words`]) }
+    public static func `feedWriteSentOnWords`(`call`: String, `place`: String, `status`: String, `words`: String) -> String { PhoneWords.format("feedWriteSentOnWords", [`call`, `place`, `status`, `words`]) }
+    public static func `feedWriteUnknownOnWords`(`call`: String, `place`: String, `words`: String) -> String { PhoneWords.format("feedWriteUnknownOnWords", [`call`, `place`, `words`]) }
     public static func `feedYouChose`(`choice`: String) -> String { PhoneWords.format("feedYouChose", [`choice`]) }
     public static func `feedbackStripAccount`(`login`: String) -> String { PhoneWords.format("feedbackStripAccount", [`login`]) }
     public static func `feedbackStripBug`() -> String { PhoneWords.format("feedbackStripBug", []) }
@@ -6129,6 +6132,9 @@ extension PhoneWords {
         "feedUndelivered": ["why"],
         "feedUnsafeDataReaderReported": [],
         "feedUpdated": ["text"],
+        "feedWriteNotSentOnWords": ["call", "place", "why", "words"],
+        "feedWriteSentOnWords": ["call", "place", "status", "words"],
+        "feedWriteUnknownOnWords": ["call", "place", "words"],
         "feedYouChose": ["choice"],
         "feedbackStripAccount": ["login"],
         "feedbackStripBug": [],

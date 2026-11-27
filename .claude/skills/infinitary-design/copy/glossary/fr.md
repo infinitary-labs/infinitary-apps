@@ -75,6 +75,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | holds an override passes (named on a task's Activity) | asking first: la demande préalable; the open decisions: les décisions ouvertes; the waits: les attentes; the open parts: les parties ouvertes; the checks: les vérifications; the delivery proof: la preuve de livraison; the saved story: le récit enregistré; the heavy-run line: la file des exécutions lourdes; the cost limit: le plafond de coût; a retired hold: une retenue qui n’existe plus | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Comment l’obtenir | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
+| intake round (a docs site guide) | tournée de réception | A scheduled task that reads new issues and pull requests and drafts replies; "tournée" reads as a regular pass, feminine. |
 | Intelligence | Intelligence | |
 | issue (where the project lives) | ticket | |
 | join (the phone joins a computer) | rejoindre | "Rejoindre votre ordinateur"; "In reach" is "À portée". |

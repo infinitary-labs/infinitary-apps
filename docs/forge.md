@@ -588,7 +588,7 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   A write to `/repos/{owner}/{repo}/...` of the task's registered project, from a task that ships a change, is sent at once; the policy routes it as `own`.
   From a task that only answers, only a start or rerun of a run on its own project is sent at once: a workflow dispatch or a run or job rerun on GitHub, a pipeline start, a pipeline or job retry or a manual job's play on GitLab (INF-729, the captain's way D, so a nightly check starts with no click).
   Such a start may be a release workflow, as a building task's already may.
-  Every other write is kept for the captain's click ("A write that asks", below).
+  Every other write is kept for the captain's click, or for a yes of theirs that still stands ("A write that asks", below).
   A task with no project, or whose project lives where the app has no JSON API - kept on this computer, or on a plain Git host - reads and asks through the github.com sign-in (`accountForge`).
   No GraphQL (`/graphql` is refused for reads and writes alike, and never becomes an ask).
   A release file is not this JSON body: it goes through `github_write`'s `file` field ("Release files", below).
@@ -701,8 +701,20 @@ The outcome is recorded on the ask: the host's status, nothing sent (a refusal o
 The crewmate hears it once (`write-answered`), with the host's answer within the gateway's caps, and the task's timeline keeps one line.
 A task's close drops its asks that were never sent.
 A crewmate on another computer asks the same way: its write and its card reach the home, which keeps the ask and sends it (protocol 5.0, `docs/contract.md`).
+
+**A yes that still stands.**
+A write kept on the task's own project, or through the github.com sign-in, by a task that is no unsafe data reader is the soft hold `kept-write` (`docs/delivery-rigor.md`, "The holds"), the captain's pick on INF-6987.
+Besides the captain's click, a yes of theirs whose words cover the write passes it when the crewmate names it as `github_write`'s `allowance`: a project direction heard from the captain by its `d:` id, a card on the task's Already allowed list, or `standing` for the standing override.
+The host checks only that the yes still stands, through the list a check request's allowance reads (`keptYeses`): a direction while it is heard and current, a card while its yes is kept on the same work, `standing` while the override stands at the task's head; it never reads the words, and whether they cover the write is the crewmate's judgment.
+A yes that stands sends the write once with no card: the host keeps it as an ask naming the yes (`ForgeWriteAsk.yes`) and takes it before it is sent, through the same `sendTaken` a click uses, so an outcome that is unknown is never sent again (`sent-once`).
+The crewmate hears the host's answer in the tool's answer, and the task's timeline keeps one line quoting the captain's words it rested on, in the captain's language.
+A named yes that does not stand keeps and sends nothing, and its refusal ends with the hold's sentence.
+An unsafe data reader's write and a write to another project by a task whose own project has an API where it lives are kept for the click whatever allowance they name (a write through the github.com sign-in is soft whichever repository it names, since the sign-in route keeps every write alike), and the answer says the allowance passed nothing; the GitHub integration's actions keep their Settings rule and the captain's click (`docs/integrations.md`, "The rules").
+A crewmate on another computer names the yes the same way; the home checks it.
 Evidence: `tests/e2e/forge-signin.spec.ts` - a write to another repository, a project kept on this computer creating its GitHub repository through the github.com sign-in, and a task that only answers writing to its own project - each shows the exact call on the card, nothing sent before the captain's key, one request after it, the crewmate hearing the answer, and the same ask on a revised card refused; `tests/e2e/gitlab-delivery.spec.ts` keeps a write to another GitLab project unsent.
 The gateway tests (`src/core/forge/providers/github/gateway.test.ts`, `src/core/forge/providers/gitlab/gateway.test.ts`) send a task that only answers' run start and rerun at once, watch the run, and keep its cancel, its other writes, a start elsewhere and a start through the github.com sign-in; the GitHub one keeps a side-effect task's reply and close the same way.
+`src/core/forge/providers/github/gatewayKeptWrite.test.ts` sends a side-effect task's reply on a heard direction and on the standing override, an answer task's reply on its own project on a heard direction, and a write through the github.com sign-in on an Already allowed card; it refuses a direction not heard or retired, `standing` with no override and a card taken back, keeps a reader's write and another project's whatever yes they name, and never sends an unknown outcome again.
+`tests/e2e/kept-write-yes.spec.ts` sends a side-effect task's reply on a heard direction with no card, keeps one that names none for the captain's click, refuses one that names a direction never heard, and keeps an unsafe data reader's reply on its approval card whatever direction it names.
 
 ### A reader's writes
 

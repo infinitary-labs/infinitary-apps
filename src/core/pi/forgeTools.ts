@@ -529,7 +529,7 @@ const BITBUCKET_READ_SCOPE =
   "Bitbucket API after /2.0: /repositories/{workspace}/{repo_slug}/..., with page size pagelen. Bitbucket Data Center: the path after the server's address, /rest/api/latest/projects/{KEY}/repos/{slug}/..., and build statuses under /rest/build-status/latest/commits/{commit}.";
 
 const GITHUB_WRITE_SCOPE =
-  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes (another project, account, organization, or a task without a project API) are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; only the captain's click sends it once, then you hear the answer.";
+  "Your project: /repos/{owner}/{repo}/... on GitHub, /projects/<url-encoded group/name>/... on GitLab or /repositories/{workspace}/{repo_slug}/... on Bitbucket (/rest/api/latest/projects/{KEY}/repos/{slug}/... on Bitbucket Data Center). A shipping task sends writes at once, including workflows, other branches, settings and permissions; an answer task sends only run starts and reruns. Merges and default-branch moves or deletion are refused: use check_change pull and your merge card. Other writes (another project, account, organization, or a task without a project API) are kept with an ask id. Explain why on an emit_card action with {kind: request_write, ask}, beside Not now; the captain's click, or a yes named in allowance where that parameter allows it, sends it once, then you hear the answer.";
 
 export const GITHUB_READ_TOOL = crewmateTool({
   name: "github_read",
@@ -563,10 +563,16 @@ export const GITHUB_WRITE_TOOL = crewmateTool({
     method: stringEnum(["POST", "PATCH", "PUT", "DELETE"]),
     path: Type.String(),
     body: Type.Optional(Type.String({ description: "The request's JSON text" })),
+    allowance: Type.Optional(
+      Type.String({
+        description:
+          "Only for a write your task would keep, on your own project or through the github.com sign-in: a yes still standing whose words cover it - a heard project direction's d: id, an Already allowed card, or standing. It then goes once with no card; the app checks only that the yes stands. Never for an unsafe data reader, an integration, or another project outside the github.com sign-in.",
+      }),
+    ),
     file: Type.Optional(
       Type.String({
         description:
-          "A regular file in your working copy, relative to it, never a link. With file set, POST sends that file and body stays out. On GitHub, path is the release's upload_url, or /repos/{owner}/{repo}/releases/{id}/assets, accepted only on GitHub's upload address, with the file's type and a 2 GB cap. On GitLab, path is /projects/{id}/releases/{tag}: the file is put in the package registry and linked on that release. On Bitbucket, path is /repositories/{workspace}/{repo_slug}/downloads: the file goes to the repository's Downloads. Bitbucket Data Center takes no release file. Your own project sends at once; any other waits for the captain's click.",
+          "A regular file in your working copy, relative to it, never a link. With file set, POST sends that file and body stays out. On GitHub, path is the release's upload_url, or /repos/{owner}/{repo}/releases/{id}/assets, accepted only on GitHub's upload address, with the file's type and a 2 GB cap. On GitLab, path is /projects/{id}/releases/{tag}: the file is put in the package registry and linked on that release. On Bitbucket, path is /repositories/{workspace}/{repo_slug}/downloads: the file goes to the repository's Downloads. Bitbucket Data Center takes no release file. Your own project sends at once; any other is kept like any other write.",
       }),
     ),
   }),

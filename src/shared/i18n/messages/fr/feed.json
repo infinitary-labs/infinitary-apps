@@ -137,5 +137,8 @@
   "feedUndelivered": "Message non remis : {why}",
   "feedUnsafeDataReaderReported": "Le lecteur de données non sûres a fait son rapport ; ses mots sont sur sa fiche.",
   "feedUpdated": "Mise à jour : {text}",
+  "feedWriteNotSentOnWords": "Requête {call} non envoyée à {place} sur vos mots « {words} » : {why}",
+  "feedWriteSentOnWords": "Requête {call} envoyée une fois à {place} sans carte, sur vos mots « {words} » : réponse {status}.",
+  "feedWriteUnknownOnWords": "Requête {call} envoyée une fois à {place} sans carte, sur vos mots « {words} » ; on ne sait pas ce qu’il en est, et elle ne sera jamais renvoyée.",
   "feedYouChose": "Vous avez choisi « {choice} »"
 }

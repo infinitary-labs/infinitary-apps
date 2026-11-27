@@ -722,6 +722,7 @@ export const workRequests = {
         path: z.string(),
         body: z.string().optional(),
         validationEffect: z.string().optional(),
+        allowance: z.string().optional(),
       }),
     }),
     response: toolTextSchema,

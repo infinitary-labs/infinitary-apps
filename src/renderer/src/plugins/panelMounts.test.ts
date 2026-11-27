@@ -8,6 +8,7 @@ import {
 import { DEFAULT_LAYOUT, type Layout } from "@shared/preferences";
 import { READ_NAMES } from "@shared/reads";
 import { afterEach, describe, expect, it } from "vitest";
+import { useShellStore } from "../app/store";
 import { panelBodies } from "../personal/panelBodies";
 import { PersonalPlugins } from "../personal/personalPlugins";
 import { registerBuiltinPlugin } from "./builtin";
@@ -353,6 +354,47 @@ describe("the window's answer about its panels", () => {
       expect(states()["clock-0"]).toBe("drawn");
       expect(states()["clock-1"]).toBe("drawn");
     } finally {
+      stop();
+      noteMountSnapshot({ extensions: [] });
+    }
+  });
+
+  it("says while Settings is open that nothing on the rails is on screen, on the rows its rails hold", async () => {
+    // INF-6925's finding 2: Settings draws no rails, so a placed panel the
+    // window called drawn had no box to photograph, and the answer said
+    // nothing of it.
+    const host = new PluginHost();
+    plugins = new PersonalPlugins(host, () => {});
+    const snapshot: PersonalSnapshot = {
+      extensions: [view({ id: "desk-clock" }), view({ id: "hidden-one" })],
+    };
+    plugins.apply(snapshot);
+    panelBodies.note("desk-clock", { version: VERSION, state: "drawn" });
+    railStore.hide("hidden-one");
+    const sent: PanelMounts[] = [];
+    const stop = startPanelMounts(host, {
+      reportMounts: async (mounts) => {
+        sent.push(mounts);
+      },
+    });
+    const row = (id: string) => sent.at(-1)?.panels.find((mount) => mount.id === id);
+    try {
+      noteMountSnapshot(snapshot);
+      await Promise.resolve();
+      expect(row("desk-clock")).toMatchObject({ state: "drawn" });
+      expect(row("desk-clock")).not.toHaveProperty("away");
+      useShellStore.getState().setView("settings");
+      await Promise.resolve();
+      expect(row("desk-clock")).toMatchObject({ state: "drawn", away: "settings" });
+      // A hidden panel is on no rail, so where the rails are says nothing of it.
+      expect(row("hidden-one")).toMatchObject({ state: "hidden" });
+      expect(row("hidden-one")).not.toHaveProperty("away");
+      expect(panelMountsSchema.safeParse(sent.at(-1)).success).toBe(true);
+      useShellStore.getState().setView("home");
+      await Promise.resolve();
+      expect(row("desk-clock")).not.toHaveProperty("away");
+    } finally {
+      useShellStore.getState().setView("home");
       stop();
       noteMountSnapshot({ extensions: [] });
     }

@@ -64,6 +64,24 @@ export function mountOf(
 
 /** One panel as the window answered for it, in a crewmate's words. */
 export function mountLine(mount: PanelMount): string {
+  return `${stateLine(mount)}${awayLine(mount)}`;
+}
+
+/** Why the panel's rail is out of sight, whatever its state on that rail. */
+function awayLine(mount: PanelMount): string {
+  switch (mount.away) {
+    case undefined:
+      return "";
+    case "folded":
+      // i18n-exempt: served to the crew (where the window's rails are)
+      return "; the window has its rails folded away right now, for a wide card, a maximized card or the main message, so the captain does not see it until they come back, though it can still be photographed";
+    case "settings":
+      // i18n-exempt: served to the crew (where the window's rails are)
+      return "; the captain has Settings open, where the window draws no rails, so nothing of it is on screen to photograph until they go back";
+  }
+}
+
+function stateLine(mount: PanelMount): string {
   const rail = mount.rail ? `the ${mount.rail} rail` : "no rail";
   const why = mount.why ? `: ${mount.why}` : "";
   switch (mount.state) {

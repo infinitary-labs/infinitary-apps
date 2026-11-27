@@ -53,8 +53,9 @@ export function renderCaptureText(result: PanelCaptureResult): string {
     result.photographed === "draft"
       ? `This is your version of "${result.id}", drawn out of sight: the captain's rail does not show it yet. place_panel puts it there; capture again then to see it docked.`
       : `This is "${result.id}" docked on the captain's rail, as they see it.`;
+  // A drawn panel goes unsaid, unless the captain cannot see its rail now.
   const window =
-    result.window && result.window.state !== "drawn"
+    result.window && (result.window.state !== "drawn" || result.window.away)
       ? [`The window says it is ${mountLine(result.window)}.`]
       : [];
   return [

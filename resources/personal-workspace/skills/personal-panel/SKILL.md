@@ -418,7 +418,11 @@ Two places, and the skill for the data source you need (`github-prs`, `quota`,
   sight; a new panel is on no rail at all. It answers per panel in the
   window's own word: drawn (on which rail), collapsed, folded or in the More
   row, loading, stopped drawing, off its rail, hidden by the captain, or
-  refused, with its reason. The placed version shows with the running dot
+  refused, with its reason. It also says when the rails are out of sight:
+  folded away for a wide card or the message box, which still photographs,
+  or Settings open, which draws no rails, so photograph again once the
+  captain is back.
+  The placed version shows with the running dot
   until your report commits it; a save after placing runs out of sight again
   until you place again.
 

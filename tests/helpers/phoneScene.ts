@@ -35,6 +35,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
   let computer: string | undefined;
   let liveParts: string[] = [];
   let waitingCard: string | undefined;
+  let away: string[] = [];
   const cleanup = () => {
     if (waitingCard)
       core.services.supervisor.closeCard(waitingCard, { kind: "firstmate" }, "Scene fixture");
@@ -47,11 +48,42 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
     }
     ids = [];
     liveParts = [];
+    away = [];
     if (computer) core.services.devices.remove(computer);
     computer = undefined;
   };
   return {
-    cleanup,
+    /** The scene's commands that make no new fixture: the program's next stage, the cleanup and the crew grouping. */
+    async command(command: string | undefined) {
+      if (command === "scene-stage-finished") return this.finishParts();
+      if (command === "scene-cleanup") {
+        cleanup();
+        return { ok: true };
+      }
+      const repos = core.services.repos.list();
+      if (command === "scene-one-project") {
+        // INF-6955's plan, the captain's answer on the middle ring: with one project of the person's own on this
+        // computer, its crew sit with the first mate. The other computer is away, so its crewmate stays in its group.
+        const offshore = repos.find((repo) => repo.name === "offshore-survey")?.id;
+        const closing = ids.filter((id) => {
+          const task = tasks.get(id);
+          return (
+            !!task &&
+            task.repoId === offshore &&
+            task.status !== "done" &&
+            task.status !== "dropped" &&
+            !away.includes(id)
+          );
+        });
+        for (const id of closing)
+          tasks.close(id, { status: "done", reason: "answered", actor: "host" });
+        return { closed: closing };
+      }
+      return {
+        ...(await core.dispatch("inf:settings:crew-grouping:get", [])),
+        projects: Object.fromEntries(repos.map((repo) => [repo.name, repo.id])),
+      };
+    },
     async finishParts() {
       for (const id of liveParts)
         tasks.close(id, { status: "done", reason: "answered", actor: "host" });
@@ -226,6 +258,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           deviceId: computer,
           parentId: program,
         });
+        away = [remote, remotePart];
         const review = add("review", "Review the harbour soundings", {
           parentId: first,
           shape: { kind: "review", kind_source: "host:review" },

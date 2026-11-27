@@ -235,6 +235,33 @@ export function createOwnBatches(owners: {
         facts: { kind: "batch-sent-back", head: change.head, reason },
       });
     },
+    trialFailed: ({ repo, open, trial }) => {
+      const label =
+        open.number === undefined
+          ? undefined
+          : forgeFor(repo).label({
+              number: open.number,
+              branch: open.branch,
+              headSha: trial.head,
+              url: null,
+            });
+      const facts = {
+        kind: "batch-trial-failed" as const,
+        head: trial.version,
+        held: open.head,
+        trial: trial.head,
+        ...(label ? { change: label } : {}),
+        ...(open.url ? { url: open.url } : {}),
+        checks: trial.failed ?? [],
+      };
+      owners.inbox.enqueue(trial.task, { facts });
+      // The batch's repair, where another task, hears it too: it answers the hold.
+      const repair = open.repair ? tasks.get(open.repair) : undefined;
+      if (repair && repair.id !== trial.task && !TaskService.isClosed(repair))
+        owners.inbox.enqueue(repair.id, {
+          facts: { ...facts, fix: tasks.get(trial.task)?.key || trial.task },
+        });
+    },
     held: ({ repo, batch, sentBack }) =>
       owners.firstmate()?.notifyOp(
         {

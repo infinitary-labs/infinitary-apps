@@ -928,6 +928,7 @@
   "settingsProjectsBatchAnswerRuleNote": "Aucune des deux réponses ne satisfait la règle. Chacune change ce que contient le lot.",
   "settingsProjectsBatchAnswerYourself": "Répondre vous-même",
   "settingsProjectsBatchChanges": "Modifications à renvoyer",
+  "settingsProjectsBatchCheckingFix": "Ses vérifications tournent maintenant avec le correctif de {key}, avant que vous l’approuviez. Si elles réussissent, l’approuver fusionne le lot tel quel.",
   "settingsProjectsBatchGap": "Quand un lot démarre",
   "settingsProjectsBatchGapDescription": "Un intervalle plus long met plus de modifications approuvées dans chaque lot, donc ses vérifications s’exécutent moins souvent. La réparation d’un lot retenu n’attend jamais.",
   "settingsProjectsBatchGapHours": {

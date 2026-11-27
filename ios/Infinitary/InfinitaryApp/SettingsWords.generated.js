@@ -14684,7 +14684,35 @@ ${events}` : prompt;
      * wrote it again under its own push (docs/forge.md, "A generated commit"):
      * then `head`. Taken once per combine; the next combine starts without it.
      */
-    generated: string().optional()
+    generated: string().optional(),
+    /**
+     * The batch's own checks run early on a held batch's declared fix
+     * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+     * its own branch at `version`, built on the newest held version, the held
+     * members plus the fix's own difference are combined at `head` and pushed
+     * to the batch's branch and pull request, while `head` and `members` above
+     * stay the held version. The fix is no member until approved; approved at
+     * `version` with the checks at `head` passed, the batch merges `head` as it
+     * is. `failed` names the checks that failed there.
+     */
+    trial: object({
+      /** The fix's task, whose story was confirmed. */
+      task: string(),
+      /** The fix's confirmed version on its own branch. */
+      version: string(),
+      head: string(),
+      base: string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: array(batchMemberSchema),
+      at: number(),
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: array(string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: string().optional()
+    }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -14903,7 +14931,9 @@ ${events}` : prompt;
           /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
           awaitsFix: boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
-          passed: boolean()
+          passed: boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({

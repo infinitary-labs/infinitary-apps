@@ -289,6 +289,7 @@
 "automationWaitsForPlaceholder" = "Every event";
 "batchesPanelAfter" = "after #%1$@";
 "batchesPanelChecking" = "checking %1$@";
+"batchesPanelCheckingFix" = "checks run with fix %1$@ before its approval";
 "batchesPanelChecksFull" = "Checks: %2$@ passed, %1$@ failed, %3$@ running, as read at %4$@";
 "batchesPanelChecksPassed" = "%1$@ of %2$@ checks passed";
 "batchesPanelChecksUnread" = "checks not read yet";
@@ -1110,6 +1111,9 @@
 "feedBatchQueuedHost" = "%2$@: the project's host took %1$@ into the main branch's merge queue. It merges there once the queue's checks pass.";
 "feedBatchRetried" = "%2$@: %1$@ was combined again and its checks run again.";
 "feedBatchSentBack" = "%1$@: \"%3$@\" was sent back from its batch: %2$@";
+"feedBatchTrial" = "%2$@: %1$@ runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.";
+"feedBatchTrialFailed" = "%3$@: %2$@ stays held because %1$@ failed with its declared fix. The fix's crewmate repairs it in a new version.";
+"feedBatchTrialFailedUnnamed" = "%2$@: %1$@ stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.";
 "feedBranchPushed" = "Pushed the branch";
 "feedBuildRowKept" = "Filed “%2$@” as %1$@ for later.";
 "feedBuildRowNotFiled" = "Did not file “%1$@”.";
@@ -3572,6 +3576,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Neither answer meets the rule. Each one changes what the batch holds.";
 "settingsProjectsBatchAnswerYourself" = "Answer it yourself";
 "settingsProjectsBatchChanges" = "Changes to send back";
+"settingsProjectsBatchCheckingFix" = "Its checks are running now with the fix from %1$@, before you approve that fix. If they pass, approving it merges the batch as it is.";
 "settingsProjectsBatchGap" = "When a batch starts";
 "settingsProjectsBatchGapDescription" = "A longer time between batches puts more approved changes in each one, so their checks run less often. A held batch's repair never waits.";
 "settingsProjectsBatchGapNow" = "As soon as a change is approved";

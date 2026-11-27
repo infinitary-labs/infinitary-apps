@@ -303,6 +303,7 @@ public enum PhoneMessages {
     public static func `batchesPanelAfter`(`number`: String) -> String { PhoneWords.format("batchesPanelAfter", [`number`]) }
     public static func `batchesPanelBatchTitle`(`count`: Int, `number`: String) -> String { PhoneWords.format("batchesPanelBatchTitle", [`count`, `number`]) }
     public static func `batchesPanelChecking`(`duration`: String) -> String { PhoneWords.format("batchesPanelChecking", [`duration`]) }
+    public static func `batchesPanelCheckingFix`(`key`: String) -> String { PhoneWords.format("batchesPanelCheckingFix", [`key`]) }
     public static func `batchesPanelChecksFull`(`failed`: String, `passed`: String, `running`: String, `time`: String) -> String { PhoneWords.format("batchesPanelChecksFull", [`failed`, `passed`, `running`, `time`]) }
     public static func `batchesPanelChecksPassed`(`passed`: String, `total`: String) -> String { PhoneWords.format("batchesPanelChecksPassed", [`passed`, `total`]) }
     public static func `batchesPanelChecksUnread`() -> String { PhoneWords.format("batchesPanelChecksUnread", []) }
@@ -1166,6 +1167,9 @@ public enum PhoneMessages {
     public static func `feedBatchQueuedHost`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchQueuedHost", [`label`, `project`]) }
     public static func `feedBatchRetried`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchRetried", [`label`, `project`]) }
     public static func `feedBatchSentBack`(`project`: String, `reason`: String, `title`: String) -> String { PhoneWords.format("feedBatchSentBack", [`project`, `reason`, `title`]) }
+    public static func `feedBatchTrial`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchTrial", [`label`, `project`]) }
+    public static func `feedBatchTrialFailed`(`checks`: String, `label`: String, `project`: String) -> String { PhoneWords.format("feedBatchTrialFailed", [`checks`, `label`, `project`]) }
+    public static func `feedBatchTrialFailedUnnamed`(`label`: String, `project`: String) -> String { PhoneWords.format("feedBatchTrialFailedUnnamed", [`label`, `project`]) }
     public static func `feedBranchPushed`() -> String { PhoneWords.format("feedBranchPushed", []) }
     public static func `feedBuildRowKept`(`task`: String, `title`: String) -> String { PhoneWords.format("feedBuildRowKept", [`task`, `title`]) }
     public static func `feedBuildRowNotFiled`(`title`: String) -> String { PhoneWords.format("feedBuildRowNotFiled", [`title`]) }
@@ -3728,6 +3732,7 @@ public enum PhoneMessages {
     public static func `settingsProjectsBatchAnswerRuleNote`() -> String { PhoneWords.format("settingsProjectsBatchAnswerRuleNote", []) }
     public static func `settingsProjectsBatchAnswerYourself`() -> String { PhoneWords.format("settingsProjectsBatchAnswerYourself", []) }
     public static func `settingsProjectsBatchChanges`() -> String { PhoneWords.format("settingsProjectsBatchChanges", []) }
+    public static func `settingsProjectsBatchCheckingFix`(`key`: String) -> String { PhoneWords.format("settingsProjectsBatchCheckingFix", [`key`]) }
     public static func `settingsProjectsBatchGap`() -> String { PhoneWords.format("settingsProjectsBatchGap", []) }
     public static func `settingsProjectsBatchGapDescription`() -> String { PhoneWords.format("settingsProjectsBatchGapDescription", []) }
     public static func `settingsProjectsBatchGapHours`(`count`: Int) -> String { PhoneWords.format("settingsProjectsBatchGapHours", [`count`]) }
@@ -5102,6 +5107,7 @@ extension PhoneWords {
         "batchesPanelAfter": ["number"],
         "batchesPanelBatchTitle": ["count", "number"],
         "batchesPanelChecking": ["duration"],
+        "batchesPanelCheckingFix": ["key"],
         "batchesPanelChecksFull": ["failed", "passed", "running", "time"],
         "batchesPanelChecksPassed": ["passed", "total"],
         "batchesPanelChecksUnread": [],
@@ -5965,6 +5971,9 @@ extension PhoneWords {
         "feedBatchQueuedHost": ["label", "project"],
         "feedBatchRetried": ["label", "project"],
         "feedBatchSentBack": ["project", "reason", "title"],
+        "feedBatchTrial": ["label", "project"],
+        "feedBatchTrialFailed": ["checks", "label", "project"],
+        "feedBatchTrialFailedUnnamed": ["label", "project"],
         "feedBranchPushed": [],
         "feedBuildRowKept": ["task", "title"],
         "feedBuildRowNotFiled": ["title"],
@@ -8527,6 +8536,7 @@ extension PhoneWords {
         "settingsProjectsBatchAnswerRuleNote": [],
         "settingsProjectsBatchAnswerYourself": [],
         "settingsProjectsBatchChanges": [],
+        "settingsProjectsBatchCheckingFix": ["key"],
         "settingsProjectsBatchGap": [],
         "settingsProjectsBatchGapDescription": [],
         "settingsProjectsBatchGapHours": ["count"],

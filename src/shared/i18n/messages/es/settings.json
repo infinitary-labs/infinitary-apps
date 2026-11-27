@@ -928,6 +928,7 @@
   "settingsProjectsBatchAnswerRuleNote": "Ninguna respuesta cumple la regla. Cada una cambia lo que contiene el lote.",
   "settingsProjectsBatchAnswerYourself": "Responder tú mismo",
   "settingsProjectsBatchChanges": "Cambios para devolver",
+  "settingsProjectsBatchCheckingFix": "Sus comprobaciones se están ejecutando ahora con la corrección de {key}, antes de que la apruebes. Si se superan, al aprobarla el lote se fusiona tal como está.",
   "settingsProjectsBatchGap": "Cuándo empieza un lote",
   "settingsProjectsBatchGapDescription": "Un intervalo más largo pone más cambios aprobados en cada lote, así que sus comprobaciones se ejecutan menos a menudo. La reparación de un lote retenido nunca espera.",
   "settingsProjectsBatchGapHours": {

@@ -982,6 +982,7 @@
   "settingsProjectsBatchAnswerRuleNote": "لا تفي أيّ من الإجابتين بالقاعدة. كل منهما تغيّر ما تحمله الدفعة.",
   "settingsProjectsBatchAnswerYourself": "أجب بنفسك",
   "settingsProjectsBatchChanges": "التغييرات المراد إرجاعها",
+  "settingsProjectsBatchCheckingFix": "تعمل فحوصاتها الآن مع التصحيح من {key}، قبل أن توافق على ذلك التصحيح. إذا نجحت، فإن الموافقة عليه تدمج الدفعة كما هي.",
   "settingsProjectsBatchGap": "متى تبدأ الدفعة",
   "settingsProjectsBatchGapDescription": "كلما طال الفاصل دخلت تغييرات موافق عليها أكثر في كل دفعة، فتعمل فحوصاتها مرات أقل. إصلاح الدفعة المعلّقة لا ينتظره أبدًا.",
   "settingsProjectsBatchGapHours": {

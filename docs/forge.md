@@ -1204,7 +1204,7 @@ The first pass after a start reconciles each open batch from the host: a pull re
 Another person's pull request is untouched: one the captain reviews merges as its own pull request through the merge review ("A requested merge").
 It merges at the captain's click and joins no batch, and so does a contribution through a fork (`ChangeContext.ownBatch`).
 
-Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` and `combine.held.test.ts` (real git against a bare repository) and `batches.test.ts` and `batches.held.test.ts`; `src/shared/batches.test.ts`; `batches.unconfirmed.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts`, `bitbucket/bitbucketForge.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub, `tests/e2e/gitlab-own-batches.spec.ts` on GitLab and `tests/e2e/bitbucket-own-batches.spec.ts` on Bitbucket, whose last batch goes through Bitbucket's merge queue.
+Evidence: `src/core/batches/line.test.ts`, `combine.test.ts` and `combine.held.test.ts` (real git against a bare repository) and `batches.test.ts`, `batches.held.test.ts` and `batches.trial.test.ts` (a held batch's early run with its fix); `src/shared/batches.test.ts`; `batches.unconfirmed.test.ts`; `src/core/forge/providers/github/batches.test.ts`, `gitlab/batches.test.ts`, `bitbucket/bitbucketForge.test.ts` and `mergeWays.test.ts`; `src/core/orchestrator/ownBatchChange.test.ts`, `ownBatchChange.held.test.ts`, `ownBatches.test.ts` and `mergeReviews.test.ts` (a pull request named by number); and the journeys `tests/e2e/own-batches.spec.ts` on GitHub, `tests/e2e/gitlab-own-batches.spec.ts` on GitLab and `tests/e2e/bitbucket-own-batches.spec.ts` on Bitbucket, whose last batch goes through Bitbucket's merge queue.
 
 ### A generated commit
 
@@ -1302,6 +1302,22 @@ Try again ends the wait.
 Every combine of an open batch, the one that takes the awaited fix, Try again and a send-back included, reads the batch branch where the project lives first, so a push whose record was lost is combined over instead of refused every time (`Batches.moved`).
 When the awaited repair's task closes first, the batch stays held with no repair to wait for, and the feed says so once (`BATCH_WORDS.fixClosed`): another repair's approved fix, or Try again, ends the hold.
 For a flake, the repair runs the failed checks again where the project lives, and checks that run again end the hold by the host's own reading; the flaky test still gets an owner.
+A declared fix's checks run with the batch before it is approved (the captain's plan for a held batch's fix).
+Once the fix's story is confirmed on its own branch at a version that builds on the newest held version, the app combines the held members, less any sent back, with the fix's own difference from that version and pushes it to the batch's branch and pull request, which run the batch's checks there (`startTrial`, `src/core/batches/trial.ts`).
+It is kept as the batch's early run (`OpenBatch.trial`): the batch's version, its members and its hold stay as they were, the fix is no member, and nothing waiting in line joins.
+It starts only while the batch is held for its checks at its version, with no rerun declared passed and nothing queued or unconfirmed, the fix declared and its task open, the awaited fix after a send-back, and that version not approved yet; otherwise nothing is pushed.
+A new version of the fix, or its story confirmed in new words, starts a new run in place of the earlier one; the same story confirmed again starts nothing.
+Each pass reads the run's checks at its commit (`followTrial`), and the batch's pull request description, the Batches panel and the batch's box in Settings say its checks run with the fix before approval.
+A generated commit the project's checks add on the run is written again and stands as the run's commit, as on any batch.
+A run that fails keeps the hold at the batch's version, its fix's version stands failed on the fix's batch check, and the fix's crewmate and the batch's repair, where another task, each hear it once in the `batch-trial-failed` wake; an approval of that version leaves the batch held and puts the fix in line at the next pass, or at Try again or a send-back when either comes first, so the combine takes it (`approvedFixInLine`).
+Checks at the run's commit that then read otherwise end the failure, as they end a held version's hold.
+A run that passes waits for the fix's approval and merges nothing.
+Approved at the run's version and words once it passed, the run's commit becomes the batch's version, described again without the run's words, and merges as it is, after the same last look as any batch, and changes waiting in line stay there for the next batch (`promoted`, `src/core/batches/line.ts`).
+Approved while the run still runs, at another version or in other words, or with the pull request behind or conflicting with the default branch, the batch combines with the fix and the line as above.
+A member that left or was reworded, a hold that ended, a declared rerun that passed, another fix approved, or a batch branch moved by someone else drops the run (`trialStands`).
+A dropped run whose commit is still on the batch's branch puts the held version back there, so the batch goes on held where it was; a reworded member then combines the batch again, as without a run.
+When the fix's task closes, the run is left as it is and the batch stays held.
+A pull request merged by hand at the run's commit settles the fix with the members.
 A batch held for its checks reads them before an approved fix joins: a version whose checks pass on a rerun merges as it is, and the fix waits in line for the next batch, still declared, with the version it was built on.
 Its checks failing again take the approved fix at once, without waking a repair again.
 A repair may also judge that a rerun already passed the held version, such as a step of the batch's own run that runs the failed tests again while the host still reads the first attempt's jobs failed, and declare it with `check_change`'s `batch.passed`, naming that version (`Batches.declarePassed`, `OpenBatch.passed`).
@@ -1317,7 +1333,7 @@ Each held batch says who has its next step, in one rule the Batches panel and Se
 - no one, while no repair is recorded or the recorded one closed.
 
 Only the captain's and no one's ask anything of the captain.
-Settings → Projects shows a held batch in the Changes group of the repository's settings on its project's page (`BatchHoldPanel`, `src/renderer/src/settings/`): a title and a sentence saying who has it, naming the repair by key, the repair's latest report line while it works (`outcomeSummary`), why it holds and since when, a button that opens the repair's task, one that opens the pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
+Settings → Projects shows a held batch in the Changes group of the repository's settings on its project's page (`BatchHoldPanel`, `src/renderer/src/settings/`): a title and a sentence saying who has it, naming the repair by key, the repair's latest report line while it works (`outcomeSummary`), a line naming the declared fix its checks run with before approval while that early run has not failed, why it holds and since when, a button that opens the repair's task, one that opens the pull request, Try again, and Send back with a reason for the chosen changes, every control reached by keys.
 Try again and Send back lead only while a setting refuses the merge or no repair is working on it; otherwise they fold under Answer it yourself, and the box takes the plain background of the other boxes while the crew has the hold, and a warning tint otherwise.
 Try again combines the batch again at a new version with every change waiting in line, so its checks run again.
 If the same work combines to the branch's current or a held version, the combine advances the last commit's committer date until the version is new, without changing the work or adding a commit.
@@ -1358,6 +1374,7 @@ The gap counts from when the project's last batch formed from the line, kept as 
 A batch still takes the whole line, so every change approved during the gap goes up in the next batch together.
 The pass on the tick forms it on its first run once the gap has passed (`forms`, `nextBatchAt`), and the first change after a quiet stretch longer than the gap forms one at once.
 A held batch's repair never waits for the gap: a declared fix, Try again and a send-back each combine the open batch again with every change waiting in line, which forms no new batch and moves no `formed`.
+A held batch that merges as its early run with its fix leaves every change waiting in line there, and they form the next batch once the gap has passed since the held batch formed ("A held batch").
 While a change waits in line under a gap, its batch check says when the next batch starts (`BATCH_STATUS_WORDS.waitingUntil`, `Batches.status`).
 
 Evidence: `src/core/batches/line.test.ts` and `batches.test.ts` ("the batch gap"), and the journey `tests/e2e/batch-gap.spec.ts`, which sets it by keys.
@@ -1368,7 +1385,7 @@ The Batched pull requests runbook carries a panel of its own, Batches, in its fo
 It only points: nothing in it merges, answers or moves a change.
 It reads `batches.list` and `tasks.board`, and shows only the focused project's repositories while the project focus is on one (`docs/project-focus.md`).
 
-`batches.list` (`batchesView`, `src/core/batches/view.ts`) answers each project repository on batched pull requests, or whose record still holds something, from the app's own record alone: its line with why each change waits, its open batch with its state, hold, members, declared fixes and checks, the changes left out and why, and the batches that ended in the last day.
+`batches.list` (`batchesView`, `src/core/batches/view.ts`) answers each project repository on batched pull requests, or whose record still holds something, from the app's own record alone: its line with why each change waits, its open batch with its state, hold, members, declared fixes, the fix its early run carries and checks, the changes left out and why, and the batches that ended in the last day.
 Nothing in it asks where the project lives.
 The open batch's checks are the reading the batch pass already made at its version, kept in memory (`Batches.checksReading`) and pushed with its own `batch_checks` event only when the counts change; a batch that ends, or a restart, drops it, and the panel then says the checks are not read yet.
 The record keeps each batch that merged or closed as `BatchRecord.finished` - its number, link, members, when it formed and ended, its outcome and how many times it held (`finishedWith`, `src/core/batches/line.ts`) - and the view lists only those that ended in the last day (`FINISHED_BATCH_KEPT_MS`, `finishedWithin`).
@@ -1379,7 +1396,7 @@ Collapsed, the panel's header says the open batch's state and how long it has he
 Its first words are bright unless the crew has the hold, as every panel marks what needs the captain.
 Open, it shows:
 
-- the open batch: a dot for its state, its number and size, its state and how long beside them (for a hold, only how long, since the line below says who has it), for a hold a sentence saying who has it ("A held batch") with the repair's key as a button and its latest report line, its checks as a bar with how many passed, the failed checks by name on one line that shows the name's end, the declared fix's key unless the sentence names it, its members as task chips (six, then "+N more"), and Open in Settings while Settings holds the captain's next step: a setting, a rule or no repair;
+- the open batch: a dot for its state, its number and size, its state and how long beside them (for a hold, only how long, since the line below says who has it), for a hold a sentence saying who has it ("A held batch") with the repair's key as a button and its latest report line, its checks as a bar with how many passed, the failed checks by name on one line that shows the name's end, a line naming the declared fix the checks run with before approval while that early run has not failed (`checkingFix`), the declared fix's key unless the sentence names it, its members as task chips (six, then "+N more"), and Open in Settings while Settings holds the captain's next step: a setting, a rule or no repair;
 - one row for the changes waiting, and why;
 - a row for each change left out, with why;
 - Last day, closed until opened, with each batch that ended.

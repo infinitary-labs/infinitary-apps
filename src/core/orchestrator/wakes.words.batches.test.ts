@@ -184,6 +184,43 @@ const CASES: WordsCases<OwnBatchWakeKind> = {
         'Your change at 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c clashes with this project\'s open batch of approved changes, #34 (https://github.com/acme/meter/pull/34): it combines with the default branch but clashes with "feat(meter): show the weekly window", an approved change ahead of it in the batch that is not merged yet. Rebuild it on that batch\'s version now rather than waiting for the batch to merge: git fetch origin infinitary-batch/3f9a0c1d, then bring only your own commits onto 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e, resolve the clash, run your validation again and push. That version carries, in order: MTR-12 "fix(meter): read the reset date", MTR-14 "feat(meter): show the weekly window". Declare that push with check_change conflictRepair, giving 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e as newBase. The captain\'s merge approval is kept and covers 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c: impact none keeps it, with no new card. Once its own checks pass, the rebuilt version waits right behind that batch\'s changes, joins it if the batch is combined again, and goes first in the next batch as one commit of its own difference from 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e. If the batch merges first with those changes, rebuild on 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e all the same: your current version stays out of later batches until the rebuilt one arrives. If the batch\'s changes change before it merges, you are told once to rebuild on its new version.',
     },
   ],
+  "batch-trial-failed": [
+    {
+      // INF-6950: a declared fix whose early run with its held batch failed hears it before approval.
+      name: "the fix's own crewmate hears its run failed",
+      wake: {
+        facts: {
+          kind: "batch-trial-failed",
+          head: "7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c",
+          held: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
+          trial: "9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e",
+          change: "#31",
+          url: "https://github.com/acme/meter/pull/31",
+          checks: ["unit-tests"],
+        },
+      },
+      words:
+        "Your declared fix at 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c ran in its held batch #31 (https://github.com/acme/meter/pull/31) before approval, and the batch's checks at 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e, its held version 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 plus the fix, failed: unit-tests. The batch stays held at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0, and nothing merged. Read those checks on that pull request at 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e, repair the fix on your branch, still built on 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0, push and confirm its story with open_change again: the batch runs its checks with the new version. An approval of 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c leaves the batch held.",
+    },
+    {
+      // INF-6950: the held batch's repair, another task, hears the same failure.
+      name: "the batch's repair hears the fix's run failed",
+      wake: {
+        facts: {
+          kind: "batch-trial-failed",
+          head: "7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c",
+          held: "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0",
+          trial: "9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e",
+          change: "#31",
+          url: "https://github.com/acme/meter/pull/31",
+          checks: ["unit-tests"],
+          fix: "MTR-14",
+        },
+      },
+      words:
+        "MTR-14's declared fix at 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c ran in its held batch #31 (https://github.com/acme/meter/pull/31) before approval, and the batch's checks at 9a1e4c7b2d8f0a3e6c5b1d9f7a2e4c8b0d6f3a1e, its held version 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0 plus the fix, failed: unit-tests. The batch stays held at 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0, and nothing merged. MTR-14's crewmate repairs the fix in a new version on 5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0; account for these failures as the batch-repair skill says if they change your answer to the hold. An approval of 7c3e9a1f5b2d8c4a0e6f1b9d3a7c5e2f8b4d0a6c leaves the batch held.",
+    },
+  ],
   "merge-line": [
     {
       // INF-4497 finding 2: the quiet while a change waits in the batch line is told once, never flagged.

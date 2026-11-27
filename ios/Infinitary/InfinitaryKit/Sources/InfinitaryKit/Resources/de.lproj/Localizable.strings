@@ -289,6 +289,7 @@
 "automationWaitsForPlaceholder" = "Jedes Ereignis";
 "batchesPanelAfter" = "nach #%1$@";
 "batchesPanelChecking" = "prüft seit %1$@";
+"batchesPanelCheckingFix" = "Überprüfungen laufen mit Korrektur %1$@ vor ihrer Freigabe";
 "batchesPanelChecksFull" = "Überprüfungen: %2$@ erfolgreich, %1$@ fehlgeschlagen, %3$@ laufen, Stand %4$@";
 "batchesPanelChecksPassed" = "%1$@ von %2$@ Überprüfungen erfolgreich";
 "batchesPanelChecksUnread" = "Überprüfungen noch nicht gelesen";
@@ -1110,6 +1111,9 @@
 "feedBatchQueuedHost" = "%2$@: Der Host des Projekts hat %1$@ in die Merge-Warteschlange des Hauptbranchs aufgenommen. Er wird dort zusammengeführt, sobald die Überprüfungen der Warteschlange erfolgreich sind.";
 "feedBatchRetried" = "%2$@: %1$@ wurde neu zusammengestellt, und seine Überprüfungen laufen erneut.";
 "feedBatchSentBack" = "%1$@: „%3$@“ wurde aus seinem Bündel zurückgeschickt: %2$@";
+"feedBatchTrial" = "%2$@: %1$@ führt seine Überprüfungen mit der angekündigten Korrektur aus, bevor die Korrektur bestätigt ist. Wird die Korrektur in dieser Version bestätigt und bestehen diese Überprüfungen, wird der Stapel so zusammengeführt, wie er ist.";
+"feedBatchTrialFailed" = "%3$@: %2$@ bleibt angehalten, weil diese Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind: %1$@. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.";
+"feedBatchTrialFailedUnnamed" = "%2$@: %1$@ bleibt angehalten, weil seine Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.";
 "feedBranchPushed" = "Den Branch gepusht";
 "feedBuildRowKept" = "„%2$@“ als %1$@ für später abgelegt.";
 "feedBuildRowNotFiled" = "„%1$@“ nicht abgelegt.";
@@ -3572,6 +3576,7 @@
 "settingsProjectsBatchAnswerRuleNote" = "Keine der Antworten erfüllt die Regel. Jede ändert, was das Bündel enthält.";
 "settingsProjectsBatchAnswerYourself" = "Selbst antworten";
 "settingsProjectsBatchChanges" = "Änderungen zum Zurückschicken";
+"settingsProjectsBatchCheckingFix" = "Die Überprüfungen laufen jetzt mit der Korrektur aus %1$@, bevor du sie freigibst. Sind sie erfolgreich, wird das Bündel mit deiner Freigabe so zusammengeführt, wie es ist.";
 "settingsProjectsBatchGap" = "Wann ein Bündel startet";
 "settingsProjectsBatchGapDescription" = "Ein längerer Abstand bringt mehr bestätigte Änderungen in jedes Bündel, sodass seine Überprüfungen seltener laufen. Die Reparatur eines angehaltenen Bündels wartet nie darauf.";
 "settingsProjectsBatchGapNow" = "Sobald eine Änderung bestätigt ist";

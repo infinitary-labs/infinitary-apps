@@ -10,6 +10,7 @@
     "other": "الدفعة #{number} · التغييرات: {count}"
   },
   "batchesPanelChecking": "قيد الفحص منذ {duration}",
+  "batchesPanelCheckingFix": "تعمل الفحوصات مع الإصلاح {key} قبل الموافقة عليه",
   "batchesPanelChecksFull": "الفحوصات: نجح {passed}، فشل {failed}، قيد التشغيل {running}، كما قُرئت عند {time}",
   "batchesPanelChecksPassed": "الفحوصات الناجحة: {passed} من {total}",
   "batchesPanelChecksUnread": "لم تُقرأ الفحوصات بعد",

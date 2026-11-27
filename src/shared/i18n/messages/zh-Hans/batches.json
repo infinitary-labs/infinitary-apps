@@ -5,6 +5,7 @@
     "other": "第 #{number} 批 · {count} 个改动"
   },
   "batchesPanelChecking": "检查中 {duration}",
+  "batchesPanelCheckingFix": "正在带上修正 {key} 运行检查，尚未批准",
   "batchesPanelChecksFull": "检查：{passed} 项已通过，{failed} 项未通过，{running} 项正在运行，读取于 {time}",
   "batchesPanelChecksPassed": "{total} 项检查中已通过 {passed} 项",
   "batchesPanelChecksUnread": "尚未读取检查",

@@ -1224,6 +1224,7 @@ export class ChangeMerge {
       url: null,
       branch: pull.branch ?? "",
       headSha: pull.headSha,
+      headRepo: pull.headRepo,
       title: pull.title ?? "",
       body: "",
     };

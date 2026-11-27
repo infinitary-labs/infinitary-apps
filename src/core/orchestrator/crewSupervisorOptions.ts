@@ -527,6 +527,7 @@ export type CrewSupervisorOptions = {
   completionPresentation?: (
     taskId: string,
     revision: number,
+    selectedRequest?: number,
   ) => Promise<
     Pick<
       DeclaredCardInput,

@@ -2,6 +2,7 @@ import type { StagedChangePresentation } from "@shared/changePresentation";
 import { hasChangeRequests } from "@shared/forge";
 import { overridePasses, softHoldWords } from "@shared/holds";
 import { acceptedValidation } from "@shared/liveValidation";
+import { deliveryForRecord } from "@shared/repos";
 import {
   type Forge,
   type ForgeChange,
@@ -51,7 +52,7 @@ export type MergeCardWalk = {
   did: string[];
   stop?: MergeCardStop;
   /** The committed version the walk verified pushed: the one the card offers (INF-4018). */
-  ready?: { revision: number; title: string; head: string };
+  ready?: { revision: number; title: string; head: string; selectedRequest?: number };
 };
 
 const SUPPLIER_WORDS: Record<MergeCardSupplier, string> = {
@@ -87,7 +88,7 @@ function wordsOf(caught: unknown): string {
 
 /**
  * show_merge_card's steps up to the card (INF-3717 piece 2): resolves the
- * change once, on the branch the working copy has checked out, does each
+ * change once, honoring a selected direct pull request before using the checkout, does each
  * step that is the app's own - preparing the story it was given, preparing
  * the same words again once live proof was accepted since, opening the pull
  * request and publishing the story there - and stops at the first step
@@ -161,23 +162,46 @@ export class MergeCardSteps {
         `This task carries the review ${carried.key} passed at this same commit${carried.proof ? ", with the proof accepted there" : ""}.`,
       );
 
-    // The change, resolved once: the branch the working copy has checked out.
+    // A checkout can share a commit with a different request without being that request.
     const local = this.publication.localStoryDestination(taskId) !== undefined;
     let forge: Forge | undefined;
     let branch: string | undefined;
     let repoId: string | null | undefined;
     let ownBranch: string | undefined;
+    let selectedRequest: number | undefined;
     if (local) {
       branch = await this.publication.presentationBranch(taskId).catch(() => undefined);
     } else {
-      const located = this.context.locate(taskId, "open", "own");
-      if ("said" in located) return stop("pull", located.said, "app");
+      const own = this.context.locate(taskId, "open", "own");
+      if ("said" in own) return stop("pull", own.said, "app");
+      const direct = selected && deliveryForRecord(own.record, own.repo?.delivery) === "direct-pr";
+      const located = direct ? this.context.locate(taskId, "open", "current") : own;
+      if ("said" in located) return stop("pull", located.said, "crewmate");
       forge = located.forge;
       repoId = located.record.repoId;
       ownBranch = located.record.branch;
-      branch =
-        (await this.publication.presentationBranch(taskId).catch(() => undefined)) ??
-        currentChange(located.record.delivery, located.branch).branch;
+      const checkout = await this.publication.presentationBranch(taskId).catch(() => undefined);
+      if (direct) {
+        const label = numberLabel(forge, selected.number);
+        if (located.elsewhere)
+          return stop(
+            "pull",
+            // i18n-exempt: a tool refusal served to the crewmate
+            `The selected ${label} is in another project. Use its explicit merge review and emit_card; nothing was published.`,
+            "crewmate",
+          );
+        if (checkout !== undefined && checkout !== selected.branch) {
+          const ownChange = options.tasks.changeFor(taskId);
+          return stop(
+            "pull",
+            // i18n-exempt: a tool refusal served to the crewmate
+            `The selected ${label} uses ${selected.branch}, not the checked-out ${checkout}. Check out ${selected.branch} to publish its saved story, or use emit_card with its explicit merge review if it predates saved stories.${ownChange ? ` To deliver this task's own branch instead, make its change current with check_change({ change: "${ownChange.id}" })${checkout === ownBranch ? "" : ` and check out ${ownBranch}`}.` : ""} Nothing was published.`,
+            "crewmate",
+          );
+        }
+        selectedRequest = selected.number;
+      }
+      branch = checkout ?? currentChange(located.record.delivery, located.branch).branch;
     }
     const ledger = () => options.tasks.delivery.changePresentation(taskId, branch);
     const signIn = (where: Forge, after = "") =>
@@ -192,11 +216,19 @@ export class MergeCardSteps {
     // the version that merged, and nothing is prepared, pushed or published
     // for it again, since its branch may be gone.
     let open: ForgeChange | null | undefined;
-    if (forge && branch && hasChangeRequests(forge.kind) && ledger()?.published) {
+    const target = selectedRequest === undefined ? {} : { selectedRequest };
+    if (
+      forge &&
+      branch &&
+      hasChangeRequests(forge.kind) &&
+      (ledger()?.published || selectedRequest !== undefined)
+    ) {
       let merged: MergedStory | undefined;
       try {
         open = await forge.changeFor(branch);
-        if (!open) merged = await mergedStory(options.tasks, taskId, forge, branch);
+        if (selectedRequest !== undefined && open?.number !== selectedRequest) open = null;
+        if (!open && ledger()?.published)
+          merged = await mergedStory(options.tasks, taskId, forge, branch);
       } catch (caught) {
         // A failed read stops the walk before the story step: words saved
         // while a merged pull request cannot be read would be a newer
@@ -219,7 +251,31 @@ export class MergeCardSteps {
           `${numberLabel(forge, pull.number)} was merged outside the app at ${pull.headSha}, so its merge card shows story revision ${revision}, the story it merged with${given ? "; the story words you passed were not saved, since a merged pull request takes no new story" : ""}.`,
         );
         const title = ledger()?.revisions.find((saved) => saved.revision === revision)?.title ?? "";
-        return { did, ready: { revision, title, head: pull.headSha } };
+        return { did, ready: { revision, title, head: pull.headSha, ...target } };
+      }
+      if (selectedRequest !== undefined) {
+        const label = numberLabel(forge, selectedRequest);
+        if (!open && !ledger()?.published)
+          return stop(
+            "pull",
+            // i18n-exempt: a tool refusal served to the crewmate
+            `The selected ${label} is not the open request for ${branch}. Read that request again; no replacement will be opened.`,
+            "crewmate",
+          );
+        if (!open)
+          return stop(
+            "pull",
+            // i18n-exempt: a tool refusal served to the crewmate
+            `The pull request that carried this story for ${branch} is no longer open. Publication stops; the app does not reopen or replace it. Reopen it where the project lives, or close this task.`,
+            "captain",
+          );
+        if (!ledger())
+          return stop(
+            "story",
+            // i18n-exempt: a tool refusal served to the crewmate
+            `The selected ${label} predates saved stories. Use emit_card with its explicit merge review. Nothing was published.`,
+            "crewmate",
+          );
       }
     }
 
@@ -355,11 +411,11 @@ export class MergeCardSteps {
         : ledgered?.published?.revision === shown && ledgered.publication?.state === "confirmed";
     const published = open !== null && done(current, open);
     if (!published) {
-      const answer = await this.publication.open(taskId, {
-        title,
-        presentation: shown,
-        branch,
-      });
+      const answer = await this.publication.open(
+        taskId,
+        { title, presentation: shown, branch },
+        selectedRequest,
+      );
       let read: ForgeChange | null;
       try {
         read = await changeFor();
@@ -372,7 +428,12 @@ export class MergeCardSteps {
         );
       }
       const after = ledger();
-      if (!read || !done(after, read)) return stop(read ? "publish" : "pull", answer, "app");
+      if (
+        !read ||
+        (selectedRequest !== undefined && read.number !== selectedRequest) ||
+        !done(after, read)
+      )
+        return stop(read ? "publish" : "pull", answer, "app");
       did.push(
         !hosted
           ? `Recorded ${changeWords(forge, read)} as the change; ${forge.place ?? "where the project lives"} keeps no pull requests, so the story stays on the merge card.`
@@ -381,6 +442,6 @@ export class MergeCardSteps {
             : `${open ? "Published the story on" : "Opened"} ${changeWords(forge, read)}${open ? "" : " with the story"} and read it back.`,
       );
     }
-    return { did, ready: { revision: shown, title, head } };
+    return { did, ready: { revision: shown, title, head, ...target } };
   }
 }

@@ -5,7 +5,11 @@ import { checkSnapshotSummary } from "@shared/checkSnapshot";
 import type { MergeReview } from "@shared/mergeReview";
 import type { NoChecksChange } from "@shared/repos";
 import { describe, expect, it, vi } from "vitest";
-import { stub as githubStub } from "../../../tests/helpers/githubForgeStub";
+import {
+  stub as githubStub,
+  passingPrWorkflows,
+  githubCheckRun as runJson,
+} from "../../../tests/helpers/githubForgeStub";
 import {
   FakeForge,
   insertDirectPrTask,
@@ -1062,17 +1066,6 @@ describe("a neutral check by each host's own rule (INF-4552)", () => {
     "Analyze",
   ];
   const NEUTRAL = "Test Insights - Coverage Delta";
-  const runJson = (name: string, conclusion: string, app: string, id: number) => ({
-    id,
-    name,
-    status: "completed",
-    conclusion,
-    started_at: "2026-11-15T20:00:00Z",
-    completed_at: "2026-11-15T20:10:00Z",
-    app: { slug: app },
-    check_suite: { id: 900 + id },
-  });
-
   /** The user's checks as GitHub answers them, through the app's real GitHub reader. */
   async function readOnGitHub() {
     const { forge } = await githubStub({
@@ -1088,7 +1081,7 @@ describe("a neutral check by each host's own rule (INF-4552)", () => {
       [`GET /repos/octo/meter/commits/${HEAD}/status`]: () => ({
         json: { state: "success", statuses: [] },
       }),
-      "GET /repos/octo/meter/actions/runs": () => ({ json: { total_count: 0, workflow_runs: [] } }),
+      "GET /repos/octo/meter/actions/runs": () => ({ json: passingPrWorkflows(PASSED.length, 23) }),
     });
     return forge.checks({
       number: 23,

@@ -11,6 +11,7 @@
   "taskBrowserStoppedIdle": "parou após 30 minutos sem uso",
   "taskBrowserStoppedQuit": "parou quando o Infinitary foi fechado",
   "taskBrowserStoppedTaskClosed": "parou quando a tarefa foi encerrada",
+  "taskChecksUnattributed": "O {host} não indicou a solicitação de pull de algumas execuções de fluxo de trabalho.",
   "taskGroupBacklog": "backlog",
   "taskGroupLanded": "concluídas · 7 d",
   "taskGroupQueued": "na fila",

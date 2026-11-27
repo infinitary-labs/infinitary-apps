@@ -7,7 +7,9 @@ import {
   phone,
   repaired,
 } from "../../../tests/helpers/savedStory";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { ForgePull } from "../forge";
+import { git } from "../workspace/git";
 
 // Integration cohort (docs/test-cohorts.md): real git at the run's own
 // priority, the slowest test (the first, which loads the file's modules)
@@ -60,7 +62,7 @@ describe("the merge card of a story pull request merged outside the app", () => 
       did: [
         `#1413 was merged outside the app at ${original}, so its merge card shows story revision 1, the story it merged with; the story words you passed were not saved, since a merged pull request takes no new story.`,
       ],
-      ready: { revision: 1, title: story.title, head: original },
+      ready: { revision: 1, title: story.title, head: original, selectedRequest: 1413 },
     });
     expect(at.tasks.delivery.changePresentation("ab12cd34", phone)?.revisions).toHaveLength(1);
     expect(opens(at)).toBe(1);
@@ -171,4 +173,76 @@ describe("the merge card of a story pull request merged outside the app", () => 
       }
     },
   );
+});
+
+describe("a selected pull request on the way to its merge card", () => {
+  it("does not open a duplicate when a selected legacy PR shares the checkout's commit", async () => {
+    const { at, story, checkedOut } = await deliveringFromAnotherBranch();
+    const title = "fix: upgrade translations";
+    at.forge.change = {
+      number: 1906,
+      url: "https://github.com/x/y/pull/1906",
+      branch: "renovate/major-i18n",
+      title,
+      headSha: original,
+      base: "main",
+    };
+    const pull = {
+      ...at.forge.change,
+      state: "open" as const,
+      merged: false,
+      base: "main",
+      headRepo: "x/y",
+      readiness: "clean" as const,
+    };
+    Object.assign(at.forge, { pull: async () => pull });
+    expect(await at.service.checkTool.checkForCrew("ab12cd34", { pull: pull.number })).toContain(
+      "current change",
+    );
+    const walk = await at.service.mergeCard.walk("ab12cd34", { ...story, title });
+    expect({
+      openings: opens(at),
+      selected: at.tasks.get("ab12cd34")?.delivery?.checkTarget?.number,
+    }).toEqual({ openings: 0, selected: 1906 });
+    expect(walk.stop?.missing).toContain("#1906");
+    expect(at.tasks.delivery.changePresentation("ab12cd34", phone)).toBeUndefined();
+    console.log("Selected-request fixture", {
+      stop: walk.stop,
+      openings: opens(at),
+      selected: 1906,
+    });
+    // Even with a matching checkout, another request on that branch is not a substitute.
+    at.forge.change = { ...pull, number: 1948, branch: phone };
+    const selected = at.tasks.get("ab12cd34")?.delivery?.checkTarget;
+    if (!selected) throw new Error("The fixture requires a selected PR.");
+    seedDelivery(at.tasks, "ab12cd34", { checkTarget: { ...selected, branch: phone } });
+    const replaced = await at.service.mergeCard.walk("ab12cd34", story);
+    expect(replaced.stop?.missing).toContain("no replacement will be opened");
+    expect(opens(at)).toBe(0);
+    await expect(
+      at.service.publication.completionPresentation("ab12cd34", 1, 1906),
+    ).rejects.toThrow("The checkout names a different pull request");
+    const own = at.tasks.changeFor("ab12cd34");
+    const repoDir = at.tasks.get("ab12cd34")?.repoDir;
+    if (!own || !repoDir) throw new Error("The fixture requires a task change with a project.");
+    await git(repoDir, ["branch", own.head.branch, "HEAD"]);
+    at.bringBranchHome.mockResolvedValue(repoDir);
+    checkedOut.branch = own.head.branch;
+    const ownBranch = await at.service.mergeCard.walk("ab12cd34");
+    expect(ownBranch.stop?.missing).toContain(`check_change({ change: "${own.id}" })`);
+    await at.service.checkTool.checkForCrew("ab12cd34", { change: own.id });
+    expect(at.tasks.get("ab12cd34")?.delivery?.checkTarget).toBeUndefined();
+    expect(opens(at)).toBe(0);
+  });
+  it("stops at the pull request when the one that carried the story closed, sending nothing again", async () => {
+    const { at, story: saved } = await deliveringFromAnotherBranch();
+    // One title for the story, the pull request and the card.
+    const story = { ...saved, title: "feat: share the story" };
+    expect((await at.service.mergeCard.walk("ab12cd34", story)).ready).toBeDefined();
+    at.forge.change = null;
+    const walk = await at.service.mergeCard.walk("ab12cd34", story);
+    expect(walk.stop).toMatchObject({ step: "pull", by: "captain" });
+    expect(walk.stop?.missing).toContain("is no longer open. Publication stops");
+    expect(opens(at)).toBe(1);
+  });
 });

@@ -341,8 +341,8 @@ export function startHomeCrew({
     prepareChange: (taskId, input) => changeDelivery.publication.preparePresentation(taskId, input),
     openChange: (taskId, input) => changeDelivery.publication.open(taskId, input),
     mergeCardSteps: (taskId, story) => changeDelivery.mergeCard.walk(taskId, story),
-    completionPresentation: (taskId, revision) =>
-      changeDelivery.publication.completionPresentation(taskId, revision),
+    completionPresentation: (taskId, revision, selectedRequest) =>
+      changeDelivery.publication.completionPresentation(taskId, revision, selectedRequest),
     validateLocalStory: (taskId) => changeDelivery.publication.validateLocalStory(taskId),
     checkChange: (taskId, input) => changeDelivery.checkTool.checkForCrew(taskId, input),
     readWorkflow: (taskId, input) => workflowEvidence.read(taskId, input),

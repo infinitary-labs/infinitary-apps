@@ -59,6 +59,8 @@ export type ForgeChange = {
   url: string | null;
   branch: string;
   headSha: string;
+  /** Source repository when the host reports it, including when the source is a fork. */
+  headRepo?: string;
   /** Request title; at a contributor merge, the verified story supplies the squash title. */
   title?: string;
   /** A prerequisite publication remains a draft until final proof is reviewed. */

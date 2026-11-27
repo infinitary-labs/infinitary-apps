@@ -4451,6 +4451,7 @@
 "taskBrowserStoppedIdle" = "se detuvo tras 30 minutos sin uso";
 "taskBrowserStoppedQuit" = "se detuvo al cerrarse Infinitary";
 "taskBrowserStoppedTaskClosed" = "se detuvo al cerrarse la tarea";
+"taskChecksUnattributed" = "%1$@ no identificó la solicitud de cambios de algunas ejecuciones de flujos de trabajo.";
 "taskGroupBacklog" = "pendientes";
 "taskGroupLanded" = "terminadas · 7 d";
 "taskGroupQueued" = "en cola";

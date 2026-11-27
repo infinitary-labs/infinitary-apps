@@ -4451,6 +4451,7 @@
 "taskBrowserStoppedIdle" = "30分間使われず停止しました";
 "taskBrowserStoppedQuit" = "Infinitary の終了時に停止しました";
 "taskBrowserStoppedTaskClosed" = "タスクの終了とともに停止しました";
+"taskChecksUnattributed" = "%1$@ は一部のワークフロー実行に対応するプルリクエストを特定できませんでした。";
 "taskGroupBacklog" = "バックログ";
 "taskGroupLanded" = "完了 · 7日";
 "taskGroupQueued" = "待機中";

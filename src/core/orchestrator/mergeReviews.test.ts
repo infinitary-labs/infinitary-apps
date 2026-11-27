@@ -4,6 +4,7 @@ import { fixedHoldWords } from "@shared/holds";
 import { type MergeReview, mergeRuleWords } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
+import { stub } from "../../../tests/helpers/githubForgeStub";
 import {
   FakeForge,
   insertDirectPrTask,
@@ -576,6 +577,100 @@ describe("reviewed contributor changes", () => {
       `putIn ${review.branch} ${HEAD}`,
     ]);
   });
+
+  it.each([
+    { configured: false, previousHead: undefined, reason: "the checks failed" },
+    { configured: true, previousHead: undefined, reason: "the checks failed" },
+    { configured: false, previousHead: MERGED, reason: "the checks failed" },
+    { configured: false, previousHead: HEAD, reason: "the checks cannot be read" },
+  ])(
+    "holds a reviewed fork with an unlinked run (configured: $configured, earlier request head: $previousHead)",
+    async ({ configured, previousHead, reason }) => {
+      const at = await onGitHub();
+      const headRepo = "contributor/y";
+      const branch = "main";
+      const sourceHead = { ref: branch, sha: HEAD, repo: { id: 912, full_name: headRepo } };
+      const requests = [
+        { number: 23, state: "open", merged: false, head: sourceHead },
+        ...(previousHead
+          ? [
+              {
+                number: 22,
+                state: "closed",
+                merged: true,
+                head: { ...sourceHead, sha: previousHead },
+              },
+            ]
+          : []),
+      ];
+      at.host.pull = openPull({ branch, headRepo, headRepoId: 912 });
+      const { forge: host, seen } = await stub(
+        {
+          [`GET /repos/x/y/commits/${HEAD}/check-runs`]: () => ({
+            json: {
+              check_runs: [
+                {
+                  name: "Build",
+                  status: "completed",
+                  conclusion: "failure",
+                  app: { slug: "github-actions" },
+                  check_suite: { id: 42 },
+                },
+              ],
+            },
+          }),
+          [`GET /repos/x/y/commits/${HEAD}/status`]: () => ({
+            json: { statuses: [{ context: "Contributor agreement", state: "success" }] },
+          }),
+          "GET /repos/x/y/actions/runs": () => ({
+            json: {
+              total_count: 1,
+              workflow_runs: [
+                {
+                  id: 8,
+                  workflow_id: 7,
+                  check_suite_id: 42,
+                  event: "pull_request",
+                  run_number: 1,
+                  status: "completed",
+                  head_branch: branch,
+                  head_repository: { id: 912, full_name: headRepo },
+                  pull_requests: [],
+                },
+              ],
+            },
+          }),
+          "GET /repos/x/y/pulls": (call) => ({
+            json:
+              new URL(call.url, "https://api.github.com").searchParams.get("head") ===
+              `contributor:${branch}`
+                ? requests
+                : [],
+          }),
+        },
+        undefined,
+        {
+          owner: "x",
+          name: "y",
+          ...(configured ? { source: { id: 34, fullName: "maintainer/y" } } : {}),
+        },
+      );
+      vi.spyOn(at.forge, "checks").mockImplementation(host.checks.bind(host));
+      const review = await at.prepare();
+      const gate = await at.service.reviews.reviewGate(at.task.id, review.id);
+      const click = await at.service.reviews.mergeReview(at.task.id, review.id);
+      const mergeCalls = at.forge.calls.filter((call) => call.startsWith("putIn"));
+      console.log("Fork check gate", { configured, previousHead, gate, click, mergeCalls });
+      expect(gate).toContain(`Card refused: ${reason}`);
+      expect(click).toMatchObject({
+        ok: false,
+        stop: "checks",
+        text: expect.stringContaining(reason),
+      });
+      expect(mergeCalls).toEqual([]);
+      expect(seen.every(({ method }) => method === "GET")).toBe(true);
+    },
+  );
 
   it.each([
     { headRepo: "another/y" },

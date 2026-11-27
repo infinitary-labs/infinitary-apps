@@ -379,6 +379,7 @@ export class ChangeChecks {
         number: pull.number,
         branch: target.branch,
         headSha: pull.headSha,
+        headRepo: pull.headRepo,
         title: pull.title,
         base: pull.base,
         url:

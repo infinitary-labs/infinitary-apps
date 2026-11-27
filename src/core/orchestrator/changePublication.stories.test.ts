@@ -1190,15 +1190,15 @@ describe("shared story delivery boundaries", () => {
       run("commit", "-m", "test: record a fixture");
       bringBranchHome.mockResolvedValue(home.path);
       const waiting = await at.service.mergeCard.walk("ab12cd34");
-      expect(waiting.stop).toMatchObject({ step: "story", by: "crewmate" });
-      expect(waiting.stop?.missing).toContain(`${own} has no prepared story. ${howTo}`);
+      expect(waiting.stop).toMatchObject({ step: "pull", by: "crewmate" });
+      expect(waiting.stop?.missing).toContain(`uses ${named}, not the checked-out ${own}`);
 
       // Detached at the named branch's commit (another working copy may hold
       // the branch by name), the card calls follow the current change.
       checkout.now = { branch: null, head: original };
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
-        ready: { revision: 1, title, head: original },
+        ready: { revision: 1, title, head: original, selectedRequest: at.forge.change?.number },
       });
       expect(await at.service.publication.completionPresentation("ab12cd34", 1)).toMatchObject({
         revision: 1,
@@ -1290,7 +1290,12 @@ describe("shared story delivery boundaries", () => {
         revision: 1,
       });
       const again = await at.service.mergeCard.walk("ab12cd34", story);
-      expect(again.ready).toEqual({ revision: 1, title: story.title, head: original });
+      expect(again.ready).toEqual({
+        revision: 1,
+        title: story.title,
+        head: original,
+        selectedRequest: 1413,
+      });
       expect(again.did).toEqual([
         "Story revision 1 already says these words at this version, so no revision was added.",
       ]);
@@ -1298,7 +1303,7 @@ describe("shared story delivery boundaries", () => {
       expect(opens(at)).toBe(1);
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
-        ready: { revision: 1, title: story.title, head: original },
+        ready: { revision: 1, title: story.title, head: original, selectedRequest: 1413 },
       });
     });
 
@@ -1418,18 +1423,6 @@ describe("shared story delivery boundaries", () => {
       expect(opens(at)).toBe(0);
     });
 
-    it("stops at the pull request when the one that carried the story closed, sending nothing again", async () => {
-      const { at, story: saved } = await deliveringFromAnotherBranch();
-      // One title for the story, the pull request and the card.
-      const story = { ...saved, title: "feat: share the story" };
-      expect((await at.service.mergeCard.walk("ab12cd34", story)).ready).toBeDefined();
-      at.forge.change = null;
-      const walk = await at.service.mergeCard.walk("ab12cd34", story);
-      expect(walk.stop).toMatchObject({ step: "pull", by: "captain" });
-      expect(walk.stop?.missing).toContain("is no longer open. Publication stops");
-      expect(opens(at)).toBe(1);
-    });
-
     it("prepares the same words again once the live proof is accepted since the story, then stops repeating it", async () => {
       const { at, story: saved } = await deliveringFromAnotherBranch();
       const story = {
@@ -1493,7 +1486,7 @@ describe("shared story delivery boundaries", () => {
       expect(ledger?.published?.revision).toBe(2);
       expect(await at.service.mergeCard.walk("ab12cd34")).toEqual({
         did: [],
-        ready: { revision: 2, title: story.title, head: original },
+        ready: { revision: 2, title: story.title, head: original, selectedRequest: 1413 },
       });
       expect(opens(at)).toBe(0);
       expect(at.update).toHaveBeenCalledTimes(1);

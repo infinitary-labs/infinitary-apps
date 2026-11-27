@@ -4451,6 +4451,7 @@
 "taskBrowserStoppedIdle" = "أُوقف بعد 30 دقيقة دون استخدام";
 "taskBrowserStoppedQuit" = "توقف عند إغلاق Infinitary";
 "taskBrowserStoppedTaskClosed" = "أُوقف عند إغلاق المهمة";
+"taskChecksUnattributed" = "لم يحدّد %1$@ طلب السحب المرتبط ببعض عمليات تشغيل سير العمل.";
 "taskGroupBacklog" = "المؤجلة";
 "taskGroupLanded" = "دُمجت · 7 أيام";
 "taskGroupQueued" = "في قائمة الانتظار";

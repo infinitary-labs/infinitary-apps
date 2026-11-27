@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import type { ForgeLocation } from "@core/forge";
 import { GitHubForge } from "@core/forge/providers/github/githubForge";
 import { afterEach } from "vitest";
 import { BUNDLED_NAMING } from "./namingRunbook";
@@ -35,7 +36,11 @@ afterEach(async () => {
  * records the waits between reads of a background merge's result instead of
  * sleeping them.
  */
-export async function stub(routes: Record<string, Route>, sleeps?: number[]) {
+export async function stub(
+  routes: Record<string, Route>,
+  sleeps?: number[],
+  project?: Pick<ForgeLocation, "owner" | "name" | "source">,
+) {
   const seen: Seen[] = [];
   server = createServer((req, res) => {
     let raw = "";
@@ -65,7 +70,12 @@ export async function stub(routes: Record<string, Route>, sleeps?: number[]) {
   const { port } = listening.address() as AddressInfo;
   const base = `http://127.0.0.1:${port}`;
   const forge = new GitHubForge(
-    { kind: "github", host: "github.com", owner: "octo", name: "meter", dir: "/r" },
+    {
+      kind: "github",
+      host: "github.com",
+      dir: "/r",
+      ...(project ?? { owner: "octo", name: "meter" }),
+    },
     {
       token: async () => "gho_test",
       apiBaseUrl: base,
@@ -76,3 +86,27 @@ export async function stub(routes: Record<string, Route>, sleeps?: number[]) {
   );
   return { seen, forge, base };
 }
+
+export const githubCheckRun = (name: string, conclusion: string, app: string, id: number) => ({
+  id,
+  name,
+  status: "completed",
+  conclusion,
+  started_at: "2026-11-15T20:00:00Z",
+  completed_at: "2026-11-15T20:10:00Z",
+  app: { slug: app },
+  check_suite: { id: 900 + id },
+});
+
+export const passingPrWorkflows = (count: number, number: number) => ({
+  total_count: count,
+  workflow_runs: Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    workflow_id: index + 1,
+    check_suite_id: 901 + index,
+    event: "pull_request",
+    run_number: 1,
+    status: "completed",
+    pull_requests: [{ number }],
+  })),
+});

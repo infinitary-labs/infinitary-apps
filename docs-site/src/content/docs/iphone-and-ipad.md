@@ -92,6 +92,7 @@ The phone needs your computer awake, with Infinitary open.
 If it cannot reach it, it says "Your computer is out of reach. Check that Infinitary is open and both devices share a network."
 
 With notifications on, your phone shows a notification for each new card, even while Infinitary is closed there.
+While you are at a computer that shows your first mate, your phone stays quiet; the cards that came meanwhile reach it once you leave, after five minutes without the keyboard or mouse or as soon as the screen locks, and a card you already saw there never does.
 With more than one computer kept, each one sends its own, and the notification names the computer it came from; tapping it shows that computer and opens the card.
 Each computer keeps sending them while you show another one: your phone leaves it a sealed note through Infinitary's relay whenever its notification permission renews, which only that computer can read.
 

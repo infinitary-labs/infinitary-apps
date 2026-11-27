@@ -6,6 +6,7 @@ import { DevicePairing } from "@core/devices/pairing";
 import type { CoreDispatch } from "@core/dispatcher";
 import { CoreEventBus } from "@core/events";
 import type { Core } from "@core/index";
+import { SomeoneHere } from "@core/someoneHere";
 import { buildUpdateTarget } from "@core/update/updateChannels";
 import { createUpdateChecker, type UpdateChecker } from "@core/update/updateChecker";
 import type { Card } from "@shared/cards";
@@ -250,6 +251,8 @@ export function ownCore(): OwnCore {
       settings: { getDictation: () => ({ enabled: true }) },
       quota: { onWindowFocus: vi.fn(), onResumed: vi.fn() },
       personal: { framePanelDir: () => "/own/panels" },
+      // What this program's window reads of its computer, for the phone (src/main/attendance.ts).
+      someoneHere: new SomeoneHere(),
     },
     paths: { crewmatesDir: "/own/crewmates" },
     events: new CoreEventBus(),

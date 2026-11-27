@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-follows-presence",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Your phone stays quiet while you are at your computer",
+      "body": "Your phone no longer buzzes for a card while you are working at a computer that shows your first mate. The cards that come meanwhile reach your phone once you leave: after five minutes without the keyboard or mouse, or at once when the screen locks or turns off. Acting on your phone also counts as having left, until you next touch the computer. A card you already saw on the computer never reaches the phone.",
+      "noPicture": "Nothing on screen changes; this changes when a phone notification is sent.",
+      "docsSite": ["iphone-and-ipad"],
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

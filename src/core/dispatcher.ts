@@ -156,16 +156,18 @@ export const VIEWER_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<CoreInvok
   // open, and holds the crew's saved work while it installs an update.
   "inf:own-window:here",
   "inf:update:hold",
-  // A window in a program of its own, named by its connection, says whether it is in front.
+  // A window in a program of its own, named by its connection, says whether it is in front
+  // and whether someone is at its computer.
   "inf:window:front",
+  "inf:window:someone-here",
 ]);
 
 /** A request that names the window asking it, asked by something that is not a window. */
 const OWN_WINDOW_ONLY = "Only this computer's own window asks this of its first mate.";
 
-/** Whether a window is in front, said by something that is not a window. */
+/** Whether a window is in front or someone is at its computer, said by something that is not a window. */
 // i18n-exempt: an error for a caller that is not a window, never shown
-const WINDOW_ONLY = "Only a window says whether it is in front.";
+const WINDOW_ONLY = "Only a window says whether it is in front or someone is at its computer.";
 
 export type CoreDispatcherOptions = {
   services: CoreServices;
@@ -828,6 +830,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       throw new Error(OWN_WINDOW_ONLY);
     },
     "inf:window:front": () => {
+      throw new Error(WINDOW_ONLY);
+    },
+    "inf:window:someone-here": () => {
       throw new Error(WINDOW_ONLY);
     },
 
@@ -1682,9 +1687,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       const [step] = parseInvokeRequest("inf:update:hold", rawArgs);
       return updateHold(step, viewer);
     }
-    if (channel === "inf:window:front") {
-      const [inFront] = parseInvokeRequest("inf:window:front", rawArgs);
-      services.windowsInFront.report(viewer, inFront);
+    if (channel === "inf:window:front" || channel === "inf:window:someone-here") {
+      const [said] = parseInvokeRequest(channel, rawArgs);
+      services.someoneHere[channel === "inf:window:front" ? "front" : "here"](viewer, said);
       return { ok: true };
     }
     const [taskId, size] = parseInvokeRequest("inf:browser:size", rawArgs);

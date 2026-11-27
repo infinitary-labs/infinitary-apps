@@ -15,6 +15,7 @@ import {
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { otherMac, shown, stopEachTest, stops } from "../../tests/helpers/shellStandIns";
 import { BesideWindow } from "./besideWindow";
+import { PresenceWatch } from "./presenceWatch";
 import type { OwnedRun } from "./runCommand";
 
 /**
@@ -273,6 +274,37 @@ describe("the window beside a command's first mate", () => {
     await expect
       .poll(() => command.asked("inf:window:front"), { timeout: 5_000 })
       .toEqual([[true], [false], [true], [true]]);
+  });
+
+  // INF-7038's approved plan, Part 2, with the captain's answers: the phone stays quiet while
+  // someone is at a computer showing the first mate, and acting on the phone counts as having
+  // left it. This window's program reads its own computer and says so at each welcome and
+  // each change.
+  it("tells the first mate whether someone is at this computer, at each welcome and change, and nobody after the phone acted", async () => {
+    const command = commandRun();
+    await command.open().settled();
+    let idle = 0;
+    const presence = new PresenceWatch(true, () => idle);
+    const at = besideShell(command.doorDir, { presence });
+    await at.start();
+    await expect.poll(() => command.asked("inf:window:someone-here")).toEqual([[true]]);
+    presence.set("locked", true);
+    await expect.poll(() => command.asked("inf:window:someone-here")).toEqual([[true], [false]]);
+    presence.set("locked", false);
+    await expect
+      .poll(() => command.asked("inf:window:someone-here"))
+      .toEqual([[true], [false], [true]]);
+    await command.stop();
+    await command.open().settled();
+    await expect
+      .poll(() => command.asked("inf:window:someone-here"), { timeout: 5_000 })
+      .toEqual([[true], [false], [true], [true]]);
+    // A minute untouched, then the captain acts on the phone.
+    idle = 60;
+    command.run.core.events.emit("inf:window:captain-on-phone", {});
+    await expect
+      .poll(() => command.asked("inf:window:someone-here"))
+      .toEqual([[true], [false], [true], [true], [false]]);
   });
 
   // INF-4786: a window that came to the front before its first welcome, then quit, went on

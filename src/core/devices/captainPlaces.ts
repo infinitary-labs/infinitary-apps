@@ -63,6 +63,11 @@ export class CaptainPlaces implements CaptainPlaceReads {
       /** The first mate's own computer's name, as macOS gives it; absent when it could not be read. */
       homeName?: string;
       now: () => number;
+      /**
+       * The captain's input came from a paired phone or iPad, which each
+       * window's program hears (`inf:window:captain-on-phone`, docs/phone-push.md).
+       */
+      onPhone?: () => void;
     },
   ) {}
 
@@ -74,6 +79,7 @@ export class CaptainPlaces implements CaptainPlaceReads {
   during<T>(work: () => T): T {
     const words = this.asking();
     if (words !== undefined) this.last = { words, at: this.options.now() };
+    if (this.fromPhone()) this.options.onPhone?.();
     return this.input.run(words, work);
   }
 

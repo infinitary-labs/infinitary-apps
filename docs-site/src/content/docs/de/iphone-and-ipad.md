@@ -1,5 +1,5 @@
 ---
-source: 343fc510d10a179f
+source: 4689a21f9d4af463
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---
@@ -93,6 +93,7 @@ Das Telefon braucht deinen Computer wach und mit geöffnetem Infinitary.
 Wenn es ihn nicht erreicht, sagt es: „Dein Computer ist außer Reichweite. Prüfe, ob Infinitary geöffnet ist und beide Geräte im selben Netzwerk sind.“
 
 Mit eingeschalteten Mitteilungen zeigt dein Telefon für jede neue Karte eine Mitteilung, auch wenn Infinitary dort geschlossen ist.
+Während du an einem Computer bist, der deinen ersten Offizier zeigt, bleibt dein Telefon still; die Karten, die inzwischen kamen, erreichen es, sobald du gehst, nach fünf Minuten ohne Tastatur oder Maus oder sobald sich der Bildschirm sperrt, und eine Karte, die du dort schon gesehen hast, nie.
 Wenn du mehr als einen Computer behältst, sendet jeder seine eigenen, und die Mitteilung nennt den Computer, von dem sie kommt; tippst du darauf, zeigt das Telefon diesen Computer und öffnet die Karte.
 Jeder Computer sendet sie weiter, während du einen anderen anzeigst: Dein Telefon hinterlässt ihm über das Relay von Infinitary eine versiegelte Nachricht, sobald seine Mitteilungsberechtigung erneuert wird, und nur dieser Computer kann sie lesen.
 

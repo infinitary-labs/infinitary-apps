@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "computer-versions-split",
+      "reason": "Internal: computer version comparisons move into their own module without changing device behavior."
+    }
+  ]
+}

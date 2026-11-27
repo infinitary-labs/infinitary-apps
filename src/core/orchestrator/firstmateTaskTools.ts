@@ -11,7 +11,7 @@ import { TaskService } from "../tasks/taskService";
 import { TaskTagRefusal } from "../tasks/taskTags";
 import type { DeliveryNote } from "./answerDelivery";
 import type { AskCapture } from "./askCapture";
-import { captainWordsIn } from "./captainOverrides";
+import { captainWordsIn, SCHEDULED_CITES_DIRECTION } from "./captainOverrides";
 import { FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import { cardHeldStartRefusal } from "./cardHeldStart";
 import { cardMutationText } from "./cardMutationText";
@@ -550,8 +550,11 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         const from = input.from?.trim();
         const cited = from?.startsWith("d:")
           ? supervisor.overrides.citedDirection(record.id, from)
-          : captainWordsIn(host.turn, input.from, (cite) =>
-              supervisor.overrides.citedCaptainWords(record.id, cite, { partOf: true }),
+          : captainWordsIn(
+              host.turn,
+              input.from,
+              (cite) => supervisor.overrides.citedCaptainWords(record.id, cite, { partOf: true }),
+              SCHEDULED_CITES_DIRECTION,
             );
         if (!cited.ok) return cited.text;
         const said = {

@@ -31,18 +31,21 @@ export const OVERRIDE_REFUSED = "Override refused: nothing was recorded.";
  * (`from` omitted or `turn`), every message of his it carries, however it
  * began; or the words on the task `cite` reads from a card, the Crewmate
  * tab or the standing override. A scheduled check carries none of his
- * words, so it cites none. The host checks only that the words are his.
+ * words, so it cites none; `scheduledElse` says what such a check may cite
+ * instead, where the tool takes one. The host checks only that the words
+ * are his.
  */
 export function captainWordsIn(
   turn: { canCreate: boolean; asked: readonly string[] },
   from: string | undefined,
   cite: (from: string) => ReturnType<CaptainOverrides["citedCaptainWords"]>,
+  scheduledElse?: string,
 ): ReturnType<CaptainOverrides["citedCaptainWords"]> {
   if (from && from !== "turn") {
     if (!citesKeptWords(turn))
       return {
         ok: false,
-        text: `${OVERRIDE_REFUSED} A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.`,
+        text: `${OVERRIDE_REFUSED} A scheduled check cites no card, Crewmate tab line or standing words, since none of the captain's words arrived with it; the one standing still applies.${scheduledElse ? ` ${scheduledElse}` : ""}`,
       };
     return cite(from);
   }
@@ -78,6 +81,11 @@ const CITED_DIRECTION_WHY = {
   changed: (id: string, revision: number) =>
     `d:${id} is no longer at revision ${revision}, the one these words are: it was revised or retired since. Cite it again by its d: id, or the captain's own words.`,
 };
+
+/** What else a scheduled check may cite for an override, after its refusal of the captain's words. */
+// i18n-exempt: served to the first mate, never shown to a person
+export const SCHEDULED_CITES_DIRECTION =
+  "A heard direction of the task's project, cited by its d: id, may still record one.";
 
 /** How a direction change refused on its cited words begins. */
 // i18n-exempt: a refusal served to the first mate, never shown to a person

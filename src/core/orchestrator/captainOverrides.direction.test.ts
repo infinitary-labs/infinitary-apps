@@ -28,7 +28,7 @@ import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
-import { DIRECTION_REFUSED, OVERRIDE_REFUSED } from "./captainOverrides";
+import { DIRECTION_REFUSED, OVERRIDE_REFUSED, SCHEDULED_CITES_DIRECTION } from "./captainOverrides";
 
 fakeClockEachTest();
 
@@ -187,10 +187,31 @@ describe("an override citing a heard direction", () => {
     // The captain's reply reached an earlier turn, never this one.
     expect(h.session.prompts.slice(0, -1).join("\n")).toContain("Run them and merge if they pass.");
     expect(h.session.prompts.at(-1)).not.toContain("Run them and merge if they pass.");
-    expect(
-      await override(h, "t-release", { holds: ["checks"], until: "task", from: replied }),
-    ).toContain("A scheduled check records no override");
+    const refused = await override(h, "t-release", {
+      holds: ["checks"],
+      until: "task",
+      from: replied,
+    });
+    expect(refused).toContain(
+      `${OVERRIDE_REFUSED} A scheduled check cites no card, Crewmate tab line or standing words`,
+    );
+    // It points the override at the citation a scheduled check may make.
+    expect(refused).toContain(SCHEDULED_CITES_DIRECTION);
     expect(h.tasks.get("t-release")?.delivery?.override).toBeUndefined();
+    // A close cites no direction, so its refusal names none.
+    const close = await toolsOf(h.specs).get("settle_task")?.execute("close-scheduled", {
+      task_id: "t-release",
+      mode: "done",
+      why: "finished",
+      evidence: "The harbor build is out and its checks passed.",
+      captain_words: replied,
+      closing_sentence: "The harbor release shipped.",
+    });
+    expect(close?.content[0]?.text).toContain(
+      "Not closed: A scheduled check cites no card, Crewmate tab line or standing words",
+    );
+    expect(close?.content[0]?.text).not.toContain(SCHEDULED_CITES_DIRECTION);
+    expect(h.tasks.get("t-release")?.status).not.toBe("done");
     expect(
       await override(h, "t-release", {
         holds: ["checks"],

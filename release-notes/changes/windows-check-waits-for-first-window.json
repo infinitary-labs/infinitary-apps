@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "windows-check-waits-for-first-window",
+      "reason": "The Windows installer check waits for the app's window to show before it launches the app again and checks that window, instead of racing the window's first paint; it changes only the check, not the app."
+    }
+  ]
+}

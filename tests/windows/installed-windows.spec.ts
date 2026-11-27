@@ -375,7 +375,9 @@ test("the Windows installer installs for this person, offers Git, starts the com
       .poll(gitVersion, { timeout: 10 * 60_000, intervals: [2_000] })
       .toBe(`git version ${GIT_FOR_WINDOWS.version}.windows.1`);
     keep("git-version.txt", gitVersion());
-    // The app goes on to open its window once Git is in place.
+    // The app goes on to open its window once Git is in place: its saved data appears as its core
+    // starts, and the window, made after that, shows only at its first paint, which on this fresh
+    // PC can come many seconds after the saved data.
     await expect
       .poll(
         () =>
@@ -385,6 +387,7 @@ test("the Windows installer installs for this person, offers Git, starts the com
         { timeout: 120_000 },
       )
       .toBe(true);
+    await expect.poll(() => showsWindow(opened.pid), { timeout: 120_000 }).toBe(true);
     if (evidence) screenshot(join(evidence, "first-window.png"));
   });
 
@@ -413,10 +416,16 @@ test("the Windows installer installs for this person, offers Git, starts the com
       await expect.poll(() => runTask(label)?.state, { timeout: 60_000 }).toBe("Ready");
     };
 
+    // The app's program runs before its window shows: a launch it answers in between, which it
+    // does once the window is made (`answerLaunch`), would find no window shown yet.
     const windowOpened = async (): Promise<number> => {
-      await expect.poll(() => topAppProcesses().length, { timeout: 60_000 }).toBeGreaterThan(0);
-      const [window] = topAppProcesses().filter((process) => process.parent === "explorer.exe");
-      if (!window) throw new Error("the window is not running");
+      const shown = () =>
+        topAppProcesses().filter(
+          (process) => process.parent === "explorer.exe" && showsWindow(process.pid),
+        );
+      await expect.poll(() => shown().length, { timeout: 60_000 }).toBeGreaterThan(0);
+      const [window] = shown();
+      if (!window) throw new Error("the window is not shown");
       return window.pid;
     };
     // taskkill fails the whole tree when one of its programs ended on its own

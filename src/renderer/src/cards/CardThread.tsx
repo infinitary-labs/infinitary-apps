@@ -51,6 +51,7 @@ import {
 } from "../design/core/FileControls";
 import { installedBindings } from "../design/core/installedKeys";
 import { DictationMark, PastedTextChip } from "../design/voice/VoiceInput";
+import { isCardOverlayPage } from "../overlay/overlayPage";
 import { AnnotationControls, NO_NOTES, NoteAnchor, QueuedNotes } from "./AnnotationControls";
 import { FOLLOW_SLACK_PX } from "./CrewmateView";
 import type { CollectAnswers } from "./PrototypeBody";
@@ -532,13 +533,15 @@ export function ReplyRow({
               // The dictation key goes on to record here, and Escape while
               // this field records abandons it (docs/composer.md, "Voice").
               if (dictation.keyDown(event)) return;
-              // Only the opted-in layer lends an unused Escape to the window's
-              // existing chain. Every other key stays the field's own.
+              // Only the opted-in layer, and the card overlay's page, lend an
+              // unused Escape to the page's existing chain: the overlay's
+              // leaves the field for the card, then sends the overlay away
+              // (docs/card-overlay.md). Every other key stays the field's own.
               if (
                 event.key === "Escape" &&
                 !event.defaultPrevented &&
                 !isComposing(event) &&
-                hasNotTypingKeys(installedBindings())
+                (hasNotTypingKeys(installedBindings()) || isCardOverlayPage())
               )
                 return;
               event.stopPropagation();

@@ -8,12 +8,11 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
     public struct Client: Decodable, Sendable, Equatable {
         public let kept: Bool
         public let refused: String?
-        public let retiring: Bool?
         public let runClient: Bool?
         /// When Google ends the sign-in, in milliseconds on the computer's clock.
         public let endsAt: Double?
-        public init(kept: Bool, refused: String? = nil, retiring: Bool? = nil, runClient: Bool? = nil, endsAt: Double? = nil) {
-            self.kept = kept; self.refused = refused; self.retiring = retiring; self.runClient = runClient; self.endsAt = endsAt
+        public init(kept: Bool, refused: String? = nil, runClient: Bool? = nil, endsAt: Double? = nil) {
+            self.kept = kept; self.refused = refused; self.runClient = runClient; self.endsAt = endsAt
         }
     }
     public struct Row: Decodable, Sendable, Equatable {
@@ -31,45 +30,31 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
     public let addable: [Addable]?
 }
 
-/// What the Google row says of its client when that outranks its health, and its one next step: the computer's
-/// `googleClientState` (src/renderer/src/settings/GoogleClientSetup.tsx), in the same order.
+/// What the Google row says of its client when that outranks its health: the computer's `googleClientState`
+/// (src/renderer/src/settings/GoogleClientSetup.tsx), in the same order.
 public struct PhoneGoogleClientState: Equatable, Sendable {
-    public enum Next: Sendable { case setUp, setUpAgain, signIn }
     public enum Tone: Sendable { case danger, warning }
     public let words: String
     public let detail: String
     public let tone: Tone
-    public let next: Next
 
     public static func of(_ client: PhoneIntegrations.Client?, health: String?) -> PhoneGoogleClientState? {
         guard let client else { return nil }
         if client.refused != nil {
             return .init(words: PhoneMessages.integrationsGoogleStopped(), detail: PhoneMessages.integrationsGoogleStoppedDetail(),
-                         tone: .danger, next: .setUpAgain)
+                         tone: .danger)
         }
         guard let health, health != "needs_reauth" else { return nil }
-        if client.retiring == true {
-            return client.kept
-                ? .init(words: PhoneMessages.integrationsGoogleRetiring(), detail: PhoneMessages.integrationsGoogleReadyDetail(),
-                        tone: .warning, next: .signIn)
-                : .init(words: PhoneMessages.integrationsGoogleRetiring(), detail: PhoneMessages.integrationsGoogleRetiringDetail(),
-                        tone: .warning, next: .setUp)
-        }
         if let endsAt = client.endsAt {
             let date = Date(timeIntervalSince1970: endsAt / 1000).formatted(date: .abbreviated, time: .omitted)
             return .init(words: PhoneMessages.integrationsGoogleStops(date: date),
-                         detail: PhoneMessages.integrationsGoogleStopsDetail(date: date), tone: .warning, next: .setUpAgain)
+                         detail: PhoneMessages.integrationsGoogleStopsDetail(date: date), tone: .warning)
         }
         return nil
     }
 
-    public var nextWords: String {
-        switch next {
-        case .signIn: PhoneMessages.integrationsGoogleSignIn()
-        case .setUp: PhoneMessages.integrationsGoogleSetUp()
-        case .setUpAgain: PhoneMessages.integrationsGoogleSetUpAgain()
-        }
-    }
+    /// Every client state's one next step sets the client up again.
+    public var nextWords: String { PhoneMessages.integrationsGoogleSetUpAgain() }
 }
 
 private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: PhoneIntegrations }

@@ -1256,9 +1256,6 @@
 "integrationsGoogleExchangeOperation" = "إكمال تسجيل الدخول إلى Google باستخدام عميل Google الخاص بك";
 "integrationsGoogleExchangeReason" = "يكمل Infinitary تسجيل دخولك إلى Google باستخدام عميل Google الخاص بك.";
 "integrationsGoogleExchangeResult" = "تسجيل دخول جديد إلى Google، محفوظ في الأسرار وذاكرة التطبيق";
-"integrationsGoogleReadyDetail" = "عميل Google الخاص بك محفوظ. سجّل الدخول به لتنتقل عن عميل Infinitary المشترك.";
-"integrationsGoogleRetiring" = "أعدّ اتصالك الخاص";
-"integrationsGoogleRetiringDetail" = "Google متصل عبر عميل Infinitary المشترك، وهو في طريقه إلى التوقف. يظل يعمل حتى ذلك الحين؛ أعدّ عميلك الخاص لتبقى متصلًا.";
 "integrationsGoogleSetUp" = "إعداد";
 "integrationsGoogleSetUpAgain" = "إعداد من جديد";
 "integrationsGoogleSetUpFirst" = "أعدّ عميل Google الخاص بك أولًا، من الإعدادات ← التكاملات ← Google.";
@@ -1274,7 +1271,6 @@
 "integrationsGoogleSetupStepFile" = "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم أفلته هنا أو اختره أو الصق محتواه.";
 "integrationsGoogleSetupStepPage" = "افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.";
 "integrationsGoogleSetupTitle" = "أعدّ اتصال Google الخاص بك";
-"integrationsGoogleSignIn" = "تسجيل الدخول";
 "integrationsGoogleSignInHint" = "سجّل الدخول بحساب Google الذي أنشأ عميلك: فهو لا يخدم إلا ذلك الحساب.";
 "integrationsGoogleStopped" = "توقّف عميل Google الخاص بك";
 "integrationsGoogleStoppedDetail" = "لم تعد Google تقبل عميلك، ربما لأنه حُذف في Google Cloud. أعدّه من جديد لتعيد ربط Google.";

@@ -1256,9 +1256,6 @@
 "integrationsGoogleExchangeOperation" = "Finish the Google sign-in with your own Google client";
 "integrationsGoogleExchangeReason" = "Infinitary finishes your Google sign-in with your own Google client.";
 "integrationsGoogleExchangeResult" = "A new Google sign-in, kept in Secrets and the app's memory";
-"integrationsGoogleReadyDetail" = "Your own Google client is kept. Sign in with it to move off Infinitary's shared client.";
-"integrationsGoogleRetiring" = "Set up your own connection";
-"integrationsGoogleRetiringDetail" = "Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.";
 "integrationsGoogleSetUp" = "Set up";
 "integrationsGoogleSetUpAgain" = "Set up again";
 "integrationsGoogleSetUpFirst" = "Set up your own Google client first, in Settings → Integrations → Google.";
@@ -1274,7 +1271,6 @@
 "integrationsGoogleSetupStepFile" = "Download the client file Google shows with Download JSON, then drop it here, choose it, or paste what it holds.";
 "integrationsGoogleSetupStepPage" = "Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.";
 "integrationsGoogleSetupTitle" = "Set up your own Google connection";
-"integrationsGoogleSignIn" = "Sign in";
 "integrationsGoogleSignInHint" = "Sign in with the Google account that made your client: it serves only that account.";
 "integrationsGoogleStopped" = "Your Google client stopped";
 "integrationsGoogleStoppedDetail" = "Google no longer accepts your client, perhaps because it was deleted in Google Cloud. Set it up again to reconnect Google.";

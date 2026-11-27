@@ -961,7 +961,6 @@ describe("Google as an integration", () => {
       },
     });
     expect(setup.client).toBeUndefined();
-    expect(setup.signsIn).toBe(false);
     expect(setup.endpoints).toEqual({
       auth: "https://accounts.google.com/o/oauth2/v2/auth",
       token: "https://oauth2.googleapis.com/token",
@@ -983,7 +982,6 @@ describe("Google as an integration", () => {
       },
     });
     expect(named.client).toEqual({ id: STAND_IN_CLIENT_ID, secret: STAND_IN_CLIENT_SECRET });
-    expect(named.signsIn).toBe(true);
   });
 });
 

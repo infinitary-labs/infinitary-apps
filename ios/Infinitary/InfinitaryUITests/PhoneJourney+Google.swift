@@ -96,6 +96,39 @@ extension PhoneJourney {
         XCTAssertTrue(account.label.contains(who), account.label)
         picture("google-signed-in")
 
+        // INF-7012's approved plan, piece 1: "a row line with a link appears when Google refuses an unmarked client",
+        // on the phone as on the computer, and the row keeps its sign-in. The phone reads its computer's rows as
+        // Settings opens, so it opens Settings again after each answer from Google.
+        func openIntegrationsAgain() {
+            let close = app.buttons["close-phone-settings"]
+            tapOnPhone(close, repeatDiscarded: false)
+            XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+            tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
+            XCTAssertTrue(integrations.waitForPresence(timeout: 20), app.debugDescription)
+            tapOnPhone(integrations, repeatDiscarded: false)
+            XCTAssertTrue(account.waitForPresence(timeout: 20), app.debugDescription)
+        }
+        // The row draws what it last read until Settings' own read answers, so each wait is for the new words.
+        let line = app.staticTexts["google-client-state"]
+        let next = app.buttons["google-client-next"]
+        let refused = try await home("google-agent-refused")
+        XCTAssertEqual(refused["refused"] as? String, "agent")
+        openIntegrationsAgain()
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Mark your client for agents"), object: line, timeout: 20),
+                       .completed, app.debugDescription)
+        XCTAssertTrue(app.staticTexts["google-client-detail"].label.hasPrefix("Google's Gmail and Calendar servers only take a client marked"),
+                      app.staticTexts["google-client-detail"].label)
+        XCTAssertEqual(next.label, "Open Google Cloud")
+        XCTAssertTrue(next.isEnabled, "Google Cloud's page reads nothing on the computer")
+        XCTAssertTrue(account.label.contains(who), "The row keeps its sign-in")
+        waitForSteadyTarget(next)
+        picture("google-agent-refused")
+        let marked = try await home("google-agent-marked")
+        XCTAssertTrue(marked["refused"] is NSNull, "Google's next answer clears the line")
+        openIntegrationsAgain()
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Set up again"), object: next, timeout: 20),
+                       .completed, "The client's own line comes back: \(app.debugDescription)")
+
         let signOut = app.buttons["google-sign-out"]
         waitForSteadyTarget(signOut)
         tapOnPhone(signOut, repeatDiscarded: false)

@@ -289,8 +289,10 @@ extension PhoneJourney {
         let terminal = theme.buttons["phone-theme-own-old-terminal"]
         XCTAssertTrue(terminal.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(yours.label, "Yours")
-        XCTAssertEqual(theme.buttons.allElementsBoundByIndex.map(\.label),
-                       ["Device", "Dark", "Light"] + Self.builtInThemes.map(\.name) + ["Old terminal"])
+        // The tile added later can come first in the accessibility tree, so where it sits is read from its frame.
+        let labels = theme.buttons.allElementsBoundByIndex.map(\.label)
+        XCTAssertEqual(labels.filter { $0 != "Old terminal" }, ["Device", "Dark", "Light"] + Self.builtInThemes.map(\.name))
+        XCTAssertEqual(labels.filter { $0 == "Old terminal" }.count, 1, "The own theme is one tile, under its own name")
         XCTAssertLessThan(theme.buttons["Tokyo Night"].frame.maxY, yours.frame.minY, "Yours follows the built-in themes")
         XCTAssertLessThanOrEqual(yours.frame.maxY, terminal.frame.minY)
         // On an iPhone the built-in themes can fill the sheet, so Yours is brought up into view for its picture.

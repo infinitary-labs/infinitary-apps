@@ -2390,6 +2390,7 @@
 "phoneTaskFactsLevelExtraHigh" = "Sehr hoch";
 "phoneTaskFactsLevelHigh" = "Hoch";
 "phoneTaskFactsLevelLow" = "Niedrig";
+"phoneTaskFactsLevelMax" = "Max.";
 "phoneTaskFactsLevelMedium" = "Mittel";
 "phoneTaskFactsLevelMinimal" = "Minimal";
 "phoneTaskFactsLevelModelDefault" = "Modellstandard";
@@ -3737,6 +3738,7 @@
 "settingsProjectsWorkspaceDescription" = "Baut direkt im Ordner: keine Arbeitskopie und kein Pull Request.";
 "settingsReasoningAuto" = "Automatisch";
 "settingsReasoningLabel" = "%2$@ %1$@ Denken für %3$@";
+"settingsReasoningMax" = "Max.";
 "settingsReasoningSaveFailed" = "Der Denkaufwand konnte nicht gespeichert werden. Deine vorherige Wahl wird weiter angezeigt. Versuch es noch einmal.";
 "settingsReasoningSavedUnavailable" = "%1$@ · gespeichert, nicht verfügbar";
 "settingsReasoningUnavailable" = "Denkaufwand-Optionen nicht verfügbar";

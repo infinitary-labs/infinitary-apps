@@ -118,7 +118,10 @@ export type PlacedHost = {
         | {
             model: { provider: string; id: string };
             accountId?: string;
-            thinking: { level: "low" | "medium" | "high" | "xhigh" | "off"; quick?: boolean };
+            thinking: {
+              level: "low" | "medium" | "high" | "xhigh" | "max" | "off";
+              quick?: boolean;
+            };
             commit(opened: {
               model?: { provider: string; id: string };
               account?: string;

@@ -11,6 +11,9 @@ export function claudeReasoningCapabilities(model: string | undefined): Reasonin
 }
 
 const CLAUDE_EFFORT_RUNGS: readonly ThinkingLevel[] = ["low", "medium", "high", "xhigh"];
+// A Max request (a task's own override) caps to the strongest rung here
+// rather than falling off the order to the weakest.
+const EFFORT_ORDER: readonly ThinkingLevel[] = [...CLAUDE_EFFORT_RUNGS, "max"];
 
 /**
  * The effort a coding session opens at on the spec's model (FI3-439). The
@@ -28,6 +31,6 @@ export function claudeCodingReasoning(
   const opened =
     level === "off"
       ? undefined
-      : openingReasoning(CLAUDE_EFFORT_RUNGS, offered, level, spec.thinking.quick === true);
+      : openingReasoning(EFFORT_ORDER, offered, level, spec.thinking.quick === true);
   return opened ?? { level: "default" };
 }

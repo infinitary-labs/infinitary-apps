@@ -660,6 +660,7 @@
   "phoneTaskFactsLevelExtraHigh": "Extra high",
   "phoneTaskFactsLevelHigh": "High",
   "phoneTaskFactsLevelLow": "Low",
+  "phoneTaskFactsLevelMax": "Max",
   "phoneTaskFactsLevelMedium": "Medium",
   "phoneTaskFactsLevelMinimal": "Minimal",
   "phoneTaskFactsLevelModelDefault": "Model's own",

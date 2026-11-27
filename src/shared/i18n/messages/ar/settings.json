@@ -1251,6 +1251,7 @@
   "settingsProjectsWorkspaceDescription": "يُبنى في مكانه: لا نسخة عمل ولا طلب سحب.",
   "settingsReasoningAuto": "تلقائي",
   "settingsReasoningLabel": "استدلال {provider} {model} لـ{slot}",
+  "settingsReasoningMax": "أقصى",
   "settingsReasoningSaveFailed": "تعذّر حفظ الاستدلال. لا يزال اختيارك السابق معروضًا. أعِد المحاولة.",
   "settingsReasoningSavedUnavailable": "{reasoning} · محفوظ، غير متاح",
   "settingsReasoningUnavailable": "خيارات الاستدلال غير متاحة",

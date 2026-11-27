@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "reasoning-max-level",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Models whose strongest reasoning is Max offer Max",
+      "body": "Some models, such as GLM-5.3, offer Max reasoning above High, and some offer it above Extra high. Models now lists Max beside a model's other reasoning choices when the model offers it, and crewmates on that model can work at it. Before, those models stopped at High or Extra high.",
+      "noPicture": "The change adds one choice to an existing menu; the menu and the Models view otherwise look the same.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

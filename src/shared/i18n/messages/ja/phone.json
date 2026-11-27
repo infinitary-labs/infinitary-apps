@@ -640,6 +640,7 @@
   "phoneTaskFactsLevelExtraHigh": "最高",
   "phoneTaskFactsLevelHigh": "高",
   "phoneTaskFactsLevelLow": "低",
+  "phoneTaskFactsLevelMax": "最大",
   "phoneTaskFactsLevelMedium": "中",
   "phoneTaskFactsLevelMinimal": "最小",
   "phoneTaskFactsLevelModelDefault": "モデルの既定値",

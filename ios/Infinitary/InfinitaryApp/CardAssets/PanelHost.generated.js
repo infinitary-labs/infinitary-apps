@@ -90530,6 +90530,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${provider} ${model} reasoning for ${slot}`;
   }
+  function settingsReasoningMax() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أقصى`;
+      case "de":
+        return `Max.`;
+      case "es":
+        return `Máximo`;
+      case "fr":
+        return `Max.`;
+      case "ja":
+        return `最大`;
+      case "ko":
+        return `최대`;
+      case "pt-BR":
+        return `Máximo`;
+      case "zh-Hans":
+        return `最大`;
+      case "zh-Hant":
+        return `最大`;
+      case "en-XA":
+        return `[Ṁáẋ ~]`;
+      case "ar-XB":
+        return `‮Max‬`;
+    }
+    return `Max`;
+  }
   function settingsReasoningSaveFailed() {
     switch (currentLanguage()) {
       case "ar":
@@ -118934,6 +118961,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsWorkspaceDescription,
     settingsReasoningAuto,
     settingsReasoningLabel,
+    settingsReasoningMax,
     settingsReasoningSaveFailed,
     settingsReasoningSavedUnavailable,
     settingsReasoningUnavailable,
@@ -122643,6 +122671,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsWorkspaceDescription": [],
     "settingsReasoningAuto": [],
     "settingsReasoningLabel": ["model", "provider", "slot"],
+    "settingsReasoningMax": [],
     "settingsReasoningSaveFailed": [],
     "settingsReasoningSavedUnavailable": ["reasoning"],
     "settingsReasoningUnavailable": [],
@@ -131560,12 +131589,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     reason: string().optional()
   });
   const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "max", "default"]),
     lower: _enum(["quick", "capped"]).optional()
   });
   const slotSchema = _enum(["premium", "high", "medium", "low"]);
   const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh", "max"]);
   const reasoningCapabilitiesSchema = object({
     levels: array(reasoningChoiceSchema),
     fixed: _enum(["off", "default"]).optional()

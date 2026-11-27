@@ -1,4 +1,5 @@
 import { z } from "zod";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * The reasoning a crewmate's session opened at (FI3-439), as its backend
@@ -9,12 +10,12 @@ import { z } from "zod";
  * level the routing table asked for (`docs/routing.md`, "Reasoning effort").
  */
 export const reasoningSchema = z.object({
-  level: z.enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+  level: z.enum(["off", "minimal", "low", "medium", "high", "xhigh", "max", "default"]),
   lower: z.enum(["quick", "capped"]).optional(),
 });
 export type Reasoning = z.infer<typeof reasoningSchema>;
 
-const LEVEL_WORD: Record<Reasoning["level"], string> = {
+const LEVEL_WORD: Record<Exclude<Reasoning["level"], "max">, string> = {
   off: "None",
   minimal: "Minimal",
   low: "Low",
@@ -26,7 +27,7 @@ const LEVEL_WORD: Record<Reasoning["level"], string> = {
 
 /** The summary's word for a reasoning level ("Extra high"). */
 export function reasoningWord(reasoning: Reasoning): string {
-  return LEVEL_WORD[reasoning.level];
+  return reasoning.level === "max" ? m.settingsReasoningMax() : LEVEL_WORD[reasoning.level];
 }
 
 /** Why the reasoning sits below what its level asks, as one sentence; null when it does not. */

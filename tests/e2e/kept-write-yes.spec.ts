@@ -3,12 +3,18 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
-import { sentOnYesLine } from "../../src/core/orchestrator/keptWriteYes";
+import {
+  notStandingWords,
+  passedNothingWords,
+  sentOnYesLine,
+} from "../../src/core/orchestrator/keptWriteYes";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskRecords";
+import { cardReaderWritesTitle } from "../../src/shared/i18n/messages.generated";
 import { sendWriteWords } from "../../src/shared/vocabulary";
 import type { ForgeWriteAsk } from "../../src/shared/writeAsk";
 import { scratchDir } from "../helpers/scratchDirs";
+import { cardBody } from "./frames";
 import { type GitHubStub, STUB_OPEN_ISSUE, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
@@ -24,10 +30,12 @@ import {
   KEPT_REPLY_WRITE,
   keptWriteCrew,
   keptWriteFirstmate,
+  SEND_AS_READER,
   SEND_ON_CLICK,
   SEND_ON_DIRECTION,
+  SEND_ON_UNHEARD,
 } from "./scenarios/keptWriteYes";
-import { shownCard } from "./stack";
+import { showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -38,10 +46,14 @@ import { pressKey } from "./windowKeys";
  *   the app keeps for the captain's click, goes to GitHub once with no card
  *   when its crewmate names a project direction heard from the captain, and
  *   the task's Activity quotes the words it rested on; a reply that names no
- *   yes sends nothing until the captain's click, which sends it once.
+ *   yes sends nothing until the captain's click, which sends it once; one
+ *   that names a direction never heard from the captain is refused with
+ *   nothing kept or sent; and an unsafe data reader's reply that names the
+ *   heard direction waits on the reader's approval card, sending nothing.
  * - Data: meterlab on GitHub over a bare repository here, the GitHub stand-in
  *   signed in with its one open issue, and for the first journey the
- *   captain's intake direction for meterlab, heard in their own words.
+ *   captain's intake direction for meterlab, heard in their own words, or
+ *   saved on the first mate's own judgment.
  * - Completion signal: GitHub's requests and the issue's comments, the
  *   task's kept ask, its Activity and its outcome.
  * - Not proven here: whether a real model judges that a reply plainly
@@ -63,8 +75,12 @@ test.afterEach(async () => {
   github = undefined;
 });
 
-/** A fresh folder holding meterlab on GitHub, and the captain's intake direction when asked. */
-function arrange(prefix: string, withDirection: boolean): string {
+/**
+ * A fresh folder holding meterlab on GitHub, and the intake direction when
+ * asked: heard in the captain's own words, or saved on the first mate's own
+ * judgment with no heard mark.
+ */
+function arrange(prefix: string, direction?: "heard" | "unheard"): string {
   const userDataDir = scratchDir(prefix);
   const origin = "https://github.com/octo/meterlab.git";
   const bare = join(userDataDir, "github-meterlab.git");
@@ -90,7 +106,7 @@ function arrange(prefix: string, withDirection: boolean): string {
     addedAt: 1,
   });
   db.close();
-  if (withDirection) {
+  if (direction) {
     const project = { ...METERLAB, path: meterlab };
     const knowledge = new KnowledgeService({
       dir: join(userDataDir, "knowledge"),
@@ -102,8 +118,9 @@ function arrange(prefix: string, withDirection: boolean): string {
         id: INTAKE_DIRECTION.id,
         scope: METERLAB.id,
         text: INTAKE_DIRECTION.text,
-        reason: "The captain said it in their own words.",
-        heard: { from: "turn" },
+        ...(direction === "heard"
+          ? { reason: "The captain said it in their own words.", heard: { from: "turn" } }
+          : { reason: "The first mate saved it on its own judgment." }),
       });
     } finally {
       knowledge.close();
@@ -160,7 +177,7 @@ const keptAsks = (userDataDir: string, id: string) =>
 /** The captain's ask in their own words: a project direction lets plain replies go (INF-6987, A1). */
 test("a side-effect task's reply that names a heard direction goes to GitHub once, with no card, and its Activity quotes the direction", async () => {
   test.setTimeout(3 * 60_000);
-  const userDataDir = arrange("infinitary-kept-write-yes-", true);
+  const userDataDir = arrange("infinitary-kept-write-yes-", "heard");
   const { page } = await launch(userDataDir);
 
   await send(page, SEND_ON_DIRECTION.ask);
@@ -218,7 +235,7 @@ test("a side-effect task's reply that names a heard direction goes to GitHub onc
 /** The soft hold's other way: the captain's click on the ask's card (INF-6987, A1). */
 test("a side-effect task's reply that names no yes waits for the captain's click, which sends it once", async () => {
   test.setTimeout(3 * 60_000);
-  const userDataDir = arrange("infinitary-kept-write-click-", false);
+  const userDataDir = arrange("infinitary-kept-write-click-");
   const { page } = await launch(userDataDir);
 
   await send(page, SEND_ON_CLICK.ask);
@@ -246,4 +263,60 @@ test("a side-effect task's reply that names no yes waits for the captain's click
     .poll(async () => (await detail())?.outcome ?? "", { timeout: 45_000 })
     .toContain(KEPT_REPLY_OUTCOME);
   expect(github?.requests().filter((entry) => entry === REPLY_CALL)).toEqual([REPLY_CALL]);
+});
+
+/** An unheard direction is no yes (INF-6987, A1 tests; piece P: a direction saved on the first mate's own judgment). */
+test("a side-effect task's reply that names a direction never heard from the captain is refused, with nothing kept or sent", async () => {
+  test.setTimeout(3 * 60_000);
+  const userDataDir = arrange("infinitary-kept-write-unheard-", "unheard");
+  const { page } = await launch(userDataDir);
+
+  await send(page, SEND_ON_UNHEARD.ask);
+  const row = await rowTitled(page, SEND_ON_UNHEARD.title);
+  const detail = () => page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), row.id);
+  await expect
+    .poll(async () => (await detail())?.outcome ?? "", { timeout: 60_000 })
+    .toContain(`${KEPT_REPLY_OUTCOME}${notStandingWords(SEND_ON_UNHEARD.allowance)}`);
+  expect(github?.requests()).not.toContain(REPLY_CALL);
+  expect(github?.commentsOn(STUB_OPEN_ISSUE)).toEqual([]);
+  expect(keptAsks(userDataDir, row.id)).toEqual([]);
+  const cards = await page.evaluate(() => window.infinitary.cards.list());
+  expect(cards.map((card) => card.title)).not.toContain(KEPT_REPLY_CARD_TITLE);
+});
+
+/** The captain's pick on INF-6987's reader question: route A, a reader's writes keep the click. */
+test("an unsafe data reader's reply that names a heard direction waits on the reader's approval card and sends nothing", async () => {
+  test.setTimeout(3 * 60_000);
+  const userDataDir = arrange("infinitary-kept-write-reader-", "heard");
+  const { page } = await launch(userDataDir);
+
+  await send(page, SEND_AS_READER.ask);
+  const row = await rowTitled(page, SEND_AS_READER.title);
+  const detail = () => page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), row.id);
+  await expect
+    .poll(async () => (await detail())?.outcome ?? "", { timeout: 60_000 })
+    .toContain(passedNothingWords(SEND_AS_READER.allowance));
+  const title = cardReaderWritesTitle({ place: "GitHub" });
+  await expect
+    .poll(
+      async () =>
+        (await page.evaluate(() => window.infinitary.cards.list())).some(
+          (one) => one.title === title,
+        ),
+      { timeout: 45_000 },
+    )
+    .toBe(true);
+  await showCard(page, title);
+  const rows = cardBody(page, title).locator("[data-inf-ask-row]");
+  await expect(rows).toHaveCount(1, { timeout: 45_000 });
+  await expect(rows.nth(0)).toContainText(REPLY_CALL);
+  expect(github?.requests()).not.toContain(REPLY_CALL);
+  expect(github?.commentsOn(STUB_OPEN_ISSUE)).toEqual([]);
+  const [kept] = keptAsks(userDataDir, row.id);
+  expect(kept).toMatchObject({ method: KEPT_REPLY_WRITE.method, path: KEPT_REPLY_WRITE.path });
+  expect(kept?.yes).toBeUndefined();
+  expect(kept?.sentAt).toBeUndefined();
+
+  const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+  if (evidence) await page.screenshot({ path: join(evidence, "kept-write-reader-card.png") });
 });

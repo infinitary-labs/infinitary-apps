@@ -445,7 +445,7 @@ describe("words from outside in saved conversations", () => {
       await w.scheduler.settled();
     };
     await tick();
-    w.google.deliver(LENA);
+    const lena = w.google.deliver(LENA);
     // A look counts mail a minute old, which Gmail's search holds.
     await tick();
     await tick();
@@ -453,7 +453,7 @@ describe("words from outside in saved conversations", () => {
     if (!saved) throw new Error("No saved rule");
     const [run] = w.scheduler.history(saved.id);
     // The rule hears which conversation got mail, in words fenced as Google's.
-    const told = "New mail in a Gmail conversation";
+    const told = `New mail in Gmail conversation ${w.google.mail.get(lena)?.threadId}`;
     expect(run?.events?.[0]?.summary).toContain(told);
     // A run the first mate handled keeps its closing words, which may quote the event.
     const [earlier] = w.store.waiting(saved.id);

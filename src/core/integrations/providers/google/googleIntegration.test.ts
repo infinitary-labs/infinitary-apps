@@ -709,12 +709,11 @@ describe("Google as an integration", () => {
     // words (the captain's pick B on INF-7017's plan-mismatch card), still fenced as Google's.
     clock.now += 61_000;
     const { items } = await integrations.look("google", "message_received", start.cursor);
-    expect(items.map((item) => item.id)).toEqual([google.mail.get(id)?.threadId]);
     const [summary] = fencedSpans(items[0]?.summary ?? "");
     expect(summary).toMatchObject({
       label: GOOGLE_DATA_FENCE,
       closed: true,
-      words: "New mail in a Gmail conversation",
+      words: `New mail in Gmail conversation ${google.mail.get(id)?.threadId}`,
     });
     expect(eventsWords(items).split("\n")).toEqual([
       `- ${items[0]?.summary} (id ${items[0]?.id})`,
@@ -812,7 +811,9 @@ describe("Google as an integration", () => {
 
     clock.now += 20_000;
     const found = await integrations.look("google", "message_received", start.cursor);
-    expect(found.items.map((item) => item.id)).toEqual([google.mail.get(id)?.threadId]);
+    expect(found.items.map((item) => outside(item.summary))).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(id)?.threadId}`,
+    ]);
   });
 
   it("renews the access before it runs out and after Google refuses it, and asks for a new sign-in only when Google refuses the lasting key", async () => {

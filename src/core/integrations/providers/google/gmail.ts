@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 import type {
   IntegrationActionSpec,
@@ -27,7 +28,7 @@ export const GMAIL_MESSAGE_EVENT: IntegrationEventSpec = {
   name: "message_received",
   label: "A message arrives",
   description:
-    "Each Gmail conversation that gets new mail in the inbox, once a look, by the conversation's id. Google asks the captain before anything reads who sent mail or what it says, so the event names only the conversation: read_message with that id as thread reads its newest message, which Google may ask the captain about first.",
+    "Each Gmail conversation that gets new mail in the inbox, once a look; a later reply in it is a new event. Google asks the captain before anything reads who sent mail or what it says, so the summary names only the conversation's id: read_message with that id as thread reads its newest message, which Google may ask the captain about first.",
   every: 1,
 };
 
@@ -72,7 +73,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Read a message",
     effect: "reads",
     description:
-      "Read one message by its id: its sender, recipients, subject, date, labels, its text, and each attachment's name, type and part, which save_attachment takes. With thread, a conversation's id instead, such as a message_received event names, it reads that conversation's newest message in the inbox the same way, and lists the conversation's other messages by id, sender and date, newest first.",
+      "Read one message by its id: its sender, recipients, subject, date, labels, its text, and each attachment's name, type and part, which save_attachment takes. With thread, a conversation's id instead, such as a message_received event's summary names, it reads that conversation's newest message in the inbox the same way, and lists the conversation's other messages by id, sender and date, newest first.",
     input: z
       .strictObject({ id: messageIdSchema.optional(), thread: messageIdSchema.optional() })
       .refine((value) => (value.id === undefined) !== (value.thread === undefined), {
@@ -503,8 +504,8 @@ function receivedAt(message: Message): number | undefined {
  */
 type MailCursor = { account: string; since: number };
 
-/** A message_received item's summary: which conversation got mail, never a word of it. */
-export const GMAIL_NEW_MAIL = "New mail in a Gmail conversation";
+/** A message_received item's summary: which conversation got mail, by its id, never a word of the mail. */
+export const gmailNewMail = (thread: string): string => `New mail in Gmail conversation ${thread}`;
 
 /** How many pages of conversations one look reads before it starts again from now. */
 const MAIL_PAGES = 10;
@@ -533,16 +534,17 @@ function mailCursor(text: string, account: string): MailCursor | undefined {
 /**
  * Look for new mail from a cursor (`IntegrationBinding.look`): each
  * conversation in the inbox with mail Gmail received between the cursor and
- * a minute ago, to the second, is one item, named by its id. Google asks the
- * captain before anything reads a sender or subject from someone else, and a
- * look runs with nobody to ask, so it asks Gmail for conversation ids alone
- * (`THREAD_VIEW_IDS_ONLY`), which Google answers without asking; the crewmate
- * reads the conversation by its id (read_message's thread). Consecutive looks
- * search windows that meet and never overlap: `after:` holds its second and
- * `before:` does not, as both do for a day, in seconds since 1970. A
- * conversation that gets more mail later is told again. The first look, a
- * cursor from another mailbox and one from before Gmail's MCP server start
- * from now, so mail already there is never told.
+ * a minute ago, to the second, is one item, its summary naming the
+ * conversation's id. Google asks the captain before anything reads a sender
+ * or subject from someone else, and a look runs with nobody to ask, so it
+ * asks Gmail for conversation ids alone (`THREAD_VIEW_IDS_ONLY`), which
+ * Google answers without asking; the crewmate reads the conversation by its
+ * id (read_message's thread). Consecutive looks search windows that meet and
+ * never overlap: `after:` holds its second and `before:` does not, as both do
+ * for a day, in seconds since 1970. A conversation that gets more mail later
+ * is told again. The first look, a cursor from another mailbox and one from
+ * before Gmail's MCP server start from now, so mail already there is never
+ * told.
  */
 export async function lookForMail(
   gmail: GoogleTool,
@@ -573,9 +575,15 @@ export async function lookForMail(
     pages += 1;
   } while (page && pages < MAIL_PAGES);
   // Gmail lists the newest first; the oldest is told first, as it arrived.
-  const items: IntegrationEventItem[] = threads.reverse().map((id) => ({
-    id,
-    summary: GMAIL_NEW_MAIL,
+  // An item's id is the conversation's in this window, never the
+  // conversation's own: a rule drops an id it already carried (`newItems`
+  // in the scheduler), and a later reply must fire again. A look repeated
+  // from the same cursor names the same ids, so it fires nothing twice.
+  const items: IntegrationEventItem[] = threads.reverse().map((thread) => ({
+    id: createHash("sha256")
+      .update(JSON.stringify([thread, saved.since]))
+      .digest("hex"),
+    summary: gmailNewMail(thread),
   }));
   return {
     cursor: JSON.stringify({ account, since: until } satisfies MailCursor),

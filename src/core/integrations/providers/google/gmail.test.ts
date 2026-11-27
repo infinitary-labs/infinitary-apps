@@ -9,6 +9,11 @@ import {
   googleWorld,
 } from "../../../../../tests/helpers/googleWorld";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
+import { Scheduler } from "../../../orchestrator/scheduler";
+import { renderWake } from "../../../orchestrator/wakes";
+import { createScheduleTools } from "../../../pi/scheduleTools";
+import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
+import { ScheduleStore } from "../../../storage/scheduleStore";
 
 /**
  * Gmail through its MCP server (INF-7012's approved plan, piece 1), as the
@@ -52,6 +57,11 @@ function outside(text: string): string {
 
 function parsed(text: string) {
   return JSON.parse(outside(text)) as Record<string, unknown>;
+}
+
+/** The words each item of a Gmail look hands a rule. */
+function told(look: { items: { summary: string }[] }): string[] {
+  return look.items.map((item) => outside(item.summary));
 }
 
 describe("Gmail through its MCP server", () => {
@@ -111,9 +121,10 @@ describe("Gmail through its MCP server", () => {
     clock.now += 120_000;
     const asked = google.calls().length;
     const found = await integrations.look("google", "message_received", start.cursor);
-    expect(found.items.map((item) => ({ id: item.id, summary: outside(item.summary) }))).toEqual([
-      { id: google.mail.get(first)?.threadId, summary: "New mail in a Gmail conversation" },
-      { id: google.mail.get(second)?.threadId, summary: "New mail in a Gmail conversation" },
+    const thread = google.mail.get(first)?.threadId;
+    expect(told(found)).toEqual([
+      `New mail in Gmail conversation ${thread}`,
+      `New mail in Gmail conversation ${google.mail.get(second)?.threadId}`,
     ]);
     expect(found.resynced).toBeUndefined();
     // Of the reads Google asks about, the look made one, for ids alone.
@@ -126,19 +137,24 @@ describe("Gmail through its MCP server", () => {
     ).toEqual([["search_threads", "THREAD_VIEW_IDS_ONLY"]]);
     expect(google.answers).toEqual([]);
     expect(tasks.get("task-1")?.delivery?.writeAsks ?? []).toEqual([]);
+    // A look repeated from the same cursor names the same items, which a rule that carried
+    // them drops.
+    const repeated = await integrations.look("google", "message_received", start.cursor);
+    expect(repeated.items.map((item) => item.id)).toEqual(found.items.map((item) => item.id));
     const again = await integrations.look("google", "message_received", found.cursor);
     expect(again.items).toEqual([]);
 
-    // A reply in a conversation already told tells it again.
+    // A reply in a conversation already told tells it again, as an item of its own.
     google.deliver({
       from: ARRIVING.from,
       subject: `Re: ${ARRIVING.subject}`,
       text: "One more thing.",
-      threadId: google.mail.get(first)?.threadId,
+      threadId: thread,
     });
     clock.now += 120_000;
     const replied = await integrations.look("google", "message_received", again.cursor);
-    expect(replied.items.map((item) => item.id)).toEqual([google.mail.get(first)?.threadId]);
+    expect(told(replied)).toEqual([`New mail in Gmail conversation ${thread}`]);
+    expect(replied.items[0]?.id).not.toBe(found.items[0]?.id);
 
     // Mail under a minute old waits for the next look, as Gmail's search may not hold it yet.
     const fresh = google.deliver({ from: "e@example.com", subject: "Fresh", text: "v" });
@@ -147,7 +163,9 @@ describe("Gmail through its MCP server", () => {
     expect(waiting.items).toEqual([]);
     clock.now += 31_000;
     const settled = await integrations.look("google", "message_received", waiting.cursor);
-    expect(settled.items.map((item) => item.id)).toEqual([google.mail.get(fresh)?.threadId]);
+    expect(told(settled)).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(fresh)?.threadId}`,
+    ]);
 
     // Mail Gmail dates ahead of the app's clock is told once, when the clock reaches it.
     const ahead = google.deliver({
@@ -161,7 +179,9 @@ describe("Gmail through its MCP server", () => {
     expect(early.items).toEqual([]);
     clock.now += 120_000;
     const reached = await integrations.look("google", "message_received", early.cursor);
-    expect(reached.items.map((item) => item.id)).toEqual([google.mail.get(ahead)?.threadId]);
+    expect(told(reached)).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(ahead)?.threadId}`,
+    ]);
     clock.now += 120_000;
     expect((await integrations.look("google", "message_received", reached.cursor)).items).toEqual(
       [],
@@ -178,11 +198,9 @@ describe("Gmail through its MCP server", () => {
     expect(older).toMatchObject({ items: [], resynced: true });
     const after = google.deliver({ from: "b@example.com", subject: "After", text: "y" });
     clock.now += 120_000;
-    expect(
-      (await integrations.look("google", "message_received", older.cursor)).items.map(
-        (item) => item.id,
-      ),
-    ).toEqual([google.mail.get(after)?.threadId]);
+    expect(told(await integrations.look("google", "message_received", older.cursor))).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(after)?.threadId}`,
+    ]);
 
     // A cursor from another mailbox starts again from now.
     const other = again.cursor.replace(STAND_IN_ACCOUNT, "someone.else@gmail.com");
@@ -190,6 +208,69 @@ describe("Gmail through its MCP server", () => {
       items: [],
       resynced: true,
     });
+  });
+
+  // The captain's pick B on INF-7017's plan-mismatch card builds each conversation with new
+  // mail as one event, and a rule drops an item id it already carried, so a reply must come
+  // under an id of its own to fire again.
+  it("fires a rule again for a reply in a conversation it already told, through the scheduler", async () => {
+    const { google, integrations, clock, db } = await signedIn();
+    const store = new ScheduleStore(db);
+    const inbox = new InboxStore(db);
+    const scheduler = new Scheduler({
+      store,
+      inbox,
+      notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
+      broadcastEvent: () => {},
+      now: () => clock.now,
+      events: {
+        find: (integration, event) => integrations.listenable(integration, event),
+        look: (integration, event, cursor, filter) =>
+          integrations.look(integration, event, cursor, filter),
+      },
+    });
+    await createScheduleTools({
+      create: (spec, prompt, extra) =>
+        scheduler.create(spec, prompt, true, extra.name, undefined, { draft: extra.draft }),
+      cancel: async () => true,
+    })
+      .find((tool) => tool.name === "schedule_prompt")
+      ?.run({ on_event: "google/message_received", prompt: "Tell me: {{events}}" });
+    const tick = async () => {
+      clock.now += 60_000;
+      scheduler.tick(clock.now);
+      await scheduler.settled();
+    };
+    await tick();
+    const first = google.deliver(ARRIVING);
+    const thread = google.mail.get(first)?.threadId ?? "";
+    await tick();
+    await tick();
+    // The first mate handles the first run, so the reply needs a run of its
+    // own: while a run waits unsent, new mail joins it instead.
+    const [rule] = store.list();
+    if (!rule) throw new Error("No saved rule");
+    const [told] = store.waiting(rule.id);
+    if (!told) throw new Error("No waiting run");
+    store.settle(told.id, { delivery: "handled", at: clock.now, tasks: [], cards: [] });
+    google.deliver({
+      from: ARRIVING.from,
+      subject: `Re: ${ARRIVING.subject}`,
+      text: "One more thing: the PO number is 7731.",
+      threadId: thread,
+    });
+    await tick();
+    await tick();
+
+    const runs = scheduler.history(rule.id);
+    expect(runs).toHaveLength(2);
+    for (const run of runs)
+      expect(run.events?.map((event) => outside(event.summary))).toEqual([
+        `New mail in Gmail conversation ${thread}`,
+      ]);
+    const delivered = inbox.allFor(FIRSTMATE_RECIPIENT);
+    expect(delivered).toHaveLength(2);
+    for (const wake of delivered) expect(renderWake(wake)).toContain(thread);
   });
 
   // The captain's pick B on INF-7017's plan-mismatch card: a rule names only the conversation, and

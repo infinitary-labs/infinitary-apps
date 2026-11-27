@@ -144,7 +144,9 @@ describe("Google's MCP servers", () => {
         undefined,
         "To tell Lena it arrived.",
       );
-    const send = asksOf(world).find((ask) => ask.action === "send_message");
+    const send = asksOf(world).find(
+      (ask) => ask.kind === "integration" && ask.action === "send_message",
+    );
     expect((await integrations.sendAsk("task-1", send?.id ?? "")).outcome).toEqual({ kind: "ran" });
     expect(google.sent).toHaveLength(1);
 

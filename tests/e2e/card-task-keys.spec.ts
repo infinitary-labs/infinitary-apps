@@ -502,6 +502,9 @@ test("a task's record links every other task's key it shows, and its own stays t
     // By keys, as the journey goes on: Enter on its Tasks row opens its record.
     await pressKey(nowRow(page, work.ledger.key), "Enter");
     await expect(recordCard(page)).toHaveAttribute("data-task-record", work.ledger.id);
+    // The record's keys are drawn before its body, and a body drawn after the
+    // stage stops holding the record grows the card under a resting pointer.
+    await expectRecordBody(page);
     const body = recordFrame(page);
 
     await test.step("resting on the key it waits on opens that task's summary beside the record", async () => {

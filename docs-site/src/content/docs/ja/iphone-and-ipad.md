@@ -1,5 +1,5 @@
 ---
-source: b50d1979307a8fc4
+source: 343fc510d10a179f
 title: iPhone と iPad
 description: iPhone と iPad 版 Infinitary の TestFlight 非公開招待を申し込み、コンピューターに接続して、カードを読んだりメッセージを送ったりできます。
 ---
@@ -53,6 +53,13 @@ iPhone と iPad 版の Infinitary は、TestFlight で非公開に提供して�
 - **アクティビティ** には、起きたことが新しいものほど下に表示されます。
 
 パネルがオンのときは、4 つ目のタブ **パネル** に、パネルが縦に並んで表示されます。
+
+## スマートフォン独自のテーマ {#your-phones-own-theme}
+
+iPhone や iPad の設定 → 外観 → **テーマ** は、その端末だけのものです。
+**デバイス**、**ダーク**、**ライト**、またはコンピューターにある作者が付けた名前のままの 13 のテーマ（**Dracula**、**Catppuccin Latte** など）から選びます。
+選ぶとカードも含めてアプリ全体の色がすぐに変わり、Infinitary を閉じたあとも保たれます。
+コンピューターとほかのデバイスは、それぞれのテーマを保ちます。
 
 ## 開いた折りたたみ式 iPhone でカードを読む {#read-a-card-on-an-open-foldable-iphone}
 

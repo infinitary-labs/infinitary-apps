@@ -429,20 +429,17 @@ struct PhoneSettingsSheet: View {
         }
     }
 
-    /// The captain's Approve and build: this device's own Theme, in Apple's segmented control like the computer's Dark
-    /// and Light pills, worded Device, Dark and Light. The computer's Theme is never read or changed.
+    /// The captain's Approve and build: this device's own Theme, as tiles like the computer's, offering Device, Dark,
+    /// Light and each built-in color theme (INF-6888's part 3). The computer's Theme is never read or changed.
     private func theme(_ appearance: PhoneAppearance) -> some View {
         @Bindable var appearance = appearance
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             Text(PhoneMessages.phoneSettingsTheme()).font(PhoneFont.headline)
             Text(PhoneMessages.phoneSettingsThemeScope(computer: session.mac.name, device: label))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("phone-theme-scope")
-            Picker(PhoneMessages.phoneSettingsTheme(), selection: $appearance.look) {
-                ForEach(PhoneLook.allCases, id: \.self) { look in Text(look.words).tag(look) }
-            }
-            .pickerStyle(.segmented).labelsHidden().accessibilityIdentifier("phone-theme")
-            // A segmented control takes no keys of its own, and an unseen shortcut under a sheet never hears an unmodified
-            // arrow. So the control holds focus while Appearance is open and its arrows move the choice, with no command.
+            PhoneThemeTiles(look: $appearance.look)
+            // The tiles take no keys of their own, and an unseen shortcut under a sheet never hears an unmodified arrow.
+            // So the group holds focus while Appearance is open and its arrows move the choice, with no command.
             .focusable().focused($themeFocused)
             .onKeyPress(.leftArrow) { appearance.step(by: -1); return .handled }
             .onKeyPress(.rightArrow) { appearance.step(by: 1); return .handled }

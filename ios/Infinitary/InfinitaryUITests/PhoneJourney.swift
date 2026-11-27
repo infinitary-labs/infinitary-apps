@@ -111,6 +111,9 @@ import XCTest
         picture(name, screenshot: try appearancePicture(name, dark: dark))
     }
 
+    /// Settings → Appearance → Theme, the group of tiles holding one button per choice.
+    var phoneThemeTiles: XCUIElement { app.descendants(matching: .any)["phone-theme"].firstMatch }
+
     /// INF-2820 piece 1: the computer's page is Settings' first row, Your computer, which names the computer shown and
     /// its reach; piece 2 takes the top bar's computer button away, so a step reaches the page through Settings.
     func computerDetails(repeatDiscarded: Bool = true) {

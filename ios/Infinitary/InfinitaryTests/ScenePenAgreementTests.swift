@@ -23,15 +23,22 @@ import XCTest
         queue = try XCTUnwrap(device.makeCommandQueue())
     }
 
+    /// Dark, Light and each built-in color theme on its base (INF-6888's part 3: the scene tests that draw Dark and
+    /// Light also draw each built-in theme).
+    private static let themes: [(ColorScheme, PhoneColorTheme?)] = [(.dark, nil), (.light, nil)]
+        + PhoneColorTheme.allCases.map { ($0.isDark ? .dark : .light, $0) }
+
     /// The first mate in each of its three states, every reaction and every fidget, warps included, and the busy
-    /// first mate whose halo is a blurred layer, in both themes.
+    /// first mate whose halo is a blurred layer, in Dark and Light. Each built-in color theme draws the resting and the
+    /// busy first mate only: every other form takes its colors from the same palette.
     func testTheFirstMateDrawsTheSameThroughBothPens() throws {
         let modes = CharacterMachine.Mode.allCases.filter { $0 != .fidget }
         let forms: [(CharacterMachine.Mode, CharacterMachine.Fidget?)] = modes.map { ($0, nil) }
             + CharacterMachine.Fidget.allCases.map { (.fidget, $0) }
-        for theme in [ColorScheme.dark, .light] {
-            let palette = CharacterPainter.Palette(theme), cache = CharacterPainter.Cache()
-            for (mode, variant) in forms {
+        for (scheme, colorTheme) in Self.themes {
+            let theme = colorTheme?.rawValue ?? "\(scheme)"
+            let palette = CharacterPainter.Palette(scheme, theme: colorTheme), cache = CharacterPainter.Cache()
+            for (mode, variant) in colorTheme == nil ? forms : [(.idle, nil), (.working, nil)] {
                 var pose = CharacterPose(mode: mode, progress: 0.4, variant: variant, cur: .of(mode), heat: mode == .working ? 1 : 0, milliseconds: 2200)
                 pose.lid = pose.cur.lidBase
                 let reply = CharacterReply.frame(mode, pose.progress)
@@ -47,7 +54,8 @@ import XCTest
 
     /// The whole window as the render thread draws it: about twenty crewmates on two computers around the first mate,
     /// resting and busy, with keyboard browsing's outline and a summary's brackets, each warp under way, and a
-    /// supernova's blast with its sparks, shards and pulsar reaching through the crew.
+    /// supernova's blast with its sparks, shards and pulsar reaching through the crew. Each built-in color theme draws the
+    /// resting crowd once more.
     func testTheCrowdedSceneDrawsTheSameThroughBothPens() throws {
         let roster = try Self.roster(home: 12, remote: 8)
         let selected = try XCTUnwrap(roster.computers.first?.tasks.first)
@@ -79,6 +87,17 @@ import XCTest
                     Self.paint(frame, motion: motion, pose: drawn, roster: roster, now: drawn.milliseconds / 1000, palette: palette,
                                selection: nil, bracketed: nil, in: &pen)
                 }
+            }
+        }
+        for colorTheme in PhoneColorTheme.allCases {
+            let palette = CharacterPainter.Palette(colorTheme.isDark ? .dark : .light, theme: colorTheme)
+            let motion = PhoneSceneMotion()
+            var frame = motion.frame(roster: roster, now: 0, settled: false)
+            for step in 1...150 { frame = motion.frame(roster: roster, now: Double(step) / 60, settled: false) }
+            let pose = CharacterPose(mode: .idle, cur: .of(.idle), heat: 0, milliseconds: 2500)
+            try agree("crowd-idle-\(colorTheme.rawValue)", size: Self.window) { pen in
+                Self.paint(frame, motion: motion, pose: pose, roster: roster, now: 2.5, palette: palette, selection: selected.id,
+                           bracketed: (selected.id, PhoneSceneRoster.computerID(selected)), in: &pen)
             }
         }
     }

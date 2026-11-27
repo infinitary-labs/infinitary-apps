@@ -31,6 +31,8 @@ import SwiftUI
     private var collectionTimeout: Task<Void, Never>?
     private var watch = CardWatchdog()
     private var theme = "light"
+    /// The built-in color theme the body draws on `theme`, or none (docs/themes.md, "On the phone").
+    private var colorTheme: PhoneColorTheme?
     /// The device's Text Size as a factor of the Mac's sizes (`PhoneTextSize`), which the page draws the body at.
     private var textScale = 1.0
     private(set) var revealed = false
@@ -136,9 +138,10 @@ import SwiftUI
     }
 
     /// The body's one view: made and loaded the first time, then the same view, already drawn, wherever it shows next.
-    func makeView(theme: String) -> WKWebView {
-        if let view { updateTheme(theme); return view }
+    func makeView(theme: String, colorTheme: PhoneColorTheme?) -> WKWebView {
+        if let view { updateTheme(theme, colorTheme: colorTheme); return view }
         self.theme = theme
+        self.colorTheme = colorTheme
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .nonPersistent()
         configuration.mediaTypesRequiringUserActionForPlayback = .all
@@ -245,10 +248,12 @@ import SwiftUI
     }
     private func fail() { failure = PhoneMessages.phoneCardWebStopped(); close() }
 
-    func updateTheme(_ theme: String) {
-        guard theme != self.theme else { return }
+    func updateTheme(_ theme: String, colorTheme: PhoneColorTheme?) {
+        guard theme != self.theme || colorTheme != self.colorTheme else { return }
         self.theme = theme
-        view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")')", completionHandler: nil)
+        self.colorTheme = colorTheme
+        view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")', \(colorTheme.map { "'\($0.rawValue)'" } ?? "null"))",
+                                 completionHandler: nil)
     }
 
     /// The finger on the body moved on the screen farther than a press may: the page leaves that press to WebKit.
@@ -403,7 +408,7 @@ import SwiftUI
         }
         // A cover answers nothing (it carries no actions), but its map's own buttons, Fit among them, stay pressable: a
         // read-only body locks every button in it.
-        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "textScale": .number(textScale), "language": .string(PhoneWords.language), "readOnly": .bool(part == .facts || (part == .body && card.isPast)),
+        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "colorTheme": colorTheme.map { .string($0.rawValue) } ?? .null, "textScale": .number(textScale), "language": .string(PhoneWords.language), "readOnly": .bool(part == .facts || (part == .body && card.isPast)),
             "fill": fill, "actions": .array(part != .body ? [] : actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"],
             "keys": .array(keys.map(PhoneJSON.string))])
         if part == .body, case .object(var fields) = input {
@@ -764,13 +769,15 @@ final class CardWebSlot: UIView {
 struct CardWebView: UIViewRepresentable {
     let host: CardWebHost
     @Environment(\.colorScheme) private var scheme
+    @Environment(\.phoneColorTheme) private var colorTheme
     @Environment(\.dynamicTypeSize) private var typeSize
     func makeUIView(context: Context) -> CardWebSlot {
         host.updateTextScale(PhoneTextSize.scale(for: typeSize))
-        return CardWebSlot(host: host, view: host.makeView(theme: scheme == .dark ? "dark" : "light"))
+        return CardWebSlot(host: host, view: host.makeView(theme: scheme == .dark ? "dark" : "light",
+                                                           colorTheme: PhoneColorTheme.shown(colorTheme, dark: scheme == .dark)))
     }
     func updateUIView(_ slot: CardWebSlot, context: Context) {
-        host.updateTheme(scheme == .dark ? "dark" : "light")
+        host.updateTheme(scheme == .dark ? "dark" : "light", colorTheme: PhoneColorTheme.shown(colorTheme, dark: scheme == .dark))
         host.updateTextScale(PhoneTextSize.scale(for: typeSize))
         host.revealIfShown()
     }

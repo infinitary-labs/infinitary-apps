@@ -54,19 +54,22 @@ import UIKit
 }
 
 extension PhoneLook {
-    /// Device leaves the window to the system's own setting, so iOS's Automatic switching keeps working.
+    /// Device leaves the window to the system's own setting, so iOS's Automatic switching keeps working; a built-in
+    /// color theme sets its base, so everything that knows only Dark and Light follows that.
     var style: UIUserInterfaceStyle {
         switch self {
         case .device: .unspecified
         case .dark: .dark
         case .light: .light
+        case .theme(let theme): theme.style
         }
     }
 }
 
-/// Sets the style of the window it sits in. Sheets, the keyboard, card web views and the crew all read their appearance
-/// from that window, so one setting changes every screen at once with no change to the shared colours or card code.
-/// Each window of an iPad's several windows carries its own copy, so a new window starts in the chosen theme too.
+/// Sets the style and the color theme of the window it sits in. Sheets, the keyboard, card web views and the crew all
+/// read their appearance from that window, so one setting changes every screen at once. Each window of an iPad's several
+/// windows carries its own copy, so a new window starts in the chosen theme too. SwiftUI's own views read the theme
+/// through the trait's bridged environment value (`PhoneColorThemeTrait`).
 struct PhoneWindowLook: UIViewRepresentable {
     let look: PhoneLook
 
@@ -77,14 +80,21 @@ struct PhoneWindowLook: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ view: Marker, context: Context) { view.style = look.style }
+    func updateUIView(_ view: Marker, context: Context) { view.look = look }
 
     final class Marker: UIView {
-        var style: UIUserInterfaceStyle = .unspecified { didSet { apply() } }
+        var look: PhoneLook = .device { didSet { apply() } }
         override func didMoveToWindow() { super.didMoveToWindow(); apply() }
         private func apply() {
-            guard let window, window.overrideUserInterfaceStyle != style else { return }
-            window.overrideUserInterfaceStyle = style
+            guard let window else { return }
+            if window.overrideUserInterfaceStyle != look.style { window.overrideUserInterfaceStyle = look.style }
+            // UIKit raises on reading an override that was never set, so ask whether it is there first.
+            let overrides = window.traitOverrides, set = overrides.contains(PhoneColorThemeTrait.self)
+            if let theme = look.colorTheme?.rawValue {
+                if !set || overrides[PhoneColorThemeTrait.self] != theme { window.traitOverrides[PhoneColorThemeTrait.self] = theme }
+            } else if set {
+                window.traitOverrides.remove(PhoneColorThemeTrait.self)
+            }
         }
     }
 }

@@ -18,6 +18,7 @@ import {
   panelMountUrl,
   scriptSafeJson,
 } from "../../../src/shared/plugins/frameDocument";
+import { frameThemeRule } from "../../../src/shared/colorThemes";
 import { FRAME_LIB_BOOT, frameLibUrl } from "../../../src/shared/plugins/frameLib";
 import {
   PANEL_CARD_ACTIONS,
@@ -55,7 +56,7 @@ declare global {
   interface Window {
     phonePanel: {
       mount(input: Input): Promise<void>;
-      theme(value: FrameTheme): void;
+      theme(value: FrameTheme, colorTheme?: string | null): void;
       state(value: { collapsed: boolean; shown: boolean; asks?: Record<string, number> }): void;
       card(value: { data: unknown; kept: unknown; revision: number }): void;
       push(channel: string, payload: unknown): void;
@@ -72,6 +73,8 @@ declare global {
 type Input = {
   mount: string;
   theme: FrameTheme;
+  /** The phone's built-in color theme on that base, or none (docs/themes.md, "On the phone"). */
+  colorTheme?: string | null;
   panel: {
     id: string; source: "yours" | "installed" | "app"; title: string; size: "content" | "fill";
     reads: string[]; sql: string[]; moves: boolean; server: boolean; decides: boolean;
@@ -293,7 +296,7 @@ window.phonePanel = {
     };
     const fill = card ? card.height === "fill" : panel.size === "fill";
     const body = buildPanelDocument({
-      csp, theme: value.theme, title: card ? card.title : panel.title, style: `${panelStylesheet(!fill)}${phoneTextRule(scale)}${phonePressRule()}`, importMap,
+      csp, theme: value.theme, title: card ? card.title : panel.title, style: `${panelStylesheet(!fill)}${phoneTextRule(scale)}${phonePressRule()}${frameThemeRule(value.theme, value.colorTheme)}`, importMap,
       config: { ...config, module: `${panelMountUrl(mount)}${entry}` }, bootIntegrity: boot,
     });
     await native({ type: "document", body, csp });
@@ -337,13 +340,15 @@ window.phonePanel = {
       },
       { post: (message) => frame?.contentWindow?.postMessage(message, "*") },
     );
+    // The rule rides every later theme message too, as the computer's frames carry it.
+    controller.setTheme(value.theme, frameThemeRule(value.theme, value.colorTheme));
     controller.expectDocument();
     frame.src = panelMountUrl(mount);
     document.body.replaceChildren(frame);
   },
-  theme(value) {
+  theme(value, colorTheme) {
     document.documentElement.style.colorScheme = value;
-    controller?.setTheme(value);
+    controller?.setTheme(value, frameThemeRule(value, colorTheme));
   },
   state(value) {
     state = { collapsed: value.collapsed, shown: value.shown, asks: value.asks ?? state.asks };

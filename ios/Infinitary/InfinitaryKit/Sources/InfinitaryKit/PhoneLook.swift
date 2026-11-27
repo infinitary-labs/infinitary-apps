@@ -1,19 +1,52 @@
 import Foundation
 
 /// The captain's Approve and build on a theme of the phone's own: Infinitary on iPhone and iPad keeps its Theme on the
-/// device, apart from the computer's, and offers to match the device, Dark or Light. The choice is saved in this app's
-/// own defaults, never in the connection file, so Leave, Forget, Removed and joining another computer keep it, and it
-/// never reaches the computer. Nothing saved, or a value this version does not know, reads as matching the device.
-public enum PhoneLook: String, CaseIterable, Sendable {
+/// device, apart from the computer's, and offers to match the device, Dark, Light or a built-in color theme (INF-6888's
+/// part 3, the captain's "each client can choose its own theme"). The choice is saved in this app's own defaults, never
+/// in the connection file, so Leave, Forget, Removed and joining another computer keep it, and it never reaches the
+/// computer. Nothing saved, or a value this version does not know, reads as matching the device.
+public enum PhoneLook: Hashable, Sendable, CaseIterable, RawRepresentable {
     case device, dark, light
+    case theme(PhoneColorTheme)
 
-    /// The words on the segmented control, as short as the computer's Dark and Light pills.
+    /// Device, Dark and Light first, then the built-in themes in the computer's order.
+    public static var allCases: [PhoneLook] { [.device, .dark, .light] + PhoneColorTheme.allCases.map(PhoneLook.theme) }
+
+    /// What the phone-theme key saves: device, dark, light or a built-in theme's id, as the computer names it.
+    public var rawValue: String {
+        switch self {
+        case .device: "device"
+        case .dark: "dark"
+        case .light: "light"
+        case .theme(let theme): theme.rawValue
+        }
+    }
+
+    public init?(rawValue: String) {
+        switch rawValue {
+        case "device": self = .device
+        case "dark": self = .dark
+        case "light": self = .light
+        default:
+            guard let theme = PhoneColorTheme(rawValue: rawValue) else { return nil }
+            self = .theme(theme)
+        }
+    }
+
+    /// The words on the choice: Device, Dark and Light as short as the computer's, a built-in theme under its maker's
+    /// name in every language.
     public var words: String {
         switch self {
         case .device: PhoneMessages.phoneLookDevice()
         case .dark: PhoneMessages.phoneLookDark()
         case .light: PhoneMessages.phoneLookLight()
+        case .theme(let theme): theme.name
         }
+    }
+
+    /// The built-in theme this choice draws, if any.
+    public var colorTheme: PhoneColorTheme? {
+        if case .theme(let theme) = self { theme } else { nil }
     }
 
     static let key = "phone-theme"

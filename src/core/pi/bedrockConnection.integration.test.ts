@@ -347,6 +347,7 @@ describe("an Amazon Bedrock account sent through an organization's address", () 
     );
 
     // The person turns the new network down, so no request is made to it.
+    const before = gateway.seen.length;
     answers = ["10.20.30.40"];
     const moved = person([
       () => {
@@ -357,6 +358,7 @@ describe("an Amazon Bedrock account sent through an organization's address", () 
     expect(moved.prompts.map((prompt) => prompt.message)).toEqual([
       m.bedrockSignInApprovePrivate({ host: gateway.host }),
     ]);
+    expect(gateway.seen.length).toBe(before);
   }, 30_000);
 });
 

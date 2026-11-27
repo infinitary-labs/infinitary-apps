@@ -9,7 +9,7 @@ import { expect, test } from "@playwright/test";
 import { decode } from "@toon-format/toon";
 import { WebSignIns } from "../../src/core/browser/webSignIns";
 import { hostEnv } from "../../src/core/hostEnv";
-import { SECRETS_USE_ENDED_LEAD } from "../../src/core/orchestrator/wakes";
+import { SECRETS_USE_ENDED_LEAD, SECRETS_USE_RESTARTED } from "../../src/core/orchestrator/wakes";
 import { runWords } from "../../src/core/secrets/approvalCard";
 import { approvalCode } from "../../src/core/secrets/approvals";
 import { SECRETS_CHECK_WORDS } from "../../src/core/secrets/commandWords";
@@ -1214,7 +1214,10 @@ done
       homeDir,
       leftCustody: new Map(slots.map(([slot, bytes]) => [slot, Buffer.from(bytes, "base64")])),
     });
-    const cutOff = new RegExp(`${SECRETS_USE_ENDED_LEAD} [\\w-]+: unknown\\.`);
+    // The restart sentence tells this notice from an ordinary unknown end, which
+    // a program dying while the app quit would also produce.
+    const restarted = SECRETS_USE_RESTARTED.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const cutOff = new RegExp(`${SECRETS_USE_ENDED_LEAD} [\\w-]+: unknown\\. ${restarted}`);
     // The crewmate's conversation is opened again from disk before it hears.
     await expect
       .poll(

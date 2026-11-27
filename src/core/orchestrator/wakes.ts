@@ -470,4 +470,4 @@ function unknownWake(facts: unknown, ways: HoldWay[] | undefined): string {
   return `[fm-op] a wake this version cannot word:\n\`\`\`json\n${JSON.stringify({ facts, ...(ways ? { ways } : {}) }, null, 2)}\n\`\`\``;
 }
 
-export { SECRETS_USE_ENDED_LEAD } from "./deliveryWakes";
+export { SECRETS_USE_ENDED_LEAD, SECRETS_USE_RESTARTED } from "./deliveryWakes";

@@ -962,7 +962,7 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
     `[fm-op] ${SECRETS_USE_ENDED_LEAD} ${facts.request}: started. The captain allowed it and its program is running, so it no longer waits on the captain. You hear once more when it ends. This is a receipt, not permission for another use or an external action.`,
   // i18n-exempt: served to the crewmate as its steer, stays English
   "secrets-use-ended": (facts) =>
-    `[fm-op] ${SECRETS_USE_ENDED_LEAD} ${facts.receipt.request}: ${facts.receipt.state}.${facts.restarted ? " The app closed while this request waited or ran." : ""}${facts.receipt.exitCode === undefined ? "" : ` The recipient exited with status ${facts.receipt.exitCode}.`} This is a receipt, not permission for another use or an external action.${facts.receipt.state === "unknown" ? " Do not repeat this request; reconcile what happened before depending on it." : ""}`,
+    `[fm-op] ${SECRETS_USE_ENDED_LEAD} ${facts.receipt.request}: ${facts.receipt.state}.${facts.restarted ? ` ${SECRETS_USE_RESTARTED}` : ""}${facts.receipt.exitCode === undefined ? "" : ` The recipient exited with status ${facts.receipt.exitCode}.`} This is a receipt, not permission for another use or an external action.${facts.receipt.state === "unknown" ? " Do not repeat this request; reconcile what happened before depending on it." : ""}`,
   "secrets-ask-ended": (facts) => secretsAskEndedWords(facts.ended),
   "secrets-bring-ended": (facts) => secretsBringEndedWords(facts.ended),
   settled: (facts) =>
@@ -1019,6 +1019,8 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
 
 /** Protected-use start and completion, metadata only; neither receipt grants further authority. */
 export const SECRETS_USE_ENDED_LEAD = "Secrets request";
+/** The ended receipt's sentence for a use the app's close cut off, told as Secrets opens again. */
+export const SECRETS_USE_RESTARTED = "The app closed while this request waited or ran.";
 export const SECRETS_ASK_ENDED_LEAD = "Your ask to keep a secret";
 
 /** What the asker hears once when its ask ends: each kept secret's name, place, reference and version, never a value. */

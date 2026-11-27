@@ -89,6 +89,10 @@
   font-size: var(--text-sm);
   color: var(--fg-1);
 }
+.fm-card-md pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .fm-card-md a {
   color: var(--accent);
   text-decoration: underline;

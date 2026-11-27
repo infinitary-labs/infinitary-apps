@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-drafts-recommended-test-picks",
+      "reason": "The browser test of a card's recommended picks now makes its quick picks in one run inside the card's body, so a stalled round trip from the test's command process can no longer open a pause between two picks and fail the test; nothing in the app changes."
+    }
+  ]
+}

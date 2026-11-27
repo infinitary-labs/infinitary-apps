@@ -212,10 +212,12 @@ async function frontApp(): Promise<{ asn: string; bundle: string } | null> {
   return bundle ? { asn, bundle } : null;
 }
 
-/** The bundle of a running instance, null once it has quit. */
+/** The bundle of a running instance, null once it has quit. `-only` prints it as "CFBundleIdentifier"=, the full listing as bundleID=. */
 async function bundleOf(asn: string): Promise<string | null> {
   return (
-    /bundleID="([^"]+)"/.exec(await lsappinfo(["info", "-only", "bundleid", asn]))?.[1] ?? null
+    /(?:bundleID|"CFBundleIdentifier")="([^"]+)"/.exec(
+      await lsappinfo(["info", "-only", "bundleid", asn]),
+    )?.[1] ?? null
   );
 }
 

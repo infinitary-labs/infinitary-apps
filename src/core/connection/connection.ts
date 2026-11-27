@@ -73,6 +73,7 @@ import {
   CARD_NOTE_PLACES,
   type CardReads,
   cardPushFor,
+  decisionsFor,
   legacyCardSnapshot,
   lookFor,
   pastCardFor,
@@ -986,7 +987,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
             : answered,
           client.unreadLook,
         );
-        const value = pastCardFor(channel, looked, client.changes);
+        const value = decisionsFor(
+          channel,
+          pastCardFor(channel, looked, client.changes),
+          client.changes,
+        );
         reply({
           ok: true,
           value:

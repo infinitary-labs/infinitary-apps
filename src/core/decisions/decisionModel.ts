@@ -4,16 +4,19 @@ import type {
   DecisionCaller,
   DecisionModelCatalogRow,
   DecisionModelId,
+  DecisionOffering,
   DecisionPinState,
   DecisionQuestion,
   DecisionState,
   DecisionsSettings,
   DecisionsView,
-  OpenRouterDecisionOffering,
 } from "@shared/decisions";
 import {
+  currentDecisions,
   DECISION_MODEL_CATALOG,
+  decisionEgressKey,
   decisionKeyRejectedNote,
+  decisionProviderPick,
   parseDecisionOffering,
 } from "@shared/decisions";
 import {
@@ -83,7 +86,7 @@ export interface DecisionModel {
   readonly id: string;
   /** Whether it serves the typed question as its own API. */
   readonly native: boolean;
-  /** The pick its row's last answer belongs to, when one id serves several (OpenRouter's). */
+  /** The pick its row's last answer belongs to, when one id serves several (a provider's). */
   readonly pick?: string;
   decide(
     caller: DecisionCaller,
@@ -404,11 +407,11 @@ export type DecisionModelsOptions = {
    * answering. Absent: a pick is taken as answering.
    */
   pinState?: (offering: string) => DecisionPinState;
-  /** A classifier reached through an existing signed-in Pi account, not a key store. */
-  openrouter?: {
-    models: () => OpenRouterDecisionOffering[];
-    signedIn: () => boolean;
-    create: (model: string) => DecisionModel;
+  /** Classifiers reached through existing signed-in Pi accounts, not a key store. */
+  providers?: {
+    /** Each enabled, signed-in provider whose catalog lists choice-capable models, and those models. */
+    signedIn: () => ReadonlyArray<{ provider: string; models: DecisionOffering[] }>;
+    create: (provider: string, model: string) => DecisionModel;
   };
   /**
    * Builds a native model around the user's key. Injectable so a test needs
@@ -440,6 +443,16 @@ export class DecisionModels {
   private cachedNative: { id: string; key: string; model: DecisionModel } | undefined;
 
   constructor(private readonly options: DecisionModelsOptions) {}
+
+  /** A signed-in provider whose catalog lists choice-capable models, with those models. */
+  private signedInProvider(provider: string) {
+    return this.options.providers?.signedIn().find((entry) => entry.provider === provider);
+  }
+
+  /** The row, with a pick saved before `decision-providers` read as the provider pick it is. */
+  private decisions(): DecisionsSettings {
+    return currentDecisions(this.options.settings.getDecisions());
+  }
 
   active(): DecisionModel {
     return this.nativeModel() ?? this.options.adapted;
@@ -507,17 +520,13 @@ export class DecisionModels {
   allowsUse(id: DecisionUseId): boolean {
     const use = decisionUse(id);
     if (!use) return false;
-    return decisionUseAllowed(
-      this.options.settings.getDecisions(),
-      this.options.settings.getDecisionUses(),
-      use,
-    );
+    return decisionUseAllowed(this.decisions(), this.options.settings.getDecisionUses(), use);
   }
 
   /**
    * One use switched from Settings. An always-on use refuses to turn off.
    * `approve` is the approval screen the person just agreed to in the
-   * consent dialog: it raises the answering Jev or OpenRouter approval, never
+   * consent dialog: it raises the answering Jev or provider approval, never
    * past this home's own screen and never lower than it was. A `needs-ok`
    * use turns on only once its disclosure's version is agreed, which is kept.
    */
@@ -533,14 +542,9 @@ export class DecisionModels {
     const agreed = Math.max(request.agreed ?? -1, saved[use.id]?.agreed ?? -1);
     if (request.on && use.kind === "needs-ok" && agreed < (use.disclosure?.version ?? 0))
       throw new Error(`${use.name} turns on only once its disclosure is agreed.`);
-    const settings = this.options.settings.getDecisions();
+    const settings = this.decisions();
     if (request.on && request.approve !== undefined) {
-      const family =
-        settings.answerer.kind === "native"
-          ? settings.answerer.id
-          : settings.answerer.kind === "openrouter"
-            ? "openrouter"
-            : undefined;
+      const family = decisionEgressKey(settings.answerer);
       const approval = decisionApproval(settings);
       if (family && approval !== null) {
         const raised = Math.max(approval, Math.min(request.approve, DECISION_APPROVAL_VERSION));
@@ -559,17 +563,18 @@ export class DecisionModels {
   }
 
   /**
-   * The Jev or OpenRouter model answering now, by name, or null while the
-   * person's own models answer: what a use's own screen names before it
+   * The Jev or provider decision model answering now, by name, or null while
+   * the person's own models answer: what a use's own screen names before it
    * spends anything.
    */
   answererName(): string | null {
     if (!this.nativeModel()) return null;
-    const { answerer } = this.options.settings.getDecisions();
-    if (answerer.kind === "openrouter")
+    const { answerer } = this.decisions();
+    const pick = decisionProviderPick(answerer);
+    if (pick)
       return (
-        this.options.openrouter?.models().find((model) => model.id === answerer.model)?.name ??
-        answerer.model
+        this.signedInProvider(pick.provider)?.models.find((model) => model.id === pick.model)
+          ?.name ?? pick.model
       );
     if (answerer.kind !== "native") return null;
     return DECISION_MODEL_CATALOG.find((row) => row.id === answerer.id)?.name ?? null;
@@ -577,7 +582,7 @@ export class DecisionModels {
 
   /** What the Decisions group renders. Never carries a key or part of one. */
   view(): DecisionsView {
-    const settings = this.options.settings.getDecisions();
+    const settings = this.decisions();
     const pinned =
       settings.answerer.kind === "adapted" && settings.answerer.offering !== "auto"
         ? (this.options.pinState?.(settings.answerer.offering) ?? "ready")
@@ -588,21 +593,21 @@ export class DecisionModels {
       approvalVersion: DECISION_APPROVAL_VERSION,
       uses: decisionUsesView(settings, this.options.settings.getDecisionUses()),
       ...(pinned ? { pinned } : {}),
-      openrouter: {
-        models: this.options.openrouter?.signedIn() ? this.options.openrouter.models() : [],
-        state: !this.options.openrouter?.signedIn()
-          ? "signed-out"
-          : settings.egress.openrouter?.enabled &&
-              (settings.egress.openrouter.consentedVersion ?? -1) >= DECISION_FIRST_APPROVAL_VERSION
-            ? "ready"
-            : "off",
-        consented:
-          (settings.egress.openrouter?.consentedVersion ?? -1) >= DECISION_FIRST_APPROVAL_VERSION,
-        last:
-          settings.answerer.kind === "openrouter"
-            ? (this.last.get(`openrouter/${settings.answerer.model}`) ?? null)
-            : null,
-      },
+      providers: (this.options.providers?.signedIn() ?? []).map(({ provider, models }) => {
+        const egress = settings.egress[provider];
+        const consented = (egress?.consentedVersion ?? -1) >= DECISION_FIRST_APPROVAL_VERSION;
+        const pick = decisionProviderPick(settings.answerer);
+        return {
+          provider,
+          models,
+          state: egress?.enabled && consented ? "ready" : "off",
+          consented,
+          last:
+            pick?.provider === provider
+              ? (this.last.get(`${provider}/${pick.model}`) ?? null)
+              : null,
+        };
+      }),
       natives: DECISION_MODEL_CATALOG.map((row) => {
         const egress = settings.egress[row.id];
         const keyStored = this.options.keys?.has(row.id) ?? false;
@@ -632,7 +637,8 @@ export class DecisionModels {
    * this one can be logged, exported and pushed without carrying a secret.
    */
   setSettings(next: DecisionsSettings): DecisionsView {
-    this.options.settings.setDecisions(next);
+    // A view before `decision-providers` still sends an OpenRouter pick in its older shape.
+    this.options.settings.setDecisions(currentDecisions(next));
     // The client is rebuilt on the next decision: the pick, the egress or
     // the consent may all have moved.
     this.cachedNative = undefined;
@@ -650,7 +656,7 @@ export class DecisionModels {
     this.options.keys?.set(id, key);
     this.rejected.delete(id);
     this.cachedNative = undefined;
-    const settings = this.options.settings.getDecisions();
+    const settings = this.decisions();
     const seen = settings.egress[id]?.consentedVersion ?? -1;
     this.options.settings.setDecisions({
       ...settings,
@@ -671,7 +677,7 @@ export class DecisionModels {
     this.rejected.delete(id);
     this.last.delete(id);
     this.cachedNative = undefined;
-    const settings = this.options.settings.getDecisions();
+    const settings = this.decisions();
     const egress = { ...settings.egress };
     delete egress[id];
     this.options.settings.setDecisions({
@@ -692,19 +698,16 @@ export class DecisionModels {
    * stored, and the host serves a factory at all.
    */
   private nativeModel(): DecisionModel | undefined {
-    const settings = this.options.settings.getDecisions();
-    if (settings.answerer.kind === "openrouter") {
-      const egress = settings.egress.openrouter;
-      const option = this.options.openrouter;
-      if (
-        !egress?.enabled ||
-        (egress.consentedVersion ?? -1) < DECISION_FIRST_APPROVAL_VERSION ||
-        !option?.signedIn()
-      )
+    const settings = this.decisions();
+    const pick = decisionProviderPick(settings.answerer);
+    if (pick) {
+      // Each provider has its own approval: OpenRouter's never turns on OpenCode Go's.
+      const egress = settings.egress[pick.provider];
+      if (!egress?.enabled || (egress.consentedVersion ?? -1) < DECISION_FIRST_APPROVAL_VERSION)
         return undefined;
-      const modelId = settings.answerer.model;
-      if (!option.models().some((model) => model.id === modelId)) return undefined;
-      return option.create(modelId);
+      const offered = this.signedInProvider(pick.provider);
+      if (!offered?.models.some((model) => model.id === pick.model)) return undefined;
+      return this.options.providers?.create(pick.provider, pick.model);
     }
     if (settings.answerer.kind !== "native") return undefined;
     const id = settings.answerer.id;

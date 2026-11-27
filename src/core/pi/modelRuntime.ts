@@ -2,8 +2,9 @@ import { dirname, join } from "node:path";
 import { InMemoryCredentialStore, type ThinkingLevelMap } from "@earendil-works/pi-ai";
 import { ModelRuntime } from "@earendil-works/pi-coding-agent";
 
-import { BEDROCK_PROVIDER_ID, PROVIDER_CATALOG } from "@shared/providers";
+import { BEDROCK_PROVIDER_ID, OPENCODE_GO_PROVIDER_ID, PROVIDER_CATALOG } from "@shared/providers";
 import { bedrockAccountProvider } from "./bedrock";
+import { withOpenCodeGoDecisions } from "./openCodeGoDecisions";
 import { storedKeyOnly } from "./storedKeyOnly";
 
 /**
@@ -195,13 +196,17 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
  * Every offered Pi provider signed in with a key takes it from the account's
  * own store alone (`storedKeyOnly`). Amazon Bedrock is left out: its account
  * runtime registers its own sign-in (`bedrock.ts`), and no other runtime
- * serves it.
+ * serves it. OpenCode Go also gets its decision models (`openCodeGoDecisions.ts`).
  */
 function keepKeysInTheStore(runtime: ModelRuntime): void {
   for (const entry of PROVIDER_CATALOG) {
     if (entry.backend !== "pi" || entry.id === BEDROCK_PROVIDER_ID) continue;
     const stock = runtime.getProvider(entry.id);
-    if (stock?.auth.apiKey) runtime.registerNativeProvider(storedKeyOnly(stock));
+    if (!stock?.auth.apiKey) continue;
+    const kept = storedKeyOnly(stock);
+    runtime.registerNativeProvider(
+      entry.id === OPENCODE_GO_PROVIDER_ID ? withOpenCodeGoDecisions(kept) : kept,
+    );
   }
 }
 

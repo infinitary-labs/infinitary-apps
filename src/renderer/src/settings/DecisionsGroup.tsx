@@ -1,16 +1,21 @@
 import type {
   DecisionConsentText,
   DecisionModelId,
+  DecisionOffering,
   DecisionsSettings,
   DecisionsView,
-  OpenRouterDecisionOffering,
 } from "@shared/decisions";
 import {
   DECISION_MODEL_CATALOG,
+  decisionAnswererFor,
   decisionConsent,
   decisionModelRow,
-  openRouterDecisionConsent,
-  openRouterDecisionLine,
+  decisionPrice,
+  decisionProviderName,
+  decisionProviderPick,
+  decisionProvidersOf,
+  providerDecisionConsent,
+  providerDecisionLine,
 } from "@shared/decisions";
 import {
   DECISION_APPROVAL_VERSION,
@@ -41,7 +46,7 @@ const LABEL_STYLE = {
 /** What the consent dialog is open for, if anything. */
 type Consent =
   | { kind: "native"; id: DecisionModelId }
-  | { kind: "openrouter"; model: OpenRouterDecisionOffering }
+  | { kind: "provider"; provider: string; model: DecisionOffering }
   | { kind: "use"; use: DecisionUseView };
 
 function rows(text: DecisionConsentText | readonly string[]) {
@@ -55,7 +60,7 @@ function rows(text: DecisionConsentText | readonly string[]) {
  * and under it the Uses list, one switch per way Infinitary asks a decision
  * model, drawn from the home's view of `src/shared/decisionUses.ts` alone.
  * Every approval goes through the one `ConsentDialog`: turning Jev on (its
- * key field inside), picking an OpenRouter model not yet approved, and the
+ * key field inside), picking a provider's model not yet approved, and the
  * one-time OK a use needs when the answering model was approved on an older
  * screen. A home on an older version sends no uses, and the group draws the
  * answerer row alone.
@@ -76,7 +81,8 @@ export function DecisionsGroup({
   onSetDecisionUse: (request: DecisionUseRequest) => void;
 }) {
   const { models, byName } = slots;
-  const [pickingOpenRouter, setPickingOpenRouter] = useState(false);
+  /** The provider whose decision models are listed under the row, if any. */
+  const [pickingProvider, setPickingProvider] = useState<string | null>(null);
   const [pickingDecisionModel, setPickingDecisionModel] = useState(false);
   const [consent, setConsent] = useState<Consent | null>(null);
   /**
@@ -120,46 +126,47 @@ export function DecisionsGroup({
   const activeNative = natives.find((entry) => entry.chosen && entry.state === "ready");
   const rejected = natives.find((entry) => entry.chosen && entry.state === "key-rejected");
 
-  const chooseOpenRouter = (model: OpenRouterDecisionOffering, justApproved: boolean) => {
+  const providers = decisionProvidersOf(decisions);
+  const chooseProvider = (provider: string, model: DecisionOffering, justApproved: boolean) => {
     write({
       ...decisions.settings,
-      answerer: { kind: "openrouter", model: model.id },
+      answerer: decisionAnswererFor(decisions, provider, model.id),
       egress: {
         ...decisions.settings.egress,
-        openrouter: justApproved ? approved("openrouter") : kept("openrouter"),
+        [provider]: justApproved ? approved(provider) : kept(provider),
       },
     });
-    setPickingOpenRouter(false);
+    setPickingProvider(null);
   };
-  const openRouterModel =
-    answerer.kind === "openrouter"
-      ? decisions.openrouter?.models.find((model) => model.id === answerer.model)
-      : undefined;
-  const openRouterReady = openRouterModel && decisions.openrouter?.state === "ready";
-  /** The answering Jev or OpenRouter model, by name and with its approval screen's rows. */
+  const picking = providers.find(
+    (entry) => entry.provider === pickingProvider && entry.models.length,
+  );
+  const pick = decisionProviderPick(answerer);
+  const pickRow = pick && providers.find((entry) => entry.provider === pick.provider);
+  const pickModel = pick && pickRow?.models.find((model) => model.id === pick.model);
+  const providerReady = pickModel && pickRow?.state === "ready";
+  /** The answering Jev or provider model, by name and with its approval screen's rows. */
   const answering =
     answerer.kind === "native"
       ? (() => {
           const row = decisionModelRow(answerer.id);
           return row ? { name: row.name, consent: decisionConsent(row) } : undefined;
         })()
-      : answerer.kind === "openrouter" && openRouterModel
-        ? { name: openRouterModel.name, consent: openRouterDecisionConsent(openRouterModel) }
+      : pick && pickModel
+        ? { name: pickModel.name, consent: providerDecisionConsent(pickModel, pick.provider) }
         : undefined;
 
   const menu: RowMenuItem[] = [
-    ...(decisions.openrouter?.models.length
-      ? [
-          {
-            id: "openrouter",
-            label: MODELS_WORDS.useOpenRouterDecisionModel,
-            onSelect: () => {
-              setPickingOpenRouter((open) => !open);
-              setPickingDecisionModel(false);
-            },
-          },
-        ]
-      : []),
+    ...providers
+      .filter((entry) => entry.models.length)
+      .map((entry) => ({
+        id: `provider-${entry.provider}`,
+        label: MODELS_WORDS.decisionModelFrom(decisionProviderName(entry.provider)),
+        onSelect: () => {
+          setPickingProvider((open) => (open === entry.provider ? null : entry.provider));
+          setPickingDecisionModel(false);
+        },
+      })),
     ...(answerer.kind === "adapted" && answerer.offering === "auto"
       ? []
       : [
@@ -211,33 +218,32 @@ export function DecisionsGroup({
       ]),
   ];
 
-  const line =
-    answerer.kind === "openrouter"
-      ? openRouterReady
-        ? openRouterDecisionLine(openRouterModel)
-        : m.settingsDecisionsOpenRouterUnavailable()
-      : activeNative
-        ? m.settingsDecisionsLineNative({
-            model: activeNative.row.name,
-            vendor: activeNative.row.vendor,
-          })
-        : rejected
-          ? m.settingsDecisionsKeyRejected()
-          : pinned === "ready" && answerer.kind === "adapted"
-            ? modelNames([...models, ...byName])(answerer.offering)
-            : pinned === "fallback"
-              ? m.settingsDecisionsChosenFallback()
-              : pinned === "held"
-                ? m.settingsDecisionsChosenHeld()
-                : m.settingsDecisionsAuto();
+  const line = pick
+    ? providerReady
+      ? providerDecisionLine(pickModel, pick.provider)
+      : m.settingsDecisionsProviderUnavailable({ provider: decisionProviderName(pick.provider) })
+    : activeNative
+      ? m.settingsDecisionsLineNative({
+          model: activeNative.row.name,
+          vendor: activeNative.row.vendor,
+        })
+      : rejected
+        ? m.settingsDecisionsKeyRejected()
+        : pinned === "ready" && answerer.kind === "adapted"
+          ? modelNames([...models, ...byName])(answerer.offering)
+          : pinned === "fallback"
+            ? m.settingsDecisionsChosenFallback()
+            : pinned === "held"
+              ? m.settingsDecisionsChosenHeld()
+              : m.settingsDecisionsAuto();
   const tone = rejected
     ? "danger"
     : pinned === "held"
       ? "warn"
-      : activeNative || openRouterReady
+      : activeNative || providerReady
         ? "ok"
         : "ring";
-  const last = openRouterReady ? decisions.openrouter?.last : activeNative?.native?.last;
+  const last = providerReady ? pickRow?.last : activeNative?.native?.last;
 
   const switchUse = (use: DecisionUseView, on: boolean) => {
     if (use.kind === "always-on") return;
@@ -306,16 +312,19 @@ export function DecisionsGroup({
         </ConsentDialog>
       );
     }
-    if (consent.kind === "openrouter") {
-      const model = consent.model;
+    if (consent.kind === "provider") {
+      const { provider, model } = consent;
       return (
         <ConsentDialog
-          title={m.settingsDecisionsTurnOnOpenRouter({ model: model.name })}
-          facts={rows(openRouterDecisionConsent(model))}
+          title={m.settingsDecisionsTurnOnThrough({
+            model: model.name,
+            provider: decisionProviderName(provider),
+          })}
+          facts={rows(providerDecisionConsent(model, provider))}
           act={DECISION_USES_WORDS.turnOn}
           onClose={closeConsent}
           onAct={() => {
-            chooseOpenRouter(model, true);
+            chooseProvider(provider, model, true);
             closeConsent();
           }}
         />
@@ -376,9 +385,11 @@ export function DecisionsGroup({
         last={last}
         items={menu}
       />
-      {pickingOpenRouter && !!decisions.openrouter?.models.length && (
+      {picking && (
         <fieldset
-          aria-label={m.settingsDecisionsOpenRouterModels()}
+          aria-label={m.settingsDecisionsProviderModels({
+            provider: decisionProviderName(picking.provider),
+          })}
           style={{
             border: 0,
             borderTop: "1px solid var(--line-1)",
@@ -389,20 +400,20 @@ export function DecisionsGroup({
             gap: 4,
           }}
         >
-          {decisions.openrouter.models.map((model) => (
+          {picking.models.map((model) => (
             <Button
               key={model.id}
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (decisions.openrouter?.consented) chooseOpenRouter(model, false);
-                else setConsent({ kind: "openrouter", model });
+                if (picking.consented) chooseProvider(picking.provider, model, false);
+                else setConsent({ kind: "provider", provider: picking.provider, model });
               }}
             >
-              {m.settingsDecisionsOpenRouterPrice({
+              {m.settingsDecisionsModelPrice({
                 model: model.name,
                 vendor: model.vendor,
-                price: String(model.inputPrice),
+                price: decisionPrice(model.inputPrice),
               })}
             </Button>
           ))}

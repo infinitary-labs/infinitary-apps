@@ -14,7 +14,7 @@ import { type BatchAnswer, batchAnswerSchema } from "./batches";
 import { shortCommit } from "./buildIdentity";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
-import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
+import { type DecisionsView, decisionAnswererSchema, decisionModelDone } from "./decisions";
 import type { DeviceMake } from "./deviceArrival";
 import { addressFormOffer, addressOffer, deviceInviteLine } from "./deviceInvite";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
@@ -1315,10 +1315,7 @@ const actionLines = {
     line: "Choose the decision model. Existing outbound consent is preserved; keys and consent stay in Settings.",
     toRequest: (v, c) => [{ ...(c as DecisionsView).settings, answerer: v.answerer }],
     readValue: (c) => ({ answerer: (c as DecisionsView).settings.answerer }),
-    done: (v) => {
-      const answerer = v.answerer as DecisionAnswerer;
-      return `decision model ${answerer.kind === "native" ? answerer.id : answerer.kind === "openrouter" ? `OpenRouter · ${answerer.model}` : answerer.offering === "auto" ? "Auto" : answerer.offering}`;
-    },
+    done: (v) => decisionModelDone(v.answerer),
   },
   "refresh-usage": {
     area: "intelligence",

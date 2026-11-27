@@ -2630,6 +2630,7 @@
 "recordValidationScenario" = "السيناريو";
 "recordValidationSupplementary" = "%1$@ (تكميلي)";
 "refuseACardCoversTheComputers" = "بطاقة تغطي الحواسيب";
+"refuseACardCoversTheProjects" = "بطاقة تغطي المشاريع";
 "refuseARecordingIsRunning" = "يجري تسجيل الآن";
 "refuseBrowserTabCannotBeFound" = "تعرض علامة تبويب المتصفح صورة لصفحة، لذا لا يمكن البحث في كلماتها";
 "refuseCloseTheOpenDialogFirst" = "أغلق مربع الحوار المفتوح أولًا";

@@ -287,7 +287,9 @@ const REFUSALS: Readonly<
     s.view !== "home"
       ? m.refuseSettingsIsOpen()
       : shownEntry(s)
-        ? m.refuseACardCoversTheComputers()
+        ? facts.computers?.byProject
+          ? m.refuseACardCoversTheProjects()
+          : m.refuseACardCoversTheComputers()
         : !facts.computers || facts.computers.page === 0
           ? facts.computers?.byProject
             ? m.refuseTheseAreTheFirstProjects()
@@ -297,7 +299,9 @@ const REFUSALS: Readonly<
     s.view !== "home"
       ? m.refuseSettingsIsOpen()
       : shownEntry(s)
-        ? m.refuseACardCoversTheComputers()
+        ? facts.computers?.byProject
+          ? m.refuseACardCoversTheProjects()
+          : m.refuseACardCoversTheComputers()
         : !facts.computers || facts.computers.page + 1 >= facts.computers.pages
           ? facts.computers?.byProject
             ? m.refuseTheseAreTheLastProjects()

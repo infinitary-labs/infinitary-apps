@@ -1861,6 +1861,7 @@
   {"said":{"m":"recordValidationScenario"},"words":"Scenario"},
   {"said":{"m":"recordValidationSupplementary","a":{"action":"‹action›"}},"words":"‹action› (supplementary)"},
   {"said":{"m":"refuseACardCoversTheComputers"},"words":"A card covers the computers"},
+  {"said":{"m":"refuseACardCoversTheProjects"},"words":"A card covers the projects"},
   {"said":{"m":"refuseARecordingIsRunning"},"words":"A recording is running"},
   {"said":{"m":"refuseBrowserTabCannotBeFound"},"words":"The Browser tab shows a picture of a page, so its words cannot be found"},
   {"said":{"m":"refuseCloseTheOpenDialogFirst"},"words":"Close the open dialog first"},

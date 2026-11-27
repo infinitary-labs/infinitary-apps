@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "カードがコンピューターの表示を覆っています",
+  "refuseACardCoversTheProjects": "カードがプロジェクトの表示を覆っています",
   "refuseARecordingIsRunning": "録音中です",
   "refuseBrowserTabCannotBeFound": "ブラウザタブはページの画像なので、その言葉は検索できません",
   "refuseCloseTheOpenDialogFirst": "開いているダイアログを先に閉じてください",

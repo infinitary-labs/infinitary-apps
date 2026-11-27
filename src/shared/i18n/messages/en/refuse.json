@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "A card covers the computers",
+  "refuseACardCoversTheProjects": "A card covers the projects",
   "refuseARecordingIsRunning": "A recording is running",
   "refuseBrowserTabCannotBeFound": "The Browser tab shows a picture of a page, so its words cannot be found",
   "refuseCloseTheOpenDialogFirst": "Close the open dialog first",

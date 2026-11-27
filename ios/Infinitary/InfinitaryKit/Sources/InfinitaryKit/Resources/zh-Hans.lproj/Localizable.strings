@@ -2630,6 +2630,7 @@
 "recordValidationScenario" = "场景";
 "recordValidationSupplementary" = "%1$@（补充）";
 "refuseACardCoversTheComputers" = "有卡片挡住了电脑列表";
+"refuseACardCoversTheProjects" = "有卡片挡住了项目列表";
 "refuseARecordingIsRunning" = "正在录音";
 "refuseBrowserTabCannotBeFound" = "浏览器标签页显示的是网页的图片，因此无法查找其中的文字";
 "refuseCloseTheOpenDialogFirst" = "请先关闭打开的对话框";

@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "Eine Karte verdeckt die Computer",
+  "refuseACardCoversTheProjects": "Eine Karte verdeckt die Projekte",
   "refuseARecordingIsRunning": "Eine Aufnahme läuft",
   "refuseBrowserTabCannotBeFound": "Der Tab „Browser“ zeigt ein Bild einer Seite, darum lassen sich seine Wörter nicht finden",
   "refuseCloseTheOpenDialogFirst": "Schließ zuerst den offenen Dialog",

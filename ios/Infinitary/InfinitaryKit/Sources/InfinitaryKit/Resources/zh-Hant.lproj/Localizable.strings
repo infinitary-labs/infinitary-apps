@@ -2630,6 +2630,7 @@
 "recordValidationScenario" = "情境";
 "recordValidationSupplementary" = "%1$@（補充）";
 "refuseACardCoversTheComputers" = "有卡片擋住了電腦清單";
+"refuseACardCoversTheProjects" = "有卡片擋住了專案清單";
 "refuseARecordingIsRunning" = "正在錄音";
 "refuseBrowserTabCannotBeFound" = "瀏覽器分頁顯示的是網頁的圖片，因此無法尋找其中的文字";
 "refuseCloseTheOpenDialogFirst" = "請先關閉開啟中的對話框";

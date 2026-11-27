@@ -104,8 +104,8 @@ describe("the group rule", () => {
     expect(groups["web-away"]).toBe("away-mac");
   });
 
-  // The review of this change (F1): a crewmate's spawn reaches the stage
-  // before its board row, so a start must not regroup everyone else.
+  // A crewmate's spawn reaches the stage before its board row, so a start
+  // must not regroup everyone else.
   it("keeps a crewmate whose project the board does not name yet in its computer's group, and the others in theirs", () => {
     const starting = {
       ...input(),
@@ -203,8 +203,8 @@ describe("the stage grouped by project", () => {
     expect(model.update(0, true).programs.filter((p) => p.id === "program")).toHaveLength(2);
   });
 
-  // The review of this change (F2): the approved plan keeps the fall home's
-  // path and trip, so the cue must reach the first mate once it lands.
+  // The approved plan keeps the fall home's path and trip, so the cue must
+  // reach the first mate once it lands.
   it("keeps a project group on the stage until its last crewmate's fall home lands", () => {
     const model = stage(["web-home", "shop-home", "shop-studio"]);
     model.update(0);

@@ -2764,6 +2764,7 @@ public enum PhoneMessages {
     public static func `recordValidationScenario`() -> String { PhoneWords.format("recordValidationScenario", []) }
     public static func `recordValidationSupplementary`(`action`: String) -> String { PhoneWords.format("recordValidationSupplementary", [`action`]) }
     public static func `refuseACardCoversTheComputers`() -> String { PhoneWords.format("refuseACardCoversTheComputers", []) }
+    public static func `refuseACardCoversTheProjects`() -> String { PhoneWords.format("refuseACardCoversTheProjects", []) }
     public static func `refuseARecordingIsRunning`() -> String { PhoneWords.format("refuseARecordingIsRunning", []) }
     public static func `refuseBrowserTabCannotBeFound`() -> String { PhoneWords.format("refuseBrowserTabCannotBeFound", []) }
     public static func `refuseCloseTheOpenDialogFirst`() -> String { PhoneWords.format("refuseCloseTheOpenDialogFirst", []) }
@@ -7669,6 +7670,7 @@ extension PhoneWords {
         "recordValidationScenario": [],
         "recordValidationSupplementary": ["action"],
         "refuseACardCoversTheComputers": [],
+        "refuseACardCoversTheProjects": [],
         "refuseARecordingIsRunning": [],
         "refuseBrowserTabCannotBeFound": [],
         "refuseCloseTheOpenDialogFirst": [],

@@ -56685,6 +56685,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `A card covers the computers`;
   }
+  function refuseACardCoversTheProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة تغطي المشاريع`;
+      case "de":
+        return `Eine Karte verdeckt die Projekte`;
+      case "es":
+        return `Una tarjeta tapa los proyectos`;
+      case "fr":
+        return `Une carte recouvre les projets`;
+      case "ja":
+        return `カードがプロジェクトの表示を覆っています`;
+      case "ko":
+        return `카드가 프로젝트 목록을 가리고 있어요`;
+      case "pt-BR":
+        return `Um cartão está cobrindo os projetos`;
+      case "zh-Hans":
+        return `有卡片挡住了项目列表`;
+      case "zh-Hant":
+        return `有卡片擋住了專案清單`;
+      case "en-XA":
+        return `[Å çáŕð çöṽéŕš ţĥé þŕöĵéçţš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A card covers the projects‬`;
+    }
+    return `A card covers the projects`;
+  }
   function refuseARecordingIsRunning() {
     switch (currentLanguage()) {
       case "ar":
@@ -120302,6 +120329,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordValidationScenario,
     recordValidationSupplementary,
     refuseACardCoversTheComputers,
+    refuseACardCoversTheProjects,
     refuseARecordingIsRunning,
     refuseBrowserTabCannotBeFound,
     refuseCloseTheOpenDialogFirst,
@@ -124099,6 +124127,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordValidationScenario": [],
     "recordValidationSupplementary": ["action"],
     "refuseACardCoversTheComputers": [],
+    "refuseACardCoversTheProjects": [],
     "refuseARecordingIsRunning": [],
     "refuseBrowserTabCannotBeFound": [],
     "refuseCloseTheOpenDialogFirst": [],

@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "Une carte recouvre les ordinateurs",
+  "refuseACardCoversTheProjects": "Une carte recouvre les projets",
   "refuseARecordingIsRunning": "Un enregistrement est en cours",
   "refuseBrowserTabCannotBeFound": "L’onglet Navigateur montre une image d’une page, ses mots ne peuvent donc pas être recherchés",
   "refuseCloseTheOpenDialogFirst": "Fermez d’abord la boîte de dialogue ouverte",

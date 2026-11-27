@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "outside-merges-ride-batch",
+      "reason": "CI and release work: main's check leaves a merged outside pull request to the next batch, which checks it and whose alpha ships it, so nobody using the app notices."
+    }
+  ]
+}

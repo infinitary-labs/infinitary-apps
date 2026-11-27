@@ -743,6 +743,12 @@ A failed cut ends the wait too, so it never holds main's fixes; an alpha run tha
 Its scripts ask GitHub again after a server error, the answer GitHub gives a request that takes it more than ten seconds, so one slow answer does not fail main's check.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").
+A push that merged an outside contributor's pull request is left to the next batch (INF-6982, the captain: "make outside PRs not trigger this at all, and simply ride my next alpha cut from my batches").
+The `sort` job reads it as outside when the merged pull request's head is in another copy of the project, or in one since deleted, and main's newest push run at the commit before it ended `success` or `failure`, or was itself left to the next batch (`scripts/batch.mjs`).
+The run then shows the job `Main push · Left to the next batch (pull request N)`, which writes a summary and cancels the run the way a paused one does, so no check, Linux startup or alpha starts.
+It ends cancelled rather than passed: main's green mark stays on a version a main check ran, and the next run's alpha wait looks for no alpha this run would have started.
+The next batch, combined on top of `main`, checks the outside change with its own, and that batch's alpha ships it; a failure the two cause only together holds that batch, whose repair fixes forward.
+When the commit before it was never accounted for, such as a batch whose waiting run a newer push replaced, or a docs-only push that started no run, the push gets the full check and its alpha, as before.
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version main's full check passed, and no other record names it.
 An untagged journey that fails fails the alpha cut from that run, which publishes nothing, while main's mark still moves (`docs/alpha.md`, "Failed alpha checks").
 A failed run fails on the version it checked, which can be older than `main`'s head, so a repair reads that run and the range of commits since the newest passing one.
@@ -758,7 +764,7 @@ The full check runs no run-alone pass either; the proof of edited journeys runs 
 Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so the run never waits in the PC's line ("A release's hosted machines").
 There one two-processor machine ran every vitest project past its step's 60-minute limit, so the Linux checks run on nine machines at once (INF-2646, the captain's approved split): `linux-checks` runs the typecheck, the lints and the build, and `linux-tests` runs the tests in eight groups, `pure`, `unit` and `unit-isolated` in three, `integration` in two, `probe` in two and `browser` in one, each group a set of vitest's own `--shard`.
 Each group keeps the 60-minute limit and reports whatever another did, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
-`tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
+`tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls, the outside merge's stop and the phone release's call of every part.
 Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a passed batch's skips the full check once the wait ends, and only files no batch built get the full check (the captain's pick on INF-3052, "A: keep a fallback full check on main for versions no batch built").
 
 ## The swept batch
@@ -769,6 +775,7 @@ The captain's merge click on its merge card puts the approved version in line.
 The app at the captain's home combines the line into one branch, `infinitary-batch/<id>`, one commit per change, and opens it as one pull request with the captain's sign-in ("A batch pull request").
 Once every check of that pull request passed, the app merges it with the same sign-in: by squash when it holds one change and by a rebase merge when it holds several, so `main` gains one commit per change.
 That merge is a push to `main` like any other, so it starts `main.yml`, and `prompt-budget.yml` and `republish-casks.yml` where their paths select it.
+An outside contributor's pull request merged since the previous batch is on `main` already, so the batch's version holds it and the batch's checks and alpha carry it ("Main's desktop release check").
 The line and its batch are the home's own record, so a batch waits while the app there is closed.
 How the app forms, combines, holds and merges a batch is `docs/forge.md`'s.
 

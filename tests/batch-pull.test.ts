@@ -782,7 +782,6 @@ describe("main's check sorting a push that merged a batch pull request", () => {
 
   it("reads the merged pull request, its files and its own run from GitHub", async () => {
     const merge = "5d8e2c1b0a9f8e7d6c5b4a3f2e1d0c9b8a7f6e5d";
-    let from = REPOSITORY;
     const github = {
       rest: {
         repos: {
@@ -796,7 +795,7 @@ describe("main's check sorting a push that merged a batch pull request", () => {
                       head: {
                         ref: rehearsal.branch,
                         sha: rehearsal.head,
-                        repo: { full_name: from },
+                        repo: { full_name: REPOSITORY },
                       },
                       base: { ref: "main", repo: { full_name: REPOSITORY } },
                     },
@@ -833,11 +832,127 @@ describe("main's check sorting a push that merged a batch pull request", () => {
     expect(await readMainPush(github, repo, { ...push, tree: "d".repeat(40) })).toEqual({
       kind: "full",
     });
-    // A fork's branch of that name is no batch, so it has no run to reuse.
-    from = "someone/infinitary";
-    expect(await readMainPush(github, repo, push)).toEqual({ kind: "full" });
+    // A fork's branch of that name is no batch: main's sort reads it as an
+    // outside pull request (below).
     // A commit that merged no pull request is checked in full.
     expect(await readMainPush(github, repo, { ...push, sha: rehearsal.base })).toEqual({
+      kind: "full",
+    });
+  });
+});
+
+// INF-6982, the captain: "make outside PRs not trigger this at all, and
+// simply ride my next alpha cut from my batches". A push that merged an
+// outside pull request is left to the next batch, once main's check
+// accounted for the commit before it.
+describe("main's check leaving a push that merged an outside pull request to the next batch", () => {
+  const merge = "7c1e9a4b2d3f5061728394a5b6c7d8e9f0a1b2c3";
+  const parent = "3b5d7f9a1c2e4f6081a2b3c4d5e6f708192a3b4c";
+  const outsidePull = (from: string | null, branch = "fix-card-spacing") => ({
+    number: 93,
+    merge_commit_sha: merge,
+    head: { ref: branch, sha: "f".repeat(40), repo: from === null ? null : { full_name: from } },
+    base: { ref: "main", repo: { full_name: REPOSITORY } },
+  });
+  const mainRun = (conclusion: string | null, status = "completed") => ({
+    id: 45600000001,
+    head_sha: parent,
+    event: "push",
+    status,
+    conclusion,
+  });
+  type MainRun = ReturnType<typeof mainRun>;
+  const githubOf = ({
+    pull = outsidePull("someone/infinitary") as ReturnType<typeof outsidePull> | undefined,
+    runs = [] as MainRun[],
+    jobs = [] as string[],
+  }) => ({
+    rest: {
+      repos: {
+        listPullRequestsAssociatedWithCommit: async ({ commit_sha }: { commit_sha: string }) => ({
+          data: commit_sha === merge && pull ? [pull] : [],
+        }),
+        getCommit: async ({ ref }: { ref: string }) => {
+          expect(ref).toBe(merge);
+          return { data: { sha: merge, parents: [{ sha: parent }] } };
+        },
+      },
+      actions: {
+        listWorkflowRuns: async (parameters: Record<string, unknown>) => {
+          expect(parameters).toMatchObject({
+            workflow_id: "main.yml",
+            head_sha: parent,
+            event: "push",
+          });
+          return { data: { workflow_runs: runs } };
+        },
+        listJobsForWorkflowRun: async ({ run_id }: { run_id: number }) => {
+          expect(run_id).toBe(45600000001);
+          return {
+            data: jobs.map((name) => ({ name, status: "completed", conclusion: "cancelled" })),
+          };
+        },
+      },
+    },
+    paginate: async <T>(list: (parameters: T) => Promise<{ data: unknown[] }>, parameters: T) =>
+      (await list(parameters)).data,
+  });
+  const push = { sha: merge, tree: rehearsal.tree, checkFiles };
+  const sort = (input: Parameters<typeof githubOf>[0]) => readMainPush(githubOf(input), repo, push);
+  // The jobs main.yml's own run shows on a push it leaves to the next batch.
+  const left = runJobNames("main.yml", {
+    github: { event_name: "push", sha: parent },
+    needs: {
+      find: { outputs: { alphas: "[]", waited: "false" } },
+      sort: { outputs: { kind: "outside", pull: "64" } },
+    },
+  });
+
+  it("leaves it to the next batch once main's run before it checked its commit or left it too", async () => {
+    expect(await sort({ runs: [mainRun("success")] })).toEqual({ kind: "outside", pull: 93 });
+    expect(await sort({ runs: [mainRun("failure")] })).toEqual({ kind: "outside", pull: 93 });
+    // Two outside merges in a row: the run before was itself left.
+    expect(left).toContain("Main push · Left to the next batch (pull request 64)");
+    expect(await sort({ runs: [mainRun("cancelled")], jobs: left })).toEqual({
+      kind: "outside",
+      pull: 93,
+    });
+    // A fork's branch named like a batch is no batch, so it has no run to reuse.
+    expect(
+      await sort({
+        pull: outsidePull("someone/infinitary", rehearsal.branch),
+        runs: [mainRun("success")],
+      }),
+    ).toEqual({ kind: "outside", pull: 93 });
+    // A pull request from a copy since deleted is still an outside one.
+    expect(await sort({ pull: outsidePull(null), runs: [mainRun("success")] })).toEqual({
+      kind: "outside",
+      pull: 93,
+    });
+  });
+
+  it("checks it in full when main's check never accounted for the commit before it", async () => {
+    // A batch whose waiting run a newer push replaced shows no job at all.
+    expect(await sort({ runs: [mainRun("cancelled")] })).toEqual({ kind: "full" });
+    // One that cancelled itself after its alpha wait, because main moved, or
+    // a paused one, shows the wait's jobs and no left job.
+    const waited = runJobNames("main.yml", {
+      github: { event_name: "push", sha: parent },
+      // It waited for the alpha cut from main run 204, as alpha-wait.yml names it.
+      needs: {
+        find: { outputs: { alphas: "[204]", waited: "true" } },
+        sort: { outputs: { kind: "full" } },
+      },
+    }).filter((name) => name.includes("Alpha cut wait"));
+    expect(waited.length).toBeGreaterThan(0);
+    expect(await sort({ runs: [mainRun("cancelled")], jobs: waited })).toEqual({ kind: "full" });
+    // Still running, or no run at all, such as a docs-only push.
+    expect(await sort({ runs: [mainRun(null, "in_progress")] })).toEqual({ kind: "full" });
+    expect(await sort({ runs: [] })).toEqual({ kind: "full" });
+  });
+
+  it("never leaves a pull request from the project's own branch", async () => {
+    expect(await sort({ pull: outsidePull(REPOSITORY), runs: [mainRun("success")] })).toEqual({
       kind: "full",
     });
   });

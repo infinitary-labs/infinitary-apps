@@ -1,5 +1,6 @@
 import { posix } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { runJobNames } from "./helpers/ciJobNames";
 import {
   loadYamlFile,
   read,
@@ -113,11 +114,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(main.concurrency.group).not.toContain("${{");
     expect(main.concurrency["cancel-in-progress"]).toBe(false);
     // Each job but the swept batch's sort and its covered mark (INF-2430's
-    // plan, piece 3; tests/batch.test.ts holds them) and the last job that
-    // dispatches the alpha cut (INF-3738; tests/main-alpha-proof.test.ts holds
-    // it) only calls a check, so a full run is exactly those checks.
+    // plan, piece 3; tests/batch.test.ts holds them), the outside merge's
+    // stop (INF-6982; held below) and the last job that dispatches the alpha
+    // cut (INF-3738; tests/main-alpha-proof.test.ts holds it) only calls a
+    // check, so a full run is exactly those checks.
     const own = Object.entries(main.jobs).filter(([, job]) => !job.uses);
-    expect(own.map(([id]) => id).sort()).toEqual(["alpha", "covered", "sort"]);
+    expect(own.map(([id]) => id).sort()).toEqual(["alpha", "covered", "outside", "sort"]);
     const calls = Object.values(main.jobs)
       .filter((job) => job.uses)
       .map((job) => job.uses);
@@ -201,6 +203,99 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(workflowString(gate?.env?.PHONE_PLAN ?? "", chosen)).toBe("");
     expect(workflowString(gate?.env?.PHONE_DEVICE ?? "", chosen)).toBe("every");
     expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
+  });
+
+  /**
+   * INF-6982, the captain: "make outside PRs not trigger this at all, and
+   * simply ride my next alpha cut from my batches". On a push the sort left
+   * to the next batch, the run starts no check and no alpha, and cancels
+   * itself as a paused one does; tests/batch-pull.test.ts holds the sort.
+   */
+  it("stops a push that merged an outside pull request before any check or alpha starts", async () => {
+    const sha = "7c1e9a4b2d3f5061728394a5b6c7d8e9f0a1b2c3";
+    const shown = (kind: string) =>
+      runJobNames("main.yml", {
+        github: { event_name: "push", sha },
+        needs: {
+          // No alpha is being cut (alpha-wait.yml).
+          find: { outputs: { alphas: "[]", waited: "false" } },
+          sort: { outputs: { kind, pull: kind === "outside" ? "93" : "" } },
+        },
+      });
+    const outside = shown("outside");
+    expect(outside).toContain("Main push · Left to the next batch (pull request 93)");
+    for (const name of outside)
+      expect(name).not.toMatch(
+        /Desktop checks|Linux startup|Start the alpha cut|Covered by batch run/,
+      );
+    // A full push and a manual request run as before, with no stop.
+    expect(shown("full")).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Main push · Desktop checks / "),
+        expect.stringContaining("Main push · Linux startup / "),
+        "Main push · Start the alpha cut",
+      ]),
+    );
+    expect(shown("full").some((name) => name.includes("Left to the next batch"))).toBe(false);
+
+    // The stop's own script: a summary naming the pull request, then it
+    // cancels its own run and never lets the job succeed.
+    const main = loadYamlFile(".github/workflows/main.yml") as {
+      jobs: Record<string, { steps: Step[] }>;
+    };
+    const step = main.jobs.outside?.steps[0];
+    const order: string[] = [];
+    const summaries: string[] = [];
+    const summary = {
+      addHeading: (text: string) => {
+        summaries.push(text);
+        return summary;
+      },
+      addRaw: (text: string) => {
+        summaries.push(text);
+        return summary;
+      },
+      write: async () => {},
+    };
+    const context = { repo: { owner: "example", repo: "project" }, runId: 41690000002, sha };
+    const github = {
+      rest: {
+        actions: {
+          cancelWorkflowRun: async (parameters: Record<string, unknown>) => {
+            order.push(`cancel ${parameters.run_id}`);
+            return {};
+          },
+        },
+      },
+    };
+    const fakeTimeout = (done: () => void, ms: number) => {
+      order.push(`pause ${ms / 60_000} minutes`);
+      done();
+    };
+    const pull = workflowString(String(step?.env?.PULL ?? ""), {
+      needs: { sort: { outputs: { pull: "93" } } },
+    });
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+    await new AsyncFunction(
+      "core",
+      "github",
+      "context",
+      "setTimeout",
+      "process",
+      step?.with?.script,
+    )(
+      { summary, setFailed: (text: string) => order.push(`failed: ${text}`) },
+      github,
+      context,
+      fakeTimeout,
+      { env: { PULL: pull } },
+    );
+    expect(order[0]).toBe(`cancel ${context.runId}`);
+    expect(order[1]).toMatch(/^pause \d+ minutes$/);
+    expect(order[2]).toMatch(/^failed: /);
+    expect(summaries[0]).toBe("Left to the next batch");
+    expect(summaries.join("\n")).toContain("#93");
+    expect(summaries.join("\n")).toContain(sha);
   });
 
   /**

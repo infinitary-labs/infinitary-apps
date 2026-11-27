@@ -4,7 +4,9 @@ name: failed-checks
 # "Outside contributors"): when ci, contributors or docs-site finishes a run
 # for an outside pull request, it comments once per version naming each
 # failed job with a link to its log, leaving out checks that also fail in
-# main's newest run and saying when main is failing too, and labels the pull
+# main's newest run that checked something (a cancelled run with no failed
+# job, such as a paused one, checked nothing) and saying when main is failing
+# too, and labels the pull
 # request "waiting on author", so it goes back to its author before any
 # review starts. A version whose every failed check also fails on main gets a
 # comment saying so and no label. A passing rerun of the same version edits

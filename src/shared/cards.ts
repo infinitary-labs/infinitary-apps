@@ -927,24 +927,25 @@ export const cardSchema = z.strictObject({
   risk: riskAssessmentSchema.optional(),
   /**
    * False on a card that takes no reply, whoever its author is
-   * (docs/card-threads.md "A card with no reply row"): the chrome draws no
+   * (docs/card-threads.md "Who answers a card"): the chrome draws no
    * reply row and the core refuses one (`cardTakesReplies`). The host sets
-   * it on the welcome alone (`cards.replies`); absent on every other card,
-   * which takes replies as its author allows.
+   * it on the welcome and on the cards shown while the first mate is down,
+   * which nobody could answer: its pause cards, its failed-turn card and its
+   * own sign-in card (`cards.replies`); absent on every other card, which
+   * takes replies as its author allows.
    */
   replies: z.literal(false).optional(),
   /**
    * Who answers a reply under a card whose author cannot (`cards.answered_by`,
-   * read through `cardAnswerer`): "firstmate" on the host's stuck alert
-   * (`card-stall-<task>`, INF-1670), its next-move card
-   * (`card-next-move-<task>`), its decision on a stopped part left last
-   * (`card-last-part-<task>`) and on every card it raises through
-   * `raiseHostCard` unless the caller names another, so the first mate
-   * answers in the thread, never the task's crewmate; "crewmate" on the
-   * app's own card for a crewmate's ask (a secret to keep or use, secrets to
-   * move in, an integration call), so the crewmate that asked answers in the
-   * thread while its ask stays open. Absent on every other card, which takes
-   * replies as its author allows.
+   * read through `cardAnswerer`): "crewmate" on the app's own card for a
+   * crewmate's ask (a secret to keep or use, secrets to move in, an
+   * integration call, an unsafe data reader's held calls), so the crewmate
+   * that asked answers in the thread while its ask stays open; "firstmate"
+   * on every other host card that does not turn replies off, named by its
+   * builder or filled in as the card goes up and as it is restored
+   * (`withHostAnswerer`), so the first mate answers in the thread, never the
+   * task's crewmate. Absent on a crewmate's or the first mate's own card,
+   * which its author answers.
    */
   answeredBy: z.enum(["firstmate", "crewmate"]).optional(),
   /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
@@ -1278,10 +1279,9 @@ export const CONVERSE_TEXT_MAX_CHARS = 20_000;
  * which needs the task it runs on, and so is a reply under the app's own
  * card for a crewmate's ask (`Card.answeredBy`). A Firstmate card's reply is
  * a captain turn about that card (cards-as-threads phase 2), and so is one
- * under a card the host named the first mate the answerer of (the stuck
- * alert and the app's own offers). The host's agent-down cards answer to
- * nobody, and neither does a card the host marked as taking no reply (the
- * welcome, `Card.replies`). A crewmate's card whose task has closed is the
+ * under any other host card (`withHostAnswerer`). A card the host marked
+ * as taking no reply answers to nobody (the welcome and the first mate's
+ * down cards, `Card.replies`). A crewmate's card whose task has closed is the
  * first mate's to answer, which the core decides from the task
  * (`firstmateAnswers`).
  */

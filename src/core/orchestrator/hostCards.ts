@@ -216,6 +216,21 @@ export function hostCard(
 }
 
 /**
+ * A host card as it goes up and as it is restored (`CardService.put`, its
+ * restart): one that names no answerer and does not turn replies off is
+ * answered by the first mate, which can pass words on to a crewmate, so a
+ * builder that forgets to name one still draws the reply field, and a card
+ * saved before its builder named one takes a reply after an update
+ * (docs/card-threads.md, "Who answers a card"). Every other card is
+ * returned as it is.
+ */
+export function withHostAnswerer(card: Card): Card {
+  return card.author === "host" && card.answeredBy === undefined && card.replies !== false
+    ? { ...card, answeredBy: "firstmate" }
+    : card;
+}
+
+/**
  * Which pause card a pause asks on: with a place to move (rung 2) it asks
  * to move under `card-fm-flagship-move`; without one (rung 3) it says the
  * seat waits, under `card-fm-refused` for a refusal and
@@ -250,6 +265,8 @@ export function firstmatePauseCard(id: string, input: FirstmatePauseCard): HostC
     meta: FIRSTMATE_CARD_META,
     body: input.body,
     actions: firstmatePauseActions(input),
+    // The paused first mate cannot answer a reply (`Card.replies`).
+    replies: false,
   });
 }
 
@@ -491,12 +508,15 @@ export function authDecisionCard(
     move?: { arg: string; modelName: string };
     /** Claude access set up for Claude Code was refused: renewed there, not signed in here. */
     access?: ClaudeAccessSource;
+    /** The first mate's own sign-in: it cannot answer a reply until it is back (`Card.replies`). */
+    noReply?: true;
   },
 ): HostCard {
   const restoreAccountId = options?.restoreAccountId;
   return hostCard({
     id,
     ...(options?.taskId ? { taskId: options.taskId } : {}),
+    ...(options?.noReply ? { replies: false as const } : {}),
     title: restoreAccountId
       ? body
       : options?.access
@@ -643,6 +663,7 @@ export function firstmateFailureCard(body: string): HostCard {
     title: FIRSTMATE_FAILURE_TITLE,
     meta: FIRSTMATE_CARD_META,
     body,
+    replies: false,
     actions: [
       {
         id: "retry-firstmate",

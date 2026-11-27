@@ -1,5 +1,5 @@
 ---
-source: 042bc7f3959ec370
+source: 75bebd4c6bb16a9e
 title: Premier lancement
 description: Ce qu’Infinitary affiche la première fois que vous l’ouvrez, comment choisir où vit votre second, comment connecter un abonnement et comment ajouter votre premier projet.
 ---
@@ -167,8 +167,8 @@ Appuyez sur **Compris** pour la ranger quand vous voulez.
 
 La première fois que votre second confie une demande à un équipier, une carte intitulée **Un équipier s'en occupe** apparaît.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="La carte Un équipier s'en occupe : le second qui envoie un équipier au travail, un panneau Maintenant indiquant qu’un équipier travaille et qu’il est inutile de le surveiller, un panneau Plus tard indiquant qu’une carte revient ici avec une réponse ou un choix, et Compris." width="1163" height="654" />
 
 Elle indique que l’équipier travaille en arrière-plan, ce qui peut prendre un moment, et que vous n’avez pas besoin de le surveiller.
 Quand l’équipier a une réponse, ou a besoin que vous choisissiez, cela vous revient sous forme de carte.

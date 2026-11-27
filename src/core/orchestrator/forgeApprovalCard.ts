@@ -111,6 +111,8 @@ export function readerApprovalCard(
     taskId: task.id,
     author: "host",
     priority: HOST_CARD_PRIORITY,
+    // The reader that asked answers a reply under its card, as every asker does.
+    answeredBy: "crewmate",
     title:
       words?.title ??
       (pages ? m.cardReaderPagesTitle() : m.cardBuildRowsTitle({ place: first.place })),

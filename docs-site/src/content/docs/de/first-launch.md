@@ -1,5 +1,5 @@
 ---
-source: 042bc7f3959ec370
+source: 75bebd4c6bb16a9e
 title: Der erste Start
 description: Was Infinitary beim ersten Öffnen zeigt, wie du wählst, wo dein erster Offizier lebt, wie du ein Abo verbindest und wie du dein erstes Projekt hinzufügst.
 ---
@@ -167,8 +167,8 @@ Drück **Verstanden**, um sie wegzulegen, wann immer du willst.
 
 Wenn dein erster Offizier zum ersten Mal eine Bitte an ein Crewmitglied gibt, erscheint eine Karte mit dem Titel **Ein Crewmitglied ist dran**.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="Die Karte „Ein Crewmitglied ist dran“: der erste Offizier, der ein Crewmitglied losschickt, ein Bereich „Jetzt“, der sagt, dass ein Crewmitglied arbeitet und du nicht zusehen musst, ein Bereich „Später“, der sagt, dass eine Karte mit einer Antwort oder einer Entscheidung hierher zurückkommt, und „Verstanden“." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="Die Karte „Ein Crewmitglied ist dran“: der erste Offizier, der ein Crewmitglied losschickt, ein Bereich „Jetzt“, der sagt, dass ein Crewmitglied arbeitet und du nicht zusehen musst, ein Bereich „Später“, der sagt, dass eine Karte mit einer Antwort oder einer Entscheidung hierher zurückkommt, und „Verstanden“." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="Die Karte „Ein Crewmitglied ist dran“: der erste Offizier, der ein Crewmitglied losschickt, ein Bereich „Jetzt“, der sagt, dass ein Crewmitglied arbeitet und du nicht zusehen musst, ein Bereich „Später“, der sagt, dass eine Karte mit einer Antwort oder einer Entscheidung hierher zurückkommt, und „Verstanden“." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="Die Karte „Ein Crewmitglied ist dran“: der erste Offizier, der ein Crewmitglied losschickt, ein Bereich „Jetzt“, der sagt, dass ein Crewmitglied arbeitet und du nicht zusehen musst, ein Bereich „Später“, der sagt, dass eine Karte mit einer Antwort oder einer Entscheidung hierher zurückkommt, und „Verstanden“." width="1163" height="654" />
 
 Sie sagt, dass das Crewmitglied im Hintergrund arbeitet, was eine Weile dauern kann, und dass du nicht zusehen musst.
 Wenn das Crewmitglied eine Antwort hat oder du etwas entscheiden musst, kommt das als Karte zurück.

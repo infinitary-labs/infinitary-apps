@@ -53,6 +53,7 @@ import {
 } from "./cardThreads";
 import { ENDED_STAYS, EndedCards } from "./endedCards";
 import { HostCardStack } from "./hostCardStack";
+import { withHostAnswerer } from "./hostCards";
 import { PutOffs } from "./putOffs";
 import type { WakeCard } from "./reportWakes";
 import { requiredActionCard, requiredActionProvenance } from "./requiredActionCard";
@@ -176,9 +177,10 @@ export class CardService {
     // Unresolved cards survive restarts (D-9). Migration 73 has retired
     // their keep-open actions and streaming state. A card with a lifecycle
     // resumes it; one written before the capture is seeded as a snapshot
-    // whose start is unknown, never given a history it did not have.
+    // whose start is unknown, never given a history it did not have. A host
+    // card saved with no answerer comes back with the one it now goes up with.
     for (const card of host.cardStore.listOpen()) {
-      const ready = card;
+      const ready = withHostAnswerer(card);
       if (ready.lifecycleId && ready.offerId) {
         this.cards.set(ready.id, ready);
         continue;
@@ -1337,10 +1339,12 @@ export class CardService {
    * Put a card the host authors on the stack: a new one, or a revision under
    * its id. A card raised again under an id it once had reopens its row, so
    * the stack and the row agree and it survives a restart like any other.
+   * A host card that names no answerer gets the first mate here, the one door
+   * every such card goes through (`withHostAnswerer`).
    */
   put(next: Card, options: { revise?: boolean } = {}): void {
     const stamped = this.evidence.stamp({
-      ...next,
+      ...withHostAnswerer(next),
       width: decidedCardWidth({
         body: next.body,
         pictures: next.pictures,

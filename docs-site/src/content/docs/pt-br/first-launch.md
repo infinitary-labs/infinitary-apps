@@ -1,5 +1,5 @@
 ---
-source: 042bc7f3959ec370
+source: 75bebd4c6bb16a9e
 title: Primeira abertura
 description: O que o Infinitary mostra na primeira vez que você o abre, como escolher onde seu imediato mora, como conectar uma assinatura e como adicionar seu primeiro projeto.
 ---
@@ -167,8 +167,8 @@ Pressione **Entendi** para guardá-lo quando quiser.
 
 Na primeira vez que seu imediato passa um pedido para um tripulante, aparece um cartão chamado **Um tripulante está cuidando disso**.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="O cartão Um tripulante está cuidando disso: o imediato despachando um tripulante, um painel Agora dizendo que um tripulante trabalha e que não precisa acompanhar, um painel Depois dizendo que um cartão volta aqui com uma resposta ou uma escolha, e Entendi." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="O cartão Um tripulante está cuidando disso: o imediato despachando um tripulante, um painel Agora dizendo que um tripulante trabalha e que não precisa acompanhar, um painel Depois dizendo que um cartão volta aqui com uma resposta ou uma escolha, e Entendi." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="O cartão Um tripulante está cuidando disso: o imediato despachando um tripulante, um painel Agora dizendo que um tripulante trabalha e que não precisa acompanhar, um painel Depois dizendo que um cartão volta aqui com uma resposta ou uma escolha, e Entendi." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="O cartão Um tripulante está cuidando disso: o imediato despachando um tripulante, um painel Agora dizendo que um tripulante trabalha e que não precisa acompanhar, um painel Depois dizendo que um cartão volta aqui com uma resposta ou uma escolha, e Entendi." width="1163" height="654" />
 
 Ele diz que o tripulante trabalha em segundo plano, o que pode levar um tempo, e que você não precisa acompanhar.
 Quando o tripulante tiver uma resposta, ou precisar que você escolha, isso volta como um cartão.

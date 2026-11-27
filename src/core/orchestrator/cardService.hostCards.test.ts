@@ -411,37 +411,54 @@ describe("host cards", () => {
     cards.dispose();
   });
 
-  it("lets the first mate answer a reply under a card the app raises, but not under the welcome or an agent-down card", () => {
-    // INF-6265's plan, piece 2: the app's own offers take replies the first
-    // mate answers; the welcome and the agent-down set stay without a field.
-    const { db, make } = setup();
+  it("gives every host card that names no answerer the first mate, but not the welcome or an agent-down card", () => {
+    // Intent: INF-6994's approved plan, piece 1: every app card except the
+    // welcome takes a typed reply. A host card whose builder names nobody,
+    // put straight on the stack as the reader's approval card once was, gets
+    // the first mate; one marked as taking no reply and the first mate's
+    // down cards stay without a field; a card saved with no answerer before
+    // the rule reads with the first mate after a restart.
+    const { db, cardStore, make } = setup();
     const cards = make();
-    const offer = {
-      id: "card-consent",
-      title: "Add the plugin?",
-      meta: "firstmate",
-      body: "<p>It asks to read your tasks.</p>",
-      actions: [{ id: "add", label: "Add it", variant: "primary" as const }],
+    const unnamed: Card = {
+      id: "card-unnamed",
+      author: "host",
+      priority: HOST_CARD_PRIORITY,
+      title: "Allow writes on GitHub?",
+      meta: "Integration approval",
+      body: "<p>A builder that names nobody.</p>",
+      actions: [{ id: "once", label: "Only this time", variant: "primary" }],
+      status: "ready",
+      createdAt: 1000,
     };
-    cards.hostCards.raiseHostCard(offer);
-    cards.hostCards.raiseHostCard({ ...offer, id: "card-quiet", replies: false });
+    cards.put(unnamed);
+    cards.put({ ...unnamed, id: "card-welcome", replies: false });
     cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    // A row an older version saved with no answerer, read back on restart.
+    cardStore.upsert({ ...unnamed, id: "card-saved-before" });
     const takes = (service: typeof cards, id: string) => {
       const card = service.get(id);
       return card && { takesReplies: cardTakesReplies(card), answeredBy: card.answeredBy };
     };
-    expect(takes(cards, "card-consent")).toEqual({ takesReplies: true, answeredBy: "firstmate" });
-    expect(takes(cards, "card-quiet")).toEqual({ takesReplies: false, answeredBy: undefined });
+    expect(takes(cards, "card-unnamed")).toEqual({ takesReplies: true, answeredBy: "firstmate" });
+    expect(takes(cards, "card-welcome")).toEqual({ takesReplies: false, answeredBy: undefined });
     expect(takes(cards, FIRSTMATE_FAILURE_CARD_ID)).toEqual({
       takesReplies: false,
       answeredBy: undefined,
     });
     cards.dispose();
-    // The answerer is saved with the card, so a restart keeps the field.
     const restarted = setup(db).make();
-    expect(takes(restarted, "card-consent")).toEqual({
+    expect(takes(restarted, "card-unnamed")).toEqual({
       takesReplies: true,
       answeredBy: "firstmate",
+    });
+    expect(takes(restarted, "card-saved-before")).toEqual({
+      takesReplies: true,
+      answeredBy: "firstmate",
+    });
+    expect(takes(restarted, "card-welcome")).toEqual({
+      takesReplies: false,
+      answeredBy: undefined,
     });
     restarted.dispose();
   });

@@ -164,3 +164,9 @@ export function workedOwnThemes(saved: readonly SavedOwnTheme[]): WorkedOwnTheme
     return { id: own.id, name: own.name, base: worked.base, tokens: worked.tokens };
   });
 }
+
+export function ownThemesRead(appearance: { ownColorThemes?: readonly SavedOwnTheme[] }): {
+  themes: WorkedOwnTheme[];
+} {
+  return { themes: workedOwnThemes(appearance.ownColorThemes ?? []) };
+}

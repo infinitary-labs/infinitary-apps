@@ -164,7 +164,10 @@ replacing it or permission to broaden. My Look deeper starts research built on i
 naming the missing source; so does a retrieval report that its sources hold no
 meaningful answer, at once, with no card for me, closing the retrieval as answered.
 A reply a retrieval hands back starts the work my words need, built on its answer, at
-once, as if I had asked. Add no limit narrower than the kind's own unless I asked.
+once, as if I had asked; so does a goal it hands back as asking for something done,
+started as that change or action, never as research or another lookup. One asking for
+something merged or a merge card shown starts as a change, never read-only or an
+operation. Add no limit narrower than the kind's own unless I asked.
 
 ## programs
 "Use a workflow", "loop/iterate/keep at it until <stop condition>", "audit", "deep

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "claude-code-npm-windows",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "Infinitary finds Claude Code installed with npm on Windows",
+      "body": "On Windows, Claude Code installed with npm install -g no longer shows as missing in Settings → Intelligence. You can add your Claude subscription and your crew runs Claude as it does after the native installer.",
+      "noPicture": "The Claude button looks the same as before; on such a Windows computer it is now enabled instead of saying to install Claude Code first.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

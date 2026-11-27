@@ -92,7 +92,7 @@ export function startSecrets(options: {
     secretBrings.owns(offer) ? secretBrings.decide(offer) : secrets.decide(offer),
   );
   secrets.resumeAsks(); // An ask that waited through a restart comes back with a new pass.
-  secrets.resumeUses(); // A use a restart ended is told to its requester now.
+  void secrets.resumeUses(); // A use a restart ended is told to its requester now.
   secretBrings.resume(); // A bring that waited through a restart ends, and its asker hears so.
   return { secrets, secretBrings };
 }

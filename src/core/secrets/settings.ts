@@ -247,10 +247,14 @@ export class SecretsSettings {
 
   /**
    * Opens Secrets once as Infinitary starts, as Settings does, which shows no
-   * dialog: a use a restart ended is told to its requester now.
+   * dialog: a use a restart ended is told to its requester now. Nobody asked
+   * for this open, so a store that reads locked or unavailable is not kept:
+   * its next use reads custody again, and tells the ended uses then.
    */
-  resumeUses(): void {
-    void this.ready().catch(() => undefined);
+  async resumeUses(): Promise<void> {
+    const owner = await this.ready().catch(() => undefined);
+    if (owner && owner.protected.availability !== "available" && this.owner === owner)
+      this.owner = undefined;
   }
 
   /** Whether this build keeps protected storage at all; it never opens the storage to answer. */

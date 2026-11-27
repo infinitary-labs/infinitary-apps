@@ -90,7 +90,7 @@ function fixture() {
       });
     return { run, script, release: () => writeFile(release, "") };
   };
-  return { settings, make, dir, told, click, deploy };
+  return { settings, make, dir, told, click, deploy, custody };
 }
 
 describe("a waiting crewmate hears its secret run start", () => {
@@ -195,5 +195,27 @@ describe("a waiting crewmate hears its secret run start", () => {
     } finally {
       await release();
     }
+  });
+
+  // The review's finding on this change: the launch open kept a store that
+  // read locked for the whole session, so a keychain unlocked later outside the
+  // app stayed unread until the person pressed Unlock.
+  it("reads a store locked at launch again at its next use, which tells the run the close stopped", async () => {
+    const f = fixture();
+    const { run } = await f.deploy(true);
+    const waiting = await run("deploy-waiting");
+    const crashed = scratchDir("secrets-started-locked-");
+    await cp(f.dir, crashed, { recursive: true });
+
+    f.custody.state = "locked";
+    const later = f.make(crashed);
+    await later.resumeUses();
+    expect(f.told).toEqual([]);
+
+    f.custody.state = "open";
+    expect((await later.view()).availability).toBe("available");
+    expect(f.told).toEqual([
+      { task: TASK, ended: { request: waiting.request, state: "invalidated" }, restarted: true },
+    ]);
   });
 });

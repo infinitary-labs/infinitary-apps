@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-send-task",
+      "reason": "Docs only: this project's outside intake method has its round draft plain replies and run approvals for a send task that sends them on the maintainer's heard direction; nothing in the app changes."
+    }
+  ]
+}

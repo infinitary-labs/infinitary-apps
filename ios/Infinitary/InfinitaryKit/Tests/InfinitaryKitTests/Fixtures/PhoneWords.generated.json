@@ -3120,6 +3120,7 @@
   {"said":{"m":"settingsProjectsWorkspaceDescription"},"words":"Builds in place: no working copy and no pull request."},
   {"said":{"m":"settingsReasoningAuto"},"words":"Auto"},
   {"said":{"m":"settingsReasoningLabel","a":{"model":"‹model›","provider":"‹provider›","slot":"‹slot›"}},"words":"‹provider› ‹model› reasoning for ‹slot›"},
+  {"said":{"m":"settingsReasoningMax"},"words":"Max"},
   {"said":{"m":"settingsReasoningSaveFailed"},"words":"Could not save reasoning. Your previous choice is still shown. Try again."},
   {"said":{"m":"settingsReasoningSavedUnavailable","a":{"reasoning":"‹reasoning›"}},"words":"‹reasoning› · saved, unavailable"},
   {"said":{"m":"settingsReasoningUnavailable"},"words":"Reasoning choices unavailable"},

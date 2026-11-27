@@ -2390,6 +2390,7 @@
 "phoneTaskFactsLevelExtraHigh" = "مرتفع جدًا";
 "phoneTaskFactsLevelHigh" = "مرتفع";
 "phoneTaskFactsLevelLow" = "منخفض";
+"phoneTaskFactsLevelMax" = "أقصى";
 "phoneTaskFactsLevelMedium" = "متوسط";
 "phoneTaskFactsLevelMinimal" = "أدنى";
 "phoneTaskFactsLevelModelDefault" = "افتراضي النموذج";
@@ -3737,6 +3738,7 @@
 "settingsProjectsWorkspaceDescription" = "يُبنى في مكانه: لا نسخة عمل ولا طلب سحب.";
 "settingsReasoningAuto" = "تلقائي";
 "settingsReasoningLabel" = "استدلال %2$@ %1$@ لـ%3$@";
+"settingsReasoningMax" = "أقصى";
 "settingsReasoningSaveFailed" = "تعذّر حفظ الاستدلال. لا يزال اختيارك السابق معروضًا. أعِد المحاولة.";
 "settingsReasoningSavedUnavailable" = "%1$@ · محفوظ، غير متاح";
 "settingsReasoningUnavailable" = "خيارات الاستدلال غير متاحة";

@@ -1131,6 +1131,7 @@
   "settingsProjectsWorkspaceDescription": "Baut direkt im Ordner: keine Arbeitskopie und kein Pull Request.",
   "settingsReasoningAuto": "Automatisch",
   "settingsReasoningLabel": "{provider} {model} Denken für {slot}",
+  "settingsReasoningMax": "Max.",
   "settingsReasoningSaveFailed": "Der Denkaufwand konnte nicht gespeichert werden. Deine vorherige Wahl wird weiter angezeigt. Versuch es noch einmal.",
   "settingsReasoningSavedUnavailable": "{reasoning} · gespeichert, nicht verfügbar",
   "settingsReasoningUnavailable": "Denkaufwand-Optionen nicht verfügbar",

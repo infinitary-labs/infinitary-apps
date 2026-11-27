@@ -205,7 +205,7 @@ describe("action permissions and channel parity", () => {
     ]);
     expect(action.done(choice)).toBe("xai/grok-4 at high: High");
     expect(action.done({ ...choice, level: null })).toBe("xai/grok-4 at high: Use level default");
-    expect(action.value.safeParse({ ...choice, level: "max" }).success).toBe(false);
+    expect(action.value.safeParse({ ...choice, level: "minimal" }).success).toBe(false);
   });
   it("projects the current default wash when a saved appearance predates that field", () => {
     expect(ACTIONS["window-wash"].readValue({ theme: "dark", showCrewModelNames: true })).toEqual({

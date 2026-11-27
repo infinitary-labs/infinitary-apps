@@ -237,7 +237,7 @@ export const placedSpecSchema = z.object({
   }),
   model: modelRefSchema.optional(),
   thinking: z.object({
-    level: z.enum(["low", "medium", "high", "xhigh", "off"]),
+    level: z.enum(["low", "medium", "high", "xhigh", "max", "off"]),
     quick: z.boolean().optional(),
   }),
   instructions: z.string(),

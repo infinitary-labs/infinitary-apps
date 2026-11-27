@@ -2390,6 +2390,7 @@
 "phoneTaskFactsLevelExtraHigh" = "最高";
 "phoneTaskFactsLevelHigh" = "高";
 "phoneTaskFactsLevelLow" = "低";
+"phoneTaskFactsLevelMax" = "最大";
 "phoneTaskFactsLevelMedium" = "中";
 "phoneTaskFactsLevelMinimal" = "最小";
 "phoneTaskFactsLevelModelDefault" = "モデルの既定値";
@@ -3737,6 +3738,7 @@
 "settingsProjectsWorkspaceDescription" = "その場で作成：作業コピーもプルリクエストもありません。";
 "settingsReasoningAuto" = "自動";
 "settingsReasoningLabel" = "%2$@ %1$@の%3$@向け推論";
+"settingsReasoningMax" = "最大";
 "settingsReasoningSaveFailed" = "推論を保存できませんでした。以前の選択が表示されたままです。もう一度お試しください。";
 "settingsReasoningSavedUnavailable" = "%1$@ · 保存済み、利用不可";
 "settingsReasoningUnavailable" = "推論の選択肢を利用できません";

@@ -2390,6 +2390,7 @@
 "phoneTaskFactsLevelExtraHigh" = "極高";
 "phoneTaskFactsLevelHigh" = "高";
 "phoneTaskFactsLevelLow" = "低";
+"phoneTaskFactsLevelMax" = "最大";
 "phoneTaskFactsLevelMedium" = "中";
 "phoneTaskFactsLevelMinimal" = "極低";
 "phoneTaskFactsLevelModelDefault" = "模型預設";
@@ -3737,6 +3738,7 @@
 "settingsProjectsWorkspaceDescription" = "就地建置：沒有工作副本，也沒有 pull request。";
 "settingsReasoningAuto" = "自動";
 "settingsReasoningLabel" = "%2$@ %1$@用於%3$@的推理";
+"settingsReasoningMax" = "最大";
 "settingsReasoningSaveFailed" = "無法儲存推理設定。仍顯示你先前的選擇。請再試一次。";
 "settingsReasoningSavedUnavailable" = "%1$@ · 已儲存，無法使用";
 "settingsReasoningUnavailable" = "無法使用推理選項";

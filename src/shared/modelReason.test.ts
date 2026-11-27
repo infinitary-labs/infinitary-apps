@@ -78,7 +78,7 @@ describe("modelReasonLine", () => {
 });
 
 describe("reasoning words", () => {
-  it("names every level a session can open at, extra high and the model's own included", () => {
+  it("names every level a session can open at, extra high, max and the model's own included", () => {
     const words = reasoningSchema.shape.level.options.map((level) => reasoningWord({ level }));
     expect(words).toEqual([
       "None",
@@ -87,6 +87,7 @@ describe("reasoning words", () => {
       "Medium",
       "High",
       "Extra high",
+      "Max",
       "Model's own",
     ]);
   });

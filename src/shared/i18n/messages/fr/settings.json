@@ -1161,6 +1161,7 @@
   "settingsProjectsWorkspaceDescription": "Construit sur place : pas de copie de travail ni de demande de tirage.",
   "settingsReasoningAuto": "Automatique",
   "settingsReasoningLabel": "Raisonnement de {provider} {model} pour {slot}",
+  "settingsReasoningMax": "Max.",
   "settingsReasoningSaveFailed": "Impossible d’enregistrer le raisonnement. Votre choix précédent reste affiché. Réessayez.",
   "settingsReasoningSavedUnavailable": "{reasoning} · enregistré, indisponible",
   "settingsReasoningUnavailable": "Choix de raisonnement indisponibles",

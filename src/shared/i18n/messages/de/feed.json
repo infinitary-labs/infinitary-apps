@@ -132,5 +132,8 @@
   "feedUndelivered": "Nachricht nicht zugestellt: {why}",
   "feedUnsafeDataReaderReported": "Der Leser unsicherer Daten hat berichtet; seine Worte stehen in seinem Protokoll.",
   "feedUpdated": "Aktualisiert: {text}",
+  "feedWriteNotSentOnWords": "{call} wurde auf deine Worte „{words}“ hin nicht an {place} gesendet: {why}",
+  "feedWriteSentOnWords": "{call} einmal ohne Karte an {place} gesendet, auf deine Worte „{words}“ hin: Die Antwort war {status}.",
+  "feedWriteUnknownOnWords": "{call} einmal ohne Karte an {place} gesendet, auf deine Worte „{words}“ hin – was daraus wurde, ist unbekannt, und es wird nie erneut gesendet.",
   "feedYouChose": "Du hast „{choice}“ gewählt"
 }

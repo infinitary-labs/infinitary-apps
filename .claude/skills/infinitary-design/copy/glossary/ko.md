@@ -78,6 +78,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | How to get it (an ask for a secret) | 받는 방법 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated |
 | inspector | 상세 보기 | Avoids 검사, which is the checks |
+| intake round (a docs site guide) | 접수 라운드 | A scheduled task that reads new issues and pull requests and drafts replies; 접수 as a desk takes in what arrives |
 | Integrations | 연동 | |
 | Intelligence | 지능 | |
 | issue (where the project lives) | 이슈 | |

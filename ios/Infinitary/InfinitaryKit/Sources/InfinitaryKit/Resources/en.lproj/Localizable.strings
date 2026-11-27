@@ -1216,6 +1216,9 @@
 "feedUndelivered" = "Message undelivered: %1$@";
 "feedUnsafeDataReaderReported" = "The unsafe data reader reported; its words are on its record.";
 "feedUpdated" = "Updated: %1$@";
+"feedWriteNotSentOnWords" = "Did not send %1$@ to %2$@ on your words “%4$@”: %3$@";
+"feedWriteSentOnWords" = "Sent %1$@ to %2$@ once without a card, on your words “%4$@”: it answered %3$@.";
+"feedWriteUnknownOnWords" = "Sent %1$@ to %2$@ once without a card, on your words “%3$@”; what came of it is unknown, and it is never sent again.";
 "feedYouChose" = "You chose \"%1$@\"";
 "feedbackStripAccount" = "Nothing is sent before your click. It goes under your GitHub account %1$@.";
 "feedbackStripBug" = "A new problem report";

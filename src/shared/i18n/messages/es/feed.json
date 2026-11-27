@@ -137,5 +137,8 @@
   "feedUndelivered": "Mensaje no entregado: {why}",
   "feedUnsafeDataReaderReported": "El lector de datos no seguros informó; sus palabras están en su registro.",
   "feedUpdated": "Actualización: {text}",
+  "feedWriteNotSentOnWords": "No se envió {call} a {place} según tus palabras «{words}»: {why}",
+  "feedWriteSentOnWords": "Se envió {call} a {place} una vez, sin tarjeta, según tus palabras «{words}»: respondió {status}.",
+  "feedWriteUnknownOnWords": "Se envió {call} a {place} una vez, sin tarjeta, según tus palabras «{words}»; no se sabe qué pasó, y nunca se vuelve a enviar.",
   "feedYouChose": "Elegiste «{choice}»"
 }

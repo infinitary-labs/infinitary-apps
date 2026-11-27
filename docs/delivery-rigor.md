@@ -640,15 +640,17 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
 | `cost-limit` | soft | consent | a task, and everything under it, past its cost limit (docs/usage.md, "The cost limit") | the captain's click on its card, or the override |
 | `model-levels` | soft | record | a task's next conversation while the model it routed to left every level and no model where it runs can take it (docs/routing.md, "A model that left every level") | the captain places a model that can take it on a level, names one for the task, or adds a sign-in that serves one where it runs |
+| `kept-write` | soft | consent | a write where a project lives that a task keeps for the captain's click: an answer or side-effect task's write on its own project, or any write through the github.com sign-in (docs/forge.md, "A write that asks") | the captain's click on its card, or a yes that still stands named as `github_write`'s allowance |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
 | `sign-in` | fixed | outside fact | work where the app is not signed in | no one |
 | `sent-once` | fixed | outside fact | a write or merge sent a second time | no one |
 | `recorded-path` | fixed | physical limit | a merge outside the merge card, and a wait that closes a cycle | no one |
 
+The list leaves out what is no hold of the app's on work: an unsafe data reader's fence ("An unsafe data reader" in `docs/agents-reach.md`), which keeps its writes for the captain's click whatever yes they name, a feedback report, which only the captain's click publishes, and the limits ledger, which counts limits and holds nothing.
 Every refusal ends with its hold's sentence.
 `softHoldWords(kind, audience)` names the override: to the first mate as the way the captain declares it, and to a crewmate as words only the captain gives, through the first mate.
-A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `card-question`, `model-levels`) names that way instead.
+A soft hold with its own way (`escalation`, `program-bound`, `start-waits`, `card-question`, `model-levels`, `kept-write`) names that way instead.
 `fixedHoldWords(kind)` says no one's word passes it.
 
 **The override.**
@@ -685,7 +687,7 @@ The captain's merge click reads the same record, since the settle boundary is on
 The merge card's fact strip shows an Override state naming the holds the captain's words pass.
 The first mate's task line in its context and `crew_status` show the standing override: what it passes, for how long, and, in `crew_status`, the captain's words.
 Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
-The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
+The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance or a write the task would keep, which it sends by naming `standing` as `github_write`'s allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
 The reviewer's brief carries them on every review turn (`reviewerOverrideWords`), so access or a step they cover is not a finding.
 Both arrive as the first entry of the Already allowed list ("What the captain already allowed" below).
 When they pass the checks, its merge reads Merge the pull request, or Merge in the next batch, on failed or running checks, since the click merges at once ("Its words" above).
@@ -712,7 +714,7 @@ The brief carries it when the work starts.
 Each new yes, one taken back, or a `replaced-by` link that brings earlier work's yeses to a task (noticed just after the change, since a change listener writes nothing) is a `task-allowed-changed` notice carrying the whole list, on the lane of every started task whose work includes the changed one, the task itself, a stronger-model retry or a takeover of it; the notice rides the next turn and starts none of its own.
 The reviewer's brief carries the builder's list, so access or a step it covers is not a finding.
 `RIGOR_SAFETY` points at the list: a yes on it is that consent, and the crewmate judges whether an ask falls inside it.
-A write kept for the captain's click, a browser handoff and anything no entry names still ask; the app adds no stop, refuses nothing new and reads none of the words.
+For a write the task would keep, the crewmate names the entry's card as `github_write`'s allowance, and the write goes once with no card (`kept-write` in "The holds"); a browser handoff and anything no entry names still ask, and the app reads none of the words.
 Each entry names the card its yes was given on, so a check request can take its approval from that yes ("Check approval" below).
 The captain's yes on a check's own approval card is kept in the same record, covering what the check declares it uses and the cost of one run (`checkYesCovers`), so it is served, carried and taken back like any other yes (INF-4446); its timeline row is the validation answer's.
 

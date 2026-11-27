@@ -86,6 +86,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | Idle (a task's state) | アイドル | 待機中 is Queued; both appear in one list. |
 | Infinitary | Infinitary | Never translated or written in katakana. |
 | inspector | インスペクター | The Knowledge pane that reads one entry. |
+| intake round (a docs site guide) | 受付ラウンド | A scheduled task that reads new issues and pull requests and drafts replies; 受付 as a front desk takes in what arrives. |
 | Integrations | 連携 | Settings section name. |
 | Intelligence | インテリジェンス | Settings section name. |
 | issue (where the project lives) | Issue | As GitHub's Japanese pages keep it. |

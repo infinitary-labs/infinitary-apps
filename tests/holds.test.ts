@@ -128,6 +128,16 @@ describe("an override naming a retired hold", () => {
   });
 });
 
+describe("an override naming the kept write", () => {
+  // INF-6987's approved plan, piece A1: a kept write passes only by the
+  // captain's click or a yes the write itself names, never an override.
+  it("is refused whole, the refusal naming the hold's own way", () => {
+    expect(overrideRefusal(["checks", "kept-write"])).toBe(
+      "Override refused: nothing was recorded. Soft hold kept-write: it passes when the captain clicks the button that sends it, or github_write names as its allowance a yes that still stands and covers it: a project direction heard from the captain by its d: id, a card on the task's Already allowed list, or standing for the captain's standing override.",
+    );
+  });
+});
+
 describe("a line the captain reads", () => {
   it("takes out every hold sentence and nothing else", () => {
     const text = `Cannot merge: the current version needs an independent review. ${softHoldWords("checks", "firstmate")}`;

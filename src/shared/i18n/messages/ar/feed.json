@@ -152,5 +152,8 @@
   "feedUndelivered": "لم تُسلَّم الرسالة: {why}",
   "feedUnsafeDataReaderReported": "أرسل قارئ البيانات غير الآمنة تقريره؛ كلامه في سجله.",
   "feedUpdated": "تحديث: {text}",
+  "feedWriteNotSentOnWords": "لم يُرسل {call} إلى {place} بناءً على كلماتك «{words}»: {why}",
+  "feedWriteSentOnWords": "أُرسل {call} إلى {place} مرة واحدة دون بطاقة، بناءً على كلماتك «{words}»: جاء الرد {status}.",
+  "feedWriteUnknownOnWords": "أُرسل {call} إلى {place} مرة واحدة دون بطاقة، بناءً على كلماتك «{words}»؛ نتيجته غير معروفة، ولن يُرسل مرة أخرى.",
   "feedYouChose": "اخترت «{choice}»"
 }

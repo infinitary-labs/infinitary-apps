@@ -127,5 +127,8 @@
   "feedUndelivered": "메시지 전달 안 됨: {why}",
   "feedUnsafeDataReaderReported": "안전하지 않은 데이터 읽기 작업이 보고했습니다. 그 내용은 기록에 있습니다.",
   "feedUpdated": "업데이트: {text}",
+  "feedWriteNotSentOnWords": "말씀하신 “{words}”에 따른 {call} 요청을 {place}에 보내지 않았어요: {why}",
+  "feedWriteSentOnWords": "말씀하신 “{words}”에 따라 카드 없이 {call} 요청을 {place}에 한 번 보냈어요. 응답: {status}",
+  "feedWriteUnknownOnWords": "말씀하신 “{words}”에 따라 카드 없이 {call} 요청을 {place}에 한 번 보냈어요. 결과는 알 수 없고, 다시 보내지 않아요.",
   "feedYouChose": "\"{choice}\" 선택함"
 }

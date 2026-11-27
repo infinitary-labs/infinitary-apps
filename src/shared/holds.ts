@@ -96,6 +96,13 @@ export const HOLDS = {
     name: "the model levels",
     way: "the captain places a model that can take it on a level in Settings, names one for the task, or adds a sign-in that serves one where it runs",
   },
+  // i18n-exempt: hold words served to the agents in their soft-hold sentence, not shown to a person
+  "kept-write": {
+    level: "soft",
+    restsOn: "consent",
+    name: "the kept write",
+    way: "the captain clicks the button that sends it, or github_write names as its allowance a yes that still stands and covers it: a project direction heard from the captain by its d: id, a card on the task's Already allowed list, or standing for the captain's standing override",
+  },
   "host-rules": {
     level: "fixed",
     restsOn: "outside fact",
@@ -273,8 +280,8 @@ export function standingOverrideWords(
   override: Pick<HoldOverride, "words" | "holds" | "until">,
 ): string {
   if (!holdNames(override.holds))
-    return `The captain's earlier count holds are retired, but their standing words still apply ${overrideSpan(override)}: "${override.words}". Judge which consent asks their words reach; for a check that declares what it uses or a validation effect these words cover, name ${STANDING_WORDS_FROM} as the request's allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
-  return `The captain's standing override on this task, recorded by the first mate: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses or a validation effect these words cover, name ${STANDING_WORDS_FROM} as the request's allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
+    return `The captain's earlier count holds are retired, but their standing words still apply ${overrideSpan(override)}: "${override.words}". Judge which consent asks their words reach; for a check that declares what it uses, a validation effect or a write github_write would keep that these words cover, name ${STANDING_WORDS_FROM} as its allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
+  return `The captain's standing override on this task, recorded by the first mate: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; for a check that declares what it uses, a validation effect or a write github_write would keep that these words cover, name ${STANDING_WORDS_FROM} as its allowance. An effect still needs exact independent clearance. Keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
 }
 
 /**

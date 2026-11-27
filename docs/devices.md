@@ -603,7 +603,7 @@ Its answers carry both versions and the step in their action ids (`not-now@app:<
 ### Each copy's version
 
 Every copy tells the home the version of Infinitary it runs in its hello (`appVersion`, `docs/connection.md`): a computer's work, the app open on another computer, and the phone, which says its own version and build as its Settings shows them (`PhoneAppVersion`).
-Settings -> Devices' list reads the apps open now from the connection's `runningVersions` and says each on its entry as `appVersion`: the version it said, `older` or `newer` as `than` when both read as versions, and `same` when it is this computer's.
+Settings -> Devices' list reads the apps open now from the connection's `runningVersions` and says each on its entry as `appVersion`: the version it said, `older` or `newer` as `than` when both read as versions, and `same` when it is this computer's (`src/core/devices/computerVersions.ts`).
 Two apps of one device read as the older, and an app from before apps said their version reads with no `app`, as one too old to say it.
 A phone's versions are its own, so its `appVersion` is never measured against this computer's.
 A computer whose work runs this computer's version carries that version as `workVersion`; one on another version says it in `otherVersion` (above).

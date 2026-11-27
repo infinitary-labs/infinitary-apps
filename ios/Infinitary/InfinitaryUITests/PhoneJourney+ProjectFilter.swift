@@ -74,7 +74,7 @@ extension PhoneJourney {
         // The iPad on its side keeps the release note's hero pair: Tasks narrowed under the focus row.
         if phoneTurnedLayout(app) == .wide {
             turnForProbe(.landscapeLeft)
-            tab("Tasks")
+            // The wide layout lists Tasks in its sidebar, with no tab strip.
             XCTAssertTrue(app.buttons["task-project-filter-npr-0"].waitForPresence(timeout: 10), app.debugDescription)
             try await appearances("6-tasks-on-its-side", showing: app.buttons["project-focus-pill"])
             turnForProbe(.portrait)
@@ -107,7 +107,8 @@ extension PhoneJourney {
         let all = app.buttons["project-filter-all-projects"]
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(all.waitForPresence(timeout: 10), "Shift-Command-P opens Filter\n\(app.debugDescription)")
-        XCTAssertTrue(all.hasFocus, "The sheet opens on the checked row")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "hasFocus == true"), object: all, timeout: 10), .completed,
+                       "The sheet opens on the checked row")
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
         XCTAssertTrue(all.waitForAbsence(timeout: 10), "Escape closes Filter")
         XCTAssertEqual(filter.value as? String, "All projects", "Escape picks nothing")

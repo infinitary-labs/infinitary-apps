@@ -1,16 +1,14 @@
 import { randomUUID } from "node:crypto";
 import type { ActionActor } from "@shared/actions";
 import { APP_FOLLOW_ONLY, APP_UPDATE_LIVE, type AppFollowReport } from "@shared/appFollow";
-import { type BuildIdentity, compareBuilds, sourceCommitOf } from "@shared/buildIdentity";
-import { takesDownload, takesUpdate } from "@shared/contractFeatures";
+import { type BuildIdentity, sourceCommitOf } from "@shared/buildIdentity";
+import { takesUpdate } from "@shared/contractFeatures";
 import { HERE, PLACE_SAID } from "@shared/deviceNames";
 import {
   buildsSourceThere,
   type ComputerReach,
-  type DeviceAppVersion,
   type DeviceCarryOn,
   type DeviceFold,
-  type DeviceOtherVersion,
   type DeviceRemovalStage,
   type DeviceRemoveWhen,
   type DeviceSsh,
@@ -22,13 +20,12 @@ import {
   deviceRunsWork,
   installedThere,
   installItThereWords,
-  isPhone,
   servedAwayWord,
 } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import * as m from "@shared/i18n/messages.generated";
 import { englishOf, type Said, said } from "@shared/i18n/said";
-import { PROTOCOL_VERSION, parseInvokeRequest } from "@shared/ipc";
+import { parseInvokeRequest } from "@shared/ipc";
 import {
   type PackageUpdateAddressQuestion,
   parseRemoteLoginAddress,
@@ -73,6 +70,11 @@ import type { WorkDevices } from "../placed/workDevices";
 import { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { copyCount } from "./appArchive";
+import {
+  appVersions,
+  otherVersion as compareOtherVersion,
+  downloadsThere,
+} from "./computerVersions";
 import type { DevicePairing } from "./pairing";
 import { RemoteLoginRefusedError, type SaveBeforeUpdate } from "./remoteLogin";
 
@@ -104,16 +106,6 @@ import { RemoteLoginRefusedError, type SaveBeforeUpdate } from "./remoteLogin";
  * its own key, keeps it, and starts again. One too old to take the update
  * order is updated by a new command run there.
  */
-
-/**
- * Whether an update over the connection has the computer download this
- * Mac's published version itself first (docs/devices.md, "Downloading over
- * the connection"): a Mac elsewhere, which keeps its own copy, on a
- * contract that takes the download order.
- */
-function downloadsThere(device: DeviceView, contract: string): boolean {
-  return device.onThisMac !== true && device.system === "macos" && takesDownload(contract);
-}
 
 /** One step of an update over the connection, as the feed says it. */
 export type DeviceUpdateEvent = Extract<FmEvent, { type: "device_update" }>;
@@ -327,7 +319,7 @@ export class Computers {
     const booted = this.options.bootedAt();
     const listening = work.listening();
     // What each app open now said of its version, read once for the whole list.
-    const apps = this.appVersions(devices);
+    const apps = appVersions(devices, this.options, this.appFollows);
     // Entries that run work, out of reach and holding work, which a later
     // entry with the same name and user may be the same computer joined
     // again (docs/devices.md, "Joined again").
@@ -355,7 +347,7 @@ export class Computers {
       const inReach = work.inReach(device.id);
       const version = work.version(device.id);
       const ssh = this.options.ssh?.(device.id);
-      const otherVersion = version ? this.otherVersion(device, version) : undefined;
+      const otherVersion = version ? compareOtherVersion(device, version, this.options) : undefined;
       const seenAt = pairing.lastSeen(device.id);
       const connectedAt = this.connectedAt(
         device.id,
@@ -489,7 +481,7 @@ export class Computers {
     // Remote Login. Only an address the order names takes that route.
     if (!options?.address) {
       const version = this.options.work.version(deviceId);
-      const other = version ? this.otherVersion(device, version) : undefined;
+      const other = version ? compareOtherVersion(device, version, this.options) : undefined;
       if (other?.source) return this.matchSource(device, other.source.commit);
     }
     if (device.remoteLogin || options?.address) {
@@ -660,7 +652,7 @@ export class Computers {
     const device = this.options.pairing.list().find((entry) => entry.id === deviceId);
     const version = this.options.work.version(deviceId);
     if (!device || !buildsSourceThere(device.system)) return;
-    if (!version || !this.otherVersion(device, version)?.source) return;
+    if (!version || !compareOtherVersion(device, version, this.options)?.source) return;
     this.options.pairing.noteSourceAllowed(deviceId);
   }
 
@@ -975,7 +967,7 @@ export class Computers {
       );
     const version = work.version(device.id);
     if (!version) return refuse("out-of-reach");
-    if (!this.otherVersion(device, version)) return refuse("current");
+    if (!compareOtherVersion(device, version, this.options)) return refuse("current");
     if (!takesUpdate(version.contract)) return refuse("not-updatable");
     // Another user on this Mac runs this Mac's own app; another Mac gets it from here.
     const runsThisApp = device.onThisMac === true && device.user !== undefined;
@@ -1303,7 +1295,11 @@ export class Computers {
       };
       // On this Mac's version, it updated, whatever its answer said.
       const stopVersion = work.onVersion((deviceId, version) => {
-        if (deviceId === device.id && version && !this.otherVersion(device, version))
+        if (
+          deviceId === device.id &&
+          version &&
+          !compareOtherVersion(device, version, this.options)
+        )
           settle({ back: true });
       });
       const missing = () => {
@@ -1398,7 +1394,7 @@ export class Computers {
       }
       if (requireApp) {
         if (version.app && version.app === this.options.home?.app) done(true);
-      } else if (!this.otherVersion(device, version)) done(true);
+      } else if (!compareOtherVersion(device, version, this.options)) done(true);
       else if (disconnected && unchangedAfterDisconnect?.(version)) done(false);
     });
     const done = (value: boolean) => {
@@ -1432,95 +1428,7 @@ export class Computers {
     if (!version) return false;
     if (version.takesWork) return this.options.work.lacksTurnChange(deviceId);
     const device = this.options.pairing.list().find((entry) => entry.id === deviceId);
-    return !!device && this.otherVersion(device, version)?.than === "older";
-  }
-
-  /**
-   * The version of the app open on each device that controls this computer
-   * now, as its connection's hello said it (docs/devices.md, "Each copy's
-   * version"), by device id. Two apps of one device read as the older, so a
-   * copy behind is never hidden; one that said none reads as too old to say.
-   */
-  private appVersions(devices: readonly DeviceView[]): Map<string, DeviceAppVersion> {
-    const apps = new Map<string, DeviceAppVersion>();
-    const running = devices.some((device) => deviceControls(device.kind))
-      ? this.options.work.runningVersions()
-      : [];
-    const home = this.options.home?.app;
-    for (const device of devices) {
-      const said = running
-        .filter((row) => row.deviceId === device.id && row.role === "view")
-        .map((row) => row.version);
-      if (said.length === 0) continue;
-      const known = said.filter((version): version is string => version !== null);
-      const app =
-        known.length < said.length
-          ? undefined
-          : known.reduce((oldest, version) =>
-              (compareSemver(version, oldest) ?? 0) < 0 ? version : oldest,
-            );
-      if (app === undefined) {
-        apps.set(device.id, {});
-        continue;
-      }
-      // A phone's app has versions of its own: never measured against this computer's.
-      const order = isPhone(device) || home === undefined ? null : compareSemver(app, home);
-      // What it said of catching up, while it is behind this computer's version and said it of that version.
-      const follow = this.appFollows.get(device.id);
-      apps.set(
-        device.id,
-        order === null
-          ? { app }
-          : order === 0
-            ? { app, same: true }
-            : {
-                app,
-                than: order < 0 ? "older" : "newer",
-                ...(order < 0 && follow && follow.version === home ? { follow } : {}),
-              },
-      );
-    }
-    return apps;
-  }
-
-  /**
-   * What the list says of a computer connected on another version of
-   * Firstmate than this Mac's: undefined when it runs this Mac's. Two
-   * versions of Firstmate are compared when both are known, else the
-   * contracts they speak.
-   */
-  private otherVersion(
-    device: DeviceView,
-    version: WorkDeviceVersion,
-  ): DeviceOtherVersion | undefined {
-    const home = this.options.home ?? { contract: PROTOCOL_VERSION };
-    // Another account on this Mac runs this Mac's own copy, whichever build it
-    // names: it is compared by version alone, and never matched by build
-    // (docs/devices.md, "Matching the home's build").
-    const builds = !device.onThisMac;
-    const match = compareBuilds(builds ? home : { contract: home.contract, app: home.app }, {
-      contract: version.contract,
-      app: version.app,
-      ...(builds ? { build: version.build } : {}),
-    });
-    if (match.same) return undefined;
-    const homeCommit = builds ? sourceCommitOf(home.build) : null;
-    const source = match.target === "source" && homeCommit;
-    const updateBy = device.remoteLogin
-      ? "remote-login"
-      : takesUpdate(version.contract)
-        ? "connection"
-        : "command";
-    return {
-      ...(version.app !== undefined ? { app: version.app } : {}),
-      ...(match.than ? { than: match.than } : {}),
-      takesWork: version.takesWork && !this.options.work.lacksTurnChange(device.id),
-      updateBy,
-      ...(source ? { source: { commit: homeCommit } } : {}),
-      ...(!source && updateBy === "connection" && downloadsThere(device, version.contract)
-        ? { downloads: true as const }
-        : {}),
-    };
+    return !!device && compareOtherVersion(device, version, this.options)?.than === "older";
   }
 
   /**

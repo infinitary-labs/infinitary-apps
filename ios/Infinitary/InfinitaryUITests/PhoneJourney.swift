@@ -180,6 +180,8 @@ import XCTest
         let line = app.otherElements["reach-line"]
         if !button.exists {
             XCTAssertEqual(words, "Live", "With the keyboard open only Live, the line gone, can be read")
+            // The line is drawn only on a computer's workspace, so its absence says Live only once the workspace shows.
+            XCTAssertTrue(app.textFields["message-box"].waitForPresence(timeout: timeout), app.debugDescription)
             XCTAssertTrue(line.waitForAbsence(timeout: timeout), "Live, the line under the bar goes: \(app.debugDescription)")
             return
         }

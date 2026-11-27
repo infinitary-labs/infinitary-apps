@@ -193,7 +193,9 @@ extension PhoneJourney {
         picture("card-thread-unread")
         tapOnPhone(cue)
         let threadAnswer = try XCTUnwrap(answered["threadAnswer"] as? String)
-        XCTAssertTrue(app.staticTexts[threadAnswer].waitForPresence(timeout: 10), app.debugDescription)
+        // XCTest refuses a query string past 128 characters, and this answer is longer, so the label is matched instead.
+        let answerLine = app.staticTexts.matching(NSPredicate(format: "label == %@", threadAnswer)).firstMatch
+        XCTAssertTrue(answerLine.waitForPresence(timeout: 10), app.debugDescription)
         picture("card-thread")
         // INF-7045's plan, part 2: the answer's https address is a link that a tap opens in the browser; its comma and
         // the older public http address stay words.

@@ -515,6 +515,49 @@ describe("host cards", () => {
     cards.dispose();
   });
 
+  it("keeps a held down card's wait through the host's revision, and waits for the answer to its newest reply", () => {
+    // Intent: INF-6994's approved plan, piece 2: a card shown while the first
+    // mate is down "stays up until the first mate answers in its thread",
+    // also when the host revises it (a recheck's new time, a repeated failure).
+    const { cardStore, make } = setup();
+    const cards = make();
+    const pause = {
+      pause: "refused" as const,
+      body: "Claude is not answering your first mate right now.",
+      accountId: "claude",
+      providerName: "Claude",
+    };
+    cards.hostCards.addFirstmatePauseCard(pause);
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
+    const first = cards.addMessage("card-fm-refused", "captain", "what now?").id;
+    cards.addMessage(FIRSTMATE_FAILURE_CARD_ID, "captain", "try later");
+
+    cards.hostCards.addFirstmatePauseCard({ ...pause, body: "Claude still is not answering." });
+    cards.hostCards.addFirstmateFailureCard("<p>The turn failed again.</p>");
+    expect(cards.get("card-fm-refused")?.body).toContain("Claude still is not answering.");
+    expect(cards.get(FIRSTMATE_FAILURE_CARD_ID)?.body).toBe("<p>The turn failed again.</p>");
+    expect(cardStore.awaitingAuthor("card-fm-refused")).toBe(true);
+    expect(cardStore.awaitingAuthor(FIRSTMATE_FAILURE_CARD_ID)).toBe(true);
+    cards.hostCards.withdrawFirstmatePauseCards("serves again");
+    cards.hostCards.withdrawHostCard(FIRSTMATE_FAILURE_CARD_ID, "recovered");
+    expect(cards.has("card-fm-refused")).toBe(true);
+    expect(cards.has(FIRSTMATE_FAILURE_CARD_ID)).toBe(true);
+
+    // Two kept replies: the answer to the first leaves the card up for the second.
+    const second = cards.addMessage("card-fm-refused", "captain", "and the backup?").id;
+    cards.replyAs(
+      { actor: "firstmate" },
+      { cardId: "card-fm-refused", text: "Nothing was lost.", answersMessage: first },
+    );
+    expect(cards.has("card-fm-refused")).toBe(true);
+    cards.replyAs(
+      { actor: "firstmate" },
+      { cardId: "card-fm-refused", text: "The backup ran.", answersMessage: second },
+    );
+    expect(cards.has("card-fm-refused")).toBe(false);
+    cards.dispose();
+  });
+
   it("files the row a restored task-less host decision lacks, and none for a note", () => {
     const { tasks, cardStore, make } = setup();
     // Rows an older version wrote with no operation row behind them.

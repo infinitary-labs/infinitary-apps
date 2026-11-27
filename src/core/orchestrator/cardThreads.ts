@@ -923,10 +923,12 @@ export class CardThreads {
     });
     // A card shown while the first mate was down stays up while a reply
     // under it waits (`HostCardStack`). The first mate answering it is no
-    // longer down, so its answer signs the card off.
+    // longer down, so its answer to the newest reply signs the card off; an
+    // answer to an earlier one leaves the card up for the reply after it.
     if (
       caller.actor === "firstmate" &&
       written.answered !== undefined &&
+      written.answered === this.host.cardStore.newestCaptainMessage(id)?.id &&
       card.author === "host" &&
       FIRSTMATE_DOWN_CARD_IDS.includes(id)
     ) {

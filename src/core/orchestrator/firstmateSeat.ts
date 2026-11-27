@@ -729,7 +729,8 @@ export class FirstmateSeat {
     }
     void this.session?.detach();
     // The pause card speaks for a lost sign-in: the generic sign-in card a
-    // failed turn raised before the proof came is not a second card for it.
+    // failed turn raised before the proof came is not a second card for it,
+    // unless a reply under it still waits for the first mate's answer.
     this.options.supervisor.cards.hostCards.clearAuthDecisionCard(FIRSTMATE_SIGN_IN_CARD_ID);
     const card = this.pauseCard(accountId, pause);
     if (!fresh) {

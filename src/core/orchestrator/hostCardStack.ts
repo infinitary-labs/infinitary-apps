@@ -175,7 +175,8 @@ export class HostCardStack {
 
   /**
    * Drop a recovered needs_reauth card without waking the Firstmate. The
-   * credential came back; the question is gone.
+   * credential came back; the question is gone. The first mate's own
+   * sign-in card stays while a reply under it waits (`withdraw`).
    */
   clearAuthDecisionCard(id: string): void {
     this.withdraw(id, "recovered");
@@ -197,7 +198,11 @@ export class HostCardStack {
     this.put({ ...hostCard(card, options), createdAt: previous?.createdAt ?? this.host.now() });
   }
 
-  /** Takes a host card down without an answer: the question it asked is gone. */
+  /**
+   * Takes a host card down without an answer: the question it asked is gone.
+   * A card shown while the first mate was down stays while a reply under it
+   * waits (`withdraw`).
+   */
   withdrawHostCard(id: string, reason: string): void {
     if (this.cards.get(id)?.author !== "host") return;
     this.withdraw(id, reason);

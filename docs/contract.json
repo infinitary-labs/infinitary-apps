@@ -66625,6 +66625,63 @@
         ]
       }
     },
+    "inf:settings:own-themes:get": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "items": false,
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "themes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^own-[a-z0-9-]{1,36}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40,
+                  "description": "The theme's name, as the person said it"
+                },
+                "base": {
+                  "type": "string",
+                  "enum": [
+                    "dark",
+                    "light"
+                  ]
+                },
+                "tokens": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "base",
+                "tokens"
+              ]
+            }
+          }
+        },
+        "required": [
+          "themes"
+        ]
+      }
+    },
     "inf:settings:appearance:set": {
       "effect": "change",
       "reach": "home",

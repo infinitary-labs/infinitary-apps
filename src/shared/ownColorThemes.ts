@@ -143,3 +143,24 @@ export function checkOwnTheme(ask: OwnThemeAsk): CheckedOwnTheme {
     );
   return { theme: { id: ownThemeId(ask.name), name: ask.name, colors: lower }, worked };
 }
+
+/**
+ * A saved theme as a view that holds none of the math draws it, the phone's
+ * own Yours (`own-themes-worked.md`): its base and every token the app worked
+ * out, `--on-accent` included.
+ */
+export const workedOwnThemeSchema = z.strictObject({
+  id: savedOwnThemeSchema.shape.id,
+  name: nameSchema,
+  base: z.enum(["dark", "light"]),
+  tokens: z.record(z.string(), z.string()),
+});
+export type WorkedOwnTheme = z.infer<typeof workedOwnThemeSchema>;
+
+/** Every saved theme worked out, in the order Settings lists them under Yours. */
+export function workedOwnThemes(saved: readonly SavedOwnTheme[]): WorkedOwnTheme[] {
+  return saved.map((own) => {
+    const worked = workOutTheme(own.colors);
+    return { id: own.id, name: own.name, base: worked.base, tokens: worked.tokens };
+  });
+}

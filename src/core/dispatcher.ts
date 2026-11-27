@@ -21,6 +21,7 @@ import {
   type WorkInvokeChannel,
 } from "@shared/ipc";
 import { KNOWLEDGE_OFF } from "@shared/knowledge";
+import { workedOwnThemes } from "@shared/ownColorThemes";
 import { OWN_WINDOW_WORDS } from "@shared/ownWindow";
 import { panelSettingsNow } from "@shared/panelSettings";
 import { type AuthPromptView, providerServesRole } from "@shared/providers";
@@ -1031,6 +1032,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // Every preference write goes through the one writer, which pushes the
     // whole value back as `inf:shell:preferences` (talk-to-personalize Step 1).
     "inf:settings:appearance:get": () => services.settings.getAppearance(),
+    "inf:settings:own-themes:get": () => ({
+      themes: workedOwnThemes(services.settings.getAppearance().ownColorThemes ?? []),
+    }),
 
     "inf:settings:appearance:set": (appearance) => services.preferences.setAppearance(appearance),
     ...crewGroupingHandlers(services, (look) => outer("inf:settings:appearance:set", [look])),

@@ -47724,6 +47724,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `When a task asks before it spends more`;
   }
+  function panelChangeCrewGrouping() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجميع رسوم الطاقم المتحركة حسب المشروع`;
+      case "de":
+        return `Crew-Animation nach Projekt gruppieren`;
+      case "es":
+        return `Agrupar la animación de la tripulación por proyecto`;
+      case "fr":
+        return `Grouper l’animation de l’équipage par projet`;
+      case "ja":
+        return `クルーのアニメーションをプロジェクトごとにまとめる`;
+      case "ko":
+        return `크루 애니메이션을 프로젝트별로 묶기`;
+      case "pt-BR":
+        return `Agrupar a animação da tripulação por projeto`;
+      case "zh-Hans":
+        return `按项目分组船员动画`;
+      case "zh-Hant":
+        return `按專案分組船員動畫`;
+      case "en-XA":
+        return `[Ĝŕöûþ ţĥé çŕéŵ áñîɱáţîöñ ƀý þŕöĵéçţ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Group the crew animation by project‬`;
+    }
+    return `Group the crew animation by project`;
+  }
   function panelChangeCrewModelNames() {
     switch (currentLanguage()) {
       case "ar":
@@ -119752,6 +119779,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeCardSize,
     panelChangeCopyStop,
     panelChangeCostLimit,
+    panelChangeCrewGrouping,
     panelChangeCrewModelNames,
     panelChangeCrewReasoning,
     panelChangeCrewSlots,
@@ -123546,6 +123574,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeCardSize": [],
     "panelChangeCopyStop": [],
     "panelChangeCostLimit": [],
+    "panelChangeCrewGrouping": [],
     "panelChangeCrewModelNames": [],
     "panelChangeCrewReasoning": [],
     "panelChangeCrewSlots": [],

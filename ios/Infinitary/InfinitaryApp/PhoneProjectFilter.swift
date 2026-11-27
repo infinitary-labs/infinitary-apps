@@ -59,7 +59,6 @@ struct PhoneFilterSheet: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { sheet = $0 }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        .onAppear { focusedRow = session.projectFocus ?? Self.allRow }
         .onKeyPress(.escape) { dismiss(); return .handled }
         .presentationDetents([.custom(PhoneFittedDetent.self), .large], selection: $detent).presentationDragIndicator(.visible)
         .presentationContentInteraction(.resizes)
@@ -98,6 +97,9 @@ struct PhoneFilterSheet: View {
         .accessibilityAddTraits(checked ? .isSelected : [])
         .accessibilityIdentifier("project-filter-\(id)")
         .focusable().focused($focusedRow, equals: id)
+        // Set from the row itself, as the Settings sheet does: set from the sheet's own onAppear, before the rows are
+        // focusable, SwiftUI drops it and no key reaches the sheet.
+        .onAppear { if checked { focusedRow = id } }
         .onPlainKey(.return) { pick(id) }
         .onPlainKey(.space) { pick(id) }
         .onPlainKey(.downArrow) { focusedRow = step(order, from: id, by: 1) }

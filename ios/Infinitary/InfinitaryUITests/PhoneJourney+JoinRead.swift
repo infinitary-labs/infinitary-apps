@@ -309,11 +309,11 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Light"], timeout: 10), .completed)
         bringUp()
         try drawn("phone-theme-yours-light", dark: false)
-        let shown = waitForRedraw(scope, from: nil)
         tapOnPhone(terminal)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: terminal, timeout: 10), .completed)
+        // The scope line is read only once it is back in view; the inks below wait for its new colors.
         bringDown()
-        _ = waitForRedraw(scope, from: shown)
+        _ = waitForRedraw(scope, from: nil)
         // The computer's workOutTheme gives the old terminal's quiet words (--fg-2) #209a39 from its text #3ddc5a.
         waitForInks("Old terminal", [(0x209a39, scope, 300, "Settings' quiet words")])
         bringUp()

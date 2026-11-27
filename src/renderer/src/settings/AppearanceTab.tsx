@@ -155,8 +155,8 @@ export function AppearanceTab() {
   const setShowCrewModelNames = useShellStore((s) => s.setShowCrewModelNames);
   const crewGrouping = useShellStore((s) => s.crewGrouping);
   const setCrewGrouping = useShellStore((s) => s.setCrewGrouping);
-  // Grouping by project changes nothing until a second project has crew, so
-  // the switch shows where the project pill does, or once it is on.
+  // Grouping by project matters to someone with two projects or more, so the
+  // switch shows where the project pill does, or once it is on.
   const projectsShown = useProjectFocus().shown;
   // On a Mac controlling another, its look is its own (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);

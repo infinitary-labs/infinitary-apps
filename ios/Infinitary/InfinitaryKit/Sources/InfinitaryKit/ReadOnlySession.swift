@@ -846,7 +846,7 @@ public struct PhoneNotice: Equatable, Sendable {
             canSend: { [weak self] in self?.homeKeepsDrafts == true && self?.canChange == true })
     }
 
-    /// Reads every open card's draft, once the cards are read at each welcome and whenever a card or opening arrives.
+    /// Reads the computer's crew grouping at each welcome; a look push carries each later change.
     private func readCrewGrouping() {
         guard homeGroupsCrew, contact == "in-reach" else { return }
         Task { [weak self] in
@@ -862,6 +862,7 @@ public struct PhoneNotice: Equatable, Sendable {
         crewGrouping = value["grouping"].text ?? grouping
     }
 
+    /// Reads every open card's draft, once the cards are read at each welcome and whenever a card or opening arrives.
     private func readDrafts() {
         guard homeKeepsDrafts, contact == "in-reach" else { return }
         Task { [weak self] in

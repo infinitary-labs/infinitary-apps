@@ -149,15 +149,17 @@ The rule is `groupPlanOf` and `groupOf` in `character/crew/crewGroups.ts`, pure 
 
 - A crewmate whose computer is away (out of reach, updating, connecting or removed) stays in that computer's frozen group, as above.
 - The built-in projects, Scratch and the app's own workspace (`builtInProject`: no repository, or a `personal` one), always sit with the first mate (the captain: "the default built-in projects should always stay with first mate").
-- So does the middle project: the only project of the person's own with crew on the page, else the window's focused project, else none (the captain's written-in answer).
+- So does the middle project: the only project of the person's own with crew on the stage, else the window's focused project, else none (the captain's written-in answer).
+- A crewmate whose project the board does not name yet, as when its spawn arrives before its board row, keeps its computer's group until the row arrives; the others keep theirs.
 - Every other crewmate sits in its project's group, `project:` and the project's id, named for the project and seated in the board's order.
 
 A group is a cluster as above: the same wings, seats, half-size formation, paging, names, sparks and falls home, and a program whose parts run on two computers draws once in its project's group.
-A spark still flies from the first mate; the page controls read Previous projects and Next projects.
+A spark still flies from the first mate; the page controls and their commands in command search read Previous projects and Next projects.
+A project group whose last crewmate is leaving stays on the stage until its fall home lands, so its cue reaches the first mate (`ComputerOrbits.computers`).
 With one group of the person's own and nothing away, everyone sits on the first mate's ring and the stage is the single-computer one.
-Until the board names the project of every crewmate whose computer is in reach, the stage stays grouped by computer, as it waits for placement.
+Until the board names any project, as before the first board or with an older home, the stage stays grouped by computer.
 While a crewmate's summary is open, the light falls on its computer's crew across every group (the captain's answer: "Its computer's crew, across every group"; `restedLight` with the stage's `computerOf`), in place of its project's.
-`crewGroups.test.ts` holds the rule and the stage: one project across two computers in one group, an away computer's frozen group, a stage of one group, a program drawn once, switching off, and the rest light.
+`crewGroups.test.ts` holds the rule and the stage: one project across two computers in one group, an away computer's frozen group, a crewmate whose project is not named yet, a stage of one group, a program drawn once, a leaving group's fall home, switching off, and the rest light.
 
 ## Visible seats
 

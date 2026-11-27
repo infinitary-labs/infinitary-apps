@@ -90,11 +90,11 @@ export function ambientStyleIn(
   return own?.some((style) => style.id === saved) ? (saved as string) : ambientStyleOf(saved);
 }
 
-/** How the app looks. The default handles records written before the wash control existed. */
 /** How the crew animation groups the crew: by computer, the default, or by project. */
 export const crewGroupingSchema = z.enum(["computer", "project"]);
 export type CrewGrouping = z.infer<typeof crewGroupingSchema>;
 
+/** How the app looks. The default handles records written before the wash control existed. */
 export const appearanceSchema = z.strictObject({
   /** Dark or Light; with a color theme chosen, that theme's base (docs/themes.md). */
   theme: themeSchema,

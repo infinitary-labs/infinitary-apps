@@ -134,6 +134,12 @@ extension PhoneJourney {
         let list = app.scrollViews["tasks-list"]
         XCTAssertTrue(list.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.buttons["task-project-filter-spr-0"].exists, "The task waiting in south-pier leaves")
+        // south-pier's waiting card raised a new-card notice, which floats over the top of Tasks until it is read or
+        // swiped (INF-589 item 6); left there, it takes the tap meant for the search field.
+        let notice = app.buttons["phone-notice"]
+        XCTAssertTrue(notice.waitForPresence(timeout: 10), app.debugDescription)
+        notice.swipeUp()
+        XCTAssertTrue(notice.waitForAbsence(timeout: 10), "A swipe puts the notice away\n\(app.debugDescription)")
         pullDownOnPhone(list)
         let search = app.textFields["task-search"]
         XCTAssertTrue(search.waitForPresence(timeout: 10), app.debugDescription)

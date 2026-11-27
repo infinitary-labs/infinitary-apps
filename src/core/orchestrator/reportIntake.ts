@@ -39,6 +39,7 @@ import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
 import type { AskEnding } from "./askEnding";
 import { cardEmitter, crewmateCardId } from "./cardEmit";
 import type { CardService } from "./cardService";
+import { committedVersion } from "./carefulReview";
 import { checkedOutHead } from "./checkedOutHead";
 import type { TaskRuntime } from "./crewRuntime";
 import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
@@ -229,6 +230,33 @@ export class ReportIntake {
           "The write is being sent. Reconcile its result before any further action; never replay an unknown outcome.",
       },
       { head },
+    );
+  }
+
+  /**
+   * A Careful builder's report reads the version its branch holds commits
+   * of its own at, for the sort at the turn's end (INF-7116 fix 3); any
+   * other task reads nothing and the report stays synchronous. A version
+   * that cannot be read is no fact, never a refused report.
+   */
+  noteCommittedVersion(task: TaskRuntime): Promise<void> | undefined {
+    const record = this.options.tasks.get(task.id);
+    if (
+      !record ||
+      record.shape?.kind === "review" ||
+      this.options.tasks.policiesOf(record)?.rigor.value !== "reviewed"
+    ) {
+      delete task.committedHead;
+      return undefined;
+    }
+    return committedVersion(this.options, record).then(
+      (head) => {
+        if (head) task.committedHead = head;
+        else delete task.committedHead;
+      },
+      () => {
+        delete task.committedHead;
+      },
     );
   }
 

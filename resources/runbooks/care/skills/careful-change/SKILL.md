@@ -8,6 +8,7 @@ description: What a Careful change takes before its push, pull request and merge
 A Careful change is reviewed before it is published, and its live proof runs once, after the code review passes.
 Record the scenarios before your first edit (Live validation below), then build with quick checks: each fix runs one focused check of what it changed, and nothing is proved live yet.
 When your work is done, commit it on your branch, report under the five headings, and do not push, open a pull request or show a merge card yet.
+The app starts no review by itself: while no review is open, that report asks the first mate with needs_firstmate to start the review of your committed version, naming it.
 An independent reviewer judges the code and the scenario list; the host delivers auto-fix findings directly and the first mate handles decisions, and each fix lands as a local commit with one focused check and no new proof record.
 After the code passes, the host sends you the proof handoff: at the passed version, run the live proof once with your edited tests' repeated rounds, take the After pictures, record the run and report it, still without pushing.
 One proof read by a reviewer judges that run, and the host hands the pass back to you: follow your brief's delivery, without a push or pull request for local-only work.
@@ -20,7 +21,7 @@ A code repair after the code passed gets a review of its own difference and reru
 
 Careful means an independent review before the merge.
 Commit any remaining work on your branch and report under the five headings without pushing.
-When the captain pressed Review carefully on your merge card, the app started the review of the version that card offered; otherwise the first mate starts the review of your committed version.
+When the captain pressed Review carefully on your merge card, the app started the review of the version that card offered; otherwise ask the first mate with needs_firstmate to start the review of your committed version.
 A pull request already open stays as it is until the review passes: no push and no new story.
 When the host delivers a pass on the version already pushed, call show_merge_card again as soon as its checks read passed.
 After fixes, push once to the same pull request after the pass, and call show_merge_card when the fresh checks pass.

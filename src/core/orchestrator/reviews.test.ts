@@ -84,9 +84,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     action: "no-op" as const,
   };
 
-  // INF-1876: a care name decides nothing in the host, the sort included; a
-  // Careful builder asks for its review with needs_firstmate (the care
-  // guidance), which the sort reads as it reads any report.
+  // INF-1876: a Careful builder's report is sorted like any other; it asks
+  // for its review with needs_firstmate (the care guidance), and committed
+  // work with no review open wakes the first mate too (INF-7116 fix 3,
+  // carefulReview.test.ts).
   it("sorts a Careful builder's report like any other; only a review's own report skips the whose-turn sort", async () => {
     const repo = gitRepo();
     try {

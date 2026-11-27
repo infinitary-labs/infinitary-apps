@@ -189,6 +189,13 @@ export type TaskRuntime = {
    * runtime's turns already named: a later turn names it only once.
    */
   keptReportTold?: number;
+  /**
+   * The version a Careful builder's branch held commits of its own at when
+   * it last reported (`committedVersion`, INF-7116 fix 3): read by the
+   * report call once the report counts, so the sort at the turn's end stays synchronous. Kept in
+   * memory only; a restart forgets it until the next report.
+   */
+  committedHead?: string;
   /** The typed review this turn's report recorded (INF-1875): a reviewer's verdict, read at the turn's end. */
   turnReview?: Extract<KeptValidationInput, { kind: "review" }>;
   /** The phase owner carries input from preparation through its one exit. */

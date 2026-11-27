@@ -14,6 +14,7 @@ import type { CardRefusal } from "../storage/taskRecords";
 import type { RelayedWords } from "../tasks/taskOrigin";
 import type { TaskQueryBuiltOn } from "../tasks/taskQuery";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
+import type { CarefulReviewOwed } from "./carefulReview";
 import { type CiReadingFact, ciFactWords } from "./ciFact";
 import { REVIEW_FIX_RULES } from "./intentBrief";
 import { withReaderDataReminder } from "./readerData";
@@ -129,6 +130,11 @@ export type ReportFacts =
        * version it proves.
        */
       proofUnread?: ProofAwaitingReader;
+      /**
+       * Its Careful work is committed at a version no passed review covers
+       * and no review of it is open (INF-7116 fix 3): that version.
+       */
+      carefulUnreviewed?: CarefulReviewOwed;
     }
   | {
       /** A reviewer reported, and the task it reviewed is no longer on record. */
@@ -265,6 +271,11 @@ export function earlierPassText(pass: { read: string; offered: string }): string
 export function proofUnreadText(proof: ProofAwaitingReader): string {
   // i18n-exempt: served to the first mate in a report wake, stays English
   return ` Its live validation run ${proof.run} at ${proof.head.slice(0, 7)} waits for an independent reader, and no review of the task is open to read it; a review started with review_of at that version reads it.`;
+}
+
+export function carefulUnreviewedText(owed: CarefulReviewOwed): string {
+  // i18n-exempt: served to the first mate in a report wake, stays English
+  return ` It is Careful work committed at ${owed.head.slice(0, 7)}, and no passed review covers that version and no review of the task is open; the host starts none by itself, so start its review with review_of at that version.`;
 }
 
 export function openReviewText(review: WakeOpenReview): string {
@@ -489,7 +500,7 @@ export const REPORT_WORDS: KindWords<ReportFacts> = {
   // A reader's filed titles and card titles sit inline between reader-data marks.
   report: (facts) =>
     withReaderDataReminder(
-      `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${withdrawnText(facts.withdrawn)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.midTurn ? midTurnText(facts.cards) : ""}${builtOnText(facts.builtOn)}${programBranchesText(facts.programBranches)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${reviewCardsText(facts.reviewCards)}${facts.earlierPass ? earlierPassText(facts.earlierPass) : ""}${facts.proofUnread ? proofUnreadText(facts.proofUnread) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`,
+      `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${withdrawnText(facts.withdrawn)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.midTurn ? midTurnText(facts.cards) : ""}${builtOnText(facts.builtOn)}${programBranchesText(facts.programBranches)}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}${reviewCardsText(facts.reviewCards)}${facts.earlierPass ? earlierPassText(facts.earlierPass) : ""}${facts.proofUnread ? proofUnreadText(facts.proofUnread) : ""}${facts.carefulUnreviewed ? carefulUnreviewedText(facts.carefulUnreviewed) : ""}${facts.workWait ? ` Work wait: ${JSON.stringify(facts.workWait)}.` : ""}${facts.stall ? ` Typed stall: ${JSON.stringify(facts.stall)}.` : ""}${facts.recoveryWays?.length ? ` Recovery ways (labels grant no permission): ${JSON.stringify(facts.recoveryWays)}.` : ""}${facts.stall || facts.recoveryWays?.length ? ` ${STALL_RECOVERY_GUIDANCE}` : ""}`,
     ),
   "review-orphan": (facts) =>
     `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`,

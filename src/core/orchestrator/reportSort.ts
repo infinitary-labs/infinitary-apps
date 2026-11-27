@@ -1,4 +1,5 @@
 import type { ProofAwaitingReader } from "@shared/liveValidation";
+import type { CarefulReviewOwed } from "./carefulReview";
 
 /**
  * The whose-turn rule (S7c, captain call C7 A - heuristics only; the
@@ -37,6 +38,11 @@ import type { ProofAwaitingReader } from "@shared/liveValidation";
  *     reader and no review of the task is open (INF-6536 finding 3): wake,
  *     whatever card is up or still moves. Only the Firstmate starts the
  *     reader; acceptance's own typed supplier says the reader is missing.
+ *  0e. Careful work is committed at a version no passed review covers and
+ *     no review of the task is open (INF-7116 fix 3): wake, whatever card
+ *     is up or still moves. The host starts no Careful review by itself,
+ *     so only the Firstmate starts it; rigor, the committed version and the
+ *     review record are typed facts, never a reading of words.
  *  1. An open DECISION card for the task: the CAPTAIN's turn. No wake; the
  *     report is already a feed line and the click returns to its author.
  *     A note never holds the turn on its own (R4.8 question 1 - a crewmate
@@ -115,6 +121,7 @@ export type ReportSortRule =
   | "waited-on"
   | "review-reread"
   | "proof-unread"
+  | "careful-unreviewed"
   | "captain-card"
   | "put-off"
   | "waits-stopped"
@@ -300,6 +307,13 @@ export type Witnesses = {
    */
   proofUnread?: ProofAwaitingReader;
   /**
+   * Careful work is committed at the version its last report read, no
+   * passed review covers it and no review of the task is open (INF-7116
+   * fix 3; `IdleLadder.carefulUnreviewed`). Only the Firstmate starts the
+   * review; the report's sort reads it.
+   */
+  carefulUnreviewed?: CarefulReviewOwed;
+  /**
    * The task has started and went back to the backlog (INF-2062;
    * `TaskRecord.backlogSince`): it waits for a Start, so it is nobody's
    * turn to move it. The idle ladder never nudges, wakes or raises a card
@@ -428,6 +442,16 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       // i18n-exempt: the sort's record for the first mate and the replay scorer
       reason:
         "its recorded proof waits for an independent reader and no review of it is open; the first mate starts one.",
+    };
+  }
+  if (facts.carefulUnreviewed) {
+    return {
+      rule: "careful-unreviewed",
+      verdict: "captain",
+      wake: true,
+      // i18n-exempt: the sort's record for the first mate and the replay scorer
+      reason:
+        "its Careful work is committed with no review open and no pass covering it; the first mate starts its review.",
     };
   }
   if (facts.answerReady || facts.decisionCardOpen || facts.finishedCardUp) {

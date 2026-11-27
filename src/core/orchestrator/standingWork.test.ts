@@ -643,7 +643,10 @@ describe("the standing list", () => {
       expect(f.read().rows).toEqual([]);
     });
 
-    it("leaves it out while its newest report declares a wait, and lists it after a later turn fails", () => {
+    it("lists a declared wait the idle ladder never acted on, leaves it out once a stall step fired, and lists it after a later turn fails", () => {
+      // The captain's choice on INF-7132's review: a declared wait keeps the
+      // row off only once a stall step fired, since at rung 0 the leftover row
+      // may be what keeps the ladder from acting.
       const f = reported();
       f.tasks.turns.recordReport("careful", {
         text: "Waiting for the docs host.",
@@ -657,6 +660,8 @@ describe("the standing list", () => {
         },
       });
       f.at(REPORTED - T0 + 3 * HOUR);
+      expect(f.read().rows).toMatchObject([{ kind: "idle", since: REPORTED }]);
+      f.tasks.turns.recordRecovery("careful", { rung: 1, count: 0, at: REPORTED + 3 * HOUR });
       expect(f.read().rows).toEqual([]);
       // A turn starts and the provider fails it; its idle boundary starts the clock again.
       f.tasks.turns.endIdle("careful");

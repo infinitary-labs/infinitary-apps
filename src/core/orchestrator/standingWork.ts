@@ -253,7 +253,9 @@ function linkedWait(host: StandingWorkHost, record: TaskRecord): Unmarked | unde
  * open review, watched checks, a merge in line, a card or answer on the
  * captain's screen, a put-off, a wait on work underway or unstarted, a
  * held account, an out-of-reach computer, a pending settle, or a work wait
- * its newest report declared that no later failed turn ended. A request to
+ * its newest report declared that no later failed turn ended, once the idle
+ * ladder has acted on this idle stay (its rung past 0): a declared wait has
+ * no owner, and at rung 0 the ladder may be the watcher misreading it. A request to
  * the first mate, a finished report with no card and a captain reply
  * waiting on its crewmate are no watcher: each is a move nobody made.
  */
@@ -263,7 +265,9 @@ function idleRow(host: StandingWorkHost, record: TaskRecord, now: number): Unmar
   if (since == null || now - since < IDLE_ROW_MS) return;
   const { tasks } = host;
   const report = tasks.lastReportEntries(record.id).at(-1);
-  if (report?.declared.workWait && (tasks.lastFailureAt(record.id) ?? -1) <= report.at) return;
+  const declaredWait =
+    report?.declared.workWait !== undefined && (tasks.lastFailureAt(record.id) ?? -1) <= report.at;
+  if (declaredWait && (record.recoveryRung ?? 0) > 0) return;
   const held = host.waits.witnesses(record.id, now);
   if (
     held.jobsRunning ||

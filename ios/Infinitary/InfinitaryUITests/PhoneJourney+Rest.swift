@@ -211,9 +211,12 @@ extension PhoneJourney {
         let toggle = try openCrewGrouping()
         XCTAssertEqual(toggle.value as? String, "0")
         tapOnPhone(toggle)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '1'"), object: toggle, timeout: 10), .completed)
+        // The computer's setting is read before the switch's verdict, so a switch that stays put says whether the
+        // computer heard the tap.
+        let turnedOn = waitForPhonePredicate(NSPredicate(format: "value == '1'"), object: toggle, timeout: 10)
         let on = try await home("scene-grouping", method: "GET")
         XCTAssertEqual(on["grouping"] as? String, "project", "The phone's switch turns the computer's own setting")
+        XCTAssertEqual(turnedOn, .completed, app.debugDescription)
         picture("native-scene-grouping-switch-on")
         closeCrewGrouping()
         XCTAssertTrue(harbour.waitForPresence(timeout: 10), app.debugDescription)
@@ -232,9 +235,10 @@ extension PhoneJourney {
 
         let again = try openCrewGrouping()
         tapOnPhone(again)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: again, timeout: 10), .completed)
+        let turnedOff = waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: again, timeout: 10)
         let off = try await home("scene-grouping", method: "GET")
         XCTAssertEqual(off["grouping"] as? String, "computer")
+        XCTAssertEqual(turnedOff, .completed, app.debugDescription)
         closeCrewGrouping()
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", homeName), object: ring, timeout: 10), .completed)
     }

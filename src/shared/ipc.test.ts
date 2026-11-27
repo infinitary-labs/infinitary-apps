@@ -125,6 +125,26 @@ describe("ipc contract", () => {
     );
   });
 
+  it("names the field and its limit when an MCP server's name or Runs is too long", () => {
+    // INF-7147: Settings showed "malformed request" for a name over 64
+    // characters, and the first mate's addition read the same words.
+    const runs = "https://mcp.example.com/mcp";
+    expect(() =>
+      parseInvokeRequest("inf:integrations:add", [
+        { name: "n".repeat(65), runs },
+        { signIn: true },
+      ]),
+    ).toThrow("Rejected inf:integrations:add: name is longer than 64 characters");
+    expect(() =>
+      parseInvokeRequest("inf:integrations:add", [{ name: "Docs", runs: "r".repeat(2049) }]),
+    ).toThrow("Rejected inf:integrations:add: runs is longer than 2048 characters");
+    expect(
+      parseInvokeRequest("inf:integrations:add", [
+        { name: "n".repeat(64), runs: "r".repeat(2048) },
+      ]),
+    ).toEqual([{ name: "n".repeat(64), runs: "r".repeat(2048) }]);
+  });
+
   it("carries a click's submission beside act, close and reply as it comes", () => {
     // The core reads it leniently and only records it, so the wire never
     // refuses a choice over metadata (docs/card-evidence.md).

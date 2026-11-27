@@ -145,8 +145,11 @@ export const integrationSecretValueSchema = z
   .min(1)
   .max(16 * 1024);
 
+/** The longest integration name, in characters once trimmed; Settings' MCP form holds to it too. */
+export const INTEGRATION_NAME_MAX = 64;
+
 /** One name shared by saved settings, Settings and the crew's lookup. */
-export const integrationNameSchema = z.string().trim().min(1).max(64);
+export const integrationNameSchema = z.string().trim().min(1).max(INTEGRATION_NAME_MAX);
 
 /** Why the app gave an existing connection a distinct name (INF-882). */
 export const integrationRenameSchema = z.strictObject({
@@ -374,6 +377,9 @@ export const integrationSettingsPatchSchema = z
   .strict();
 export type IntegrationSettingsPatch = z.infer<typeof integrationSettingsPatchSchema>;
 
+/** The longest MCP server Runs, in characters once trimmed; Settings' MCP form holds to it too. */
+export const MCP_RUNS_MAX = 2048;
+
 /**
  * An MCP server to add (docs/integrations.md, "MCP servers"): the person's
  * name for it, and what it runs - a program with its arguments, started on
@@ -382,7 +388,7 @@ export type IntegrationSettingsPatch = z.infer<typeof integrationSettingsPatchSc
 export const integrationMcpAddSchema = z
   .object({
     name: integrationNameSchema,
-    runs: z.string().trim().min(1).max(2048),
+    runs: z.string().trim().min(1).max(MCP_RUNS_MAX),
   })
   .strict();
 export type IntegrationMcpAdd = z.infer<typeof integrationMcpAddSchema>;

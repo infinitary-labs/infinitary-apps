@@ -4,9 +4,11 @@ import { expect, type Page, test } from "@playwright/test";
 import { WHOLE_ACTION } from "../../src/core/integrations/scopes";
 import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/deliveryWakes";
 import { ACTIONS } from "../../src/shared/actions";
+import { formatNumber } from "../../src/shared/i18n/format";
 import * as m from "../../src/shared/i18n/messages.generated";
 import {
   INTEGRATION_APPROVAL_WORDS,
+  INTEGRATION_NAME_MAX,
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
   INTEGRATIONS_MCP_WORDS,
@@ -14,6 +16,7 @@ import {
   integrationApprovalsTitle,
   integrationApprovalTitle,
   integrationTaskAllowLine,
+  MCP_RUNS_MAX,
   NOT_ALLOWED_WHY,
 } from "../../src/shared/integrations";
 import { serveSignInNotes } from "../helpers/mcpSignInStandIn";
@@ -136,9 +139,32 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     const form = tab.locator("[data-integration-mcp-form]");
     const name = form.getByLabel(INTEGRATIONS_MCP_WORDS.name);
     await untilFocused(name);
+    const runsField = form.getByLabel(INTEGRATIONS_MCP_WORDS.runs);
+    const connect = form.getByRole("button", { name: INTEGRATIONS_MCP_WORDS.connect });
+    // INF-7147: a name over its 64 characters, or Runs over 2,048, was sent
+    // and refused as "malformed request"; the form names the field first.
+    await name.fill("n".repeat(INTEGRATION_NAME_MAX + 1));
+    await runsField.fill(runs);
+    await expect(form.locator('[data-integration-mcp-too-long="name"]')).toHaveText(
+      m.integrationsMcpNameTooLong({ max: formatNumber(INTEGRATION_NAME_MAX) }),
+    );
+    await expect(name).toHaveAttribute("aria-invalid", "true");
+    await expect(connect).toBeDisabled();
+    const evidenceDir = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+    if (evidenceDir) await regionShot(form, join(evidenceDir, "form-long-name-after.png"));
+    await name.fill(MCP_NOTES_NAME);
+    await runsField.fill(`${runs} ${"r".repeat(MCP_RUNS_MAX)}`);
+    await expect(form.locator('[data-integration-mcp-too-long="runs"]')).toHaveText(
+      m.integrationsMcpRunsTooLong({ max: formatNumber(MCP_RUNS_MAX) }),
+    );
+    await expect(form.locator('[data-integration-mcp-too-long="name"]')).toHaveCount(0);
+    await expect(connect).toBeDisabled();
+    if (evidenceDir) await regionShot(form, join(evidenceDir, "form-long-runs-after.png"));
+    await runsField.fill("");
+    await expect(form.locator("[data-integration-mcp-too-long]")).toHaveCount(0);
+    await name.fill("");
     await typeInto(name, MCP_NOTES_NAME);
     await pressKey(name, "Tab");
-    const runsField = form.getByLabel(INTEGRATIONS_MCP_WORDS.runs);
     await untilFocused(runsField);
     await typeInto(runsField, runs, { insert: true });
     await pressKey(runsField, "Enter");

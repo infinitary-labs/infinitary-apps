@@ -1315,6 +1315,7 @@
 "integrationsGoogleStops" = "Endet %1$@";
 "integrationsGoogleStopsDetail" = "Dieser Client ist nicht im persönlichen Modus, daher beendet Google seine Anmeldung %1$@. Richte einen Client im persönlichen Modus ein, damit Google verbunden bleibt.";
 "integrationsMcpAdd" = "%1$@ hinzufügen";
+"integrationsMcpNameTooLong" = "Der Name darf höchstens %1$@ Zeichen lang sein.";
 "integrationsMcpNeedsSignIn" = "muss neu angemeldet werden";
 "integrationsMcpOfferBody" = "%1$@ verlangt eine Anmeldung, die du in deinem Browser machst. Seine Werkzeuge fragen dich danach auf einer Karte, bis du „Immer erlaubt“ wählst.";
 "integrationsMcpOfferButton" = "Integrationen öffnen";
@@ -1326,6 +1327,7 @@
 "integrationsMcpRevokeOperation" = "%1$@ mitteilen, die entfernte Anmeldung zu vergessen";
 "integrationsMcpRevokeReason" = "Infinitary teilt %1$@ mit, die entfernte Anmeldung zu vergessen.";
 "integrationsMcpRevokeResult" = "Nichts wird behalten: Die Anmeldung endet dort";
+"integrationsMcpRunsTooLong" = "Was er ausführt, darf höchstens %1$@ Zeichen lang sein.";
 "integrationsSignInAgain" = "Seite erneut öffnen";
 "integrationsSignInCancel" = "Abbrechen";
 "integrationsSignInCancelled" = "Die Anmeldung wurde abgebrochen.";

@@ -45195,6 +45195,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Add ${name}`;
   }
+  function integrationsMcpNameTooLong(input2) {
+    const max = input2.max;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكن أن يصل طول الاسم إلى ${max} حرفًا على الأكثر.`;
+      case "de":
+        return `Der Name darf höchstens ${max} Zeichen lang sein.`;
+      case "es":
+        return `El nombre puede tener como máximo ${max} caracteres.`;
+      case "fr":
+        return `Le nom peut contenir au plus ${max} caractères.`;
+      case "ja":
+        return `名前は ${max} 文字以内にしてください。`;
+      case "ko":
+        return `이름은 최대 ${max}자까지 입력할 수 있습니다.`;
+      case "pt-BR":
+        return `O nome pode ter no máximo ${max} caracteres.`;
+      case "zh-Hans":
+        return `名称最多 ${max} 个字符。`;
+      case "zh-Hant":
+        return `名稱最多 ${max} 個字元。`;
+      case "en-XA":
+        return `[Å ñáɱé çáñ ƀé áţ ɱöšţ ${max} çĥáŕáçţéŕš ļöñĝ. ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A name can be at most ‬${max}‮ characters long.‬`;
+    }
+    return `A name can be at most ${max} characters long.`;
+  }
   function integrationsMcpNeedsSignIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -45497,6 +45525,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Nothing kept: the sign-in ends there‬`;
     }
     return `Nothing kept: the sign-in ends there`;
+  }
+  function integrationsMcpRunsTooLong(input2) {
+    const max = input2.max;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يمكن أن يصل طول ما يشغّله إلى ${max} حرفًا على الأكثر.`;
+      case "de":
+        return `Was er ausführt, darf höchstens ${max} Zeichen lang sein.`;
+      case "es":
+        return `Lo que ejecuta puede tener como máximo ${max} caracteres.`;
+      case "fr":
+        return `Ce qu’il exécute peut contenir au plus ${max} caractères.`;
+      case "ja":
+        return `実行する内容は ${max} 文字以内にしてください。`;
+      case "ko":
+        return `실행할 내용은 최대 ${max}자까지 입력할 수 있습니다.`;
+      case "pt-BR":
+        return `O que ele executa pode ter no máximo ${max} caracteres.`;
+      case "zh-Hans":
+        return `运行内容最多 ${max} 个字符。`;
+      case "zh-Hant":
+        return `執行內容最多 ${max} 個字元。`;
+      case "en-XA":
+        return `[Ŵĥáţ îţ ŕûñš çáñ ƀé áţ ɱöšţ ${max} çĥáŕáçţéŕš ļöñĝ. ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮What it runs can be at most ‬${max}‮ characters long.‬`;
+    }
+    return `What it runs can be at most ${max} characters long.`;
   }
   function integrationsSignInAgain() {
     switch (currentLanguage()) {
@@ -119173,6 +119229,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleStops,
     integrationsGoogleStopsDetail,
     integrationsMcpAdd,
+    integrationsMcpNameTooLong,
     integrationsMcpNeedsSignIn,
     integrationsMcpOfferBody,
     integrationsMcpOfferButton,
@@ -119184,6 +119241,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsMcpRevokeOperation,
     integrationsMcpRevokeReason,
     integrationsMcpRevokeResult,
+    integrationsMcpRunsTooLong,
     integrationsSignInAgain,
     integrationsSignInCancel,
     integrationsSignInCancelled,
@@ -122942,6 +123000,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleStops": ["date"],
     "integrationsGoogleStopsDetail": ["date"],
     "integrationsMcpAdd": ["name"],
+    "integrationsMcpNameTooLong": ["max"],
     "integrationsMcpNeedsSignIn": [],
     "integrationsMcpOfferBody": ["name"],
     "integrationsMcpOfferButton": [],
@@ -122953,6 +123012,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsMcpRevokeOperation": ["name"],
     "integrationsMcpRevokeReason": ["name"],
     "integrationsMcpRevokeResult": [],
+    "integrationsMcpRunsTooLong": ["max"],
     "integrationsSignInAgain": [],
     "integrationsSignInCancel": [],
     "integrationsSignInCancelled": [],

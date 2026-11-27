@@ -1376,6 +1376,7 @@ public enum PhoneMessages {
     public static func `integrationsGoogleStops`(`date`: String) -> String { PhoneWords.format("integrationsGoogleStops", [`date`]) }
     public static func `integrationsGoogleStopsDetail`(`date`: String) -> String { PhoneWords.format("integrationsGoogleStopsDetail", [`date`]) }
     public static func `integrationsMcpAdd`(`name`: String) -> String { PhoneWords.format("integrationsMcpAdd", [`name`]) }
+    public static func `integrationsMcpNameTooLong`(`max`: String) -> String { PhoneWords.format("integrationsMcpNameTooLong", [`max`]) }
     public static func `integrationsMcpNeedsSignIn`() -> String { PhoneWords.format("integrationsMcpNeedsSignIn", []) }
     public static func `integrationsMcpOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsMcpOfferBody", [`name`]) }
     public static func `integrationsMcpOfferButton`() -> String { PhoneWords.format("integrationsMcpOfferButton", []) }
@@ -1387,6 +1388,7 @@ public enum PhoneMessages {
     public static func `integrationsMcpRevokeOperation`(`name`: String) -> String { PhoneWords.format("integrationsMcpRevokeOperation", [`name`]) }
     public static func `integrationsMcpRevokeReason`(`name`: String) -> String { PhoneWords.format("integrationsMcpRevokeReason", [`name`]) }
     public static func `integrationsMcpRevokeResult`() -> String { PhoneWords.format("integrationsMcpRevokeResult", []) }
+    public static func `integrationsMcpRunsTooLong`(`max`: String) -> String { PhoneWords.format("integrationsMcpRunsTooLong", [`max`]) }
     public static func `integrationsSignInAgain`() -> String { PhoneWords.format("integrationsSignInAgain", []) }
     public static func `integrationsSignInCancel`() -> String { PhoneWords.format("integrationsSignInCancel", []) }
     public static func `integrationsSignInCancelled`() -> String { PhoneWords.format("integrationsSignInCancelled", []) }
@@ -6251,6 +6253,7 @@ extension PhoneWords {
         "integrationsGoogleStops": ["date"],
         "integrationsGoogleStopsDetail": ["date"],
         "integrationsMcpAdd": ["name"],
+        "integrationsMcpNameTooLong": ["max"],
         "integrationsMcpNeedsSignIn": [],
         "integrationsMcpOfferBody": ["name"],
         "integrationsMcpOfferButton": [],
@@ -6262,6 +6265,7 @@ extension PhoneWords {
         "integrationsMcpRevokeOperation": ["name"],
         "integrationsMcpRevokeReason": ["name"],
         "integrationsMcpRevokeResult": [],
+        "integrationsMcpRunsTooLong": ["max"],
         "integrationsSignInAgain": [],
         "integrationsSignInCancel": [],
         "integrationsSignInCancelled": [],

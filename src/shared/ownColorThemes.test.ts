@@ -180,7 +180,9 @@ describe("the first mate's own color themes", () => {
       colorTheme: "own-old-terminal",
     });
     expect(() => apply(theme, { theme: "own-nothing" }, elsewhere)).toThrow(
-      "No own theme own-nothing. Saved: Old terminal.",
+      /^No theme own-nothing\. Themes: dark, light, rose-pine, .*, tokyo-night, own-old-terminal\.$/,
     );
+    // Activity names an own theme as the person said it, never by its id.
+    expect(theme.done(theme.readValue(saved))).toBe("switched to the Old terminal theme");
   });
 });

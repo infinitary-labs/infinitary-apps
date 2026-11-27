@@ -236,7 +236,7 @@ describe("the first mate's Settings actions, driven through the whole core", () 
       });
       // Activity says both what was saved and what the window now wears.
       expect(saved.lines).toEqual([
-        "switched to the own-old-terminal theme",
+        "switched to the Old terminal theme",
         "your own color themes: Old terminal",
       ]);
       expect(await appearance()).toMatchObject({ theme: "dark", colorTheme: "own-old-terminal" });

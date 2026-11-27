@@ -22,8 +22,15 @@ const DEFAULT_SIZE = DEFAULT_APPEARANCE.size as UiSize;
 
 /** Dark or Light, the base a color theme sits on: what a panel reads, as a frame is told. */
 export const themeValue = (c: unknown) => ({ theme: look(c).theme });
-/** The window's theme as the first mate names it: a color theme's id, else Dark or Light. */
-export const themeChoiceValue = (c: unknown) => ({ theme: look(c).colorTheme ?? look(c).theme });
+/**
+ * The window's theme as the first mate names it: a color theme's id, else Dark or Light, with
+ * the name a person gave their own theme, which Activity shows as they said it.
+ */
+export const themeChoiceValue = (c: unknown) => {
+  const theme = look(c).colorTheme ?? look(c).theme;
+  const own = look(c).ownColorThemes?.find((saved) => saved.id === theme);
+  return { theme, ...(own ? { name: own.name } : {}) };
+};
 /**
  * A person's own color themes by id and name, and the one this window wears
  * with the colors the app moved in it, so the answer to a save names them.

@@ -47,13 +47,17 @@ export const themeLines = {
       if (theme === "dark" || theme === "light")
         return [{ ...look, theme: themeSchema.parse(theme) }];
       const worked = themeOf(theme, look.ownColorThemes);
-      if (!worked) throw new Error(noOwnTheme(theme, look.ownColorThemes ?? []));
+      if (!worked)
+        throw new Error(
+          // i18n-exempt: served to the first mate, a model, never shown
+          `No theme ${theme}. Themes: ${[...THEME_CHOICES, ...(look.ownColorThemes ?? []).map((own) => own.id)].join(", ")}.`,
+        );
       return [wearing(look, theme, worked.base)];
     },
     readValue: themeChoiceValue,
     done: (v) => {
-      const { theme } = v as ThemeChoice;
-      return `switched to the ${isBuiltInTheme(theme) ? BUILT_IN_THEMES[theme].name : theme} theme`;
+      const { theme, name } = v as ThemeChoice & { name?: string };
+      return `switched to the ${isBuiltInTheme(theme) ? BUILT_IN_THEMES[theme].name : (name ?? theme)} theme`;
     },
   },
   // A person's own color themes (docs/themes.md, "Your own themes"). The

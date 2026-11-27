@@ -259,7 +259,8 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
       const ownColorThemes = s.ownColorThemes.filter((theme) => theme.id !== id);
       const colorTheme = s.colorTheme === id ? null : s.colorTheme;
       set({ ownColorThemes, colorTheme });
-      saveAppearance("ownColorThemes", { ownColorThemes, colorTheme: colorTheme ?? undefined });
+      // The Theme row holds Remove, so a refusal is told there.
+      saveAppearance("theme", { ownColorThemes, colorTheme: colorTheme ?? undefined });
     },
     setWashStrength: (washStrength) => {
       set({ washStrength });

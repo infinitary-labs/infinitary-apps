@@ -19,6 +19,17 @@ describe("PresenceWatch", () => {
       { away: false, watched: true },
     ]);
   });
+
+  // INF-7038's approved plan, Part 1, item 5: the music pause never reads the idle time.
+  it("reads a long idle time for the seen report and never as away", () => {
+    const watch = new PresenceWatch(true, () => 3_600);
+    expect(watch.presence()).toEqual({ away: false, watched: true });
+    expect(watch.idle()).toEqual({ seconds: 3_600 });
+  });
+
+  it("reads no idle time on a computer it does not watch", () => {
+    expect(new PresenceWatch(false, () => 3_600).idle()).toEqual({ seconds: 0 });
+  });
 });
 
 /** A `POWERBROADCAST_SETTING` as Windows lays it out: GUID, DWORD length, DWORD data. */

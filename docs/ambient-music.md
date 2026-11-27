@@ -132,6 +132,8 @@ It does not take the keyboard's media keys or show in the system's Now Playing.
 It is INF-5528's answer and the captain's choice: by default the music stops while nobody is at the computer and starts again once someone is back, and turning off the Pause when you're away switch in Settings → Appearance keeps it playing instead.
 Nobody is there while the screen is off or locked, the screen saver runs, or another person's session is in front; someone is back only once every one of those ended, so on a computer that asks for a password the music comes back at the unlock, not when the screen wakes.
 `src/main/presence.ts` hears it in the main process and tells the window over `inf:window:presence`, `{ away, watched }`; `src/main/presenceWatch.ts` combines the reasons.
+The same reasons, with the time since the keyboard or mouse was last touched (`inf:window:idle`), decide when a card counts as seen (`docs/card-authoring.md`, "Seen"); the music never reads that time, so it plays on while someone reads without touching anything.
+An isolated run reads no presence, as Linux reads none, so a journey's music and seen marks behave as on a computer that cannot tell; `INFINITARY_PRESENCE=system` reads the computer's own there.
 
 | Computer | What the app hears |
 | --- | --- |

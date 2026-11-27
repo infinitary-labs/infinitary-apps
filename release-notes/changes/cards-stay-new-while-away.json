@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "cards-stay-new-while-away",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Cards that arrive while you are away stay new",
+      "body": "A card that comes up while your Mac or Windows PC is locked, its screen is off or nobody has touched it for a while now stays new until you are back. Before, a card on screen counted as seen even with nobody there, so you could miss it.",
+      "noPicture": "This changes when an existing card counts as seen, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

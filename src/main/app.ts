@@ -85,7 +85,7 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
-import { followPresence } from "./presence";
+import { choosePresenceReading, followPresence } from "./presence";
 import { followSecondLaunches, watchRefusedLaunch } from "./refusedLaunch";
 import { followRendererRecovery } from "./rendererRecovery";
 import { resetsFor } from "./reset/wiring";
@@ -452,6 +452,7 @@ export async function startApp(
     app.setPath("userData", userDataChoice.dir);
   }
   const isolatedUserDataDir = userDataChoice.kind === "isolated" ? userDataChoice.dir : undefined;
+  choosePresenceReading(Boolean(isolatedUserDataDir));
   // pnpm dev on the person's own data folder: a run from source with nothing isolating it.
   const sourceOnOwnData = !app.isPackaged && userDataChoice.kind === "flavor";
   // An isolated run is started from outside, which starts it again; only a person's app starts

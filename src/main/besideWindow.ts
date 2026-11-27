@@ -154,6 +154,8 @@ export type BesideWindowOptions = {
   /** What this app is changed: every window hears it. */
   changed: () => void;
   localWindow?: Pick<LocalWindowOptions, "link"> & { readyMs?: number };
+  /** The first mate said the captain acted on a phone (`inf:window:captain-on-phone`). */
+  phoneActed?: () => void;
   now: () => number;
 };
 
@@ -169,6 +171,8 @@ export class BesideWindow {
   private dictation = false;
   /** Whether this window is in front, as it last said; said again at each welcome. */
   private inFront = false;
+  /** Whether someone is at this computer, as this program last read it; said again at each welcome. */
+  private someoneHere: boolean | null = null;
   /** The command this window joined, as its note names it; null when it opened between two. */
   private joined: JoinedRun | null;
   /** When the window first saw that no command runs, for an end whose record names no time. */
@@ -413,6 +417,23 @@ export class BesideWindow {
   /** A first mate from before this request refuses it, and its phone pushes as it did. */
   private sayFront(inFront: boolean): void {
     void this.window.dispatch("inf:window:front", [inFront]).catch(() => {});
+  }
+
+  /**
+   * Whether someone is at this computer changed (../attendance.ts): the
+   * first mate holds a card's push to a phone while someone is
+   * (docs/phone-push.md). A first mate that forgot it as the connection
+   * dropped hears it again at the next welcome.
+   */
+  here(someoneHere: boolean): void {
+    this.someoneHere = someoneHere;
+    if (this.held || !this.window.inReach()) return;
+    this.sayHere(someoneHere);
+  }
+
+  /** A first mate from before this request refuses it, and holds the phone only on the front. */
+  private sayHere(someoneHere: boolean): void {
+    void this.window.dispatch("inf:window:someone-here", [someoneHere]).catch(() => {});
   }
 
   /**
@@ -687,6 +708,10 @@ export class BesideWindow {
         if (theirs.success) this.look.follow(theirs.data);
         return;
       }
+      // The captain acted on a phone: this program reads whether this computer was touched just before.
+      case "inf:window:captain-on-phone":
+        if (!replayed) this.options.phoneActed?.();
+        return;
       // Its Dock choice, applied to this program.
       case "inf:presence:dock": {
         const dock = dockPresenceSchema.safeParse(payload);
@@ -1058,6 +1083,7 @@ export class BesideWindow {
     try {
       await ask("inf:own-window:here");
       if (this.inFront) this.sayFront(true);
+      if (this.someoneHere !== null) this.sayHere(this.someoneHere);
       const [look, keys, presence, dictation] = await Promise.all([
         ask("inf:shell:preferences"),
         ask("inf:settings:keys:get"),

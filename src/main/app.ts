@@ -85,7 +85,7 @@ import { KeyReminderStore } from "./keyReminders";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
 import { startOwnDisplay } from "./ownDisplay";
-import { choosePresenceReading, followPresence } from "./presence";
+import { choosePresenceReading, followPresence, presenceWatch } from "./presence";
 import { followSecondLaunches, watchRefusedLaunch } from "./refusedLaunch";
 import { followRendererRecovery } from "./rendererRecovery";
 import { resetsFor } from "./reset/wiring";
@@ -1382,6 +1382,8 @@ export async function startApp(
           if (channel === "inf:release-notes") followReleaseNotes(payload as ReleaseNotesView);
         },
         notifications: host.notifications,
+        // Whether someone is at this computer, which the phone sender follows.
+        presence: presenceWatch,
         deviceName: () => ownName,
         // A run that is not the packaged app may stand in its installed
         // version, as its own updater does (`createInstalledUpdateChecker`), so

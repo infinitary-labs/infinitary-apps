@@ -122,7 +122,7 @@ export class CardNotifier {
       if (!becameReady) continue;
       if (!this.options.enabled() || this.options.focused()) continue;
       const kind = before === undefined && !this.away.has(card.id) ? "card" : "reply";
-      this.options.show({ kind, cardId: card.id, ...noticeWords(card, kind, this.options.facts) });
+      this.options.show(noticeFor(card, kind, this.options.facts));
     }
     for (const id of this.seen.keys()) {
       if (!live.has(id)) this.seen.delete(id);
@@ -149,6 +149,15 @@ export class CardNotifier {
   seed(cards: Card[]): void {
     if (!this.primed) this.observe(cards);
   }
+}
+
+/** One card-worthy moment of `card` in its words now. */
+export function noticeFor(
+  card: Card,
+  kind: CardNotice["kind"],
+  facts: CardNotifierOptions["facts"],
+): CardNotice {
+  return { kind, cardId: card.id, ...noticeWords(card, kind, facts) };
 }
 
 /** The ask line, the name and the gist, in arrangement A. */

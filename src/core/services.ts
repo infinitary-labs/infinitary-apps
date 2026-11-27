@@ -742,7 +742,7 @@ export async function createServices(
     ...usageRoutes.facts,
   });
   taskCostOf = usage.taskCostOf;
-  const { notifier, windowsInFront } = startHomeNotifier({
+  const { notifier, someoneHere } = startHomeNotifier({
     host,
     settings,
     devices,
@@ -963,6 +963,7 @@ export async function createServices(
     devices: () => devices.list(),
     homeName: sourceComputer,
     now: ticker.now,
+    onPhone: () => emit("inf:window:captain-on-phone", {}),
   });
   // What a /feedback report's command reads and keeps (docs/feedback.md).
   const feedbackHost = startHomeFeedback({
@@ -1623,7 +1624,7 @@ export async function createServices(
   });
   return {
     paths,
-    windowsInFront,
+    someoneHere,
     recordDatabase: db,
     cardFiles: homeCardFileReads((cardId) => cardStore.get(cardId), paths, files),
     cardDrafts: new CardDrafts(db, (draft) => emit("inf:cards:draft", draft)),

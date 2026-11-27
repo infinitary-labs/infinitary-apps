@@ -138410,6 +138410,15 @@ ${FRAME_KEYBOARD_SCRIPT}
     "inf:window:front": {
       request: tuple([boolean()])
     },
+    // A window in a program of its own says whether someone is at its
+    // computer (docs/phone-push.md, "When the computer sends"), from its own
+    // program's reading of the lock, the display, the screen saver, the
+    // keyboard and mouse, and the captain acting on a phone. The first mate
+    // keeps each connection's latest word until that connection drops, and
+    // holds a card's push to a phone while one says someone is there.
+    "inf:window:someone-here": {
+      request: tuple([boolean()])
+    },
     // The captain's own input to a task's page while he has control
     // (docs/task-browser.md, "Taking control"): the pointer and keys of the
     // window he sits at, on whichever computer; the core refuses it unless he

@@ -310,58 +310,139 @@ describe("a phone's cards reach it sealed through the push relay", () => {
   }, 60_000);
 
   // The captain's words: "when i'm literally working actively on my desktop
-  // app, my phone still gets push notification". The window beside a first
-  // mate a command started, and a view on another Mac, each run in a program
-  // of their own: they say when they come to the front and when they leave
-  // it, and the phone hears nothing while one says it is in front.
-  it("sends nothing while a window in another program says it is in front, and sends again once it leaves the front or its connection drops", async () => {
+  // app, my phone still gets push notification", and their answers to
+  // INF-7038's plan, Part 2: the phone stays quiet while they are at a
+  // computer, and hears what came meanwhile once they leave it. A window in
+  // a program of its own - the window beside a first mate a command started,
+  // or a view on another Mac - says on its own connection whether someone is
+  // at its computer; one from before that request says only that it is in
+  // front, which counts while it says it.
+  it("holds each card's push while a window in another program says someone is there, and sends the ones still unseen once that ends or its connection drops", async () => {
     const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
     await connection.settled();
     const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
     const phone = await connectClient(grant, { system: { system: "ios" } });
     const pushes = registration();
     await phone.invoke("inf:devices:push", [pushes]);
+    const shown = new Map<string, Card>();
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:cards")
+        for (const entry of payload as Card[]) shown.set(entry.id, entry);
+    });
     const before = posted.length;
-    const next = async (id: string) => {
-      await card(id, "Pick a venue");
-      await waitFor(() => posted.length > before, 10_000);
-      const sent = posted.splice(before);
-      expect(sent.map((raw) => opened(pushes.key, raw).card.cardId)).toEqual([id]);
+    /** The pushes the relay took since the last call, as the phone opens them, by card. */
+    const sent = async (count: number) => {
+      await waitFor(() => posted.length >= before + count, 10_000);
+      return posted
+        .splice(before)
+        .map((raw) => opened(pushes.key, raw).card)
+        .sort((a, b) => a.cardId.localeCompare(b.cardId));
     };
-
-    // This computer's window, on its own connection.
-    const gone: (() => void)[] = [];
-    const window: BrowserViewer = { show: () => {}, onGone: (listener) => gone.push(listener) };
-    const front = (inFront: boolean) =>
-      core.dispatch("inf:window:front", [inFront], { kind: "captain" }, window);
-    await front(true);
-    await card("card-window-front", "Sent while the window is in front");
-    await front(false);
-    await next("card-window-left");
-    await front(true);
-    await card("card-window-front-again", "Sent while the window is in front again");
-    for (const listener of gone) listener();
-    await next("card-window-closed");
-
+    const seen = async (id: string) => {
+      const card = shown.get(id);
+      if (!card?.lifecycleId || !card.currentUpdateId) throw new Error("the card has an update");
+      await phone.invoke("inf:cards:seen-update", [id, card.lifecycleId, card.currentUpdateId]);
+      await waitFor(() => shown.get(id)?.currentUpdateSeen === true, 10_000);
+    };
     const macGrant = await claimLink(
       (await core.dispatch("inf:devices:invite", [{ kind: "mac", at }])).link,
       { ...AT_FIRST_LAUNCH, name: "MacBook Air" },
     );
     const mac = await connectClient(macGrant, { system: { system: "macos", chip: "arm64" } });
-    await mac.invoke("inf:window:front", [true]);
-    await card("card-view-front", "Sent while the view is in front");
-    await mac.invoke("inf:window:front", [false]);
-    await next("card-view-left");
-    await mac.invoke("inf:window:front", [true]);
-    await card("card-view-front-again", "Sent while the view is in front again");
-    await mac.close();
-    await next("card-view-closed");
+    try {
+      // Someone is at the other Mac: two cards wait, and one seen there meanwhile never goes.
+      await mac.invoke("inf:window:someone-here", [true]);
+      await card("card-held-launch", "Plan the launch week");
+      await card("card-held-seen", "Review the footer links");
+      await card("card-held-venue", "Pick a venue");
+      await seen("card-held-seen");
+      expect(posted.length).toBe(before);
+      await mac.invoke("inf:window:someone-here", [false]);
+      expect(await sent(2)).toEqual([
+        expect.objectContaining({
+          cardId: "card-held-launch",
+          body: "Plan the launch week\nThree dates fit; pick one.",
+        }),
+        expect.objectContaining({
+          cardId: "card-held-venue",
+          body: "Pick a venue\nThree dates fit; pick one.",
+        }),
+      ]);
 
-    await phone.close();
-    await core.dispatch("inf:devices:remove", [grant.deviceId]);
-    await core.dispatch("inf:devices:remove", [macGrant.deviceId]);
+      // Its window in front with nobody at it holds nothing.
+      await mac.invoke("inf:window:front", [true]);
+      await card("card-front-nobody", "Sent with nobody at the window in front");
+      expect((await sent(1)).map((each) => each.cardId)).toEqual(["card-front-nobody"]);
+
+      // The view's connection drops with someone there: what it held goes.
+      await mac.invoke("inf:window:someone-here", [true]);
+      await card("card-held-until-closed", "Sent once the view closed");
+      await mac.close();
+      expect((await sent(1)).map((each) => each.cardId)).toEqual(["card-held-until-closed"]);
+
+      // A window from before the request says only that it is in front.
+      const gone: (() => void)[] = [];
+      const window: BrowserViewer = { show: () => {}, onGone: (listener) => gone.push(listener) };
+      const front = (inFront: boolean) =>
+        core.dispatch("inf:window:front", [inFront], { kind: "captain" }, window);
+      await front(true);
+      await card("card-older-front", "Sent once the older window left the front");
+      await card("card-older-seen", "Seen in the older window");
+      await seen("card-older-seen");
+      await front(false);
+      expect((await sent(1)).map((each) => each.cardId)).toEqual(["card-older-front"]);
+      await front(true);
+      await card("card-older-closed", "Sent once the older window closed");
+      for (const listener of gone) listener();
+      expect((await sent(1)).map((each) => each.cardId)).toEqual(["card-older-closed"]);
+    } finally {
+      detach();
+      await mac.close();
+      await phone.close();
+      await core.dispatch("inf:devices:remove", [grant.deviceId]);
+      await core.dispatch("inf:devices:remove", [macGrant.deviceId]);
+    }
   }, 60_000);
 
+  // INF-7038's question 3, the captain's yes: acting on the phone counts as
+  // having left a computer, so each window's program hears when the
+  // captain's input came from a paired phone or iPad.
+  it("tells each window when the captain's input came from a paired phone, and not when it came from a computer", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const grant = await claimLink(link, { ...AT_FIRST_LAUNCH, name: "iPhone" });
+    const phone = await connectClient(grant, { system: { system: "ios" } });
+    const macGrant = await claimLink(
+      (await core.dispatch("inf:devices:invite", [{ kind: "mac", at }])).link,
+      { ...AT_FIRST_LAUNCH, name: "MacBook Air" },
+    );
+    const mac = await connectClient(macGrant, { system: { system: "macos", chip: "arm64" } });
+    const told = () => mac.pushes.filter((push) => push.channel === "inf:window:captain-on-phone");
+    try {
+      await card("card-closed-on-the-mac", "Closed on the Mac");
+      await card("card-closed-on-the-phone", "Closed on the phone");
+      await mac.invoke("inf:cards:close", ["card-closed-on-the-mac"]);
+      await phone.invoke("inf:cards:close", ["card-closed-on-the-phone"]);
+      await waitFor(() => told().length > 0, 10_000);
+      // The Mac hears its pushes in order: one its own close set off would sit before this card.
+      await card("card-after-the-phone", "Pick a venue");
+      await waitFor(
+        () =>
+          mac.pushes.some(
+            (push) =>
+              push.channel === "inf:cards" &&
+              (push.payload as Card[]).some((entry) => entry.id === "card-after-the-phone"),
+          ),
+        10_000,
+      );
+      expect(told().map((push) => push.payload)).toEqual([{}]);
+    } finally {
+      await mac.close();
+      await phone.close();
+      await core.dispatch("inf:devices:remove", [grant.deviceId]);
+      await core.dispatch("inf:devices:remove", [macGrant.deviceId]);
+    }
+  }, 60_000);
   it("forgets the phone's push address when it leaves, is removed, withdraws, or the relay says it is gone", async () => {
     const pushTo = async (name: string) => {
       const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);

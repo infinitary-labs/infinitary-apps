@@ -1,5 +1,5 @@
 ---
-source: 343fc510d10a179f
+source: 4689a21f9d4af463
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -93,6 +93,7 @@ O celular precisa do seu computador acordado, com o Infinitary aberto.
 Se não conseguir alcançá-lo, ele diz “Seu computador está fora de alcance. Verifique se o Infinitary está aberto e se os dois dispositivos estão na mesma rede.”
 
 Com as notificações ativadas, seu celular mostra uma notificação para cada novo cartão, mesmo com o Infinitary fechado nele.
+Enquanto você está em um computador que mostra seu imediato, seu celular fica em silêncio; os cartões que chegaram nesse meio-tempo chegam a ele assim que você sai, depois de cinco minutos sem teclado ou mouse ou assim que a tela bloqueia, e um cartão que você já viu lá nunca chega.
 Com mais de um computador mantido, cada um envia as próprias notificações, e a notificação diz o nome do computador de onde veio; tocar nela mostra esse computador e abre o cartão.
 Cada computador continua enviando as notificações enquanto você mostra outro: seu celular deixa para ele um bilhete lacrado pelo retransmissor do Infinitary sempre que a permissão de notificações dele é renovada, e só esse computador consegue ler.
 

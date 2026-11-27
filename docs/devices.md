@@ -1535,7 +1535,8 @@ A crewmate hears it in three places, and only while another computer or phone is
 - emit_card's answer names where the captain's latest click or words came from, and how long ago.
 - The paragraph naming the captain's computers (`crewmateComputersNote`, `src/core/pi/piResources.ts`), there once a computer that runs work is listed, tells it what to do with them: a card that needs the captain at one of these computers names it, the one they are using now and how to reach it from there, and a choice from another one than the next step needs is said on a card before anything starts that waits on them there.
 
-The host names the places and decides nothing from them: whether a card needs the captain somewhere, and whether a wait can start, are the crewmate's (`docs/principles.md`, "Build the agent's reach, never its verdicts").
+The host names the places and decides one thing from them: input from a paired phone or iPad counts as the captain having left their computers, so the first mate tells each window's program (`inf:window:captain-on-phone`) and the phone hears the cards that come meanwhile (`docs/phone-push.md`, "When the computer sends").
+Whether a card needs the captain somewhere, and whether a wait can start, are the crewmate's (`docs/principles.md`, "Build the agent's reach, never its verdicts").
 A click from a script in a card's frame names no window.
 
 ## Settings -> Devices

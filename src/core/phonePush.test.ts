@@ -9,6 +9,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { NOTICE_BODY_LIMIT } from "./notifications";
 import { APPLE_PAYLOAD_LIMIT, cardNotifiers, PhonePushes, WITHDRAW_SPACING_MS } from "./phonePush";
+import { SomeoneHere } from "./someoneHere";
 
 /**
  * The phone sender on its own (docs/phone-push.md; INF-4774's plan, approved
@@ -897,7 +898,7 @@ describe("each phone's box of letters", () => {
     let stopped = 0;
     const notifier = cardNotifiers({
       notifications: { supported: () => false, focused: () => false, show: () => {} },
-      windowsInFront: () => false,
+      someoneHere: new SomeoneHere(),
       switchedOn: () => true,
       phones: {
         pushTargets: () => [],

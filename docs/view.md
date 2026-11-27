@@ -419,7 +419,8 @@ A view posts the other Mac's card-worthy moments to this Mac's Notification Cent
 - A replay is news: a card that became ready while a dropped connection was being mended posts when its push arrives.
 
 A paired phone hears the same moments through a second `CardNotifier` on the first mate's computer, sealed through Infinitary's relay (`docs/phone-push.md`).
-While this Mac's window is in front it says so to the first mate there (`inf:window:front`), and again at each welcome, so that computer pushes no card to a phone while the captain works here (`docs/phone-push.md`, "When the computer sends").
+This Mac says to the first mate there whether its window is in front (`inf:window:front`) and whether someone is at this Mac (`inf:window:someone-here`), at each change and again at each welcome, so that computer holds a card's push to a phone while the captain works here and sends it once they leave (`docs/phone-push.md`, "When the computer sends").
+It asks the second only of a first mate that lists the `someone-here` change, and hears `inf:window:captain-on-phone` when the captain acted on a phone.
 
 A click on a notification, a view's or the first mate's own computer's, brings the window forward with that card at the front (INF-4243's plan, piece 5: "Notifications appear and open their card").
 The click notes the card in the main process (`noteNotifiedCard`, `src/main/notifiedCard.ts`) and tells the window with `inf:cards:notified`; the window takes it with `inf:cards:take-notified`, which clears it, and reads the cards again first when it does not hold that card yet (`openNotifiedCard`, `src/renderer/src/app/stackActions.ts`).

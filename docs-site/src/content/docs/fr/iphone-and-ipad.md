@@ -1,5 +1,5 @@
 ---
-source: 343fc510d10a179f
+source: 4689a21f9d4af463
 title: iPhone et iPad
 description: Demandez une invitation TestFlight privée pour Infinitary sur iPhone et iPad, puis rejoignez votre ordinateur pour lire les cartes et envoyer des messages.
 ---
@@ -93,6 +93,7 @@ Le téléphone a besoin que votre ordinateur soit éveillé, avec Infinitary ouv
 S’il ne peut pas le joindre, il indique « Votre ordinateur est hors de portée. Vérifiez qu’Infinitary est ouvert et que les deux appareils partagent un réseau. »
 
 Avec les notifications activées, votre téléphone affiche une notification pour chaque nouvelle carte, même quand Infinitary y est fermé.
+Tant que vous êtes devant un ordinateur qui affiche votre second, votre téléphone reste silencieux ; les cartes arrivées entre-temps lui parviennent dès que vous partez, après cinq minutes sans clavier ni souris ou dès que l'écran se verrouille, et une carte déjà vue là ne lui parvient jamais.
 Avec plus d’un ordinateur gardé, chacun envoie les siennes, et la notification nomme l’ordinateur d’où elle vient ; la toucher affiche cet ordinateur et ouvre la carte.
 Chaque ordinateur continue de les envoyer pendant que vous en affichez un autre : votre téléphone lui laisse une note scellée par le relais d’Infinitary chaque fois que son autorisation de notifications se renouvelle, et seul cet ordinateur peut la lire.
 

@@ -34,6 +34,7 @@ import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import type { WindowKeyReminders } from "@shared/windowAnswer";
 import type { WorkSetupReport } from "@shared/workSetup";
+import { Attendance, type AttendanceOptions } from "./attendance";
 import { type BesideOptions, BesideWindow } from "./besideWindow";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
@@ -116,6 +117,12 @@ export type ShellOptions = {
    * "Following along").
    */
   headless?: boolean;
+  /**
+   * This computer's presence and idle time (./presence.ts), which the
+   * window's program reads for the phone sender (./attendance.ts); absent,
+   * the computer cannot tell, and someone is here while a window is in front.
+   */
+  presence?: () => AttendanceOptions["presence"];
   /** Serves a started core to paired devices, and to this computer's window through the local door. */
   startConnection: (core: Core) => HomeConnection;
   /**
@@ -180,6 +187,13 @@ export type ShellOptions = {
   keySystem?: KeySystem;
 };
 
+/** A computer that cannot tell whether someone is at it: someone is while a window is in front. */
+const CANNOT_TELL: AttendanceOptions["presence"] = {
+  presence: () => ({ away: false, watched: false }),
+  idle: () => ({ seconds: 0 }),
+  listen: () => () => {},
+};
+
 /**
  * Whether this computer may run its home's work (docs/devices.md, "Joining"):
  * a Mac, a Linux computer and a Windows PC all may.
@@ -238,6 +252,8 @@ export class Shell {
   private mode: HomeMode | ViewMode | BesideMode | null = null;
   /** Whether a window of this program is in front, as it last said (`windowFront`). */
   private inFront = false;
+  /** Whether someone is at this computer for the phone sender; none in a program with no window. */
+  private attendance: Attendance | null = null;
   /** The windows that hold words not yet sent, as each last said (`windowUnsent`). */
   private readonly unsent = new Set<number>();
   private coreStarted = false;
@@ -279,6 +295,17 @@ export class Shell {
    * version) throws, as `startCore` does.
    */
   async start(): Promise<void> {
+    if (!this.options.headless) {
+      const attendance = new Attendance({
+        presence: this.options.presence?.() ?? CANNOT_TELL,
+        postsNotices: () => this.options.notifications.supported(),
+        now: this.now,
+      });
+      attendance.front(this.inFront);
+      attendance.listen((here) => this.tellHere(here));
+      attendance.start();
+      this.attendance = attendance;
+    }
     if (this.options.beside) {
       await this.becomeBeside(this.options.beside);
       return;
@@ -672,6 +699,7 @@ export class Shell {
   windowFront(inFront: boolean): void {
     this.inFront = inFront;
     if (this.mode?.kind === "beside") this.mode.beside.front(inFront);
+    this.attendance?.front(inFront);
     if (this.mode?.kind === "view") {
       const view = this.mode.view;
       view.front(inFront);
@@ -679,6 +707,18 @@ export class Shell {
       if (inFront && here.role === "view" && here.workSetup?.state === "blocked")
         void this.checkWork();
     }
+  }
+
+  /**
+   * Whether someone is at this computer changed (./attendance.ts): a first
+   * mate in this program takes it from here, and one a command started, or
+   * one on another Mac, hears it (docs/phone-push.md, "When the computer sends").
+   */
+  private tellHere(here: boolean): void {
+    const mode = this.mode;
+    if (mode?.kind === "home") mode.core.services.someoneHere.own(here);
+    if (mode?.kind === "beside") mode.beside.here(here);
+    if (mode?.kind === "view") mode.view.here(here);
   }
 
   /**
@@ -741,6 +781,7 @@ export class Shell {
     await this.switching;
     const mode = this.mode;
     this.mode = null;
+    this.attendance?.stop();
     if (mode?.kind === "view") mode.view.dispose();
     if (mode?.kind === "beside") mode.beside.close();
     if (mode?.kind === "home") {
@@ -845,6 +886,13 @@ export class Shell {
       stopFarewells();
       return stopConnections();
     };
+    // The first mate in this program hears whether someone is at this
+    // computer from its own reading, and tells it when the captain acts on a phone.
+    const stopHearingPhone = this.attendance
+      ? core.events.subscribe((channel) => {
+          if (channel === "inf:window:captain-on-phone") this.attendance?.phoneActed();
+        })
+      : () => {};
     this.mode = {
       kind: "home",
       core,
@@ -852,11 +900,13 @@ export class Shell {
       window,
       stopSsh,
       detach: () => {
+        stopHearingPhone();
         unfollow();
         unreach();
         detach();
       },
     };
+    if (this.attendance) core.services.someoneHere.own(this.attendance.here());
     this.preferences.use(core.services.preferences);
   }
 
@@ -876,10 +926,12 @@ export class Shell {
       restartWindows: this.options.restartWindows,
       changed: () => this.options.broadcast("inf:devices:this-mac", this.thisMac()),
       ...(this.options.localWindow ? { localWindow: this.options.localWindow } : {}),
+      phoneActed: () => this.attendance?.phoneActed(),
       now: this.now,
     });
     this.mode = { kind: "beside", beside };
     if (this.inFront) beside.front(true);
+    if (this.attendance) beside.here(this.attendance.here());
     this.preferences.use(beside.preferences);
     await beside.start();
   }
@@ -1014,9 +1066,11 @@ export class Shell {
       ...(this.options.keyReminders ? { keyReminders: this.options.keyReminders } : {}),
       nobodyHere: () => !this.inFront && this.unsent.size === 0,
       wordsLeft: () => this.unsent.size > 0,
+      phoneActed: () => this.attendance?.phoneActed(),
     });
     this.mode = { kind: "view", view };
     if (this.inFront) view.front(true);
+    if (this.attendance) view.here(this.attendance.here());
     this.workChecks = { view, connected: false, running: null, again: false };
     this.preferences.use(view.look);
   }

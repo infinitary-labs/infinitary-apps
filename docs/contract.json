@@ -61940,6 +61940,33 @@
         ]
       }
     },
+    "inf:window:someone-here": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "boolean"
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
     "inf:browser:input": {
       "effect": "change",
       "reach": "views",
@@ -117130,6 +117157,12 @@
         "required": [
           "id"
         ]
+      }
+    },
+    "inf:window:captain-on-phone": {
+      "payload": {
+        "type": "object",
+        "properties": {}
       }
     },
     "inf:own-window:ask": {

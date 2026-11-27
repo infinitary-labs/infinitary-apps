@@ -11,8 +11,15 @@ import {
 import { cutText } from "@shared/textCut";
 import type { DevicePairing } from "./devices/pairing";
 import type { HostNotifications } from "./host";
-import { type CardNotice, CardNotifier, type CardNotifierOptions } from "./notifications";
+import {
+  type CardNotice,
+  CardNotifier,
+  type CardNotifierOptions,
+  noticeFor,
+} from "./notifications";
+import { PhoneHold } from "./phoneHold";
 import { PhoneLetters } from "./phoneLetters";
+import type { SomeoneHere } from "./someoneHere";
 
 /**
  * The phone sender (docs/phone-push.md): beside the Mac's own notifications,
@@ -454,16 +461,17 @@ export class PhonePushes {
 
 /**
  * The home's notifiers on the cards broadcast seam: the Mac's own
- * Notification Center, which needs a host that can show them, and beside it
- * the phone sender, which needs only the switch and a phone that asked, so a
- * computer with no window still sends (docs/phone-push.md). Both stay quiet
- * while a window of this computer is in front; the phone sender also while
- * a window in a program of its own says it is in front.
+ * Notification Center, which needs a host that can show them and stays
+ * quiet while a window of this computer is in front, and beside it the
+ * phone sender, which needs only the switch and a phone that asked, so a
+ * computer with no window still sends (docs/phone-push.md). The phone
+ * sender holds each moment while someone is at a computer that shows this
+ * first mate and sends it once nobody is (`PhoneHold`).
  */
 export function cardNotifiers(options: {
   notifications: HostNotifications;
-  /** Whether a window in a program of its own says it is in front (`WindowsInFront`). */
-  windowsInFront: () => boolean;
+  /** Whether someone is at a computer that shows this first mate, and when the last word of it ends. */
+  someoneHere: Pick<SomeoneHere, "any" | "readsOwn" | "onLeft">;
   /** The Notifications switch (Settings -> General). */
   switchedOn: () => boolean;
   phones: Pick<
@@ -510,23 +518,35 @@ export function cardNotifiers(options: {
     switchedOn,
     onProblem,
   });
-  // The window may run in a program of its own, beside a first mate a
-  // command started or on another Mac: it says when it is in front.
+  const { someoneHere } = options;
+  const hold = new PhoneHold({
+    someoneHere: () => someoneHere.any(),
+    send: (notice) => pushes.send(notice),
+    switchedOn,
+    words: (card, kind) => noticeFor(card, kind, facts),
+    done: withdrawable,
+  });
+  someoneHere.onLeft(() => hold.left());
   const phone = new CardNotifier({
     enabled: () => switchedOn() && pushes.any(),
-    focused: () => notifications.focused() || options.windowsInFront(),
-    show: (notice) => pushes.send(notice),
+    // A program with no window of its own and none in another program to
+    // read it, as a core run alone, keeps the rule before presence: quiet
+    // while a window of this computer has the focus.
+    focused: () => !someoneHere.readsOwn() && notifications.focused(),
+    show: (notice) => hold.offer(notice),
     ...(facts ? { facts } : {}),
   });
   return {
     observe: (cards) => {
       mac.observe(cards);
       phone.observe(cards);
-      // Withdrawals go whether or not a window is in front: that is where
-      // the captain sees the cards whose notifications the phone removes.
+      hold.observe(cards);
+      // Withdrawals go whether or not someone is at a computer: that is
+      // where the captain sees the cards whose notifications the phone removes.
       pushes.observe(cards);
     },
     switched: () => {
+      hold.switched();
       if (switchedOn()) pushes.switched();
     },
     // A home paused mid-move starts no pass, so nothing writes the record it hands on.
@@ -568,7 +588,7 @@ function seal(key: string, what: PhonePushCard | PhonePushWithdrawal): string {
  * Whether a card pushed to a phone is withdrawn: its newest version was
  * seen, or it is no longer on the stage.
  */
-function withdrawable(card: Card | undefined): boolean {
+export function withdrawable(card: Card | undefined): boolean {
   return !card || card.ended !== undefined || !onStage(card) || card.currentUpdateSeen === true;
 }
 

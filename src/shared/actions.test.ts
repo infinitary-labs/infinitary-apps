@@ -497,6 +497,31 @@ describe("action permissions and channel parity", () => {
     ]);
     expect(ACTIONS["automation-edit"].tier).toBe("asked");
   });
+  // INF-6925 finding 1: the first mate reads a rule's failing mark as
+  // Settings shows it, from the same record.
+  it("hands the first mate an event rule's failing mark as Settings reads it", () => {
+    const failing = { since: 1_795_000_000_000, reason: "The integration answered 401." };
+    const value = ACTIONS["automation-edit"].readValue({
+      state: "ready",
+      rules: [
+        {
+          id: "r1",
+          name: "New issues",
+          state: "enabled",
+          spec: { kind: "event", integration: "github", event: "issue-opened" },
+          prompt: "Triage the new issue.",
+          revision: 1,
+          nextFire: null,
+          lastFired: 1_794_990_000_000,
+          captainRequested: true,
+          failing,
+        },
+      ],
+    });
+    expect(value.rules).toEqual([
+      expect.objectContaining({ lastFired: 1_794_990_000_000, failing }),
+    ]);
+  });
 });
 
 // INF-333 F3/F4: the offered operation must describe the selected delivery path.

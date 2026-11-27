@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "automation-last-run-firstmate",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The first mate knows when each automation last ran",
+      "body": "Ask the first mate whether an automation has run and it now answers from the same record Settings shows, including runs from before its conversation restarted. It also sees when an automation's checks for new events keep failing, and can list an automation's recent runs.",
+      "noPicture": "The change is in what the first mate can read, so its answers change but no screen does.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

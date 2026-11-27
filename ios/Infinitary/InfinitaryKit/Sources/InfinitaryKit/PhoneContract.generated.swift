@@ -38,6 +38,7 @@ public enum PhoneContract {
     public static let welcomeBodyMark = "data-inf-app-body=\"welcome\""
     public static let welcomeTitle = "How we work"
     public static let cardWordsMark = "data-inf-card-words"
+    public static let saidList = "[list]"
     public static let placeOn = "placeOn"
 }
 

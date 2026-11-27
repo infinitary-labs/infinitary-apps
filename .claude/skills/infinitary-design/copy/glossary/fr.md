@@ -72,6 +72,7 @@ A no-break space sits between a number and its unit or the percent sign ("1,6 Go
 | header (a request's) | en-tête | Masculine: "un en-tête". |
 | held (a batch that stopped) | retenu | "Lot retenu", "Retenu depuis {since}"; the same verb as "la retient" on a merge a rule holds. |
 | hold (on a task) | retenue | "elle est retenue", "à la fin de sa retenue"; as in "la retient" for a merge. |
+| holds an override passes (named on a task's Activity) | asking first: la demande préalable; the open decisions: les décisions ouvertes; the waits: les attentes; the open parts: les parties ouvertes; the checks: les vérifications; the delivery proof: la preuve de livraison; the saved story: le récit enregistré; the heavy-run line: la file des exécutions lourdes; the cost limit: le plafond de coût; a retired hold: une retenue qui n’existe plus | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Comment l’obtenir | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; "d’Infinitary" with elision. |
 | Intelligence | Intelligence | |

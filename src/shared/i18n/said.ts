@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { inLanguage } from "./current.ts";
-import { formatTime } from "./format.ts";
+import { formatList, formatTime } from "./format.ts";
 import { SOURCE_LANGUAGE } from "./languages.ts";
 import { MESSAGE_FILLS, MESSAGES, type MessageName } from "./messages.generated.ts";
 
@@ -14,7 +14,8 @@ import { MESSAGE_FILLS, MESSAGES, type MessageName } from "./messages.generated.
  * What a fact fills is a string shown as it is (a name, a key, words the
  * captain or the crew wrote), a count, a time of day worded where it is
  * shown, or another message with its own fills: one level deep, so the
- * shape stays plain data any reader can check.
+ * shape stays plain data any reader can check. A list of the app's own names
+ * fills a blank as such a message too (`saidList`).
  */
 
 /** A time of day, worded where it is shown ("3:12 PM"). */
@@ -52,6 +53,39 @@ export function said<N extends MessageName>(m: N, ...args: Args<N, SaidPart>): S
   return a && Object.keys(a).length ? { m, a } : { m };
 }
 
+/**
+ * The name a list fill carries in place of a message (`saidList`). No catalog
+ * message can take it, since a message's name is a camelCase identifier.
+ */
+export const SAID_LIST = "[list]";
+
+type BareMessage = { [N in MessageName]: InputOf<N> extends undefined ? N : never }[MessageName];
+
+/**
+ * Messages with no blanks of their own, worded as one list where the fact is
+ * shown: "the checks and the cost limit" in English, the reader's own list in
+ * another language (`formatList`). It is a message part named `SAID_LIST`
+ * whose fills are the listed names under "0", "1" and on, so it keeps the
+ * shape every reader already checks: a reader from before has no message by
+ * that name and shows the English saved beside the fact.
+ */
+export function saidList(names: readonly [BareMessage, ...BareMessage[]]): SaidPart {
+  return { m: SAID_LIST, a: Object.fromEntries(names.map((name, at) => [String(at), name])) };
+}
+
+/** A list fill in the reader's language, or undefined when any of its names is not a message this catalog words alone. */
+function wordList(fills: SaidPart["a"]): string | undefined {
+  const given = fills ?? {};
+  const items: string[] = [];
+  for (let at = 0; at < Object.keys(given).length; at++) {
+    const name = given[String(at)];
+    const item = typeof name === "string" ? wordSaid({ m: name }) : undefined;
+    if (item === undefined) return undefined;
+    items.push(item);
+  }
+  return items.length ? formatList(items) : undefined;
+}
+
 /** A message to fill another fact's blank with: filled only with strings, counts and times. */
 export function saidPart<N extends MessageName>(m: N, ...args: Args<N, never>): SaidPart {
   const [a] = args as [SaidPart["a"]?];
@@ -65,6 +99,7 @@ function isMessage(name: string): name is MessageName {
 function fillOf(value: Said["a"] extends Record<string, infer V> | undefined ? V : never) {
   if (typeof value === "string" || typeof value === "number") return value;
   if ("time" in value) return formatTime(value.time, { hour: "numeric", minute: "2-digit" });
+  if (value.m === SAID_LIST) return wordList(value.a);
   return wordSaid(value);
 }
 

@@ -660,6 +660,8 @@ export type OverrideEntry = {
   until: "version" | "task" | null;
   head: string | null;
   route: OverrideRoute | null;
+  /** The direction a `direction` route cites, as `d:<id>`; null otherwise. */
+  direction: string | null;
   merge_click: boolean;
   replaces: { at: string; holds: string[] } | null;
 };
@@ -669,11 +671,15 @@ export type OverrideEntry = {
  * stamps its own actor on the row: the captain's Merge anyway click
  * (`passChecksFromCard`) writes as the captain, and update_task override
  * (`declareOverride`), the first mate relaying the captain's words, writes
- * as the first mate. Any other actor is no known route, so it reads null.
+ * as the first mate. An override whose words are a heard direction of the
+ * task's project (INF-7021) records that direction, whoever wrote it, so
+ * the audit reads it apart from words the captain gave on the task. Any
+ * other actor is no known route, so it reads null.
  */
-export type OverrideRoute = "merge-anyway" | "relayed-words";
+export type OverrideRoute = "merge-anyway" | "relayed-words" | "direction";
 
-function overrideRoute(actor: string): OverrideRoute | null {
+function overrideRoute(actor: string, direction: string | null): OverrideRoute | null {
+  if (direction) return "direction";
   if (actor === "captain") return "merge-anyway";
   if (actor === "firstmate") return "relayed-words";
   return null;
@@ -694,7 +700,8 @@ function overrideEntries(tables: FleetTables, taskIds: readonly string[]): Overr
       holds: override.holds,
       until: override.until,
       head: override.head,
-      route: overrideRoute(override.actor),
+      route: overrideRoute(override.actor, override.direction),
+      direction: override.direction,
       merge_click: override.mergeClick,
       replaces: override.replaces
         ? { at: iso(override.replaces.at), holds: override.replaces.holds }

@@ -4,8 +4,10 @@ import { formatTime } from "./format.ts";
 import * as m from "./messages.generated.ts";
 import {
   englishOf,
+  SAID_LIST,
   said,
   saidLine,
+  saidList,
   saidMark,
   saidPart,
   wordedLine,
@@ -44,6 +46,40 @@ describe("a saved fact", () => {
       "Merging PR #61",
     );
     expect(wordedLine({ text: "Plain" })).toBe("Plain");
+  });
+
+  // The captain's pick on INF-7021's review: a direction's override line on
+  // a task's Activity names each hold it passes, in the reader's language.
+  it("words a list of messages it fills a blank with as one list in the reader's language", () => {
+    const line = saidLine(
+      said("taskOverrideDirectionGone", {
+        direction: "release-checks",
+        holds: saidList(["taskHoldChecks", "taskHoldWaits", "taskHoldCostLimit"]),
+      }),
+    );
+    expect(line.text).toBe(
+      "Your direction d:release-checks no longer stands, so it stops passing the checks, the waits and the cost limit on this task.",
+    );
+    setCurrentLanguage("de");
+    expect(wordedLine(line)).toBe(
+      "Deine Vorgabe d:release-checks gilt nicht mehr, daher halten diese Punkte die Aufgabe wieder zurück: die Überprüfungen, das Warten auf andere Arbeit und die Kostengrenze.",
+    );
+    setCurrentLanguage("ja");
+    expect(wordedLine(line)).toBe(
+      "あなたの方針 d:release-checks は有効でなくなったため、このタスクでチェック、ほかの作業の待ち、コスト上限の保留を越えられなくなりました。",
+    );
+  });
+
+  it("shows its saved English when its list names a message this catalog cannot word", () => {
+    const line = {
+      text: "Saved English",
+      said: said("taskOverrideDirectionGone", {
+        direction: "release-checks",
+        holds: { m: SAID_LIST, a: { "0": "taskHoldChecks", "1": "taskHoldGone" } },
+      }),
+    };
+    setCurrentLanguage("de");
+    expect(wordedLine(line)).toBe("Saved English");
   });
 });
 

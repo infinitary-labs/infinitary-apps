@@ -165,6 +165,7 @@ A change with no `from` still saves, on the first mate's own judgment: it guides
 A revision is heard only from what its own change carried, so a later revision with no cited words is not heard, even when an earlier one was.
 Only a heard current revision is consent: `keptYeses` (`src/core/tasks/alreadyAllowed.ts`) lists a project direction for a check approval or a visible validation effect only then, so an approval that rests on one waits for a click once its current revision is not heard.
 `renderDirections` serves each direction's `heard`, where it was heard or `false`, and Knowledge's inspector says it for the current revision and for each one in the history.
+A heard current project direction can also pass a task's soft holds, when the first mate cites it by its `d:` id for that task's override; the host ends the override once the direction is revised or retired (`docs/delivery-rigor.md`, "The override").
 
 A direction whose current revision was saved before Infinitary kept these marks has none, and reads as not heard (`docs/saved-data-compatibility.md`, "The knowledge collection").
 At the first start that finds any, the first mate is asked once to raise one card listing them, each a checkbox whose value is its `d:` id with none ticked (`askToConfirmDirections`, `src/core/orchestrator/directionsToConfirm.ts`; the captain's pick: "Confirm today's directions once, on one card").

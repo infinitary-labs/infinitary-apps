@@ -302,6 +302,13 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
           return {
             text: "Not closed: the words cited are the captain's click on a merge, which approves that merge and asks no close. Cite their words that ask the close, or close without captain_words.",
           };
+        // A direction's words pass only the holds its override names, never
+        // every hold a close's own words pass (INF-7021).
+        if (said.direction)
+          return {
+            // i18n-exempt: a refusal served to the first mate, never shown to a person
+            text: `Not closed: the standing words are the captain's direction d:${said.direction.id}, which passes only the holds its override names and asks no close. Cite their own words that ask the close, or close without captain_words.`,
+          };
         captainWords = said.words;
       }
       const close = () =>

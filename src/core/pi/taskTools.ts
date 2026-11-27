@@ -129,7 +129,9 @@ export type TaskToolsDelegate = {
    * Record the captain's override (docs/delivery-rigor.md, "The holds"):
    * his words from this turn, or from the message `from` cites - his reply
    * under a card of the task, or his line in its Crewmate tab - which the
-   * host keeps; refused without them, and in a scheduled check.
+   * host keeps; refused without them, and in a scheduled check. `from` may
+   * instead cite a heard direction of the task's project by its `d:` id,
+   * on any turn, a scheduled check included (INF-7021).
    */
   override(input: {
     task: string;
@@ -530,7 +532,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           },
           {
             description:
-              "Captain's words (this turn's; or from: a card id, their reply or click there; crewmate-tab; or standing, the recorded words, to add holds) pass soft holds you judge, until as they mean, even unrefused; empty holds takes it back.",
+              "Captain's words (this turn's; or from: a card id, their reply or click there; crewmate-tab; standing, the recorded words, to add holds; or a heard direction of the task's project by d: id, on any turn, ending when it is revised or retired) pass soft holds you judge, until as they mean, even unrefused; empty holds takes it back.",
           },
         ),
       ),

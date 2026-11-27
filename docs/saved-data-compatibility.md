@@ -615,6 +615,13 @@ A task's delivery facts may carry a `WebReadAsk` among its `writeAsks`, with `ki
 An older build knows no web ask, so it would list one as a write where the project lives with no method or path; downgrading with a page still waiting is unsupported.
 An older build ignores `readerHolds` and serves no `web_read`.
 
+## An override citing a direction
+
+A task's standing override (`HoldOverride`, `docs/delivery-rigor.md`, "The override") may carry `direction`, the id and revision of the heard project direction its words are; it rides the existing JSON and adds no migration.
+An older build ignores `direction` and reads such an override as one the captain's words gave, so it never ends it when the direction is revised or retired; downgrading while one stands is unsupported.
+The next start of a build that knows the field ends it if the direction changed meanwhile.
+Its Activity lines name the holds it passes as a list fill (`docs/i18n.md`, "Saved facts"), which an older build or phone cannot word, so it shows those lines in their saved English.
+
 ## Task tags
 
 A migration adds `project_tags`, each project's own tags, and `task_tags`, the tags each task carries with who set each (`docs/task-tags.md`); both start empty, so every project starts with no tags and every task carries none.

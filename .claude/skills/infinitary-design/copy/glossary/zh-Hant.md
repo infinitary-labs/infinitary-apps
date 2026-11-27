@@ -74,6 +74,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | header (an extra request header) | 標頭 | Microsoft Taiwan's word. |
 | held (a batch that stopped) | 暫緩 | 暫停 stays for what a person pauses. |
 | hold (on a task) | 暫緩 | 暫緩結束 for a hold ending. |
+| holds an override passes (named on a task's Activity) | asking first: 先問過你; the open decisions: 未決的決定; the waits: 對其他工作的等待; the open parts: 未完成的部分; the checks: 檢查; the delivery proof: 交付證明; the saved story: 已儲存的變更說明; the heavy-run line: 繁重執行的排隊; the cost limit: 費用上限; a retired hold: 已停用的項目 | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | 取得方法 | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated. |
 | inspector | 檢閱器 | The Knowledge pane that reads one entry, as Apple's Taiwan apps say. |

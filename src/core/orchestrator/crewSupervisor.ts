@@ -197,6 +197,7 @@ export class CrewSupervisor {
   /** The crew's side of a running program: its parts, its asks, its bound and its end. */
   private readonly crewPrograms: CrewPrograms;
   private readonly stopAllowedLinks: () => void;
+  private readonly stopDirectionWatch: () => void;
   /** A rule's notes as a file: bound once the Scheduler exists, which is built after the crew. */
   private ruleNotes: RuleNotes | undefined;
 
@@ -601,6 +602,15 @@ export class CrewSupervisor {
           for (const taskId of carriers) this.overrides.allowedNoticed(taskId);
         });
     });
+    // An override citing a direction ends once that direction changes
+    // (INF-7021). Ending it writes, so it runs after the knowledge write's
+    // notification, never inside it.
+    this.stopDirectionWatch =
+      options.knowledge?.onChange(() =>
+        queueMicrotask(() => {
+          if (!this.disposed) this.directionsChanged();
+        }),
+      ) ?? (() => {});
     this.briefs = new CrewBrief(options, {
       cards: this.cards,
       machineOf: (taskId) => this.facts.machineOf(taskId),
@@ -811,7 +821,19 @@ export class CrewSupervisor {
       }
       this.settling.settle.resumePendingSettles();
       this.settling.kept.resumeMergeAuthorizations();
+      // A direction revised or retired while the app was closed ends the
+      // override that cited it now.
+      this.directionsChanged();
     });
+  }
+
+  /** `CaptainOverrides.directionsChanged`, run from a hook or at start where a throw would be lost. */
+  private directionsChanged(): void {
+    try {
+      this.overrides.directionsChanged();
+    } catch (caught) {
+      console.warn("[crew] overrides citing a direction could not be checked:", caught);
+    }
   }
 
   /**
@@ -1647,6 +1669,7 @@ export class CrewSupervisor {
     this.disposed = true;
     this.cards.dispose();
     this.stopAllowedLinks();
+    this.stopDirectionWatch();
     // Each program runs again from its record at the next start.
     this.programs.dispose();
     this.watch.stopWatchdog();

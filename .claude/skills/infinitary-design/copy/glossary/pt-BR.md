@@ -72,6 +72,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | header (a request's) | cabeçalho | |
 | held (a batch that stopped) | retido | "Lote retido", "Retido desde as {since}"; the same verb as "a retém" on a merge a rule holds. |
 | hold (on a task) | retenção | "está retida", "quando a retenção acabar"; as in "a retém" for a merge. |
+| holds an override passes (named on a task's Activity) | asking first: a consulta prévia; the open decisions: as decisões em aberto; the waits: as esperas; the open parts: as partes em aberto; the checks: as verificações; the delivery proof: a prova de entrega; the saved story: a história salva; the heavy-run line: a fila de execuções pesadas; the cost limit: o limite de custo; a retired hold: uma retenção que não existe mais | Joined as one list in the reader's language on the line. |
 | How to get it (an ask for a secret) | Como obter | The heading over the steps a crewmate lays out for making or finding a secret. |
 | Infinitary | Infinitary | Never translated; masculine article: "o Infinitary". |
 | Intelligence | Inteligência | |

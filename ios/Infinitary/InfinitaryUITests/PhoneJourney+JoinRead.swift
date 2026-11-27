@@ -279,8 +279,9 @@ extension PhoneJourney {
     }
 
     /// INF-7024: an own theme saved at the computer reaches Settings, open on the phone, under Yours after the built-in
-    /// themes; picked, it draws the whole screen on its base and Settings' quiet words in the computer's worked-out
-    /// colors; removed at the computer, it leaves Yours and the pick goes back to its base, Dark. Device is chosen again.
+    /// themes; picked, it draws the whole screen on its base, and Settings' quiet words and Home's card in the computer's
+    /// worked-out colors; removed at the computer, it leaves Yours and the pick goes back to its base, Dark. Device is
+    /// chosen again.
     /// Data: the join part's test home and INF-6888's old green terminal. Leaves Settings open, drawing light.
     private func phoneOwnTheme() async throws {
         let theme = phoneThemeTiles, scope = app.staticTexts["phone-theme-scope"], yours = app.staticTexts["phone-theme-yours"]
@@ -295,13 +296,10 @@ extension PhoneJourney {
         XCTAssertEqual(labels.filter { $0 == "Old terminal" }.count, 1, "The own theme is one tile, under its own name")
         XCTAssertLessThan(theme.buttons["Tokyo Night"].frame.maxY, yours.frame.minY, "Yours follows the built-in themes")
         XCTAssertLessThanOrEqual(yours.frame.maxY, terminal.frame.minY)
-        // On an iPhone the built-in themes fill the sheet, so the list scrolls the tile into view for its picture and
-        // the scope line back for its colors. A tile under the sheet's foot still reads hittable, so its frame decides.
-        let foot = app.frame.maxY - 40
-        func bringUp() { for _ in 0..<4 where terminal.frame.maxY > foot { app.swipeUp(velocity: .slow) } }
-        func bringDown() { for _ in 0..<4 where scope.frame.minY < app.frame.minY + 120 { app.swipeDown(velocity: .slow) } }
+        func bringUp() { bringThemeTileUp(terminal) }
+        func bringDown() { bringThemeScopeDown() }
         bringUp()
-        XCTAssertLessThanOrEqual(terminal.frame.maxY, foot, "The own theme's tile shows whole")
+        XCTAssertLessThanOrEqual(terminal.frame.maxY, app.frame.maxY - 40, "The own theme's tile shows whole")
         picture("phone-theme-yours")
         // Under Light the own tile keeps its own colors, the light half of this change's hero picture pair.
         bringDown()
@@ -318,6 +316,14 @@ extension PhoneJourney {
         waitForInks("Old terminal", [(0x209a39, scope, 300, "Settings' quiet words")])
         bringUp()
         try drawn("phone-theme-old-terminal", dark: true)
+        // Cards take an own theme as its tokens rather than an id, so Home's card body is read in it too.
+        let close = app.buttons["close-phone-settings"]
+        tapOnPhone(close)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
+        try homeDrawn(in: ("Old terminal", true, 0x020a03, 0x209a39), "phone-theme-old-terminal-home")
+        try reopenAppearance()
+        bringUp()
+        XCTAssertTrue(terminal.isSelected, "The own pick is still chosen")
         _ = try await home("own-theme-remove")
         XCTAssertTrue(terminal.waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertFalse(yours.exists, "The last own theme removed takes Yours away")
@@ -394,7 +400,19 @@ extension PhoneJourney {
         try drawn(name, dark: look.dark)
     }
 
-    private func reopenAppearance() throws {
+    /// On an iPhone the built-in themes fill the sheet, so the list scrolls an own theme's tile into view. A tile under
+    /// the sheet's foot still reads hittable, and the grid draws a tile only near view, so its frame decides.
+    func bringThemeTileUp(_ tile: XCUIElement) {
+        for _ in 0..<4 where !tile.exists || tile.frame.maxY > app.frame.maxY - 40 { app.swipeUp(velocity: .slow) }
+    }
+
+    /// Scrolls Settings back until the theme's scope line, and the tiles at the top of the grid, show.
+    func bringThemeScopeDown() {
+        let scope = app.staticTexts["phone-theme-scope"]
+        for _ in 0..<4 where !scope.exists || scope.frame.minY < app.frame.minY + 120 { app.swipeDown(velocity: .slow) }
+    }
+
+    func reopenAppearance() throws {
         tapOnPhone(app.buttons["phone-settings"])
         let appearance = app.buttons["phone-settings-appearance"]
         XCTAssertTrue(appearance.waitForPresence(timeout: 10), app.debugDescription)

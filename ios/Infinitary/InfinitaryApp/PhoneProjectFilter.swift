@@ -136,7 +136,8 @@ struct PhoneFocusRow: View {
             HStack(spacing: PhoneTheme.space2) {
                 Button { openFilter() } label: {
                     HStack(spacing: 6) {
-                        Text(pill.name).foregroundStyle(PhoneTheme.text).lineLimit(1)
+                        // The name is what the whole phone is narrowed to, so on a narrow phone the counts give way first.
+                        Text(pill.name).foregroundStyle(PhoneTheme.text).lineLimit(1).layoutPriority(1)
                         Text(counts).foregroundStyle(PhoneTheme.muted).lineLimit(1)
                     }.font(PhoneFont.mono)
                         .padding(.horizontal, PhoneTheme.space3).frame(minHeight: 32)

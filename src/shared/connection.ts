@@ -381,7 +381,8 @@ const resultFrameSchemas = [
 /**
  * What a device sends: one hello first, then any number of requests, and
  * `leave` when its person leaves this home: the home takes the device off
- * its list and closes it as `unpaired` (docs/devices.md, "Leave"). A
+ * its list and closes it as `unpaired`, telling it first when it lists
+ * `removal-notice` (docs/devices.md, "Leave"). A
  * computer that runs work also answers what the home asks it, with one
  * `result` per request id (src/shared/work.ts). A phone whose home lists
  * `CATCH_UP_SHOWN` sends one `shown` once its catch-up shows.

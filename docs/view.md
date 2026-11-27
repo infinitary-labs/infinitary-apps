@@ -544,7 +544,7 @@ When the other Mac is in reach the device sends the connection's `leave` frame, 
 Either way this Mac deletes its grant and its key, notes which Mac and which device on its list it left, and returns to its own first launch, which says "This computer left MacBook Pro."
 The work there keeps its own grant until the other Mac's removal reaches it, and this window never opens that Mac again with it (`docs/helper.md`, "A Mac that also controls").
 
-**Removed at the other Mac**: a connection closed as `unpaired` (`4401`), or two `401` answers in a row to the device's upgrade, means that Mac took this one off its list.
+**Removed at the other Mac**: the home's `unpaired` frame and the close after it (`removal-notice`, `docs/connection.md` "Closing"), a connection closed as `unpaired` (`4401`), or two `401` answers in a row to the device's upgrade, means that Mac took this one off its list.
 This Mac does the same as for Leave without telling it, and its first launch says "MacBook Pro removed this computer.
 Paste a new link to come back."
 

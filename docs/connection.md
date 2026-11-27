@@ -49,7 +49,7 @@ Every refusal happens on the upgrade, before the device can send a frame:
 
 The pairing seam is `any()`, `subscribe(listener)`, `identity()` (the home's TLS key and certificate), `admit(request)` (the paired device the upgrade request's TLS socket proves to be, or null), `holds(deviceId)` and `claim(body, request)` (a device using its link at `/pair`).
 Pairing decides how a device proves itself; the connection never reads a secret from an address.
-A change to what is paired reaches the connection before the change returns: every connected device whose `holds` no longer answers true is closed in that same call (`unpaired`), and a frame from a device no longer held is dropped and the device closed.
+A change to what is paired reaches the connection before the change returns: every connected device whose `holds` no longer answers true is closed in that same call (`unpaired`), or, when its hello lists `removal-notice`, told so in that call and closed once it closes itself or the grace passes ("Closing"), and a frame from a device no longer held is dropped and the device closed.
 
 Beside `/connection` and `/pair`, the listener answers two plain requests from a computer that runs work, admitted by the same seam: `/firstmate`, this app (`docs/devices.md`, "Getting Infinitary by its own key"), and `/infinitary-source`, the committed tree of the commit a home run from source runs (`FETCH_SOURCE_PATH`, `docs/devices.md`, "Matching the home's build").
 
@@ -174,7 +174,7 @@ An empty argument before a given one still goes as null, so a request that can h
 - A device whose `access` is `read` is answered its reads and sent every push; a channel whose `effect` is `change` is refused, until the device is updated, and does not reach the core.
   The one exception is `READ_ONLY_ASKS` (`src/shared/contractFeatures.ts`): a view's `inf:converse` with a single non-blank string, the captain's plain words, is forwarded as above, which a home on major 16 or later does by its version and an older home announces by listing `messages-while-reading` (`docs/view.md`, "Read only").
   So are a view's `inf:home-update:install` and `inf:home-update:later` with no arguments, the home's own update (`home-update`, `docs/view.md` "Updating the first mate's computer").
-- A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired` (`docs/devices.md`, "Leave").
+- A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired`, telling it first when its hello lists `removal-notice` ("Closing"; `docs/devices.md`, "Leave").
 
 The home asks a computer that runs work the same way, with `invoke` and one `result` per `id` (`HomeConnection.ask`): only a connected `work` device whose welcome said it takes work, and only the orders in `src/shared/work.ts`, `src/shared/workBrowsers.ts`, `src/shared/signIns.ts` and `src/shared/resources.ts`.
 In the core it reaches them through `WorkDevices` (`src/core/placed/workDevices.ts`), to which the shell attaches the connection once it starts it and from which it takes it back before it closes it.

@@ -30,8 +30,11 @@ const CAPTURE_STABLE_MAX_POLLS = 30;
 const captureWindows = new Set<BrowserWindow>();
 
 type Box = { width: number; height: number; pending?: boolean };
-/** A framed panel's iframe, by the start of its address and its drawn size. */
-type FramePlace = { prefix: string; width: number; height: number };
+/**
+ * A framed panel's iframe, by the start of its address and its drawn size;
+ * `auto` when the frame takes its document's height rather than filling the panel.
+ */
+type FramePlace = { prefix: string; width: number; height: number; auto?: boolean };
 type Snapshot = {
   html: string;
   css: string;
@@ -143,7 +146,12 @@ function panelSnapshotScript(panelId: string): string {
       const rect = source.getBoundingClientRect();
       const marker = document.createElement("div");
       marker.setAttribute("data-capture-frame", String(frames.length));
-      frames.push({ prefix: src.slice(0, end + 1), width: rect.width, height: rect.height });
+      frames.push({
+        prefix: src.slice(0, end + 1),
+        width: rect.width,
+        height: rect.height,
+        auto: source.style.height !== "100%",
+      });
       node.replaceWith(marker);
     });
     clone.querySelectorAll("script, object, embed, link, meta").forEach((node) => node.remove());
@@ -159,28 +167,46 @@ ${CSS_COLLECTOR}
   const body = document.body ? document.body.cloneNode(true) : null;
   if (!body) return null;
   body.querySelectorAll("script, iframe, object, embed, link, meta").forEach((node) => node.remove());
-  return collectCss().then((css) => ({ css, bodyHtml: body.innerHTML }));
+  const height = document.body.getBoundingClientRect().height;
+  return collectCss().then((css) => ({ css, bodyHtml: body.innerHTML, height }));
 })()`;
 
-async function readFrames(win: BrowserWindow, places: FramePlace[]): Promise<CaptureFrame[]> {
+/**
+ * Each frame's document, and how much taller (or shorter) the panel is than
+ * the window drew it. A frame out of sight - on a rail folded away for a
+ * card - is throttled: its document lays out, but its height
+ * report waits on an animation frame that never comes, so the iframe keeps
+ * the height of whatever it drew last, or none for a version placed while
+ * the rail was away. An auto-height frame is sized from its document here,
+ * measured as the page measures itself (`resize` in frameScript.ts), so the
+ * picture is the panel as it draws once the rail is back.
+ */
+async function readFrames(
+  win: BrowserWindow,
+  places: FramePlace[],
+): Promise<{ frames: CaptureFrame[]; grow: number }> {
   const subtree = win.webContents.mainFrame.framesInSubtree;
   const frames: CaptureFrame[] = [];
+  let grow = 0;
   for (const place of places) {
     const frame = subtree.find((candidate) => candidate.url.startsWith(place.prefix));
     const read = frame
       ? ((await frame.executeJavaScript(FRAME_READ_SCRIPT, true).catch(() => null)) as {
           css: string;
           bodyHtml: string;
+          height: number;
         } | null)
       : null;
+    const height = place.auto && read && read.height > 0 ? Math.ceil(read.height) : place.height;
+    grow += height - place.height;
     frames.push({
       css: read?.css ?? "",
       bodyHtml: read?.bodyHtml ?? "",
       width: place.width,
-      height: place.height,
+      height,
     });
   }
-  return frames;
+  return { frames, grow };
 }
 
 async function stablePanelBox(win: BrowserWindow, panelId: string): Promise<Box | null> {
@@ -317,6 +343,11 @@ export async function captureDockedPanel(input: {
     true,
   )) as Snapshot | null;
   if (!snapshot || snapshot.width < 1 || snapshot.height < 1) return null;
-  const frames = await readFrames(win, snapshot.frames ?? []);
-  return renderSnapshot(win, snapshot, frames, input.theme);
+  const { frames, grow } = await readFrames(win, snapshot.frames ?? []);
+  return renderSnapshot(
+    win,
+    { ...snapshot, height: Math.max(1, snapshot.height + grow) },
+    frames,
+    input.theme,
+  );
 }

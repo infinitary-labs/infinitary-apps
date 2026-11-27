@@ -662,7 +662,12 @@ describe("the dispatched workflow's gate", () => {
     );
     expect(call.strategy).toBeUndefined();
     // INF-2410's scheme A: its jobs' names lead with the release's trigger.
-    expect(inputs).toEqual({ trigger: "Requested TestFlight", source_commit: source });
+    // INF-7079's fix 4: release asks for the release phone queue (tests/phone-ci.test.ts owns where it lands).
+    expect(inputs).toEqual({
+      trigger: "Requested TestFlight",
+      source_commit: source,
+      release: true,
+    });
     expect(phone.on.workflow_call.inputs.source_commit.type).toBe("string");
     expect(phone.on.workflow_call.inputs.device).toMatchObject({ type: "string", default: "" });
     const contexts = {

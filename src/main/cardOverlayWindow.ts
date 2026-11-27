@@ -109,6 +109,13 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     win.webContents.on("before-mouse-event", (_event, mouse) => {
       if (mouse.type === "mouseDown") pressed = true;
     });
+    // Hiding the app gives the activation back to the app behind it, the game. A panel that
+    // lost the keys first went because the person moved to another app, Infinitary's own
+    // window included, which keeps it. Each way out passes here once while the panel shows.
+    const handBack = () => {
+      if (pressed && win.isVisible() && win.isFocused()) app.hide();
+      pressed = false;
+    };
     const panel: OverlayPanel = {
       showWithKeys: () => {
         if (!win.isDestroyed()) win.show();
@@ -118,15 +125,13 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       },
       hide: () => {
         if (win.isDestroyed()) return;
-        const hadKeys = win.isFocused();
+        handBack();
         win.hide();
-        // Hiding the app gives the activation back to the app behind it, the game. A panel that
-        // lost the keys first went because the person moved to another app, Infinitary's own
-        // window included, which keeps it.
-        if (pressed && hadKeys) app.hide();
       },
       destroy: () => {
-        if (!win.isDestroyed()) win.destroy();
+        if (win.isDestroyed()) return;
+        handBack();
+        win.destroy();
       },
       askToLeave: () => {
         if (!win.isDestroyed() && !win.webContents.isDestroyed())

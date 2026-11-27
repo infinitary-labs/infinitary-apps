@@ -1,5 +1,5 @@
 ---
-source: b740a04367a85517
+source: 0a2abffa6cee2faa
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -69,6 +69,8 @@ No computador em que seu imediato vive, eles ficam em **Sites com login** em **S
   0% é o padrão.
 - **Tema** é **Escuro**, **Claro** ou um de treze temas com o nome que o autor deu, como **Dracula**, **Catppuccin Mocha** ou **Rosé Pine Dawn**.
   A escolha muda na hora as cores da janela, dos cartões e dos painéis, e as setas do teclado passam de uma opção para outra.
+  Para ter um tema seu, descreva-o ao seu imediato, como "um terminal verde antigo": ele salva o tema em **Seus** e o aplica na hora, e o Infinitary mantém todas as cores fáceis de ler.
+  **Descrever o seu** começa essa mensagem, e **Remover** apaga o tema seu que está em uso.
 
 ### Fontes {#fonts}
 

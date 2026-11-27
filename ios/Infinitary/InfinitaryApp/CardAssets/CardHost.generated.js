@@ -62414,6 +62414,142 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Light`;
   }
+  function settingsAppearanceThemeOwnDescribe() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف سمتك`;
+      case "de":
+        return `Eigenes beschreiben`;
+      case "es":
+        return `Describe el tuyo`;
+      case "fr":
+        return `Décrire le vôtre`;
+      case "ja":
+        return `自分で説明する`;
+      case "ko":
+        return `직접 설명하기`;
+      case "pt-BR":
+        return `Descrever o seu`;
+      case "zh-Hans":
+        return `描述你自己的`;
+      case "zh-Hant":
+        return `描述你自己的`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ýöûŕ öŵñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe your own‬`;
+    }
+    return `Describe your own`;
+  }
+  function settingsAppearanceThemeOwnDraft() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اصنع سمة ألوان خاصة بي: `;
+      case "de":
+        return `Mach mir ein eigenes Farbdesign: `;
+      case "es":
+        return `Haz mi propio tema de colores: `;
+      case "fr":
+        return `Crée mon propre thème de couleurs : `;
+      case "ja":
+        return `自分だけのカラーテーマを作ってください：`;
+      case "ko":
+        return `나만의 색상 테마를 만들어 주세요: `;
+      case "pt-BR":
+        return `Crie meu próprio tema de cores: `;
+      case "zh-Hans":
+        return `为我做一个自己的颜色主题：`;
+      case "zh-Hant":
+        return `為我做一個自己的顏色主題：`;
+      case "en-XA":
+        return `[Ṁáķé ɱý öŵñ çöļöŕ ţĥéɱé:  ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make my own color theme: ‬`;
+    }
+    return `Make my own color theme: `;
+  }
+  function settingsAppearanceThemeOwnRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Supprimer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `삭제`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsAppearanceThemeOwnRemoveNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}`;
+      case "de":
+        return `${name} entfernen`;
+      case "es":
+        return `Quitar ${name}`;
+      case "fr":
+        return `Supprimer ${name}`;
+      case "ja":
+        return `${name} を削除`;
+      case "ko":
+        return `${name} 삭제`;
+      case "pt-BR":
+        return `Remover ${name}`;
+      case "zh-Hans":
+        return `移除 ${name}`;
+      case "zh-Hant":
+        return `移除 ${name}`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}`;
+    }
+    return `Remove ${name}`;
+  }
+  function settingsAppearanceThemeYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سماتك`;
+      case "de":
+        return `Deine`;
+      case "es":
+        return `Tuyos`;
+      case "fr":
+        return `Les vôtres`;
+      case "ja":
+        return `あなたのテーマ`;
+      case "ko":
+        return `내 테마`;
+      case "pt-BR":
+        return `Seus`;
+      case "zh-Hans":
+        return `你的`;
+      case "zh-Hant":
+        return `你的`;
+      case "en-XA":
+        return `[Ýöûŕš ~~]`;
+      case "ar-XB":
+        return `‮Yours‬`;
+    }
+    return `Yours`;
+  }
   function settingsAppearanceWash() {
     switch (currentLanguage()) {
       case "ar":
@@ -117807,6 +117943,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceThemeDark,
     settingsAppearanceThemeDescription,
     settingsAppearanceThemeLight,
+    settingsAppearanceThemeOwnDescribe,
+    settingsAppearanceThemeOwnDraft,
+    settingsAppearanceThemeOwnRemove,
+    settingsAppearanceThemeOwnRemoveNamed,
+    settingsAppearanceThemeYours,
     settingsAppearanceWash,
     settingsAppearanceWashDescription,
     settingsAppearanceWashValue,
@@ -121517,6 +121658,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceThemeDark": [],
     "settingsAppearanceThemeDescription": [],
     "settingsAppearanceThemeLight": [],
+    "settingsAppearanceThemeOwnDescribe": [],
+    "settingsAppearanceThemeOwnDraft": [],
+    "settingsAppearanceThemeOwnRemove": [],
+    "settingsAppearanceThemeOwnRemoveNamed": ["name"],
+    "settingsAppearanceThemeYours": [],
     "settingsAppearanceWash": [],
     "settingsAppearanceWashDescription": [],
     "settingsAppearanceWashValue": ["percent"],
@@ -128404,6 +128550,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     "ambient-music": true,
     // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
     "ambient-own-style": true,
+    "own-theme": [
+      "destructive",
+      "Saving under a saved theme's name replaces its colors for good, and remove deletes one"
+    ],
     "ambient-away": true,
     "card-size": true,
     language: true,

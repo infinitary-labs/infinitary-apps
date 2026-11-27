@@ -2814,6 +2814,11 @@
 "settingsAppearanceThemeDark" = "Dark";
 "settingsAppearanceThemeDescription" = "Dark, Light, or a theme its maker named. Every color in the window follows.";
 "settingsAppearanceThemeLight" = "Light";
+"settingsAppearanceThemeOwnDescribe" = "Describe your own";
+"settingsAppearanceThemeOwnDraft" = "Make my own color theme: ";
+"settingsAppearanceThemeOwnRemove" = "Remove";
+"settingsAppearanceThemeOwnRemoveNamed" = "Remove %1$@";
+"settingsAppearanceThemeYours" = "Yours";
 "settingsAppearanceWash" = "Window wash";
 "settingsAppearanceWashDescription" = "How much of the theme color covers the blurred background. 0%% is the default.";
 "settingsAppearanceWashValue" = "%1$@%% opacity";

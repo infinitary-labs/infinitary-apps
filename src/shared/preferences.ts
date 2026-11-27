@@ -3,6 +3,7 @@ import { ownStylesSchema } from "./ambientOwn";
 import { AMBIENT_STYLES, type AmbientStyle, DEFAULT_AMBIENT_STYLE } from "./ambientStyles";
 import { colorThemeSchema } from "./colorThemes";
 import { fontChoicesSchema } from "./fonts";
+import { ownColorThemesSchema } from "./ownColorThemes";
 import { type SidePanelPlacement, sidePanelPlacementSchema } from "./plugins/manifest";
 import { usageUnitSchema } from "./usage";
 
@@ -100,6 +101,13 @@ export const appearanceSchema = z.strictObject({
    * older build switched drops it.
    */
   colorTheme: colorThemeSchema.optional(),
+  /**
+   * The person's own color themes, made by the first mate from their words
+   * (src/shared/ownColorThemes.ts); missing means none. `colorTheme` may name
+   * one by its id. The core keeps them in a row of their own, so an older
+   * build never meets them.
+   */
+  ownColorThemes: ownColorThemesSchema.optional(),
   /** Missing on older installs keeps content-based sizing. */
   defaultCardSize: defaultCardSizeSchema.optional(),
   /**

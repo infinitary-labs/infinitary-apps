@@ -1,9 +1,9 @@
 import {
-  type BuiltInThemeId,
-  builtInTheme,
   COLOR_THEME_ATTRIBUTE,
+  COLOR_THEME_SHEET,
   frameThemeRule,
-  shownTheme,
+  type OwnThemeColors,
+  themeOf,
   themeRule,
 } from "@shared/colorThemes";
 import type { Theme } from "@shared/preferences";
@@ -18,10 +18,10 @@ import { useSyncExternalStore } from "react";
  * card or panel follows without being built again.
  */
 
-const SHEET_ID = "inf-color-theme";
-
-/** The chosen built-in theme, or null for plain Dark or Light. */
-let chosen: BuiltInThemeId | null = null;
+/** The chosen theme, built-in or the person's own, or null for plain Dark or Light. */
+let chosen: string | null = null;
+/** The person's own themes, which `chosen` may name. */
+let own: readonly OwnThemeColors[] = [];
 let drawn = 0;
 const listeners = new Set<() => void>();
 
@@ -31,7 +31,7 @@ const listeners = new Set<() => void>();
  * own on one drawn in the other, such as a picture of either.
  */
 export function themeFrameStyle(theme: Theme): string {
-  return frameThemeRule(theme, chosen);
+  return frameThemeRule(theme, chosen, own);
 }
 
 const readDrawn = () => drawn;
@@ -53,32 +53,38 @@ export function useThemeColorsDrawn(): number {
  * the theme changes reads them again.
  */
 export function followColorTheme(
-  choice: () => { theme: Theme; colorTheme: string | null },
+  choice: () => { theme: Theme; colorTheme: string | null; own: readonly OwnThemeColors[] },
   subscribe: (listener: () => void) => () => void,
   doc: Document = document,
 ): () => void {
   let applied = "";
   const apply = () => {
-    const { theme, colorTheme } = choice();
-    const id = shownTheme(colorTheme, theme);
-    const key = `${theme}:${id ?? ""}`;
+    const choosing = choice();
+    const worked = themeOf(choosing.colorTheme, choosing.own);
+    const id = worked?.base === choosing.theme ? choosing.colorTheme : null;
+    // An own theme saved again under its name keeps its id: its rule is part of the key.
+    const rule = id && worked ? themeRule(worked.tokens) : "";
+    const key = `${choosing.theme}:${id ?? ""}:${rule}`;
     if (key === applied) return;
     applied = key;
-    let sheet = doc.getElementById(SHEET_ID);
+    let sheet = doc.getElementById(COLOR_THEME_SHEET.id);
     if (id) {
       if (!sheet) {
         sheet = doc.createElement("style");
-        sheet.id = SHEET_ID;
+        sheet.id = COLOR_THEME_SHEET.id;
       }
       // Last in the head on every change, so it follows every color sheet, a late one included.
       doc.head.append(sheet);
-      sheet.textContent = themeRule(builtInTheme(id).tokens);
+      sheet.textContent = rule;
+      // A picture of a panel copies the rule and lays it only on this base (src/main/host/panelCapture.ts).
+      sheet.setAttribute(COLOR_THEME_SHEET.base, choosing.theme);
       doc.body.setAttribute(COLOR_THEME_ATTRIBUTE, id);
     } else {
       sheet?.remove();
       doc.body.removeAttribute(COLOR_THEME_ATTRIBUTE);
     }
     chosen = id;
+    own = choosing.own;
     drawn += 1;
     for (const listener of listeners) listener();
   };

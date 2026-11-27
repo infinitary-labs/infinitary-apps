@@ -44,7 +44,7 @@ Model changes still require the captain.
 ## App action catalog (4.54, pieces 1–4)
 
 `app_state` reads the shared catalog in `src/shared/actions.ts`: area, strict value schema, current value, tier, and consistent static `captainAllowed` / `firstmateAllowed` flags, plus `allowedNow` for the current code-stamped wake.
-`app_state` with `area: "reads"` lists the named reads with their args, and with `read` it answers one of them on demand (`APP_READS` in `src/core/pi/appReads.ts`): what Settings shows beyond the lines' current values - usage, an automation's runs and next dates, kept jobs, the update, the computers' readings, one of the person's own ambient styles whole, the keyboard keys, copies and moves, and a runbook's crew part (`docs/runbooks.md`, "Reading a runbook's crew part").
+`app_state` with `area: "reads"` lists the named reads with their args, and with `read` it answers one of them on demand (`APP_READS` in `src/core/pi/appReads.ts`): what Settings shows beyond the lines' current values - usage, an automation's runs and next dates, kept jobs, the update, the computers' readings, one of the person's own ambient styles or color themes whole, the keyboard keys, copies and moves, and a runbook's crew part (`docs/runbooks.md`, "Reading a runbook's crew part").
 A read the window's read catalog names runs through that entry's own args and request; nothing a read answers joins the context a turn builds.
 `app_change` takes a top-level action enum, value, and evidence.
 The dispatcher enforces actor permissions independently.
@@ -128,6 +128,10 @@ A window's own setting (its look, layout, update and key reminder, `window: true
 
 `window-size` (FI3-524, `asked`) claims the appearance row's size: 100, 110, 125 or 150 percent.
 The Size picker, the size keys, the View menu and command search make the same change as the captain, so a run of them leaves one attributed feed line and operation, and the first mate makes it when asked.
+
+`own-theme` (`asked`) saves, changes and removes the person's own color themes, as `ambient-own-style` does for ambient styles (docs/themes.md, "Your own themes").
+A save is a name, an optional built-in theme to start from and the colors that differ; the line tells each color's job, the app keeps colors readable, and its answer names each color the app moved.
+A theme with a fault is refused in words and nothing changes; the `theme` line wears a saved one by its `own-` id.
 
 ### Settled runs
 

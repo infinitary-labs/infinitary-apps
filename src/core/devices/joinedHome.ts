@@ -11,6 +11,7 @@ import {
   type SteppedDown,
   steppedDownSchema,
 } from "@shared/devices";
+import { ownColorThemesSchema } from "@shared/ownColorThemes";
 import {
   type Appearance,
   appearanceSchema,
@@ -65,6 +66,12 @@ const colorThemeFileSchema = z.strictObject({
   version: z.literal(1),
   theme: colorThemeSchema,
   base: themeSchema,
+});
+/** The person's own color themes, beside the look for the same reason (docs/themes.md, "Your own themes"). */
+const OWN_THEMES_FILE = "own-color-themes.json";
+const ownThemesFileSchema = z.strictObject({
+  version: z.literal(1),
+  themes: ownColorThemesSchema,
 });
 /**
  * The grant this app kept its own first mate beside: it came while the
@@ -391,7 +398,12 @@ export class JoinedHome {
         keyboard,
       } = lookSchema.parse(JSON.parse(readFileSync(path, "utf8")));
       const colorTheme = this.colorTheme(saved.theme);
-      const appearance = colorTheme === null ? saved : { ...saved, colorTheme };
+      const ownColorThemes = this.ownThemes();
+      const appearance = {
+        ...saved,
+        ...(colorTheme === null ? {} : { colorTheme }),
+        ...(ownColorThemes.length === 0 ? {} : { ownColorThemes }),
+      };
       return keyboard === undefined ? { appearance, layout } : { appearance, layout, keyboard };
     } catch {
       return null;
@@ -399,10 +411,25 @@ export class JoinedHome {
   }
 
   setLook(look: OwnLook): void {
-    const { colorTheme, ...appearance } = look.appearance;
+    const { colorTheme, ownColorThemes, ...appearance } = look.appearance;
     this.write(LOOK_FILE, { version: 1, ...look, appearance });
     if (colorTheme === undefined) rmSync(join(this.dir, COLOR_THEME_FILE), { force: true });
     else this.write(COLOR_THEME_FILE, { version: 1, theme: colorTheme, base: appearance.theme });
+    // A look without them keeps the saved ones, as the home's own store does.
+    if (ownColorThemes === undefined) return;
+    if (ownColorThemes.length === 0) rmSync(join(this.dir, OWN_THEMES_FILE), { force: true });
+    else this.write(OWN_THEMES_FILE, { version: 1, themes: ownColorThemes });
+  }
+
+  /** The saved own color themes; a file that cannot be read is none. */
+  private ownThemes(): NonNullable<Appearance["ownColorThemes"]> {
+    const path = join(this.dir, OWN_THEMES_FILE);
+    if (!existsSync(path)) return [];
+    try {
+      return ownThemesFileSchema.parse(JSON.parse(readFileSync(path, "utf8"))).themes;
+    } catch {
+      return [];
+    }
   }
 
   /** The saved color theme when it was chosen on `base`, else null; one that cannot be read is none. */

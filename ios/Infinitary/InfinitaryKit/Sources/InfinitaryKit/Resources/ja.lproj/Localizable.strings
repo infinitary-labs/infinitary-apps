@@ -2814,6 +2814,11 @@
 "settingsAppearanceThemeDark" = "ダーク";
 "settingsAppearanceThemeDescription" = "ダーク、ライト、または作者が名付けたテーマ。ウィンドウのすべての色が切り替わります。";
 "settingsAppearanceThemeLight" = "ライト";
+"settingsAppearanceThemeOwnDescribe" = "自分で説明する";
+"settingsAppearanceThemeOwnDraft" = "自分だけのカラーテーマを作ってください：";
+"settingsAppearanceThemeOwnRemove" = "削除";
+"settingsAppearanceThemeOwnRemoveNamed" = "%1$@ を削除";
+"settingsAppearanceThemeYours" = "あなたのテーマ";
 "settingsAppearanceWash" = "ウインドウの色合い";
 "settingsAppearanceWashDescription" = "ぼかした背景をテーマの色がどれだけ覆うかを設定します。標準は0%%です。";
 "settingsAppearanceWashValue" = "不透明度%1$@%%";

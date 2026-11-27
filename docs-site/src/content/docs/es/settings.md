@@ -1,5 +1,5 @@
 ---
-source: b740a04367a85517
+source: 0a2abffa6cee2faa
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -69,6 +69,8 @@ En la computadora donde vive tu primer oficial, están en **Sitios con sesión i
   0 % es el valor predeterminado.
 - **Tema** es **Oscuro**, **Claro** o uno de trece temas con el nombre que les dio su autor, como **Dracula**, **Catppuccin Mocha** o **Rosé Pine Dawn**.
   Tu elección cambia al instante los colores de la ventana, sus tarjetas y sus paneles, y las flechas del teclado pasan de una opción a otra.
+  Para tener un tema propio, descríbeselo a tu primer oficial, por ejemplo «una terminal verde antigua»: lo guarda en **Tuyos** y lo aplica al instante, e Infinitary mantiene cada color fácil de leer.
+  **Describe el tuyo** empieza ese mensaje, y **Quitar** borra el tema tuyo que tienes puesto.
 
 ### Fuentes {#fonts}
 

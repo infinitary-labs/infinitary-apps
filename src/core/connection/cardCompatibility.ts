@@ -15,6 +15,8 @@ export const AMBIENT_STYLE = contractChange("ambient-style");
 export const AMBIENT_AWAY = contractChange("ambient-away");
 /** A built-in color theme over Dark or Light in the look (`color-theme.md`). */
 export const COLOR_THEME = contractChange("color-theme");
+/** The person's own color themes in the look (`own-color-themes.md`). */
+export const OWN_COLOR_THEMES = contractChange("own-color-themes");
 export const AMBIENT_OWN_STYLES = contractChange("ambient-own-styles");
 /** Own styles past the 12 an older view reads (`ambient-own-styles-uncapped.md`). */
 export const AMBIENT_OWN_STYLES_UNCAPPED = contractChange("ambient-own-styles-uncapped");

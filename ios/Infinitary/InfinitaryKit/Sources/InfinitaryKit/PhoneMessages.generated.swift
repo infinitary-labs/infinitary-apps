@@ -2954,6 +2954,11 @@ public enum PhoneMessages {
     public static func `settingsAppearanceThemeDark`() -> String { PhoneWords.format("settingsAppearanceThemeDark", []) }
     public static func `settingsAppearanceThemeDescription`() -> String { PhoneWords.format("settingsAppearanceThemeDescription", []) }
     public static func `settingsAppearanceThemeLight`() -> String { PhoneWords.format("settingsAppearanceThemeLight", []) }
+    public static func `settingsAppearanceThemeOwnDescribe`() -> String { PhoneWords.format("settingsAppearanceThemeOwnDescribe", []) }
+    public static func `settingsAppearanceThemeOwnDraft`() -> String { PhoneWords.format("settingsAppearanceThemeOwnDraft", []) }
+    public static func `settingsAppearanceThemeOwnRemove`() -> String { PhoneWords.format("settingsAppearanceThemeOwnRemove", []) }
+    public static func `settingsAppearanceThemeOwnRemoveNamed`(`name`: String) -> String { PhoneWords.format("settingsAppearanceThemeOwnRemoveNamed", [`name`]) }
+    public static func `settingsAppearanceThemeYours`() -> String { PhoneWords.format("settingsAppearanceThemeYours", []) }
     public static func `settingsAppearanceWash`() -> String { PhoneWords.format("settingsAppearanceWash", []) }
     public static func `settingsAppearanceWashDescription`() -> String { PhoneWords.format("settingsAppearanceWashDescription", []) }
     public static func `settingsAppearanceWashValue`(`percent`: String) -> String { PhoneWords.format("settingsAppearanceWashValue", [`percent`]) }
@@ -7760,6 +7765,11 @@ extension PhoneWords {
         "settingsAppearanceThemeDark": [],
         "settingsAppearanceThemeDescription": [],
         "settingsAppearanceThemeLight": [],
+        "settingsAppearanceThemeOwnDescribe": [],
+        "settingsAppearanceThemeOwnDraft": [],
+        "settingsAppearanceThemeOwnRemove": [],
+        "settingsAppearanceThemeOwnRemoveNamed": ["name"],
+        "settingsAppearanceThemeYours": [],
         "settingsAppearanceWash": [],
         "settingsAppearanceWashDescription": [],
         "settingsAppearanceWashValue": ["percent"],

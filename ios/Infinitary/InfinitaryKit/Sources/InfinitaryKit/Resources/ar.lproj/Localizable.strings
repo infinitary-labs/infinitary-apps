@@ -2814,6 +2814,11 @@
 "settingsAppearanceThemeDark" = "داكنة";
 "settingsAppearanceThemeDescription" = "داكنة أو فاتحة أو سمة باسم صانعيها. تتبعها كل ألوان النافذة.";
 "settingsAppearanceThemeLight" = "فاتحة";
+"settingsAppearanceThemeOwnDescribe" = "صف سمتك";
+"settingsAppearanceThemeOwnDraft" = "اصنع سمة ألوان خاصة بي: ";
+"settingsAppearanceThemeOwnRemove" = "إزالة";
+"settingsAppearanceThemeOwnRemoveNamed" = "إزالة %1$@";
+"settingsAppearanceThemeYours" = "سماتك";
 "settingsAppearanceWash" = "تلوين النافذة";
 "settingsAppearanceWashDescription" = "مقدار ما يغطيه لون السمة من الخلفية المموّهة. القيمة الافتراضية 0%%.";
 "settingsAppearanceWashValue" = "عتامة %1$@%%";

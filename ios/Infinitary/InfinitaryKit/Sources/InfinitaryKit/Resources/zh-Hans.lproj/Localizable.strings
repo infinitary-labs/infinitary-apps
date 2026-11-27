@@ -2814,6 +2814,11 @@
 "settingsAppearanceThemeDark" = "深色";
 "settingsAppearanceThemeDescription" = "深色、浅色，或由作者命名的主题。窗口中的所有颜色都会随之改变。";
 "settingsAppearanceThemeLight" = "浅色";
+"settingsAppearanceThemeOwnDescribe" = "描述你自己的";
+"settingsAppearanceThemeOwnDraft" = "为我做一个自己的颜色主题：";
+"settingsAppearanceThemeOwnRemove" = "移除";
+"settingsAppearanceThemeOwnRemoveNamed" = "移除 %1$@";
+"settingsAppearanceThemeYours" = "你的";
 "settingsAppearanceWash" = "窗口底色";
 "settingsAppearanceWashDescription" = "主题颜色覆盖模糊背景的程度。默认为 0%%。";
 "settingsAppearanceWashValue" = "%1$@%% 不透明度";

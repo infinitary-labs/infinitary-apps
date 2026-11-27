@@ -22,6 +22,28 @@ NOTICE credits each source theme with its MIT copyright and permission notice.
 
 The built-in themes are Rosé Pine, Rosé Pine Moon, Rosé Pine Dawn, Catppuccin Latte, Catppuccin Frappé, Catppuccin Macchiato, Catppuccin Mocha, One Dark, One Light, Dracula, Night Owl, Night Owl Light and Tokyo Night, in that order.
 
+## Your own themes
+
+A person makes a theme of their own by asking the first mate in plain words, such as "an old green terminal".
+The first mate's `own-theme` line (`src/shared/themeActions.ts`) saves it under its name with `save` and takes it away with `remove`; the format and its check are `src/shared/ownColorThemes.ts`.
+
+- **The format.**
+  A save is a `name`, an optional `like`, a built-in theme's id to start from, and `colors`: any of the six as `#rrggbb`.
+  `background` and `accent` are needed unless `like` gives them.
+  A color left out comes from `like`; with no `like`, `text` is worked out from the background's hue and the rest are Dark's or Light's own, by the background's base.
+- **The check.**
+  The six colors are worked out as a built-in theme's are (below), and a theme with any fault is refused in words that name it and what the app would also move, with nothing saved.
+  What the app moves to reach a floor is not a fault: the line's answer names each move.
+- **The name.**
+  A theme saves under `own-<words>`, worked out from its name as an ambient style's is, so asking again under the same name changes that theme.
+  The `theme` line wears a saved theme by its id.
+- **Removing.**
+  `remove` takes a name or id; a window wearing the removed theme keeps its base.
+
+Settings → Appearance → Theme shows the saved themes under Yours, after the built-in ones, in the same group of tiles.
+Remove under them takes away the theme worn, and Describe your own puts the start of an ask in the message box.
+`app_state`'s `theme.own-theme` read answers one saved theme whole.
+
 ## Working out the tokens
 
 `workOutTheme` turns the six colors into every color token `colors.css` declares (`COLOR_TOKENS`, `src/shared/designTokens.ts`), in OKLab and OKLCH:
@@ -50,16 +72,19 @@ The built-in themes are Rosé Pine, Rosé Pine Moon, Rosé Pine Dawn, Catppuccin
 The look's optional `colorTheme` holds the chosen theme, and `theme` keeps its base.
 `SettingsStore` keeps it in a row of its own, `color-theme`, with the base it was chosen on, and never in the `appearance` row.
 Picking Dark or Light is a look with no color theme, which removes the row.
+The look's optional `ownColorThemes` holds the saved own themes, each as its six colors were asked, and `SettingsStore` keeps them in a row of their own, `own-color-themes`, which an empty list removes.
+A joined view keeps them in its own `own-color-themes.json`.
 An older build writes only the `appearance` row, so when the saved base no longer matches it, the base wins and the window shows plain Dark or Light.
 A theme name this build does not know stays saved and shows the base (`shownTheme`).
 
-A view that does not list the `color-theme` contract change is never sent the field (`viewHello.ts`), so it never saves a look it cannot read back.
+A view that does not list the `color-theme` contract change is never sent the field, and one that does not list `own-color-themes` is never sent `ownColorThemes` (`viewHello.ts`), so it never saves a look it cannot read back.
 A view keeps its own look, color theme included.
 
 ## Drawing it
 
 The window lays the theme with one rule in a sheet of its own, `<style id="inf-color-theme">`, kept last in the head, and marks the body `data-color-theme` (`src/renderer/src/app/colorTheme.ts`).
 Dark and Light lay nothing: they are the color sheets themselves.
+The sheet's `data-base` names the base its rule is for, so a picture of a placed panel copies the window's own rule when its base matches, an own theme included, and otherwise works out the theme's rule for the picture's base (`src/main/host/panelCaptureDocument.ts`).
 
 A frame gets the same rule two ways:
 

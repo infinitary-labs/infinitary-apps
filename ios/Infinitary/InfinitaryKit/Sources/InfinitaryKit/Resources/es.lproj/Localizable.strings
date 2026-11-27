@@ -2814,6 +2814,11 @@
 "settingsAppearanceThemeDark" = "Oscuro";
 "settingsAppearanceThemeDescription" = "Oscuro, Claro o un tema con el nombre que le dio su autor. Todos los colores de la ventana lo siguen.";
 "settingsAppearanceThemeLight" = "Claro";
+"settingsAppearanceThemeOwnDescribe" = "Describe el tuyo";
+"settingsAppearanceThemeOwnDraft" = "Haz mi propio tema de colores: ";
+"settingsAppearanceThemeOwnRemove" = "Quitar";
+"settingsAppearanceThemeOwnRemoveNamed" = "Quitar %1$@";
+"settingsAppearanceThemeYours" = "Tuyos";
 "settingsAppearanceWash" = "Velo de la ventana";
 "settingsAppearanceWashDescription" = "Cuánto del color del tema cubre el fondo desenfocado. 0 %% es el valor predeterminado.";
 "settingsAppearanceWashValue" = "%1$@ %% de opacidad";

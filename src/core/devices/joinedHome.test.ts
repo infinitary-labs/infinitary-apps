@@ -12,6 +12,49 @@ import { JoinedHome } from "./joinedHome";
 // color theme, so the theme lives in a file of its own beside it.
 const olderLook = appearanceSchema.omit({ colorTheme: true });
 
+// Part 2 of the same plan: the person's own themes live in a file of their own too, and a
+// look sent without them keeps the saved ones.
+it("keeps a window's own color themes beside its look", () => {
+  const dir = scratchDir("joined-own-themes-");
+  const joined = new JoinedHome(dir);
+  const terminal = {
+    id: "own-old-terminal",
+    name: "Old terminal",
+    colors: {
+      background: "#020a03",
+      text: "#3ddc5a",
+      accent: "#8dff9c",
+      hot: "#ffd23d",
+      danger: "#ff5a4d",
+      captain: "#b99aff",
+    },
+  };
+  joined.setLook({
+    appearance: {
+      ...DEFAULT_APPEARANCE,
+      theme: "dark",
+      colorTheme: "own-old-terminal",
+      ownColorThemes: [terminal],
+    },
+    layout: DEFAULT_LAYOUT,
+  });
+  expect(joined.look()?.appearance).toMatchObject({
+    colorTheme: "own-old-terminal",
+    ownColorThemes: [terminal],
+  });
+  const saved = JSON.parse(readFileSync(join(dir, "appearance.json"), "utf8"));
+  expect(olderLook.omit({ ownColorThemes: true }).safeParse(saved.appearance).success).toBe(true);
+  expect(saved.appearance).not.toHaveProperty("ownColorThemes");
+
+  joined.setLook({ appearance: { ...DEFAULT_APPEARANCE, theme: "dark" }, layout: DEFAULT_LAYOUT });
+  expect(joined.look()?.appearance.ownColorThemes).toEqual([terminal]);
+  joined.setLook({
+    appearance: { ...DEFAULT_APPEARANCE, theme: "dark", ownColorThemes: [] },
+    layout: DEFAULT_LAYOUT,
+  });
+  expect(joined.look()?.appearance).not.toHaveProperty("ownColorThemes");
+});
+
 it("keeps a window's color theme beside its look, where an older version still reads the look", () => {
   const dir = scratchDir("joined-color-theme-");
   const joined = new JoinedHome(dir);

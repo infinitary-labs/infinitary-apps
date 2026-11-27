@@ -211,6 +211,69 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     }
   });
 
+  // The approved plan for color themes (INF-6888, part 2): the first mate saves a theme the
+  // person describes and the window wears it; the answer names what the app moved; the theme
+  // line wears it by its id; app_state reads it whole by name; a removed theme worn leaves its
+  // base. Fixture: the plan trial's old green terminal.
+  it("saves an own color theme, wears it, reads it whole and removes it to its base", async () => {
+    const was = await appearance();
+    const terminal = {
+      name: "Old terminal",
+      colors: {
+        background: "#020a03",
+        text: "#3ddc5a",
+        accent: "#8dff9c",
+        hot: "#ffd23d",
+        danger: "#ff5a4d",
+      },
+    };
+    try {
+      const saved = await asked("own-theme", { save: terminal });
+      expect(saved.reply.current).toMatchObject({
+        saved: [{ id: "own-old-terminal", name: "Old terminal" }],
+        chosen: "own-old-terminal",
+        moved: [expect.stringMatching(/^quiet text /), expect.stringMatching(/^faint text /)],
+      });
+      // Activity says both what was saved and what the window now wears.
+      expect(saved.lines).toEqual([
+        "switched to the own-old-terminal theme",
+        "your own color themes: Old terminal",
+      ]);
+      expect(await appearance()).toMatchObject({ theme: "dark", colorTheme: "own-old-terminal" });
+
+      const read = JSON.parse(
+        (await tool("app_state").run({ read: "theme.own-theme", args: { name: "old terminal" } }))
+          .text,
+      ).value;
+      expect(read).toEqual({
+        id: "own-old-terminal",
+        name: "Old terminal",
+        colors: { ...terminal.colors, captain: expect.stringMatching(/^#[0-9a-f]{6}$/) },
+      });
+
+      await asked("theme", { theme: "light" });
+      expect((await appearance()).colorTheme).toBeUndefined();
+      await asked("theme", { theme: "own-old-terminal" });
+      expect(await appearance()).toMatchObject({ theme: "dark", colorTheme: "own-old-terminal" });
+
+      const refused = await tool("app_change").run({
+        action: "own-theme",
+        value: { save: { ...terminal, colors: { ...terminal.colors, hot: "#8dff9c" } } },
+        evidence: "Please.",
+      });
+      expect(refused.text).toMatch(/^The theme was not saved, and nothing changed\. hot /);
+      expect((await appearance()).ownColorThemes?.[0]?.colors.hot).toBe("#ffd23d");
+
+      await asked("own-theme", { remove: "Old terminal" });
+      const after = await appearance();
+      expect(after.theme).toBe("dark");
+      expect(after.colorTheme).toBeUndefined();
+      expect(after.ownColorThemes).toBeUndefined();
+    } finally {
+      await core.dispatch("inf:settings:appearance:set", [{ ...was, ownColorThemes: [] }]);
+    }
+  });
+
   it("chooses a language by its tag and goes back to the default with null", async () => {
     const tag = (
       ACTIONS.language.value.safeParse({ language: "zh-Hans" }).success ? "zh-Hans" : null

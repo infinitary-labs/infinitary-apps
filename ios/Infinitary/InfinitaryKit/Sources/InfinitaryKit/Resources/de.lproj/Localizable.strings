@@ -2814,6 +2814,11 @@
 "settingsAppearanceThemeDark" = "Dunkel";
 "settingsAppearanceThemeDescription" = "Dunkel, Hell oder ein Design unter dem Namen seiner Macher. Jede Farbe im Fenster folgt.";
 "settingsAppearanceThemeLight" = "Hell";
+"settingsAppearanceThemeOwnDescribe" = "Eigenes beschreiben";
+"settingsAppearanceThemeOwnDraft" = "Mach mir ein eigenes Farbdesign: ";
+"settingsAppearanceThemeOwnRemove" = "Entfernen";
+"settingsAppearanceThemeOwnRemoveNamed" = "%1$@ entfernen";
+"settingsAppearanceThemeYours" = "Deine";
 "settingsAppearanceWash" = "Fenstertönung";
 "settingsAppearanceWashDescription" = "Wie stark die Designfarbe den unscharfen Hintergrund überdeckt. 0 %% ist der Standard.";
 "settingsAppearanceWashValue" = "%1$@ %% Deckkraft";

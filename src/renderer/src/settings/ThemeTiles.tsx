@@ -1,17 +1,18 @@
 import {
   BUILT_IN_THEME_IDS,
   BUILT_IN_THEMES,
-  type BuiltInThemeId,
   builtInTheme,
   shippedTokens,
   shownTheme,
+  themeOf,
 } from "@shared/colorThemes";
 import * as m from "@shared/i18n/messages.generated";
-import type { Theme } from "@shared/preferences";
 import type { CSSProperties } from "react";
+import { mainMessageRefusal } from "../app/composer";
 import { useShellStore } from "../app/store";
+import { Button } from "../design";
 
-type Tile = { value: Theme | BuiltInThemeId; label: string; tokens: Record<string, string> };
+type Tile = { value: string; label: string; tokens: Record<string, string> };
 
 /** The unseen radio a tile holds; the tile draws its focus (design/styles.css). */
 const UNSEEN: CSSProperties = {
@@ -84,16 +85,39 @@ function Swatch({ tokens }: { tokens: Record<string, string> }) {
 }
 
 /**
- * The Theme row's choices as one group of tiles: Dark, Light and each
- * built-in theme under its maker's name. They are native radios of one name,
- * so the arrow keys move the pick and every pick applies at once.
+ * Describe your own (docs/themes.md, "Your own themes"): home, with the
+ * message box starting the ask to the first mate and the caret after it,
+ * for the person to describe the look. Nothing is sent from here. Refused,
+ * as Go to the main message is, while the box is held.
+ */
+function describeOwnTheme(): void {
+  const shell = useShellStore.getState();
+  if (mainMessageRefusal(shell) !== null) return;
+  shell.focusMainMessage();
+  shell.beginDraft(m.settingsAppearanceThemeOwnDraft());
+}
+
+/**
+ * The Theme row's choices as one group of tiles: Dark, Light, each built-in
+ * theme under its maker's name, then the person's own under Yours, each
+ * under the name they gave it. They are native radios of one name, so the
+ * arrow keys move the pick and every pick applies at once. Below them,
+ * Remove takes away the own theme the window wears, and Describe your own
+ * starts the ask to the first mate.
  */
 export function ThemeTiles() {
   const theme = useShellStore((s) => s.theme);
   const colorTheme = useShellStore((s) => s.colorTheme);
+  const own = useShellStore((s) => s.ownColorThemes);
   const setTheme = useShellStore((s) => s.setTheme);
   const setColorTheme = useShellStore((s) => s.setColorTheme);
-  const value = shownTheme(colorTheme, theme) ?? theme;
+  const removeOwn = useShellStore((s) => s.removeOwnColorTheme);
+  const value = shownTheme(colorTheme, theme, own) ?? theme;
+  const ownChosen = own.find((saved) => saved.id === value);
+  const ownTiles: Tile[] = own.flatMap((saved) => {
+    const worked = themeOf(saved.id, own);
+    return worked ? [{ value: saved.id, label: saved.name, tokens: worked.tokens }] : [];
+  });
   const tiles: Tile[] = [
     { value: "dark", label: m.settingsAppearanceThemeDark(), tokens: shippedTokens("dark") },
     { value: "light", label: m.settingsAppearanceThemeLight(), tokens: shippedTokens("light") },
@@ -103,49 +127,86 @@ export function ThemeTiles() {
       tokens: builtInTheme(id).tokens,
     })),
   ];
+  const tile = (tile: Tile) => {
+    const checked = tile.value === value;
+    return (
+      <label key={tile.value} data-theme-tile={tile.value} style={tileStyle(checked)}>
+        <input
+          type="radio"
+          name="appearance-theme"
+          value={tile.value}
+          checked={checked}
+          onChange={() => {
+            if (checked) return;
+            if (tile.value === "dark" || tile.value === "light") setTheme(tile.value);
+            else setColorTheme(tile.value);
+          }}
+          style={UNSEEN}
+        />
+        <Swatch tokens={tile.tokens} />
+        <span
+          style={{
+            fontFamily: "var(--font-ui)",
+            fontSize: "var(--text-xs)",
+            fontWeight: 500,
+            color: checked ? "var(--fg-1)" : "var(--fg-2)",
+            // A name is never cut short: a long one, or one at a larger Size, wraps.
+            overflowWrap: "anywhere",
+          }}
+        >
+          {tile.label}
+        </span>
+      </label>
+    );
+  };
   return (
-    <div
-      role="radiogroup"
-      aria-label={m.settingsAppearanceTheme()}
-      style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(124px, 1fr))",
-        gap: "var(--space-2)",
-        marginTop: "var(--space-3)",
-      }}
-    >
-      {tiles.map((tile) => {
-        const checked = tile.value === value;
-        return (
-          <label key={tile.value} data-theme-tile={tile.value} style={tileStyle(checked)}>
-            <input
-              type="radio"
-              name="appearance-theme"
-              value={tile.value}
-              checked={checked}
-              onChange={() => {
-                if (checked) return;
-                if (tile.value === "dark" || tile.value === "light") setTheme(tile.value);
-                else setColorTheme(tile.value);
-              }}
-              style={UNSEEN}
-            />
-            <Swatch tokens={tile.tokens} />
-            <span
-              style={{
-                fontFamily: "var(--font-ui)",
-                fontSize: "var(--text-xs)",
-                fontWeight: 500,
-                color: checked ? "var(--fg-1)" : "var(--fg-2)",
-                // A maker's name is never cut short: a long one, or one at a larger Size, wraps.
-                overflowWrap: "anywhere",
-              }}
+    <>
+      <div
+        role="radiogroup"
+        aria-label={m.settingsAppearanceTheme()}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(124px, 1fr))",
+          gap: "var(--space-2)",
+          marginTop: "var(--space-3)",
+        }}
+      >
+        {tiles.map(tile)}
+        {ownTiles.length > 0 && (
+          <span
+            data-theme-yours=""
+            style={{
+              gridColumn: "1 / -1",
+              marginTop: "var(--space-2)",
+              fontFamily: "var(--font-ui)",
+              fontSize: "var(--text-xs)",
+              fontWeight: 500,
+              color: "var(--fg-3)",
+            }}
+          >
+            {m.settingsAppearanceThemeYours()}
+          </span>
+        )}
+        {ownTiles.map(tile)}
+      </div>
+      <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-3)" }}>
+        {ownChosen && (
+          <span data-theme-own-remove="">
+            <Button
+              variant="secondary"
+              aria-description={m.settingsAppearanceThemeOwnRemoveNamed({ name: ownChosen.name })}
+              onClick={() => removeOwn(ownChosen.id)}
             >
-              {tile.label}
-            </span>
-          </label>
-        );
-      })}
-    </div>
+              {m.settingsAppearanceThemeOwnRemove()}
+            </Button>
+          </span>
+        )}
+        <span data-theme-own-describe="">
+          <Button variant="secondary" onClick={describeOwnTheme}>
+            {m.settingsAppearanceThemeOwnDescribe()}
+          </Button>
+        </span>
+      </div>
+    </>
   );
 }

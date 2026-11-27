@@ -107,10 +107,16 @@ extension PhoneJourney {
                       "At All projects the panel hears no project\n\(app.debugDescription)")
 
         // From the keyboard: Shift-Command-P opens the sheet on the checked row, Escape closes it, and the arrows and
-        // Return pick. Focus is read by what the keys do, as the Settings journeys read it: from All projects, the
-        // checked row, one Down and Return pick north-pier, the first project. As PhoneKeys owns, Xcode emits the
-        // physical Return for LF, not CR; Escape goes through the test home, since XCTest's typist sends no event for it.
+        // Return pick. Focus is read by what the keys do, as the Settings journeys read it. Every computer keeps its
+        // Scratch project beside the three seeded, so the rows the keys move through are read from the open sheet, top
+        // to bottom: from All projects, the checked row, one Down and Return pick the first project listed. As
+        // PhoneKeys owns, Xcode emits the physical Return for LF, not CR; Escape goes through the test home, since
+        // XCTest's typist sends no event for it.
         let all = app.buttons["project-filter-all-projects"]
+        func listed() -> [String] {
+            app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'project-filter-' AND identifier != %@", all.identifier))
+                .allElementsBoundByIndex.sorted { $0.frame.minY < $1.frame.minY }.map(\.label)
+        }
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(all.waitForPresence(timeout: 10), "Shift-Command-P opens Filter\n\(app.debugDescription)")
         waitForSteadyTarget(all)
@@ -120,19 +126,21 @@ extension PhoneJourney {
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(all.waitForPresence(timeout: 10), app.debugDescription)
         waitForSteadyTarget(all)
+        let order = listed()
+        XCTAssertGreaterThanOrEqual(order.count, 3, app.debugDescription)
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(all.waitForAbsence(timeout: 10), "Return picks and closes Filter")
-        focused(on: northName, elsewhere: 1)
-        // All projects is also the first row, so the same keys with north-pier checked tell the checked row from the
-        // first: Down from north-pier picks south-pier, the next project.
+        XCTAssertEqual(filter.value as? String, order[0], "Down from All projects picks the first project listed")
+        // All projects is also the first row, so the same keys with the first project checked tell the checked row
+        // from the first: Down from it picks the second project listed.
         app.typeKey("p", modifierFlags: [.command, .shift])
-        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
-        waitForSteadyTarget(row)
+        XCTAssertTrue(all.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(all)
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])
-        XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return picks and closes Filter")
-        XCTAssertEqual(filter.value as? String, try field(1, "name"), "The sheet opens on the checked row, north-pier")
+        XCTAssertTrue(all.waitForAbsence(timeout: 10), "Return picks and closes Filter")
+        XCTAssertEqual(filter.value as? String, order[1], "The sheet opens on the checked row, \(order[0])")
         tapOnPhone(app.buttons["project-focus-clear"])
         XCTAssertTrue(app.otherElements["project-focus-row"].waitForAbsence(timeout: 10), app.debugDescription)
     }

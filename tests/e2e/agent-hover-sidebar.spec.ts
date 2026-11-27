@@ -5,13 +5,14 @@ import { SMALLEST_WINDOW } from "../../src/shared/smallestWindow";
 import { agentHoverFixture, HOVER_COUNTS, HOVER_NOTE, HOVER_PLAN } from "./agentHoverFixture";
 import { nextFrame } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { clearOfLosses, expectClearOf, intersects, resizeWindow } from "./layout";
+import { clearOfLosses, expectClearOf, intersects, resizeWindow, within } from "./layout";
 import { movePanelTo } from "./panelLayout";
 import { seedClockPanels } from "./personalFixtures";
 import { heroShot, regionShot, windowShot } from "./pictures";
 import { promptInput } from "./prompt";
 import {
   expandDock,
+  expectRailsDrawn,
   expectRecordBody,
   keySummary,
   linkedTaskKeys,
@@ -90,6 +91,57 @@ async function language(page: Page, choice: (typeof LANGUAGES)[number]) {
 
 async function controls(page: Page) {
   return page.locator(RAIL_CONTENTS_SELECTOR).filter({ visible: true }).all();
+}
+
+/** Tasks on `side` and Activity across from it, read back from the rails
+ * themselves: the layout write returns before the rails redraw, and a wait
+ * for drawn pages that runs first passes on the panels' old places. */
+async function placeTasks(page: Page, side: "left" | "right") {
+  const across = side === "right" ? "left" : "right";
+  await movePanelTo(page, "activity", { x: across, y: "top" });
+  await movePanelTo(page, "now", { x: side, y: "top" });
+  await expect(page.locator(`[data-rail="${side}"] > [data-side-panel="now"]`)).toBeVisible();
+  await expect(
+    page.locator(`[data-rail="${across}"] > [data-side-panel="activity"]`),
+  ).toBeVisible();
+}
+
+/** Where the open summary falls, with the window and every visible rail
+ * control measured in the same layout. Read one call at a time, a summary
+ * box taken before a panel unfolded pairs with that panel's box taken after:
+ * an overlap no frame ever drew. */
+async function summaryPlace(page: Page): Promise<{ outside: string[]; covered: string[] }> {
+  const boxes = await page.evaluate(
+    ({ summary, rails }) => {
+      const rect = (element: Element) => {
+        const { x, y, width, height } = element.getBoundingClientRect();
+        return { x, y, width, height };
+      };
+      const surface = document.querySelector(summary);
+      return {
+        surface: surface ? rect(surface) : null,
+        window: { x: 0, y: 0, width: innerWidth, height: innerHeight },
+        controls: [...document.querySelectorAll(rails)]
+          .filter((control) => control.checkVisibility({ visibilityProperty: true }))
+          .map((control) => ({
+            name:
+              control.getAttribute("data-side-panel") ??
+              (control.hasAttribute("data-rail-more") ? "more" : "create slot"),
+            box: rect(control),
+          }))
+          .filter(({ box }) => box.width > 0 && box.height > 0),
+      };
+    },
+    { summary: summarySelector, rails: RAIL_CONTENTS_SELECTOR },
+  );
+  const { surface } = boxes;
+  if (!surface) return { outside: ["summary missing"], covered: [] };
+  return {
+    outside: within(surface, boxes.window),
+    covered: boxes.controls
+      .filter(({ box }) => intersects(surface, box))
+      .map(({ name }) => `covers ${name}`),
+  };
 }
 
 /** Removing only a sidebar's paint must not reveal words previously hidden
@@ -185,6 +237,11 @@ async function hoverNearRail(
   const { page, app } = launched;
   await page.mouse.move(20, 50);
   await resizeWindow(app, page, size);
+  // A panel that has just moved rails stands at header height until its
+  // page draws. A summary opened before then is placed clear of that header
+  // and moves aside when the panel unfolds under it, mid-measurement on a
+  // slow machine.
+  await expectRailsDrawn(page);
   await nextFrame(page);
   const anchors = (await stageAnchors(page))
     .filter((point) => (side === "right" ? point.x > size.width / 2 : point.x < size.width / 2))
@@ -204,15 +261,14 @@ async function hoverNearRail(
     await expect(summary).toContainText(HOVER_NOTE);
     await expect(page.locator("[data-crew-target]")).toBeVisible();
     await nextFrame(page);
-    expect(await clearOfLosses(page, summary), "The summary stays inside the window").toEqual([]);
-    const obstacles = await controls(page);
-    const losses = await clearOfLosses(page, summary, ...obstacles);
-    if (options.allowOverlay && losses.length > 0) {
-      await expectAboveSidebar(summary, obstacles);
+    const { outside, covered } = await summaryPlace(page);
+    expect(outside, "The summary stays inside the window").toEqual([]);
+    if (options.allowOverlay && covered.length > 0) {
+      await expectAboveSidebar(summary, await controls(page));
       overlays++;
       if (options.retainPlan && overlays === 1) await expectRetainedPlan(launched, summary, size);
     } else {
-      expect(losses, "A clear-place summary must avoid every visible rail control").toEqual([]);
+      expect(covered, "A clear-place summary must avoid every visible rail control").toEqual([]);
     }
     if (index === 0 && options.capture && process.env.HOVER_EVIDENCE) {
       await windowShot(page, join(process.env.HOVER_EVIDENCE, `${options.capture}.png`));
@@ -240,8 +296,7 @@ test("crewmate summaries clear both rails in both text directions", async () => 
     for (const choice of LANGUAGES) {
       await language(page, choice);
       for (const side of ["right", "left"] as const) {
-        await movePanelTo(page, "activity", { x: side === "right" ? "left" : "right", y: "top" });
-        await movePanelTo(page, "now", { x: side, y: "top" });
+        await placeTasks(page, side);
         for (const width of [SMALLEST_WINDOW.width, 1024, 1200, 1440]) {
           await test.step(`${choice}, ${side} rail, ${width} pixels`, async () => {
             await hoverNearRail(
@@ -286,8 +341,7 @@ test("a held summary clears a growing prompt under reduced motion", async () => 
   try {
     await prepare(launched);
     const { page, app } = launched;
-    await movePanelTo(page, "activity", { x: "left", y: "top" });
-    await movePanelTo(page, "now", { x: "right", y: "top" });
+    await placeTasks(page, "right");
     await resizeWindow(app, page, { width: SMALLEST_WINDOW.width, height: 800 });
     await nextFrame(page);
     const middle = await page.evaluate(() => innerHeight / 2);
@@ -346,8 +400,7 @@ test("a tall summary stays above sidebars only when the smallest window leaves n
       await language(page, choice);
       let overlays = 0;
       for (const side of ["right", "left"] as const) {
-        await movePanelTo(page, "activity", { x: side === "right" ? "left" : "right", y: "top" });
-        await movePanelTo(page, "now", { x: side, y: "top" });
+        await placeTasks(page, side);
         overlays += await hoverNearRail(launched, side, SMALLEST_WINDOW, {
           allowOverlay: true,
           capture: `review-after-${choice}-${side}-tall`,

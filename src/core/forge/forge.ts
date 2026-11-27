@@ -227,6 +227,11 @@ export type ForgePull = {
   headRepo?: string;
   /** Immutable host repository id, when supplied. */
   headRepoId?: number;
+  /**
+   * A contributor's pull request whose author allows the project's
+   * maintainers to push to its branch (GitHub's `maintainer_can_modify`).
+   */
+  maintainerCanModify?: true;
   readiness: ForgeReadiness;
   mergeable?: boolean | null;
   mergeableState?: string;

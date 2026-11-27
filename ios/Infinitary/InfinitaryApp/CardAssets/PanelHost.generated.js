@@ -127339,7 +127339,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
-  const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`]+";
+  const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`\\u3000-\\u303f\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65]+";
   const URL_TRAILING_PUNCTUATION = ".,;:!?'";
   const URL_CLOSERS = { ")": "(", "]": "[", "}": "{" };
   const LOOPBACK_HOSTS = ["localhost", "127.0.0.1", "::1", "[::1]"];
@@ -130466,7 +130466,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-KKV3e3SrjYz/VggofpbBn8DyZPEv6nz2OU6RmolqX8M=";
+  const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
@@ -139785,13 +139785,6 @@ ${FRAME_KEYBOARD_SCRIPT}
           if (this.spec.inset) this.port.post({ fm: V, type: "inset", ...this.spec.inset });
           if (this.spec.markup !== void 0)
             this.port.post({ fm: V, type: "markup", html: this.spec.markup });
-          if (this.spec.taskKeys) {
-            this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
-          }
-          if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
-          if (this.spec.entryRefs) {
-            this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
-          }
           if (this.spec.onImage || this.spec.onEscape || this.spec.onExpand || this.spec.onSound || this.spec.addresses) {
             this.port.post({
               fm: V,
@@ -139802,6 +139795,13 @@ ${FRAME_KEYBOARD_SCRIPT}
               ...this.spec.onSound ? { sound: true } : {},
               ...this.spec.addresses ? { addresses: true } : {}
             });
+          }
+          if (this.spec.taskKeys) {
+            this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
+          }
+          if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
+          if (this.spec.entryRefs) {
+            this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
           }
           if (message.document)
             this.port.post({ fm: V, type: "initialize", document: message.document });

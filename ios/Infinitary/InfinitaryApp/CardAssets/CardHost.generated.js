@@ -125274,7 +125274,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
-  const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`]+";
+  const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`\\u3000-\\u303f\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65]+";
   const URL_RE = new RegExp(URL_IN_TEXT, "gi");
   const URL_TRAILING_PUNCTUATION = ".,;:!?'";
   const URL_CLOSERS = { ")": "(", "]": "[", "}": "{" };
@@ -128472,7 +128472,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-KKV3e3SrjYz/VggofpbBn8DyZPEv6nz2OU6RmolqX8M=";
+  const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";

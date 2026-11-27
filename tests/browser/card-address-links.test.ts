@@ -11,7 +11,7 @@ import { commands } from "vitest/browser";
  * showed the address as plain text). The body goes through the real bridge
  * script and frame document in a sandboxed frame, and the test plays the host
  * as a card's mount does: it answers `ready` with `keys` saying `addresses`,
- * and records what the frame posts. A panel's mount says no `addresses`, and
+ * then `tasks` naming a recorded task, and records what the frame posts. A panel's mount says no `addresses`, and
  * its words stay as written.
  */
 
@@ -19,6 +19,7 @@ const STEP = "Open https://openrouter.ai/settings/keys and sign in.";
 
 const BODY = `
   <ol><li id="step">${STEP}</li></ol>
+  <p id="tracked">Tracked at https://acme.atlassian.net/browse/INF-12 as INF-12.</p>
   <p>Run <code>curl https://openrouter.ai/api/v1/models</code> (see https://en.wikipedia.org/wiki/API_(disambiguation)).</p>
   <form><fieldset><legend>1. Which model?</legend>
     <label><input type="radio" name="model" value="neon"> Neon, listed at https://openrouter.ai/neon</label>
@@ -73,6 +74,10 @@ async function mount(name: string, addresses: boolean): Promise<Heard[]> {
       "*",
     );
     frame.contentWindow?.postMessage(
+      { fm: FRAME_BRIDGE_VERSION, type: "tasks", keys: ["INF-12"] },
+      "*",
+    );
+    frame.contentWindow?.postMessage(
       { fm: FRAME_BRIDGE_VERSION, type: "initialize", document: data.document },
       "*",
     );
@@ -104,6 +109,7 @@ test("a card body's addresses written as words become links whose press posts th
     .poll(() => linked("addresses-card"))
     .toEqual([
       address("https://openrouter.ai/settings/keys"),
+      address("https://acme.atlassian.net/browse/INF-12"),
       address("https://openrouter.ai/api/v1/models"),
       address("https://en.wikipedia.org/wiki/API_(disambiguation)"),
       address("https://openrouter.ai/neon"),
@@ -117,6 +123,12 @@ test("a card body's addresses written as words become links whose press posts th
       return { text: step?.textContent, after: step?.querySelector("a")?.nextSibling?.nodeValue };
     }),
   ).toEqual({ text: STEP, after: " and sign in." });
+  // A recorded task's key inside an address stays part of it; the key in the words beside it links to the task.
+  expect(
+    await inFrame("addresses-card", () =>
+      [...document.querySelectorAll("#tracked a[data-inf-task]")].map((key) => key.textContent),
+    ),
+  ).toEqual(["INF-12"]);
 
   // A press on the step's address posts it as the host's link message.
   await inFrame("addresses-card", () =>

@@ -651,15 +651,10 @@ export class FrameController {
         if (this.spec.inset) this.port.post({ fm: V, type: "inset", ...this.spec.inset });
         if (this.spec.markup !== undefined)
           this.port.post({ fm: V, type: "markup", html: this.spec.markup });
-        if (this.spec.taskKeys) {
-          this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
-        }
-        if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
-        if (this.spec.entryRefs) {
-          this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
-        }
         // The keys the host hears from this document: a picture's, for a
-        // mount that opens pictures, and an Escape that leaves it.
+        // mount that opens pictures, and an Escape that leaves it. Before the
+        // task keys and references: a card's addresses link first, so a key
+        // inside an address stays part of it (frameLinkScript.ts).
         if (
           this.spec.onImage ||
           this.spec.onEscape ||
@@ -676,6 +671,13 @@ export class FrameController {
             ...(this.spec.onSound ? { sound: true as const } : {}),
             ...(this.spec.addresses ? { addresses: true as const } : {}),
           });
+        }
+        if (this.spec.taskKeys) {
+          this.port.post({ fm: V, type: "tasks", keys: [...this.spec.taskKeys] });
+        }
+        if (this.spec.litKey) this.port.post({ fm: V, type: "lit", key: this.spec.litKey });
+        if (this.spec.entryRefs) {
+          this.port.post({ fm: V, type: "entries", entries: [...this.spec.entryRefs] });
         }
         if (message.document)
           this.port.post({ fm: V, type: "initialize", document: message.document });

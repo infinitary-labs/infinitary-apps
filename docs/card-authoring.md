@@ -625,7 +625,7 @@ The vocabulary beyond plain text:
 Links open through the app's safe external opener: https anywhere, plus http to loopback (`localhost`, `127.0.0.1`, `[::1]`) and to genuine `.localhost` subdomains, single-level or nested (`http://app.localhost:1355`, `http://task-1.soapbox.localhost:1355`).
 Public http, lookalikes such as `localhost.example.com` or `evillocalhost`, other schemes and addresses without a scheme are ignored without feedback.
 An address written as words in a card's body is a link too (INF-7045): the card frame's bridge wraps each one the opener would take in `<a href data-inf-address>`, at load and whenever the body changes, on the computer and the phone alike (`src/shared/plugins/frameLinkScript.ts`).
-Which words count as an address, the trailing punctuation and unmatched closing bracket it leaves outside, and which addresses the opener takes have one owner, `src/shared/linkify.ts`.
+The data behind which words count as an address, the trailing punctuation and unmatched closing bracket it leaves outside, and which addresses the opener takes has one owner, `src/shared/linkify.ts`, which the bridge's text splices in; the bridge's own `addressIn`, `unmatched` and `opens` mirror its trimming and opener logic, so a change to that logic changes both.
 An address stays words inside a link, button, summary, form field, option, `data-inf-action` or `data-inf-draft` element, `role=button` element, editable area, script, style or drawing; inside a choice's label it links, and a press on it opens it and leaves the choice as it was.
 A panel's words are not a card's: its frame links no address.
 Write `<a href>` when the link's words should differ from its address.

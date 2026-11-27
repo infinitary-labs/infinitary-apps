@@ -2,14 +2,21 @@
  * What counts as an address in a card's words, and which addresses a card
  * may open. A plain-text body is split here (`splitCardBodyUrls`); the card
  * frame's bridge links the addresses an HTML body writes as words
- * (src/shared/plugins/frameLinkScript.ts), from the same pattern, trimming
- * rule and opener rule spliced into its text, so the two never disagree.
+ * (src/shared/plugins/frameLinkScript.ts). Only the data below is spliced
+ * into the bridge's text; the bridge keeps its own twins of the trimming and
+ * opener logic (`addressIn`, `unmatched` and `opens`), which a change to
+ * `trimTrailingUrlPunctuation` or `isSafeCardHref` must mirror.
  */
 
 export type CardBodyPart = { type: "text"; value: string } | { type: "url"; value: string };
 
-/** An address in words, as a case-blind pattern: scheme-anchored, so javascript:, file: and friends never match. */
-export const URL_IN_TEXT = "https?:\\/\\/[^\\s<>\"'`]+";
+/**
+ * An address in words, as a case-blind pattern: scheme-anchored, so javascript:, file: and friends never match.
+ * It ends at the CJK symbols and punctuation block and at full-width punctuation (not full-width letters or
+ * digits), which Chinese and Japanese words write right after an address with no space between.
+ */
+export const URL_IN_TEXT =
+  "https?:\\/\\/[^\\s<>\"'`\\u3000-\\u303f\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65]+";
 const URL_RE = new RegExp(URL_IN_TEXT, "gi");
 
 /** Punctuation that ends a sentence around an address rather than the address itself. */

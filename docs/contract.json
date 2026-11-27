@@ -121069,6 +121069,15 @@
                 },
                 "dirty": {
                   "type": "boolean"
+                },
+                "renamedFrom": {
+                  "maxItems": 32,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  }
                 }
               },
               "required": [

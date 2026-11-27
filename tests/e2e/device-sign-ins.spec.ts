@@ -1229,9 +1229,8 @@ test("a connection from the connection file here is used on a computer, and a ne
     await file.choose.click();
     await file.pending("team-gateway").approve.click();
     const f = customApiForm(page);
-    // The line under the address answers after the form opens and pushes the
-    // HTTP box down a line; a click whose press and release straddle that move
-    // lands its release on the line and toggles nothing (INF-6840).
+    // A person ticks the HTTP box after reading where Save sends, so each tick
+    // first waits for the line under the address to name it (INF-6840).
     const approveHttp = async (address: string) => {
       await expect(f.sendsTo).toContainText(address);
       await f.http.check();

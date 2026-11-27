@@ -102,7 +102,7 @@ This is a transport lifetime, not the account Pause policy.
 1. The form asks for a name, the full base address, **Connect with** (an optional masked key or a token command), the protocol, optional **Extra request headers** and the models.
    There is no network question and no no-key checkbox.
    A live line under the address reads "Sends to (canonical address) · (network)" (`inf:accounts:custom:address`, DNS only, nothing sent to the server).
-   Its place stays blank until that answer comes, so the plain HTTP approval and the rest of the form under it never move between a press and its release.
+   Before the first answer its place is held blank and one line tall, so a one-line answer does not move the plain HTTP approval under it; after that, a changed address keeps the earlier answer's words until its own answer comes.
    On Edit at the same address the key field reads "Saved key kept · type to replace", beside **Remove saved key**; an empty key there keeps the saved one.
    Each model row has its check status, ID, context and output tokens, Reasoning profile, Cache retention and a remove button.
    A folded **Name and price** part under it takes an optional display name, four prices in US dollars per million tokens (input, output, cache read, cache write) and a **Free** switch that sets all four to zero (INF-6581's plan, piece 1); it opens on its own when the line already states one.

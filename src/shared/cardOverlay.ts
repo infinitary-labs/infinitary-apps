@@ -27,8 +27,8 @@ export const savedCardOverlaySchema = z.object({
 export type SavedCardOverlay = z.infer<typeof savedCardOverlaySchema>;
 
 /**
- * Why the overlay's key is not working now: another program holds it
- * (`taken`), or this computer has no overlay (`unsupported`, every desktop
+ * Why the overlay's key is not working now: the system would not register
+ * it (`taken`), or this computer has no overlay (`unsupported`, every desktop
  * but a Mac's). A key that works has none.
  */
 export const CARD_OVERLAY_PROBLEMS = ["taken", "unsupported"] as const;
@@ -42,8 +42,8 @@ export type CardOverlay = z.infer<typeof cardOverlaySchema>;
 
 /**
  * A person's change answered: the switch and key as they are now, and why
- * the change was not made, if it was not - the key is held by another
- * program (`taken`) or may not summon (`not-allowed`, `overlayKeyAllowed`).
+ * the change was not made, if it was not - the system would not register
+ * the key (`taken`), or the key may not summon (`not-allowed`, `overlayKeyAllowed`).
  */
 export const cardOverlaySetSchema = z.object({
   overlay: cardOverlaySchema,

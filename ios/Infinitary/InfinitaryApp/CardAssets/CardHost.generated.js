@@ -80104,29 +80104,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `يستخدم تطبيق آخر ${key}. تحتفظ البطاقات بـ ${kept}.`;
+        return `لم يقبل macOS ${key}. تحتفظ البطاقات بـ ${kept}.`;
       case "de":
-        return `Eine andere App nutzt ${key}. Die Karten behalten ${kept}.`;
+        return `macOS hat ${key} nicht angenommen. Die Karten behalten ${kept}.`;
       case "es":
-        return `Otra app usa ${key}. Las tarjetas siguen con ${kept}.`;
+        return `macOS no aceptó ${key}. Las tarjetas siguen con ${kept}.`;
       case "fr":
-        return `Une autre app utilise ${key}. Les cartes gardent ${kept}.`;
+        return `macOS n’a pas accepté ${key}. Les cartes gardent ${kept}.`;
       case "ja":
-        return `ほかのアプリが ${key} を使っています。カードは ${kept} のままです。`;
+        return `macOS が ${key} を受け付けませんでした。カードは ${kept} のままです。`;
       case "ko":
-        return `다른 앱이 ${key}를 쓰고 있어요. 카드는 ${kept}를 그대로 써요.`;
+        return `macOS가 ${key}를 받아들이지 않았어요. 카드는 ${kept}를 그대로 써요.`;
       case "pt-BR":
-        return `Outro app usa ${key}. Os cartões continuam com ${kept}.`;
+        return `O macOS não aceitou ${key}. Os cartões continuam com ${kept}.`;
       case "zh-Hans":
-        return `另一个应用正在使用 ${key}。卡片仍使用 ${kept}。`;
+        return `macOS 未接受 ${key}。卡片仍使用 ${kept}。`;
       case "zh-Hant":
-        return `另一個 App 正在使用 ${key}。卡片仍使用 ${kept}。`;
+        return `macOS 未接受 ${key}。卡片仍使用 ${kept}。`;
       case "en-XA":
-        return `[Åñöţĥéŕ áþþ ûšéš ${key}. Ţĥé çáŕðš ķééþ ${kept}. ~~~~~~~~~~~~]`;
+        return `[ɱáçÖŠ ðîð ñöţ áççéþţ ${key}. Ţĥé çáŕðš ķééþ ${kept}. ~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Another app uses ‬${key}‮. The cards keep ‬${kept}‮.‬`;
+        return `‮macOS did not accept ‬${key}‮. The cards keep ‬${kept}‮.‬`;
     }
-    return `Another app uses ${key}. The cards keep ${kept}.`;
+    return `macOS did not accept ${key}. The cards keep ${kept}.`;
   }
   function settingsKeyboardCardOverlayNotAllowed(input2) {
     const key = input2.key;
@@ -80214,29 +80214,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `يستخدم تطبيق آخر ${key}، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.`;
+        return `لم يقبل macOS ${key}، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.`;
       case "de":
-        return `Eine andere App nutzt ${key}, daher tut die Taste gerade nichts. Wähl eine andere Taste.`;
+        return `macOS hat ${key} nicht angenommen, daher tut die Taste gerade nichts. Wähl eine andere Taste.`;
       case "es":
-        return `Otra app usa ${key}, así que ahora no hace nada. Elige otra tecla.`;
+        return `macOS no aceptó ${key}, así que ahora no hace nada. Elige otra tecla.`;
       case "fr":
-        return `Une autre app utilise ${key}, il ne fait donc rien pour le moment. Choisissez un autre raccourci.`;
+        return `macOS n’a pas accepté ${key}, il ne fait donc rien pour le moment. Choisissez un autre raccourci.`;
       case "ja":
-        return `ほかのアプリが ${key} を使っているため、今は何も起きません。別のキーを選んでください。`;
+        return `macOS が ${key} を受け付けなかったため、今は何も起きません。別のキーを選んでください。`;
       case "ko":
-        return `다른 앱이 ${key}를 쓰고 있어서 지금은 아무 일도 하지 않아요. 다른 키를 골라 주세요.`;
+        return `macOS가 ${key}를 받아들이지 않아서 지금은 아무 일도 하지 않아요. 다른 키를 골라 주세요.`;
       case "pt-BR":
-        return `Outro app usa ${key}, então ela não faz nada agora. Escolha outra tecla.`;
+        return `O macOS não aceitou ${key}, então ela não faz nada agora. Escolha outra tecla.`;
       case "zh-Hans":
-        return `另一个应用正在使用 ${key}，所以它现在不起作用。请选择其他按键。`;
+        return `macOS 未接受 ${key}，所以它现在不起作用。请选择其他按键。`;
       case "zh-Hant":
-        return `另一個 App 正在使用 ${key}，所以它現在沒有作用。請選擇其他按鍵。`;
+        return `macOS 未接受 ${key}，所以它現在沒有作用。請選擇其他按鍵。`;
       case "en-XA":
-        return `[Åñöţĥéŕ áþþ ûšéš ${key}, šö îţ ðöéš ñöţĥîñĝ ñöŵ. Çĥööšé áñöţĥéŕ ķéý. ~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[ɱáçÖŠ ðîð ñöţ áççéþţ ${key}, šö îţ ðöéš ñöţĥîñĝ ñöŵ. Çĥööšé áñöţĥéŕ ķéý. ~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Another app uses ‬${key}‮, so it does nothing now. Choose another key.‬`;
+        return `‮macOS did not accept ‬${key}‮, so it does nothing now. Choose another key.‬`;
     }
-    return `Another app uses ${key}, so it does nothing now. Choose another key.`;
+    return `macOS did not accept ${key}, so it does nothing now. Choose another key.`;
   }
   function settingsKeyboardChanged() {
     switch (currentLanguage()) {

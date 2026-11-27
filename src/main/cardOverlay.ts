@@ -35,7 +35,7 @@ export type OverlayPanel = {
 export type CardOverlayDeps = {
   /** Whether this desktop has the overlay: a Mac's alone. */
   supported: boolean;
-  /** Registers a system-wide shortcut; false when another program holds it. */
+  /** Registers a system-wide shortcut; false when the system will not take it (a key another program holds is not refused on a Mac). */
   register(accelerator: string, run: () => void): boolean;
   unregister(accelerator: string): void;
   /** Makes the panel, hidden, and starts its page; `gone` hears it close, however it closes. */

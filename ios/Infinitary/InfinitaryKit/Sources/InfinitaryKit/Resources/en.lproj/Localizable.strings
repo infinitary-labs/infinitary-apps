@@ -3416,11 +3416,11 @@
 "settingsKeyboardCardOverlayChange" = "Change key";
 "settingsKeyboardCardOverlayChangeLabel" = "Change the key that shows cards over other apps";
 "settingsKeyboardCardOverlayDescription" = "Press %1$@ in any app, even a full-screen game, to answer the waiting card at the edge of the screen. Press it again or Escape to go back.";
-"settingsKeyboardCardOverlayKept" = "Another app uses %2$@. The cards keep %1$@.";
+"settingsKeyboardCardOverlayKept" = "macOS did not accept %2$@. The cards keep %1$@.";
 "settingsKeyboardCardOverlayNotAllowed" = "%1$@ cannot show the cards: choose a key with Control, Option or Command, other than Escape, Tab, Return, Space or Delete.";
 "settingsKeyboardCardOverlayPress" = "Press a key with Control, Option or Command. Escape cancels.";
 "settingsKeyboardCardOverlayRecording" = "Recording a key for cards over other apps";
-"settingsKeyboardCardOverlayTaken" = "Another app uses %1$@, so it does nothing now. Choose another key.";
+"settingsKeyboardCardOverlayTaken" = "macOS did not accept %1$@, so it does nothing now. Choose another key.";
 "settingsKeyboardChanged" = "Changed";
 "settingsKeyboardClashMovesKeeps" = "%1$@. Saving moves it here, and “%2$@” keeps its other keys.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. Saving moves it here, and “%2$@” will have no key.";

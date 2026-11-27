@@ -3416,11 +3416,11 @@
 "settingsKeyboardCardOverlayChange" = "تغيير المفتاح";
 "settingsKeyboardCardOverlayChangeLabel" = "تغيير المفتاح الذي يُظهر البطاقات فوق التطبيقات الأخرى";
 "settingsKeyboardCardOverlayDescription" = "اضغط %1$@ في أي تطبيق، حتى في لعبة بملء الشاشة، لتجيب عن البطاقة المنتظرة عند حافة الشاشة. اضغطه مرة أخرى أو Esc للعودة.";
-"settingsKeyboardCardOverlayKept" = "يستخدم تطبيق آخر %2$@. تحتفظ البطاقات بـ %1$@.";
+"settingsKeyboardCardOverlayKept" = "لم يقبل macOS %2$@. تحتفظ البطاقات بـ %1$@.";
 "settingsKeyboardCardOverlayNotAllowed" = "لا يمكن لـ %1$@ إظهار البطاقات: اختر مفتاحًا مع Control أو Option أو Command، غير Esc وTab وReturn والمسافة وDelete.";
 "settingsKeyboardCardOverlayPress" = "اضغط مفتاحًا مع Control أو Option أو Command. يلغي Esc.";
 "settingsKeyboardCardOverlayRecording" = "جارٍ تسجيل مفتاح لإظهار البطاقات فوق التطبيقات الأخرى";
-"settingsKeyboardCardOverlayTaken" = "يستخدم تطبيق آخر %1$@، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.";
+"settingsKeyboardCardOverlayTaken" = "لم يقبل macOS %1$@، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.";
 "settingsKeyboardChanged" = "مُغيَّر";
 "settingsKeyboardClashMovesKeeps" = "%1$@. الحفظ ينقله إلى هنا، ويحتفظ «%2$@» بمفاتيحه الأخرى.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. الحفظ ينقله إلى هنا، ولن يبقى لـ «%2$@» أي مفتاح.";

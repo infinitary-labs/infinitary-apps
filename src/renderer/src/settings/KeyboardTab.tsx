@@ -970,8 +970,8 @@ function overlayError(
 /**
  * The card overlay's switch and key (docs/card-overlay.md), on a Mac alone:
  * on, the key shows the card stack over any app, a full-screen game
- * included. A key another program holds is refused and the one before it
- * keeps working; recording saves the first press that may summon.
+ * included. A key the system will not register is refused and the one
+ * before it keeps working; recording saves the first press that may summon.
  */
 function CardOverlayRow({
   recording,

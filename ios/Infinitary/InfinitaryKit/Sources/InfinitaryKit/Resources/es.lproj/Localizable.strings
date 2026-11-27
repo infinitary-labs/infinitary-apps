@@ -3416,11 +3416,11 @@
 "settingsKeyboardCardOverlayChange" = "Cambiar tecla";
 "settingsKeyboardCardOverlayChangeLabel" = "Cambiar la tecla que muestra tarjetas sobre otras apps";
 "settingsKeyboardCardOverlayDescription" = "Presiona %1$@ en cualquier app, incluso en un juego a pantalla completa, para responder la tarjeta pendiente en el borde de la pantalla. Presiónala otra vez o Esc para volver.";
-"settingsKeyboardCardOverlayKept" = "Otra app usa %2$@. Las tarjetas siguen con %1$@.";
+"settingsKeyboardCardOverlayKept" = "macOS no aceptó %2$@. Las tarjetas siguen con %1$@.";
 "settingsKeyboardCardOverlayNotAllowed" = "%1$@ no puede mostrar las tarjetas: elige una tecla con Control, Opción o Comando, que no sea Esc, Tab, Retorno, Espacio ni Borrar.";
 "settingsKeyboardCardOverlayPress" = "Presiona una tecla con Control, Opción o Comando. Esc cancela.";
 "settingsKeyboardCardOverlayRecording" = "Grabando una tecla para las tarjetas sobre otras apps";
-"settingsKeyboardCardOverlayTaken" = "Otra app usa %1$@, así que ahora no hace nada. Elige otra tecla.";
+"settingsKeyboardCardOverlayTaken" = "macOS no aceptó %1$@, así que ahora no hace nada. Elige otra tecla.";
 "settingsKeyboardChanged" = "Cambiado";
 "settingsKeyboardClashMovesKeeps" = "%1$@. Al guardar, pasa aquí y «%2$@» conserva sus otras teclas.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. Al guardar, pasa aquí y «%2$@» se queda sin tecla.";

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "heartbeat-idle-row",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The Heartbeat now names work left idle with nothing to move it on",
+      "body": "With the Heartbeat on, your first mate's look over waiting work now includes any started task that has sat idle for two hours with nothing running, no review open, no checks watched, no card for you and no wait it declared. Before, a task like that could sit for a day when the app wrongly read it as still working, and the Heartbeat never listed it.",
+      "noPicture": "The change adds work to what your first mate reads on each Heartbeat, not to any view.",
+      "noDocsSite": "The runbooks page already says the Heartbeat looks over work waiting with nothing to bring it up; this makes that hold for idle work.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

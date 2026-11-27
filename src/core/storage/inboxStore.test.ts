@@ -67,7 +67,7 @@ describe("InboxStore", () => {
     const { db, inbox } = setup();
     const readings: boolean[] = [];
     const detach = inbox.onChange(() =>
-      readings.push(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)),
+      readings.push(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX).length > 0),
     );
     const id = inbox.transaction(() => {
       const id = inbox.enqueue("task-1", "Reply captured");
@@ -281,7 +281,7 @@ describe("InboxStore", () => {
     expect(inbox.outage("task-2")).toEqual({ failures: 0, since: null });
     // Still backing off, and still guidance that will be delivered.
     expect(inbox.pending("task-1", clock.now)).toHaveLength(0);
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(true);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX).map((row) => row.id)).toEqual([failed]);
 
     inbox.endOutage("task-1");
     expect(inbox.outage("task-1")).toEqual({ failures: 0, since: null });
@@ -328,23 +328,23 @@ describe("InboxStore", () => {
     expect(inbox.pending("task-1", clock.now).map((row) => row.id)).toEqual([id]);
   });
 
-  it("counts guidance that will still be delivered, never a spent or set-aside row", () => {
+  it("lists guidance that will still be delivered, never a spent or set-aside row", () => {
     const { inbox } = setup();
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(false);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX)).toEqual([]);
     const id = inbox.enqueue("task-1", "guidance");
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(true);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX).map((row) => row.id)).toEqual([id]);
     // In flight: the turn carrying it is the witness, not the lane.
     inbox.markDelivered([id]);
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(false);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX)).toEqual([]);
     inbox.release([id]);
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(true);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX).map((row) => row.id)).toEqual([id]);
     for (let attempt = 1; attempt < INBOX_ATTEMPT_MAX; attempt += 1) {
       inbox.markDelivered([id]);
       inbox.release([id]);
     }
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(false);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX)).toEqual([]);
     inbox.markEscalated(id);
-    expect(inbox.hasDeliverable("task-1", INBOX_ATTEMPT_MAX)).toBe(false);
+    expect(inbox.deliverable("task-1", INBOX_ATTEMPT_MAX)).toEqual([]);
   });
 
   it("keeps lanes separate and lists recipients holding rows", () => {

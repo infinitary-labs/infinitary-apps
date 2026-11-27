@@ -17,6 +17,13 @@ import { capWithOverflow } from "../overflow";
 import type { CrewStatusEntry } from "../pi/crewTools";
 import { LOCAL_MACHINE_ID } from "../session/session";
 import { INBOX_ATTEMPT_MAX, type InboxRow } from "../storage/inboxStore";
+
+/**
+ * How long a lane row still witnesses a crewmate moving after it fell due
+ * or was last tried: the honest retry's longest backoff, so a row waiting
+ * it out always counts, while one the sweep left that long does not.
+ */
+export const SERVABLE_BOUND_MS = 15 * 60_000;
 import type { TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed } from "../tasks/alreadyAllowed";
 import { hasStartQueueWait, queueWaitOf } from "../tasks/queueWait";
@@ -50,6 +57,30 @@ export class CrewFacts {
 
   deliverableRows(taskId: string, now: number): InboxRow[] {
     const rows = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
+    return this.served(taskId, rows);
+  }
+
+  /**
+   * Whether the lane holds guidance a turn will serve, due now or waiting
+   * out its grace or backoff: the idle ladder's "moving" witness
+   * (docs/report-sort.md). A row due or last tried longer ago than
+   * `SERVABLE_BOUND_MS` is not one: the sweep serves a due row within a
+   * tick, so one left that long is a leftover nothing is serving, and
+   * counting it would hide idle work for as long as it stays (INF-7116).
+   */
+  servesTurn(taskId: string, now: number): boolean {
+    const fresh = this.core.options.inbox
+      .deliverable(taskId, INBOX_ATTEMPT_MAX)
+      .filter(
+        (row) =>
+          Math.max(row.createdAt, row.lastAttemptAt ?? 0, row.nextAttemptAt ?? 0) >
+          now - SERVABLE_BOUND_MS,
+      );
+    return this.served(taskId, fresh).length > 0;
+  }
+
+  /** The rows of `rows` a turn would serve, or none when none may start or join one. */
+  private served(taskId: string, rows: InboxRow[]): InboxRow[] {
     const task = this.core.tasks.get(taskId);
     const running = task !== undefined && task.turn.busy;
     // A renewed conversation's reason rides the next full turn (`runTurn`),

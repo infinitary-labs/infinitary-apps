@@ -1767,6 +1767,7 @@
 "panelChangeCardSize" = "卡片大小";
 "panelChangeCopyStop" = "停止在另一台电脑上保留副本";
 "panelChangeCostLimit" = "任务何时在多花之前询问";
+"panelChangeCrewGrouping" = "按项目分组船员动画";
 "panelChangeCrewModelNames" = "显示船员的模型名称";
 "panelChangeCrewReasoning" = "船员的思考深度";
 "panelChangeCrewSlots" = "船员的模型";

@@ -1767,6 +1767,7 @@
 "panelChangeCardSize" = "Taille des cartes";
 "panelChangeCopyStop" = "Arrêter de garder une copie sur un autre ordinateur";
 "panelChangeCostLimit" = "Quand une tâche demande avant de dépenser plus";
+"panelChangeCrewGrouping" = "Grouper l’animation de l’équipage par projet";
 "panelChangeCrewModelNames" = "Afficher les noms de modèle de l’équipage";
 "panelChangeCrewReasoning" = "La réflexion de l’équipage";
 "panelChangeCrewSlots" = "Les modèles de l’équipage";

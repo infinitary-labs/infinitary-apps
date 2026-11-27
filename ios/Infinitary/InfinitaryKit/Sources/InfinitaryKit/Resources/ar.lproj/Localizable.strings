@@ -1767,6 +1767,7 @@
 "panelChangeCardSize" = "حجم البطاقات";
 "panelChangeCopyStop" = "إيقاف الاحتفاظ بنسخة على حاسوب آخر";
 "panelChangeCostLimit" = "متى تسأل المهمة قبل أن تنفق أكثر";
+"panelChangeCrewGrouping" = "تجميع رسوم الطاقم المتحركة حسب المشروع";
 "panelChangeCrewModelNames" = "إظهار أسماء نماذج الطاقم";
 "panelChangeCrewReasoning" = "مدى تفكير الطاقم";
 "panelChangeCrewSlots" = "نماذج الطاقم";

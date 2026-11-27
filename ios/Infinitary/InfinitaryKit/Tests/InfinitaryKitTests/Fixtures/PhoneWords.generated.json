@@ -1527,6 +1527,7 @@
   {"said":{"m":"panelChangeCardSize"},"words":"Card size"},
   {"said":{"m":"panelChangeCopyStop"},"words":"Stop keeping a copy on another computer"},
   {"said":{"m":"panelChangeCostLimit"},"words":"When a task asks before it spends more"},
+  {"said":{"m":"panelChangeCrewGrouping"},"words":"Group the crew animation by project"},
   {"said":{"m":"panelChangeCrewModelNames"},"words":"Show the crew's model names"},
   {"said":{"m":"panelChangeCrewReasoning"},"words":"How hard the crew thinks"},
   {"said":{"m":"panelChangeCrewSlots"},"words":"The crew's models"},

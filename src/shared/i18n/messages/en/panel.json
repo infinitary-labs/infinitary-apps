@@ -16,6 +16,7 @@
   "panelChangeCardSize": "Card size",
   "panelChangeCopyStop": "Stop keeping a copy on another computer",
   "panelChangeCostLimit": "When a task asks before it spends more",
+  "panelChangeCrewGrouping": "Group the crew animation by project",
   "panelChangeCrewModelNames": "Show the crew's model names",
   "panelChangeCrewReasoning": "How hard the crew thinks",
   "panelChangeCrewSlots": "The crew's models",

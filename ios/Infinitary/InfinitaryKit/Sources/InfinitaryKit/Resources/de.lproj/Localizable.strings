@@ -1767,6 +1767,7 @@
 "panelChangeCardSize" = "Kartengröße";
 "panelChangeCopyStop" = "Kopie auf einem anderen Computer nicht mehr führen";
 "panelChangeCostLimit" = "Wann eine Aufgabe fragt, bevor sie mehr ausgibt";
+"panelChangeCrewGrouping" = "Crew-Animation nach Projekt gruppieren";
 "panelChangeCrewModelNames" = "Modellnamen der Crew anzeigen";
 "panelChangeCrewReasoning" = "Wie gründlich die Crew nachdenkt";
 "panelChangeCrewSlots" = "Modelle der Crew";

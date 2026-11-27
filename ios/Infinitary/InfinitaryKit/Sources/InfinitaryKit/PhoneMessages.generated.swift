@@ -1854,6 +1854,7 @@ public enum PhoneMessages {
     public static func `panelChangeCardSize`() -> String { PhoneWords.format("panelChangeCardSize", []) }
     public static func `panelChangeCopyStop`() -> String { PhoneWords.format("panelChangeCopyStop", []) }
     public static func `panelChangeCostLimit`() -> String { PhoneWords.format("panelChangeCostLimit", []) }
+    public static func `panelChangeCrewGrouping`() -> String { PhoneWords.format("panelChangeCrewGrouping", []) }
     public static func `panelChangeCrewModelNames`() -> String { PhoneWords.format("panelChangeCrewModelNames", []) }
     public static func `panelChangeCrewReasoning`() -> String { PhoneWords.format("panelChangeCrewReasoning", []) }
     public static func `panelChangeCrewSlots`() -> String { PhoneWords.format("panelChangeCrewSlots", []) }
@@ -6756,6 +6757,7 @@ extension PhoneWords {
         "panelChangeCardSize": [],
         "panelChangeCopyStop": [],
         "panelChangeCostLimit": [],
+        "panelChangeCrewGrouping": [],
         "panelChangeCrewModelNames": [],
         "panelChangeCrewReasoning": [],
         "panelChangeCrewSlots": [],

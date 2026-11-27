@@ -57,13 +57,15 @@ export function captainWordsIn(
 // i18n-exempt: a refusal served to the first mate, never shown to a person
 export const DIRECTION_REFUSED = "Direction refused: nothing was saved.";
 // i18n-exempt: a refusal served to the first mate, never shown to a person
-const DIRECTION_CITES = `Cite turn for this turn's words, a card's id for the captain's reply or click there, or ${CREWMATE_TAB_VIA} or ${STANDING_WORDS_FROM} with task naming the task; or leave from out to save it on your own judgment, not heard.`;
+const DIRECTION_CITES = `Cite turn for words the captain typed this turn, a card's id for the captain's reply or click there, or ${CREWMATE_TAB_VIA} or ${STANDING_WORDS_FROM} with task naming the task; or leave from out to save it on your own judgment, not heard.`;
 
 /** Why a direction change's citation is refused, after `DIRECTION_REFUSED`. */
 // i18n-exempt: refusals served to the first mate, never shown to a person
 const DIRECTION_WHY = {
   taskAlone: `task names a task only beside from. ${DIRECTION_CITES}`,
   noTurnWords: `This turn carries no words of the captain's. ${DIRECTION_CITES}`,
+  choiceOnly:
+    "This turn carries the captain's choice on a card, not words they typed: cite that card's id as from, so its check reads what they picked.",
   scheduled:
     "A scheduled wake carries no words of the captain's, so it cites none; leave from out to save it on your own judgment, not heard.",
   mergeClick:
@@ -93,23 +95,27 @@ function directionRefused(why: string): { ok: false; text: string } {
 /**
  * Where the captain's own words a direction change cites were heard
  * (docs/knowledge.md, "Heard from the captain"), by the rule an override's
- * citation keeps (`captainWordsIn`): this turn's words, or words the record
- * keeps, which a scheduled wake with none of its own cites none of. With no
- * citation the change is the first mate's own judgment and saves unheard; a
- * citation the record does not hold is refused, so nothing is saved under a
- * mark it lacks.
+ * citation keeps (`captainWordsIn`): words the captain typed this turn, or
+ * words the record keeps, which a scheduled wake with none of its own cites
+ * none of. A turn that carries only a card choice cites that card, never
+ * `turn`: its words are the button's label, and the card's check is what
+ * hears only the directions a click ticked. With no citation the change is
+ * the first mate's own judgment and saves unheard; a citation the record
+ * does not hold is refused, so nothing is saved under a mark it lacks.
  */
 export function heardDirection(
-  turn: { canCreate: boolean; asked: readonly string[] },
+  turn: { canCreate: boolean; asked: readonly string[]; typed: boolean },
   change: DirectionCitation & { id?: string },
   overrides: Pick<CaptainOverrides, "directionWords">,
 ): { ok: true; heard?: KnowledgeDirectionHeard } | { ok: false; text: string } {
   const from = change.from?.trim();
   if (!from) return change.task ? directionRefused(DIRECTION_WHY.taskAlone) : { ok: true };
-  if (from === "turn")
-    return turn.asked.join("\n").trim()
-      ? { ok: true, heard: { from: "turn" } }
-      : directionRefused(DIRECTION_WHY.noTurnWords);
+  if (from === "turn") {
+    if (turn.typed && turn.asked.join("\n").trim()) return { ok: true, heard: { from: "turn" } };
+    return directionRefused(
+      turn.asked.length > 0 ? DIRECTION_WHY.choiceOnly : DIRECTION_WHY.noTurnWords,
+    );
+  }
   if (!citesKeptWords(turn)) return directionRefused(DIRECTION_WHY.scheduled);
   return overrides.directionWords(from, change.task, change.id);
 }

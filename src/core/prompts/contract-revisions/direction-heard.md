@@ -6,7 +6,7 @@ Each revision of a direction now records whether the captain's own words for it 
 
 What the first mate is now told:
 
-- The `direction` line of `app_change` takes `from`: `turn` for this turn's words, a card's id for the captain's reply or click there, or `crewmate-tab` or `standing` with `task`.
+- The `direction` line of `app_change` takes `from`: `turn` for words the captain typed this turn, a card's id for the captain's reply or click there, or `crewmate-tab` or `standing` with `task`.
   The host checks the citation by the rule an override's citation keeps and refuses one it cannot find, saving nothing; with no `from` the change saves on the first mate's judgment, not heard, and is no yes.
   Its current value lists each direction's `heard`.
 - The `directions` context block's heading says the no-consent rule holds only for a direction whose `heard` names where the captain's words for its current revision were heard, and each served row carries `heard`, where or `false`.

@@ -156,8 +156,8 @@ No host parser, trigger store or polling schedule decides these judgments.
 ### Heard from the captain
 
 Each revision of a direction records whether the captain's own words for it were heard, and from where (`direction_heard` in the knowledge store, kept by `StandingDirections.change`).
-The first mate says where with the `direction` line's `from`: `turn` for this turn's words, a card's id for the captain's reply or click there, or `crewmate-tab` or `standing` with `task` naming the task (INF-6987, the captain's plan).
-The host checks the citation by the rule an override's citation keeps (`heardDirection`, `src/core/orchestrator/captainOverrides.ts`, beside `captainWordsIn`): this turn carries the captain's words, the card holds their reply or click, the task's Crewmate tab holds a line they typed, or the task's standing reply stands.
+The first mate says where with the `direction` line's `from`: `turn` for words the captain typed this turn, a card's id for the captain's reply or click there (a turn that carries only a click cites its card, never `turn`), or `crewmate-tab` or `standing` with `task` naming the task (INF-6987, the captain's plan).
+The host checks the citation by the rule an override's citation keeps (`heardDirection`, `src/core/orchestrator/captainOverrides.ts`, beside `captainWordsIn`): this turn carries words the captain typed, the card holds their reply or click, the task's Crewmate tab holds a line they typed, or the task's standing reply stands.
 A scheduled wake that carries none of the captain's words cites none, and a citation the record does not hold is refused, so nothing is saved.
 A click whose answers name directions by `d:` id heard only the ones it names, and a click on a merge is consent to that merge, never words about a direction.
 A change the captain makes in the window is heard from the window; the dispatcher drops any `heard` a request carries, so only the core sets it.

@@ -338,6 +338,23 @@ describe("confirming the directions saved before heard marks", () => {
     expect(await confirmFrom("quiet", "Never post to the team channel.")).toContain(
       `${DIRECTION_REFUSED} The captain's click on card "Which of these directions are yours?" named d:mornings, d:squash, not d:quiet; it heard only those.`,
     );
+    // The click turn's only words are its button's label, so citing this
+    // turn cannot hear a direction the click left unticked.
+    expect(
+      await direction(
+        h,
+        {
+          op: "revise",
+          id: "d:quiet",
+          expectedRevision: 1,
+          text: "Never post to the team channel.",
+          from: "turn",
+        },
+        "The captain clicked Confirm the ticked ones.",
+      ),
+    ).toContain(
+      `${DIRECTION_REFUSED} This turn carries the captain's choice on a card, not words they typed: cite that card's id as from`,
+    );
     for (const id of ["mornings", "squash"])
       expect(readDirection(knowledge, id)).toMatchObject({
         revision: 2,

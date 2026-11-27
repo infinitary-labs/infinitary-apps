@@ -45,7 +45,11 @@ A card that arrives while one is shown waits behind it as in the window; it neve
 
 ## The panel
 
-`startCardOverlay` makes one `type: "panel"` window on each press and destroys it on each leave, so no overlay page, timer or poll runs while it is hidden.
+`startCardOverlay` makes one `type: "panel"` window on each press and destroys it on each leave.
+A notification about a card on this computer also makes it, hidden (`CardOverlayController.noticed`), so the key that follows opens the card without loading the page.
+That page reads the stack but picks no card until the key: `inf:overlay:start` answers only then, so the card is the newest notification's at the press, and the panel takes its place on the pointer's display then too.
+Unpressed, it is destroyed five minutes after the newest notification (`WARM_LIMIT_MS`), and a lock, sleep or lost display destroys it at once.
+With no notification waiting, no overlay page, timer or poll runs while it is hidden.
 It is frameless, clear, shadowless and floating above full-screen apps on every Space, at the trailing edge of the display the pointer is on (a game holds the pointer on its own display): one 560-point card 24 points from the edge, centred in the display's height and no taller than it (`overlayBounds`).
 In a right-to-left language it sits at the left edge.
 A card made large takes the display's whole work area while it stays large, and the panel returns to its place when it shrinks: the page tells the main process (`inf:overlay:wide`), which resizes the panel, and the clear area around the large card still lets the pointer through.

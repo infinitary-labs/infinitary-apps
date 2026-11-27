@@ -26,9 +26,19 @@ export function takeNotifiedCard(): string | null {
  * nothing, so a notification's own click still opens its card in the window.
  */
 let noticed: string | null = null;
+const noticeListeners = new Set<() => void>();
 
 export function noteNoticedCard(cardId: string): void {
   noticed = cardId;
+  for (const listener of noticeListeners) listener();
+}
+
+/** Hears each notification about a card: the overlay loads its page then (`CardOverlayController.noticed`). */
+export function onNoticedCard(listener: () => void): () => void {
+  noticeListeners.add(listener);
+  return () => {
+    noticeListeners.delete(listener);
+  };
 }
 
 export function noticedCard(): string | null {

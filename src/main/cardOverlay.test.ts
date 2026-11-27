@@ -7,6 +7,7 @@ import {
   LEAVE_LIMIT_MS,
   NOTHING_WAITS_MS,
   type OverlayPanel,
+  WARM_LIMIT_MS,
 } from "./cardOverlay";
 
 // Intent: INF-7063's approved plan, built with the captain's choices - an
@@ -23,14 +24,16 @@ const held = (registered: Map<string, unknown>) => [...registered.keys()];
 /** A panel that records what the controller did to it. */
 function panel() {
   const did: string[] = [];
+  const keys = { pressed: 0 };
   const it: OverlayPanel = {
+    summoned: () => void keys.pressed++,
     showWithKeys: () => did.push("show"),
     showWithoutKeys: () => did.push("show-inactive"),
     hide: () => did.push("hide"),
     destroy: () => did.push("destroy"),
     askToLeave: () => did.push("ask-to-leave"),
   };
-  return { it, did };
+  return { it, did, keys };
 }
 
 /** The system's shortcut registry, a store and a clock, as the controller meets them. */
@@ -264,6 +267,64 @@ describe("the card overlay's panel", () => {
     h.controller.hideAsked(stranger.it);
     expect(stranger.did).toEqual([]);
     expect(h.panels[0]?.did).toEqual([]);
+  });
+});
+
+// Intent: the captain's open-speed choice, "Load the page when a card notice
+// arrives, drop it later", so the key after a notification opens the card
+// without loading the page.
+describe("a panel loaded on a card's notification", () => {
+  it("loads hidden and holds its page until the key, which opens that panel", async () => {
+    const h = harness({ saved: ON });
+    h.controller.noticed();
+    const first = h.opened(0);
+    expect(first.did).toEqual([]);
+    let started = false;
+    void h.controller.pressed(first.it).then(() => {
+      started = true;
+    });
+    await Promise.resolve();
+    expect(started).toBe(false);
+    h.press();
+    await Promise.resolve();
+    expect(started).toBe(true);
+    expect(h.panels).toHaveLength(1);
+    expect(first.keys.pressed).toBe(1);
+    h.controller.ready(first.it, true);
+    expect(first.did).toEqual(["show"]);
+  });
+
+  it("goes unpressed after the wait, counted from the newest notification", () => {
+    const h = harness({ saved: ON });
+    h.controller.noticed();
+    h.advance(WARM_LIMIT_MS - 1);
+    h.controller.noticed();
+    expect(h.panels).toHaveLength(1);
+    h.advance(WARM_LIMIT_MS - 1);
+    expect(h.opened(0).did).toEqual([]);
+    h.advance(1);
+    expect(h.opened(0).did).toEqual(["destroy"]);
+    h.press();
+    expect(h.panels).toHaveLength(2);
+  });
+
+  it("loads nothing while the switch is off or a panel is already open", () => {
+    const off = harness();
+    off.controller.noticed();
+    expect(off.panels).toHaveLength(0);
+    const h = harness({ saved: ON });
+    h.press();
+    h.controller.noticed();
+    expect(h.panels).toHaveLength(1);
+  });
+
+  it("goes on a lock while it waits, so the key after opens a new one", () => {
+    const h = harness({ saved: ON });
+    h.controller.noticed();
+    h.controller.leave();
+    expect(h.opened(0).did).toEqual(["destroy"]);
+    h.press();
+    expect(h.panels).toHaveLength(2);
   });
 });
 

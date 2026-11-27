@@ -35,6 +35,7 @@ import {
   moveCommands,
   shellCommands,
 } from "./keyboard";
+import { onNoticedCard } from "./notifiedCard";
 import { assertSecurityBaseline, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
 import { lockdownNavigation } from "./security/navigation";
 import type { RendererSourceOptions } from "./security/rendererSource";
@@ -42,8 +43,9 @@ import { markOverlayWindow } from "./windows";
 
 /**
  * The card overlay's Electron half (docs/card-overlay.md): the system
- * shortcut and the one panel window, made on each summon and destroyed on
- * each leave, so nothing of it runs while it is hidden. The rules live in
+ * shortcut and the one panel window, made on each summon or card
+ * notification and destroyed on each leave, so nothing of it runs while it
+ * is hidden past a notification's wait. The rules live in
  * `CardOverlayController` (./cardOverlay.ts).
  */
 
@@ -84,7 +86,9 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
 
   const openPanel = (gone: () => void): OverlayPanel => {
     // The game's display is the pointer's: a game holds the pointer on its own display.
-    const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    // A panel loaded on a notification takes its place again at the key (`summoned`).
+    const displayNow = () => screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    const display = displayNow();
     const win = new BrowserWindow({
       // A nonactivating panel on every Space, full-screen ones included: it
       // takes the keys while the game stays the front app (INF-7063's plan).
@@ -121,7 +125,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     });
     // The app in front at the press, the game: hiding Infinitary instead would activate whichever
     // app the system orders next, which after a Command-Tab is not the game.
-    const behind = frontApp();
+    let behind: ReturnType<typeof frontApp> = Promise.resolve(null);
     // A panel that lost the keys first went because the person moved to another app, Infinitary's
     // own window included, which keeps them. Each way out passes here once while the panel shows.
     const handBack = () => {
@@ -129,6 +133,13 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       pressed = false;
     };
     const panel: OverlayPanel = {
+      summoned: () => {
+        if (win.isDestroyed()) return;
+        behind = frontApp();
+        const workArea = displayNow().workArea;
+        if (shown?.win === win) shown.workArea = workArea;
+        win.setBounds(overlayBounds(workArea, options.rightToLeft()));
+      },
       showWithKeys: () => {
         if (!win.isDestroyed()) win.show();
       },
@@ -199,6 +210,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
   powerMonitor.on("suspend", leave);
   screen.on("display-removed", leave);
   app.once("will-quit", () => controller.dispose());
+  onNoticedCard(() => controller.noticed());
 
   return {
     controller,

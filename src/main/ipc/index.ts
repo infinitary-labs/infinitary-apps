@@ -206,9 +206,12 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:overlay:settings", rendererSource, () => cardOverlay.controller.current());
   handleInvoke("inf:overlay:settings:set", rendererSource, (_event, next) => cardOverlay.set(next));
   // The rest are the overlay page's alone: any other page asking changes nothing.
-  handleInvoke("inf:overlay:start", rendererSource, (event) => ({
-    cardId: cardOverlay.panelOf(event.sender) ? noticedCard() : null,
-  }));
+  // A page loaded on a notification hears this only once the key is pressed, so it shows the newest one's card.
+  handleInvoke("inf:overlay:start", rendererSource, async (event) => {
+    const panel = cardOverlay.panelOf(event.sender);
+    if (panel) await cardOverlay.controller.pressed(panel);
+    return { cardId: panel ? noticedCard() : null };
+  });
   handleInvoke("inf:overlay:ready", rendererSource, (event, { cards }) => {
     const panel = cardOverlay.panelOf(event.sender);
     if (panel) cardOverlay.controller.ready(panel, cards);

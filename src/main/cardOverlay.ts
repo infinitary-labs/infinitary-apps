@@ -31,6 +31,8 @@ export type OverlayPanel = {
   destroy(): void;
   /** Asks its page to let go: settle its unsent words, then ask `hideAsked`. */
   askToLeave(): void;
+  /** The key was pressed for this panel: it moves to the display the pointer is on and notes the app in front. */
+  summoned(): void;
 };
 
 export type CardOverlayDeps = {
@@ -55,9 +57,14 @@ export type CardOverlayDeps = {
 export const LEAVE_LIMIT_MS = 1_000;
 /** How long the word that no card waits stays up. */
 export const NOTHING_WAITS_MS = 1_600;
+/** How long a page loaded on a card's notification waits, hidden, for the key before it goes. */
+export const WARM_LIMIT_MS = 5 * 60_000;
 
 type Phase =
   | { kind: "closed" }
+  // Loaded, hidden, on a card's notification, so the key that follows opens it at once:
+  // its page holds its card until the key (`pressed`).
+  | { kind: "warm"; panel: OverlayPanel; timer: unknown; waiting: (() => void)[] }
   | { kind: "opening"; panel: OverlayPanel; since: number }
   | { kind: "answering"; panel: OverlayPanel }
   | { kind: "nothing"; panel: OverlayPanel; timer: unknown }
@@ -143,6 +150,37 @@ export class CardOverlayController {
     return { overlay: this.current(), refused: null };
   }
 
+  /**
+   * A notification about a card went up on this computer: the panel's page
+   * loads now, hidden, and waits for the key, so the key that follows opens
+   * it without loading it. It goes unpressed after `WARM_LIMIT_MS`, counted
+   * from the newest notification.
+   */
+  noticed(): void {
+    const phase = this.phase;
+    if (phase.kind === "warm") {
+      this.deps.cancel(phase.timer);
+      this.phase = { ...phase, timer: this.deps.later(() => this.leave(), WARM_LIMIT_MS) };
+      return;
+    }
+    if (phase.kind !== "closed" || !this.registered) return;
+    const panel = this.deps.openPanel(() => this.gone(panel));
+    const timer = this.deps.later(() => this.leave(), WARM_LIMIT_MS);
+    this.phase = { kind: "warm", panel, timer, waiting: [] };
+  }
+
+  /**
+   * Settles once the key was pressed for `panel`: at once for a panel the
+   * key opened, and for one loaded on a notification when the key comes.
+   * Its page picks its card only then, so the card is the newest
+   * notification's at the press.
+   */
+  pressed(panel: OverlayPanel): Promise<void> {
+    const phase = this.phase;
+    if (phase.kind !== "warm" || phase.panel !== panel) return Promise.resolve();
+    return new Promise((resolve) => phase.waiting.push(resolve));
+  }
+
   /** The system shortcut was pressed. */
   summon(): void {
     const phase = this.phase;
@@ -150,7 +188,18 @@ export class CardOverlayController {
       const since = this.deps.now();
       this.deps.mark?.("pressed");
       const panel = this.deps.openPanel(() => this.gone(panel));
+      panel.summoned();
       this.phase = { kind: "opening", panel, since };
+      return;
+    }
+    if (phase.kind === "warm") {
+      const since = this.deps.now();
+      // i18n-exempt: a timing line for a check, read by no person in the app
+      this.deps.mark?.("pressed (loaded on a notification)");
+      this.deps.cancel(phase.timer);
+      phase.panel.summoned();
+      this.phase = { kind: "opening", panel: phase.panel, since };
+      for (const resolve of phase.waiting) resolve();
       return;
     }
     // A press while the page starts, or while it lets go, is spent on nothing.
@@ -193,7 +242,7 @@ export class CardOverlayController {
     const phase = this.phase;
     if (phase.kind === "closed" || phase.kind === "leaving") return;
     if (phase.kind === "nothing") this.deps.cancel(phase.timer);
-    if (phase.kind === "opening") {
+    if (phase.kind === "opening" || phase.kind === "warm") {
       // Nothing was shown and nothing typed: there is nothing to settle.
       this.finish();
       return;
@@ -243,7 +292,8 @@ export class CardOverlayController {
   private finish(): void {
     const phase = this.phase;
     if (phase.kind === "closed") return;
-    if (phase.kind === "leaving" || phase.kind === "nothing") this.deps.cancel(phase.timer);
+    if (phase.kind === "leaving" || phase.kind === "nothing" || phase.kind === "warm")
+      this.deps.cancel(phase.timer);
     this.phase = { kind: "closed" };
     phase.panel.destroy();
   }
@@ -252,7 +302,8 @@ export class CardOverlayController {
   private gone(panel: OverlayPanel): void {
     const phase = this.phase;
     if (phase.kind === "closed" || phase.panel !== panel) return;
-    if (phase.kind === "leaving" || phase.kind === "nothing") this.deps.cancel(phase.timer);
+    if (phase.kind === "leaving" || phase.kind === "nothing" || phase.kind === "warm")
+      this.deps.cancel(phase.timer);
     this.phase = { kind: "closed" };
   }
 

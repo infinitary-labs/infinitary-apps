@@ -814,6 +814,8 @@ export const BASELINE: Record<string, Record<string, string>> = {
   // INF-7063's plan: the card overlay's page has this long to send its unsent words before its panel, already out of sight, is destroyed.
   "src/main/cardOverlay.ts": {
     LEAVE_LIMIT_MS: "the panel is destroyed anyway; a draft not yet sent stays in the page's saved draft and goes from the window",
+    // The captain's open-speed choice: load the page on a card's notification and drop it later.
+    WARM_LIMIT_MS: "the hidden page is destroyed; the next key loads it again, about 400 ms slower",
   },
   "src/shared/accounts.ts": {
     ACCOUNT_LABEL_MAX: "the rename field stops typing at 64; IPC refuses a longer label",

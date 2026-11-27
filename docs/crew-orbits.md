@@ -151,6 +151,7 @@ The rule is `groupPlanOf` and `groupOf` in `character/crew/crewGroups.ts`, pure 
 - The built-in projects, Scratch and the app's own workspace (`builtInProject`: no repository, or a `personal` one), always sit with the first mate (the captain: "the default built-in projects should always stay with first mate").
 - So does the middle project: the only project of the person's own with crew outside an away computer's frozen group, else the window's focused project, else none (the captain's written-in answer).
 - A crewmate whose project the board does not name yet, as when its spawn arrives before its board row, keeps its computer's group until the row arrives; the others keep theirs.
+- A crewmate already in a project group keeps it when the board stops naming its project, as when a closing task's row goes before its fall home starts, so it falls home from that group (`ComputerOrbits.groupOf`).
 - Every other crewmate sits in its project's group, `project:` and the project's id, named for the project and seated in the board's order.
 - The first mate's ring, which now holds crew from every computer, is named for the middle project while that project's crew sit there, and has no name otherwise (the captain's choice; `ComputerOrbits.computers`, `labeled`).
 
@@ -160,7 +161,7 @@ A project group whose last crewmate is leaving stays on the stage until its fall
 With one group of the person's own and nothing away, everyone sits on the first mate's ring and the stage is the single-computer one.
 Until the board names any project, as before the first board or with an older home, the stage stays grouped by computer.
 While a crewmate's summary is open, the light falls on its computer's crew across every group (the captain's answer: "Its computer's crew, across every group"; `restedLight` with the stage's `computerOf`), in place of its project's.
-`crewGroups.test.ts` holds the rule and the stage: one project across two computers in one group, an away computer's frozen group, a crewmate whose project is not named yet, a stage of one group, a program drawn once, a leaving group's fall home, switching off, and the rest light.
+`crewGroups.test.ts` holds the rule and the stage: one project across two computers in one group, an away computer's frozen group, a crewmate whose project is not named yet, one the board stops naming as it closes, a stage of one group, a program drawn once, a leaving group's fall home, switching off, and the rest light.
 
 ## Visible seats
 

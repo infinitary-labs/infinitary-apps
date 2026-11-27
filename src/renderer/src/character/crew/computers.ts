@@ -226,7 +226,14 @@ export class ComputerOrbits extends CrewOrbit {
    */
   groupOf(id: string): string {
     if (!this.plan || !this.grouping) return this.computerOf(id);
-    return groupOf(this.plan, this.grouping, this.groupCrew(id));
+    const crew = this.groupCrew(id);
+    // A closing task's board row goes before its fall home starts, so a
+    // crewmate the board stops naming keeps the project group it sits in and
+    // falls home from there, instead of jumping to its computer's group.
+    const owner = this.owners.get(id);
+    if (!crew.away && owner?.startsWith(PROJECT_GROUP) && this.grouping.projectOf(id) === undefined)
+      return owner;
+    return groupOf(this.plan, this.grouping, crew);
   }
   /** Whether a computer is away: out of reach, updating, connecting or removed. */
   private away(computer: string): boolean {

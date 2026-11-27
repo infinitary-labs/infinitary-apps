@@ -252,6 +252,28 @@ describe("the stage grouped by project", () => {
     expect(cues).toContainEqual({ kind: "receive" });
   });
 
+  // The approved plan: "The spark and the fall home keep the remote path and
+  // trip". A closing task's board row goes before its leave arrives.
+  it("keeps a crewmate in its project group when the board stops naming it, so it falls home from there", () => {
+    const model = stage(["web-home", "shop-home", "shop-studio"]);
+    model.update(0);
+    model.takeCues();
+    model.setGrouping({
+      ...input(),
+      projectOf: (id) => (id === "web-home" ? undefined : PROJECT_OF[id]),
+    });
+    expect(clusterOf(model, "web-home")).toBe("project:website");
+    model.leave("web-home", "home", 16);
+    expect(model.clusters().some((c) => c.id === "project:website")).toBe(true);
+    const cues = [];
+    for (let now = 32; now < 2000; now += 16) {
+      model.update(now);
+      cues.push(...model.takeCues());
+    }
+    expect(model.has("web-home")).toBe(false);
+    expect(cues).toContainEqual({ kind: "receive" });
+  });
+
   it("goes back to each computer's group when the switch turns off", () => {
     const model = stage(["web-home", "web-studio", "shop-home"]);
     model.setGrouping(null);

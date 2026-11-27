@@ -4,15 +4,18 @@ import XCTest
 extension PhoneJourney {
     /// INF-2820 piece 2, the captain's approved plan: "the phone's Filter button and sheet, Tasks, the tag row,
     /// Activity, the crew's light, Panels and messages follow a project focus saved on the phone per computer."
-    /// Data: three projects (tests/helpers/phoneProjectFilter.ts), each with its tasks, a tag and an Activity line, and
-    /// one task in south-pier waiting on the captain.
+    /// Data: three projects (tests/helpers/phoneProjectFilter.ts), each with its tasks, a tag and an Activity line, one
+    /// task in south-pier waiting on the captain, and the Panels fixture that reads the board.
     /// Completion: a pick in the Filter sheet narrows Tasks, its tag row and Activity to north-pier and shows the focus
-    /// row on every tab, counting the one task waiting elsewhere, whose pill opens the sheet again; a message sent then
-    /// carries the project; a relaunch keeps the focus; Shift-Command-P opens the sheet on the checked row and the
-    /// arrows and Return pick; Escape closes it; the row's × shows every project again.
+    /// row on every tab, counting the one task waiting elsewhere, whose pill opens the sheet again; the panel hears the
+    /// project; a message sent then carries it; a relaunch keeps the focus; after the ×, a message carries none, and a
+    /// relaunch keeps every project shown and the panel hears none; Shift-Command-P opens the sheet on the checked row
+    /// and the arrows and Return pick; Escape closes it; the row's × shows every project again.
     func testProjectFilter() async throws {
         try await launchJoined()
         let fixture = try await home("project-filter-fixture")
+        // The Panels fixture reads the board, so it hears the focus (`view.focusedProjectId`).
+        _ = try await home("panel-seed")
         let projects = try XCTUnwrap(fixture["projects"] as? [[String: Any]])
         XCTAssertEqual(projects.count, 3, "\(fixture)")
         func field(_ index: Int, _ name: String) throws -> String { try XCTUnwrap(projects[index][name] as? String) }
@@ -43,6 +46,9 @@ extension PhoneJourney {
         for index in 1..<3 { XCTAssertFalse(app.staticTexts[try field(index, "line")].exists, "Another project's line leaves") }
         XCTAssertTrue(app.otherElements["project-focus-row"].exists, "The focus row shows on every tab")
         picture("5-activity-focused")
+        tab("Panels")
+        XCTAssertTrue(app.webViews.staticTexts["Focused on \(north)"].waitForPresence(timeout: 60),
+                      "A panel that reads the board hears the phone's project\n\(app.debugDescription)")
         // The pill opens Filter on the focused project's checked row.
         tapOnPhone(app.buttons["project-focus-pill"])
         XCTAssertTrue(row.waitForPresence(timeout: 10), "The pill opens Filter\n\(app.debugDescription)")
@@ -52,13 +58,9 @@ extension PhoneJourney {
 
         // A message written while focused carries the project.
         tab("Home")
-        let words = try XCTUnwrap(fixture["message"] as? String)
-        let input = app.textFields["message-box"]
-        focusForPhoneTyping(input, in: app); input.typeText(words)
-        tapOnPhone(app.buttons["send-message"])
-        let message = try await home("project-filter-sent")
+        let messages = try XCTUnwrap(fixture["messages"] as? [String: String])
+        let message = try await send(try XCTUnwrap(messages["focused"]), heard: "project-filter-sent")
         XCTAssertEqual(message["focusedProjectId"] as? String, north, "The message carries the phone's project: \(message)")
-        if app.navigationBars.buttons["dismiss-phone-keyboard"].exists { try await dismissKeyboardForProbe() }
 
         // Kept on the phone for this computer through a relaunch.
         app.terminate(); try await launchPhoneApp(app)
@@ -81,6 +83,20 @@ extension PhoneJourney {
         XCTAssertEqual(filter.value as? String, "All projects")
         tab("Tasks")
         XCTAssertTrue(app.buttons["task-project-filter-spr-0"].waitForPresence(timeout: 10), "All projects lists south-pier's task")
+        // At All projects a message carries no project, and a relaunch keeps every project shown.
+        tab("Home")
+        let unfocused = try await send(try XCTUnwrap(messages["all"]), heard: "project-filter-sent-all")
+        XCTAssertNil(unfocused["focusedProjectId"], "At All projects the message carries no project: \(unfocused)")
+        app.terminate(); try await launchPhoneApp(app)
+        reach("Live", timeout: 20)
+        XCTAssertTrue(filter.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(filter.value as? String, "All projects", "The focus stays let go after a relaunch")
+        XCTAssertFalse(app.otherElements["project-focus-row"].exists, "No focus row after a relaunch at All projects")
+        tab("Tasks")
+        XCTAssertTrue(app.buttons["task-project-filter-spr-0"].waitForPresence(timeout: 10), "Tasks lists every project after the relaunch")
+        tab("Panels")
+        XCTAssertTrue(app.webViews.staticTexts["Every project"].waitForPresence(timeout: 60),
+                      "At All projects the panel hears no project\n\(app.debugDescription)")
 
         // From the keyboard: Shift-Command-P opens the sheet on the checked row, Escape closes it, and the arrows and
         // Return pick.
@@ -134,6 +150,16 @@ extension PhoneJourney {
         picture("4-tasks-focused")
         tapOnPhone(app.buttons["close-task-search"])
         XCTAssertTrue(search.waitForAbsence(timeout: 10), app.debugDescription)
+    }
+
+    /// Types `words` in the message box and sends them, returning the message as the computer received it (`heard`).
+    private func send(_ words: String, heard: String) async throws -> [String: Any] {
+        let input = app.textFields["message-box"]
+        focusForPhoneTyping(input, in: app); input.typeText(words)
+        tapOnPhone(app.buttons["send-message"])
+        let message = try await home(heard)
+        if app.navigationBars.buttons["dismiss-phone-keyboard"].exists { try await dismissKeyboardForProbe() }
+        return message
     }
 
     private func tagChipNamed(_ name: String) -> XCUIElement {

@@ -236,8 +236,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
   ] },
   // INF-3830 pieces 2 and 3: the Panels tab, its frames and the panel order; a panel's title-row buttons and its cards on Home;
-  // where a panel's point.openSettings opens Settings; the status mark by a panel's title.
-  { parts: family("panels"), files: [
+  // where a panel's point.openSettings opens Settings; the status mark by a panel's title. INF-2820 piece 2: the
+  // project-filter part reads the phone's focus in a panel.
+  { parts: [...family("panels"), "project-filter"], files: [
     "ios/Infinitary/CardRuntime/panelHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/PanelHost.generated.js",
     "ios/Infinitary/InfinitaryApp/PanelWebView.swift",

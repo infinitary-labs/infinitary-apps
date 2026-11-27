@@ -17,8 +17,11 @@ const PROJECTS = [
   { name: "tide-tables", key: "TID", tag: "tables", tasks: ["Publish the spring tide table"] },
 ] as const;
 
-/** What the part types while focused on north-pier, and finds again in the message the computer received. */
-const MESSAGE = "How deep is the water under the north pier?";
+/** What the part types focused on north-pier and at All projects, and finds again in what the computer received. */
+const MESSAGES = {
+  focused: "How deep is the water under the north pier?",
+  all: "Which pier needs the most work this week?",
+} as const;
 
 type Writes = readonly { channel: string; args: unknown[] }[];
 
@@ -31,14 +34,16 @@ export async function projectFilterCommand(
 ): Promise<unknown> {
   switch (command) {
     case "project-filter-fixture":
-      return { projects: await seedProjects(core), message: MESSAGE };
+      return { projects: await seedProjects(core), messages: MESSAGES };
     // The part's message as the phone sent it to this computer.
-    case "project-filter-sent": {
+    case "project-filter-sent":
+    case "project-filter-sent-all": {
+      const text = command === "project-filter-sent" ? MESSAGES.focused : MESSAGES.all;
       const sent = () =>
         writes
           .filter((write) => write.channel === "inf:converse")
           .map((write) => write.args[0] as { text?: string } | undefined)
-          .find((payload) => payload?.text === MESSAGE);
+          .find((payload) => payload?.text === text);
       await until(() => sent() !== undefined);
       return sent();
     }

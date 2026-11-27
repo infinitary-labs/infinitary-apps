@@ -310,8 +310,7 @@ export class PiAccountBackend implements AccountBackend {
       }
       // The runtime was created, and ran its one pi.dev refresh, before this
       // credential existed, so that refresh skipped the provider.
-      if (!bedrock && !isCustomApiProvider(request.providerId))
-        void refreshCatalogInBackground(runtime, this.onCatalogRefreshed);
+      if (!bedrock) void refreshCatalogInBackground(runtime, this.onCatalogRefreshed);
     })();
     const swallowed = work.then(
       () => undefined,

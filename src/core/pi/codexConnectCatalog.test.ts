@@ -19,11 +19,25 @@ import type { AuthInteractionBridge } from "./piAuth";
  * run here; only the network is stood in. pi.dev answers the openai-codex
  * catalog it served on 2026-11-27, and OpenAI's sign-in answers a stand-in
  * token.
+ *
+ * A later Pi may bundle GPT-6.2 itself, and Pi drops an overlay older than
+ * its bundle, so the catalog also carries one model only this stand-in
+ * serves, under a Last-Modified no bundle reaches: that model is the guard.
  */
 
-const CATALOG = readFileSync(join(__dirname, "fixtures", "pidevOpenAiCodexCatalog.json"), "utf8");
-/** The Last-Modified pi.dev sent with that catalog. */
-const CATALOG_LAST_MODIFIED = "Fri, 27 Nov 2026 13:22:59 GMT";
+const REAL_CATALOG: { id: string; name: string }[] = JSON.parse(
+  readFileSync(join(__dirname, "fixtures", "pidevOpenAiCodexCatalog.json"), "utf8"),
+);
+const PI_DEV_ONLY = "gpt-pi-dev-only-stand-in";
+const CATALOG = JSON.stringify([
+  ...REAL_CATALOG,
+  {
+    ...REAL_CATALOG.find((model) => model.id === "gpt-6.2-sol"),
+    id: PI_DEV_ONLY,
+    name: "pi.dev-only stand-in",
+  },
+]);
+const CATALOG_LAST_MODIFIED = "Fri, 31 Dec 9999 23:59:59 GMT";
 
 function standInToken(): string {
   const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64");
@@ -91,7 +105,7 @@ describe("Codex connected while the app keeps running", () => {
     vi.unstubAllEnvs();
   });
 
-  it("lists GPT-6.2 Sol and Astra once the sign-in lands, and tells the home", async () => {
+  it("lists pi.dev-only models such as GPT-6.2 Sol and Astra once the sign-in lands, and tells the home", async () => {
     vi.stubEnv("PI_OFFLINE", undefined);
     vi.stubGlobal("fetch", standInNetwork);
     const paths = appPathsFor(scratchDir("infinitary-codex-connect-"));
@@ -104,7 +118,11 @@ describe("Codex connected while the app keeps running", () => {
     await vault.add("openai-codex", "oauth", deviceCodeSignIn);
     await catalogRefreshesSettled();
 
-    expect(codexIds(vault)).toEqual(expect.arrayContaining(["gpt-6.2-sol", "gpt-6.2-astra"]));
-    expect(told.at(-1)).toEqual(expect.arrayContaining(["gpt-6.2-sol", "gpt-6.2-astra"]));
+    expect(codexIds(vault)).toEqual(
+      expect.arrayContaining(["gpt-6.2-sol", "gpt-6.2-astra", PI_DEV_ONLY]),
+    );
+    expect(told.at(-1)).toEqual(
+      expect.arrayContaining(["gpt-6.2-sol", "gpt-6.2-astra", PI_DEV_ONLY]),
+    );
   }, 30_000);
 });

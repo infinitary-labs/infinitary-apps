@@ -1,5 +1,5 @@
 ---
-source: b1df1c08a3c3c75f
+source: 0304225f18fea486
 title: Intégrations
 description: Connectez GitHub, GitLab, Bitbucket, Google et des serveurs MCP pour que votre second et votre équipage puissent les joindre, et choisissez ce que chacun peut faire sans vous demander.
 ---
@@ -98,9 +98,9 @@ Dans Agenda, ils peuvent lister vos agendas et vos événements, lire un événe
 Aucune action ne supprime un événement d’agenda.
 
 Google peut arrêter un appel pour vous consulter d’abord, même un appel que vous avez autorisé.
-Infinitary affiche alors la question de Google sur une carte, avec les choix proposés par Google, aucun n’étant sélectionné.
-Rien ne s’exécute tant que vous n’en avez pas choisi un et appuyé sur **Envoyer à Google** ; **Pas maintenant** n’envoie rien.
-Votre choix ne répond qu’à cet appel-là.
+Infinitary affiche alors la question sur une carte qui nomme Gmail ou Agenda comme demandeur, avec chaque choix de Google sous forme de bouton, dans les mots de Google.
+Rien ne s’exécute tant que vous n’avez pas appuyé sur l’un d’eux, et votre choix ne répond qu’à cet appel-là.
+Un choix d’autoriser toujours est gardé par Google, pas par Infinitary.
 
 Ce que lisent votre second et votre équipage reste 30 jours dans leurs conversations enregistrées.
 Une note prend ensuite sa place.

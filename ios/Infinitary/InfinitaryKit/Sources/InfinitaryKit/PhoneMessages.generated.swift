@@ -1331,15 +1331,9 @@ public enum PhoneMessages {
     public static func `handoverWontStopText`(`to`: String) -> String { PhoneWords.format("handoverWontStopText", [`to`]) }
     public static func `handoverWontStopTitle`(`from`: String) -> String { PhoneWords.format("handoverWontStopTitle", [`from`]) }
     public static func `integrationsClientFileNotTaken`(`name`: String) -> String { PhoneWords.format("integrationsClientFileNotTaken", [`name`]) }
-    public static func `integrationsConfirmChoice`(`place`: String) -> String { PhoneWords.format("integrationsConfirmChoice", [`place`]) }
-    public static func `integrationsConfirmLeadFirstmate`(`place`: String) -> String { PhoneWords.format("integrationsConfirmLeadFirstmate", [`place`]) }
-    public static func `integrationsConfirmLeadPanel`(`panel`: String, `place`: String) -> String { PhoneWords.format("integrationsConfirmLeadPanel", [`panel`, `place`]) }
-    public static func `integrationsConfirmLeadTask`(`place`: String, `task`: String) -> String { PhoneWords.format("integrationsConfirmLeadTask", [`place`, `task`]) }
+    public static func `integrationsConfirmKeeps`(`asker`: String) -> String { PhoneWords.format("integrationsConfirmKeeps", [`asker`]) }
     public static func `integrationsConfirmNotNow`() -> String { PhoneWords.format("integrationsConfirmNotNow", []) }
-    public static func `integrationsConfirmSend`(`place`: String) -> String { PhoneWords.format("integrationsConfirmSend", [`place`]) }
-    public static func `integrationsConfirmTitle`(`action`: String, `place`: String) -> String { PhoneWords.format("integrationsConfirmTitle", [`action`, `place`]) }
-    public static func `integrationsConfirmWays`(`place`: String) -> String { PhoneWords.format("integrationsConfirmWays", [`place`]) }
-    public static func `integrationsConfirmWords`(`place`: String) -> String { PhoneWords.format("integrationsConfirmWords", [`place`]) }
+    public static func `integrationsConfirmTitle`(`action`: String, `asker`: String) -> String { PhoneWords.format("integrationsConfirmTitle", [`action`, `asker`]) }
     public static func `integrationsConnectOfferBody`(`name`: String) -> String { PhoneWords.format("integrationsConnectOfferBody", [`name`]) }
     public static func `integrationsConnectOfferButton`() -> String { PhoneWords.format("integrationsConnectOfferButton", []) }
     public static func `integrationsConnectOfferNotNow`() -> String { PhoneWords.format("integrationsConnectOfferNotNow", []) }
@@ -6222,15 +6216,9 @@ extension PhoneWords {
         "handoverWontStopText": ["to"],
         "handoverWontStopTitle": ["from"],
         "integrationsClientFileNotTaken": ["name"],
-        "integrationsConfirmChoice": ["place"],
-        "integrationsConfirmLeadFirstmate": ["place"],
-        "integrationsConfirmLeadPanel": ["panel", "place"],
-        "integrationsConfirmLeadTask": ["place", "task"],
+        "integrationsConfirmKeeps": ["asker"],
         "integrationsConfirmNotNow": [],
-        "integrationsConfirmSend": ["place"],
-        "integrationsConfirmTitle": ["action", "place"],
-        "integrationsConfirmWays": ["place"],
-        "integrationsConfirmWords": ["place"],
+        "integrationsConfirmTitle": ["action", "asker"],
         "integrationsConnectOfferBody": ["name"],
         "integrationsConnectOfferButton": [],
         "integrationsConnectOfferNotNow": [],

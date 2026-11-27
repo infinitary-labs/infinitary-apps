@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "google-question-buttons",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Answer Gmail's and Calendar's questions with one click",
+      "body": "When Gmail or Calendar stops a call to ask you first, its card now says which one is asking and shows Google's question with each of Google's choices as its own button, such as Allow once or Don't allow. One click answers that one call. Google, not Infinitary, keeps a choice to always allow.",
+      "picture": {
+        "dark": "google-question-buttons-dark.webp",
+        "light": "google-question-buttons-light.webp",
+        "alt": "A card titled Gmail asks before Send a message, with Gmail's question about an email to Lena, Don't allow and Allow once side by side, and the two Always choices as quiet buttons above them"
+      },
+      "docsSite": [
+        "integrations"
+      ],
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

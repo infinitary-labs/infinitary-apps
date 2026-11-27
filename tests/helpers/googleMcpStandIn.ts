@@ -86,26 +86,33 @@ export const LABELS = [
   { id: "Label_7", name: "Travel", type: "user" },
 ];
 
-/** Google's choices for a call it asks the person about, with the words Google gives each. */
+/**
+ * Google's choices for a send it asks the person about, in Google's order
+ * and with Google's default English labels (Google's approval guide,
+ * "ApprovalChoice").
+ */
 export const APPROVAL_CHOICES = [
   ["ALLOW_ONCE", "Allow once"],
-  ["ALLOW_AUDIENCE_ALWAYS", "Always allow sending to these recipients"],
+  ["ALLOW_AUDIENCE_ALWAYS", "Always allow for these recipients"],
   ["ALLOW_TOOL_ALWAYS", "Always allow this tool"],
-  ["DENY_ONCE", "Deny"],
+  ["DENY_ONCE", "Don't allow"],
 ] as const;
 
-const APPROVAL_SCHEMA = {
+/** Google's question line for a tool, in the shape of the guide's example. */
+export const approvalQuestion = (tool: string) => `Allow Infinitary to use ${tool}?`;
+
+const approvalSchema = (tool: string) => ({
   type: "object" as const,
   properties: {
     approval_choice: {
       type: "string" as const,
-      title: "Approval",
+      title: approvalQuestion(tool),
       enum: APPROVAL_CHOICES.map(([value]) => value),
       enumNames: APPROVAL_CHOICES.map(([, label]) => label),
     },
   },
   required: ["approval_choice"],
-};
+});
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const THREADS_A_PAGE = 50;
@@ -343,7 +350,11 @@ function approval(
   if (response.kind === "missing")
     return inputRequired({
       inputRequests: {
-        approval: inputRequired.elicit({ mode: "form", message, requestedSchema: APPROVAL_SCHEMA }),
+        approval: inputRequired.elicit({
+          mode: "form",
+          message,
+          requestedSchema: approvalSchema(tool),
+        }),
       },
       requestState: `approval-${tool}-${randomBytes(6).toString("hex")}`,
     }) as unknown as CallToolResult;

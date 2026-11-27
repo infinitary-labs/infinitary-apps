@@ -11,13 +11,12 @@ import {
   cardReaderPagesLead,
   cardReaderPagesTitle,
   cardReaderWritesLead,
+  integrationsConfirmKeeps,
   integrationsConfirmNotNow,
-  integrationsConfirmSend,
   integrationsConfirmTitle,
 } from "@shared/i18n/messages.generated";
 import { INTEGRATION_APPROVAL_WORDS, integrationApprovalsTitle } from "@shared/integrations";
 import {
-  confirmFieldOf,
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
@@ -443,16 +442,25 @@ describe("a place's own question on its confirmation card", () => {
     input: JSON.stringify({ to: ["lena@ortiz-studio.com"], body: "Sent the payment today." }),
     at,
   });
+  // Gmail's question for a send, as Google's approval guide shows it: its
+  // message, its question line and its four choices in Google's order.
   const question = {
     message: "**Send an email** to lena@ortiz-studio.com?\n\nSubject: Paid <invoice 2214>",
+    question: "Allow Infinitary to use send_message for these recipients?",
     options: [
       { value: "ALLOW_ONCE", label: "Allow once" },
-      { value: "DENY_ONCE", label: "Deny" },
+      { value: "ALLOW_AUDIENCE_ALWAYS", label: "Always allow for these recipients" },
+      { value: "ALLOW_TOOL_ALWAYS", label: "Always allow this tool" },
+      { value: "DENY_ONCE", label: "Don't allow" },
     ],
     state: '{"tool":"send_message"}',
+    asker: "Gmail",
   };
 
-  it("raises its own card with the place's words and choices, none picked, and the click carries the pick once", async () => {
+  // INF-7092's approved spec: "One footer button per Google choice, with
+  // Google's labels, Allow once as the default and Don't allow as the
+  // declining button", one click answering, and the card naming Gmail.
+  it("raises its own card naming Gmail, with one button per Google choice, and a click sends that pick once", async () => {
     const crewmate = fakeCrewmate();
     const sent: { askId: string | null; choice: string; picked?: string }[] = [];
     const h = setup(crewmate, {
@@ -485,37 +493,62 @@ describe("a place's own question on its confirmation card", () => {
       `data-inf-ask-row="${later.id}"`,
     );
     expect(card?.body).not.toContain("data-inf-ask-row");
-    expect(card?.title).toBe(
-      integrationsConfirmTitle({ place: "Google", action: "Send an email" }),
-    );
+    expect(card?.title).toBe(integrationsConfirmTitle({ asker: "Gmail", action: "Send an email" }));
     // Google's Markdown bold shows as bold, and its other words as text, never markup.
     expect(card?.body).toContain(
       "<strong>Send an email</strong> to lena@ortiz-studio.com?\n\nSubject: Paid &lt;invoice 2214&gt;",
     );
-    const radios = [...(card?.body ?? "").matchAll(/<input type="radio"[^>]*>/g)].map(
-      (match) => match[0],
-    );
-    expect(radios.map((radio) => /name="([^"]+)"/.exec(radio)?.[1])).toEqual([
-      confirmFieldOf(confirm.id),
-      confirmFieldOf(confirm.id),
-    ]);
-    expect(radios.map((radio) => /value="([^"]+)"/.exec(radio)?.[1])).toEqual([
-      "ALLOW_ONCE",
-      "DENY_ONCE",
-    ]);
-    expect(radios.some((radio) => radio.includes("checked"))).toBe(false);
+    expect(card?.body).toContain(question.question);
+    expect(card?.body).toContain(integrationsConfirmKeeps({ asker: "Gmail" }));
+    // The choices are the card's buttons, so the body holds no field to pick in.
+    expect(card?.body).not.toContain("<input");
+    // Google's Always choices are quiet, so Google's long labels keep a row of
+    // their own and Don't allow stays beside Allow once.
     expect(
-      card?.actions.map((action) => `${action.label}${action.default ? " (default)" : ""}`),
+      card?.actions.map(
+        (action) =>
+          `${action.label} ${action.variant}${action.default ? " (default)" : ""}${action.declines ? " (declines)" : ""}`,
+      ),
     ).toEqual([
-      integrationsConfirmNotNow(),
-      `${integrationsConfirmSend({ place: "Google" })} (default)`,
+      "Don't allow secondary (declines)",
+      "Always allow for these recipients ghost",
+      "Always allow this tool ghost",
+      "Allow once primary (default)",
     ]);
+    expect(sent).toEqual([]);
 
-    h.supervisor.cardActions.act(cardId, "once", "chrome", {
-      answers: [{ name: confirmFieldOf(confirm.id), values: ["ALLOW_ONCE"], changed: true }],
-    });
+    const tool = card?.actions.find((action) => action.label === "Always allow this tool");
+    h.supervisor.cardActions.act(cardId, tool?.id ?? "", "chrome", { answers: [] });
     await tick();
     await tick();
-    expect(sent).toEqual([{ askId: confirm.id, choice: "once", picked: "ALLOW_ONCE" }]);
+    expect(sent).toEqual([{ askId: confirm.id, choice: "once", picked: "ALLOW_TOOL_ALWAYS" }]);
+  });
+
+  // INF-7092's approved spec: "Not now goes when Google offers Don't allow
+  // ... It stays only for a question without a deny choice."
+  it("keeps Not now only for a question with no Don't allow, and names the place on a question kept before its asker", () => {
+    const { asker: _asker, ...older } = question;
+    const card = integrationApprovalCard(
+      {
+        ...ask("ia-send", 2),
+        confirm: { ...older, options: [{ value: "ALLOW_ONCE", label: "Allow once" }] },
+      },
+      { id: "task-1", title: "Answer Lena" },
+    );
+    expect(card.title).toBe(integrationsConfirmTitle({ asker: "Google", action: "Send an email" }));
+    // With no Always choice offered, nothing is said of who keeps one.
+    expect(card.body).not.toContain(integrationsConfirmKeeps({ asker: "Google" }));
+    expect(
+      card.actions.map((action) => [
+        action.label,
+        action.effect?.kind === "request_write" ? action.effect.integration : undefined,
+        action.effect?.kind === "request_write" ? action.effect.pick : undefined,
+        action.default === true,
+        action.declines === true,
+      ]),
+    ).toEqual([
+      [integrationsConfirmNotNow(), "deny", undefined, false, true],
+      ["Allow once", "once", "ALLOW_ONCE", true, false],
+    ]);
   });
 });

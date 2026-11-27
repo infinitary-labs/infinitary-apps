@@ -647,7 +647,7 @@ export class CardActions {
       source === "chrome" &&
       effect?.kind === "request_write" &&
       effect.integration
-        ? { rowId: associated.id, ask: effect.ask, choice: effect.integration }
+        ? { rowId: associated.id, ask: effect.ask, choice: effect.integration, pick: effect.pick }
         : undefined;
     let takenFirstmateAsk: IntegrationAskTaken | undefined;
     // INF-4446: the captain's yes to a check, kept with their other yeses.
@@ -854,7 +854,7 @@ export class CardActions {
             firstmateAsk.ask,
             takenFirstmateAsk,
             firstmateAsk.choice,
-            answers,
+            firstmateAsk.pick,
           );
           return {};
         }
@@ -874,6 +874,7 @@ export class CardActions {
             effect.integration,
             refused,
             answers,
+            effect.pick,
           );
           return {};
         }

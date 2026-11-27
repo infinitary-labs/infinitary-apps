@@ -60,6 +60,13 @@ export const requestWriteEffectSchema = z.object({
    * a view that lists `integration-task-allow` (INF-2993).
    */
   integration: z.enum(["always", "task", "once", "deny"]).optional(),
+  /**
+   * The place's own choice this button sends with `once`: one of the
+   * values a place's question offers (Google's confirmation,
+   * docs/integrations.md, "Google"). Only the host's card for that question
+   * declares it.
+   */
+  pick: z.string().min(1).max(256).optional(),
 });
 export type RequestWriteEffect = z.infer<typeof requestWriteEffectSchema>;
 

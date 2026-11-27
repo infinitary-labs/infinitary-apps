@@ -2,7 +2,6 @@ import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import {
   type BuildRowAsk,
-  confirmPickOf,
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
@@ -210,7 +209,7 @@ export class IntegrationAsks {
     askId: string,
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
-    answers?: readonly { name: string; values: readonly string[] }[],
+    pick?: string,
   ): void {
     const send = this.options.sendTakenIntegrationAsk;
     if (!send) return;
@@ -249,7 +248,7 @@ export class IntegrationAsks {
         rowId,
       );
     };
-    void send(rowId, taken, choice, confirmPickOf(answers, askId))
+    void send(rowId, taken, choice, pick)
       .then(tell, (caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in taken ? taken.ask : undefined;

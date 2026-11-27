@@ -1271,15 +1271,9 @@
 "handoverWontStopText" = "%1$@ hat es gebeten, zu speichern und zu stoppen, und es hält deine gespeicherte Arbeit noch. Jetzt stoppen beendet es, ohne zu warten. Es wurde nichts geändert.";
 "handoverWontStopTitle" = "%1$@ hat nicht gestoppt";
 "integrationsClientFileNotTaken" = "%1$@ nimmt in dieser Version von Infinitary keine Client-Datei an.";
-"integrationsConfirmChoice" = "Deine Antwort an %1$@";
-"integrationsConfirmLeadFirstmate" = "Dein erster Offizier hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. %1$@ hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.";
-"integrationsConfirmLeadPanel" = "Dein Panel „%1$@“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. %2$@ hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.";
-"integrationsConfirmLeadTask" = "Das Crewmitglied von „%2$@“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. %1$@ hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.";
+"integrationsConfirmKeeps" = "Eine Immer-Auswahl speichert %1$@, nicht Infinitary.";
 "integrationsConfirmNotNow" = "Nicht jetzt";
-"integrationsConfirmSend" = "An %1$@ senden";
-"integrationsConfirmTitle" = "%2$@ bittet dich, „%1$@“ zu bestätigen";
-"integrationsConfirmWays" = "„An %1$@ senden“ sendet deine gewählte Antwort einmal, und %1$@ führt den Aufruf aus oder stoppt ihn, wie du es entschieden hast. „Nicht jetzt“ sendet nichts, und der Aufruf läuft nicht.";
-"integrationsConfirmWords" = "In den Worten von %1$@";
+"integrationsConfirmTitle" = "%2$@ fragt vor „%1$@“ nach";
 "integrationsConnectOfferBody" = "Dein erster Offizier und deine Crew erreichen %1$@ dann mit deiner Anmeldung. Jede seiner Aktionen, auch Leseaktionen, fragt dich auf einer Karte, bis du „Immer erlaubt“ wählst.";
 "integrationsConnectOfferButton" = "Integrationen öffnen";
 "integrationsConnectOfferNotNow" = "Nicht jetzt";

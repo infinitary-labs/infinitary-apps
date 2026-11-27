@@ -43688,119 +43688,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} takes no client file in this version of Infinitary.`;
   }
-  function integrationsConfirmChoice(input2) {
-    const place = input2.place;
+  function integrationsConfirmKeeps(input2) {
+    const asker = input2.asker;
     switch (currentLanguage()) {
       case "ar":
-        return `ردّك على ${place}`;
+        return `يحتفظ ${asker} بأي خيار «دائمًا»، لا Infinitary.`;
       case "de":
-        return `Deine Antwort an ${place}`;
+        return `Eine Immer-Auswahl speichert ${asker}, nicht Infinitary.`;
       case "es":
-        return `Tu respuesta a ${place}`;
+        return `Una opción de «siempre» la guarda ${asker}, no Infinitary.`;
       case "fr":
-        return `Votre réponse à ${place}`;
+        return `Un choix « toujours » est gardé par ${asker}, pas par Infinitary.`;
       case "ja":
-        return `${place} への回答`;
+        return `「常に」の選択は Infinitary ではなく ${asker} が保持します。`;
       case "ko":
-        return `${place}에 보낼 답`;
+        return `‘항상’ 선택은 Infinitary가 아니라 ${asker}에서 보관해요.`;
       case "pt-BR":
-        return `Sua resposta ao ${place}`;
+        return `Uma escolha “sempre” é guardada pelo ${asker}, não pelo Infinitary.`;
       case "zh-Hans":
-        return `你给 ${place} 的回答`;
+        return `“始终”类选择由 ${asker} 保存，而不是 Infinitary。`;
       case "zh-Hant":
-        return `你給 ${place} 的回答`;
+        return `「一律」類選擇由 ${asker} 保存，而不是 Infinitary。`;
       case "en-XA":
-        return `[Ýöûŕ áñšŵéŕ ţö ${place} ~~~~~]`;
+        return `[Åñ Åļŵáýš çĥöîçé îš ķéþţ ƀý ${asker}, ñöţ ƀý Îñƒîñîţáŕý. ~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your answer to ‬${place}`;
+        return `‮An Always choice is kept by ‬${asker}‮, not by Infinitary.‬`;
     }
-    return `Your answer to ${place}`;
-  }
-  function integrationsConfirmLeadFirstmate(input2) {
-    const place = input2.place;
-    switch (currentLanguage()) {
-      case "ar":
-        return `طلب نائب القبطان تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
-      case "de":
-        return `Dein erster Offizier hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
-      case "es":
-        return `Tu primer oficial pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
-      case "fr":
-        return `Votre second a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
-      case "ja":
-        return `一等航海士がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
-      case "ko":
-        return `일등항해사가 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
-      case "pt-BR":
-        return `Seu imediato pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
-      case "zh-Hans":
-        return `你的大副请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
-      case "zh-Hant":
-        return `你的大副要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
-      case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your first mate asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
-    }
-    return `Your first mate asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
-  }
-  function integrationsConfirmLeadPanel(input2) {
-    const panel = input2.panel;
-    const place = input2.place;
-    switch (currentLanguage()) {
-      case "ar":
-        return `طلبت لوحتك «${panel}» تشغيل هذا، وسمح لها Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
-      case "de":
-        return `Dein Panel „${panel}“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
-      case "es":
-        return `Tu panel «${panel}» pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
-      case "fr":
-        return `Votre panneau « ${panel} » a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
-      case "ja":
-        return `パネル「${panel}」がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
-      case "ko":
-        return `“${panel}” 패널이 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
-      case "pt-BR":
-        return `Seu painel “${panel}” pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
-      case "zh-Hans":
-        return `你的面板“${panel}”请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
-      case "zh-Hant":
-        return `你的面板「${panel}」要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
-      case "en-XA":
-        return `[Ýöûŕ þáñéļ “${panel}” ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your panel “‬${panel}‮” asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
-    }
-    return `Your panel “${panel}” asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
-  }
-  function integrationsConfirmLeadTask(input2) {
-    const place = input2.place;
-    const task = input2.task;
-    switch (currentLanguage()) {
-      case "ar":
-        return `طلب فرد الطاقم في «${task}» تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف ${place} الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.`;
-      case "de":
-        return `Das Crewmitglied von „${task}“ hat gebeten, dies auszuführen, und Infinitary hat es zugelassen. ${place} hat den Aufruf gestoppt, um zuerst dich zu fragen, daher ist noch nichts gelaufen.`;
-      case "es":
-        return `El tripulante de «${task}» pidió ejecutar esto, e Infinitary lo dejó seguir. ${place} detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.`;
-      case "fr":
-        return `L’équipier de « ${task} » a demandé à exécuter ceci, et Infinitary l’a laissé faire. ${place} a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.`;
-      case "ja":
-        return `「${task}」の担当の乗組員がこの実行を求め、Infinitary は実行を許可しました。${place} が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。`;
-      case "ko":
-        return `“${task}”의 선원이 이 실행을 요청했고, Infinitary가 진행을 허락했어요. ${place}에서 먼저 확인을 받으려고 호출을 중지했기 때문에 아직 아무것도 실행되지 않았어요.`;
-      case "pt-BR":
-        return `O tripulante de “${task}” pediu para executar isto, e o Infinitary deixou que ele seguisse. O ${place} parou a chamada para perguntar a você primeiro, então nada foi executado ainda.`;
-      case "zh-Hans":
-        return `“${task}”上的船员请求运行此操作，Infinitary 已允许它继续。${place} 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。`;
-      case "zh-Hant":
-        return `「${task}」上的船員要求執行這項操作，Infinitary 已允許它繼續。${place} 停止了這次呼叫，要先徵求你的意見，所以還沒有執行任何操作。`;
-      case "en-XA":
-        return `[Ţĥé çŕéŵɱáţé öñ “${task}” ášķéð ţö ŕûñ ţĥîš, áñð Îñƒîñîţáŕý ļéţ îţ ĝö áĥéáð. ${place} šţöþþéð ţĥé çáļļ ţö ášķ ýöû ƒîŕšţ, šö ñöţĥîñĝ ĥáš ŕûñ ýéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮The crewmate on “‬${task}‮” asked to run this, and Infinitary let it go ahead. ‬${place}‮ stopped the call to ask you first, so nothing has run yet.‬`;
-    }
-    return `The crewmate on “${task}” asked to run this, and Infinitary let it go ahead. ${place} stopped the call to ask you first, so nothing has run yet.`;
+    return `An Always choice is kept by ${asker}, not by Infinitary.`;
   }
   function integrationsConfirmNotNow() {
     switch (currentLanguage()) {
@@ -43829,118 +43743,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Not now`;
   }
-  function integrationsConfirmSend(input2) {
-    const place = input2.place;
-    switch (currentLanguage()) {
-      case "ar":
-        return `إرسال إلى ${place}`;
-      case "de":
-        return `An ${place} senden`;
-      case "es":
-        return `Enviar a ${place}`;
-      case "fr":
-        return `Envoyer à ${place}`;
-      case "ja":
-        return `${place} に送信`;
-      case "ko":
-        return `${place}에 보내기`;
-      case "pt-BR":
-        return `Enviar ao ${place}`;
-      case "zh-Hans":
-        return `发送给 ${place}`;
-      case "zh-Hant":
-        return `傳送給 ${place}`;
-      case "en-XA":
-        return `[Šéñð ţö ${place} ~~~]`;
-      case "ar-XB":
-        return `‮Send to ‬${place}`;
-    }
-    return `Send to ${place}`;
-  }
   function integrationsConfirmTitle(input2) {
     const action = input2.action;
-    const place = input2.place;
+    const asker = input2.asker;
     switch (currentLanguage()) {
       case "ar":
-        return `يطلب منك ${place} تأكيد «${action}»`;
+        return `يسأل ${asker} قبل «${action}»`;
       case "de":
-        return `${place} bittet dich, „${action}“ zu bestätigen`;
+        return `${asker} fragt vor „${action}“ nach`;
       case "es":
-        return `${place} te pide que confirmes «${action}»`;
+        return `${asker} pregunta antes de «${action}»`;
       case "fr":
-        return `${place} vous demande de confirmer « ${action} »`;
+        return `${asker} demande avant « ${action} »`;
       case "ja":
-        return `${place} が「${action}」の確認を求めています`;
+        return `${asker} が「${action}」の前に確認しています`;
       case "ko":
-        return `${place}에서 “${action}” 확인을 요청해요`;
+        return `${asker}에서 “${action}” 전에 확인을 요청해요`;
       case "pt-BR":
-        return `${place} pede que você confirme “${action}”`;
+        return `${asker} pergunta antes de “${action}”`;
       case "zh-Hans":
-        return `${place} 请你确认“${action}”`;
+        return `${asker} 在“${action}”前询问你`;
       case "zh-Hant":
-        return `${place} 請你確認「${action}」`;
+        return `${asker} 在「${action}」前詢問你`;
       case "en-XA":
-        return `[${place} ášķš ýöû ţö çöñƒîŕɱ “${action}” ~~~~~~~~]`;
+        return `[${asker} ášķš ƀéƒöŕé “${action}” ~~~~~]`;
       case "ar-XB":
-        return `${place}‮ asks you to confirm “‬${action}‮”‬`;
+        return `${asker}‮ asks before “‬${action}‮”‬`;
     }
-    return `${place} asks you to confirm “${action}”`;
-  }
-  function integrationsConfirmWays(input2) {
-    const place = input2.place;
-    switch (currentLanguage()) {
-      case "ar":
-        return `يرسل «إرسال إلى ${place}» الردّ الذي اخترته مرة واحدة، ثم يشغّل ${place} الاستدعاء أو يوقفه حسب اختيارك. ولا يرسل «ليس الآن» شيئًا، ولا يُشغَّل الاستدعاء.`;
-      case "de":
-        return `„An ${place} senden“ sendet deine gewählte Antwort einmal, und ${place} führt den Aufruf aus oder stoppt ihn, wie du es entschieden hast. „Nicht jetzt“ sendet nichts, und der Aufruf läuft nicht.`;
-      case "es":
-        return `«Enviar a ${place}» envía una sola vez la respuesta que elegiste, y ${place} ejecuta o detiene la llamada según tu elección. «Ahora no» no envía nada, y la llamada no se ejecuta.`;
-      case "fr":
-        return `« Envoyer à ${place} » envoie une seule fois la réponse choisie, et ${place} exécute ou arrête l’appel selon votre choix. « Pas maintenant » n’envoie rien, et l’appel ne s’exécute pas.`;
-      case "ja":
-        return `「${place} に送信」を押すと、選んだ回答が 1 回だけ送られ、${place} は選んだとおりに呼び出しを実行または停止します。「今はしない」を押すと何も送られず、呼び出しは実行されません。`;
-      case "ko":
-        return `“${place}에 보내기”는 고른 답을 한 번 보내고, ${place}에서는 선택한 대로 호출을 실행하거나 중지해요. “나중에”는 아무것도 보내지 않으며, 호출도 실행되지 않아요.`;
-      case "pt-BR":
-        return `“Enviar ao ${place}” envia uma única vez a resposta que você escolheu, e o ${place} executa ou para a chamada conforme a sua escolha. “Agora não” não envia nada, e a chamada não é executada.`;
-      case "zh-Hans":
-        return `“发送给 ${place}”会把你选的回答发送一次，${place} 会按你的选择运行或停止这次调用。“暂不”不发送任何内容，这次调用也不会运行。`;
-      case "zh-Hant":
-        return `「傳送給 ${place}」會把你選的回答傳送一次，${place} 會依你的選擇執行或停止這次呼叫。「暫時不要」不會傳送任何內容，這次呼叫也不會執行。`;
-      case "en-XA":
-        return `[Šéñð ţö ${place} šéñðš ţĥé áñšŵéŕ ýöû þîçķéð öñçé, áñð ${place} ŕûñš öŕ šţöþš ţĥé çáļļ áš ýöû çĥöšé. Ñöţ ñöŵ šéñðš ñöţĥîñĝ, áñð ţĥé çáļļ ðöéšñ'ţ ŕûñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Send to ‬${place}‮ sends the answer you picked once, and ‬${place}‮ runs or stops the call as you chose. Not now sends nothing, and the call doesn't run.‬`;
-    }
-    return `Send to ${place} sends the answer you picked once, and ${place} runs or stops the call as you chose. Not now sends nothing, and the call doesn't run.`;
-  }
-  function integrationsConfirmWords(input2) {
-    const place = input2.place;
-    switch (currentLanguage()) {
-      case "ar":
-        return `بكلمات ${place}`;
-      case "de":
-        return `In den Worten von ${place}`;
-      case "es":
-        return `En palabras de ${place}`;
-      case "fr":
-        return `Dans les mots de ${place}`;
-      case "ja":
-        return `${place} の言葉`;
-      case "ko":
-        return `${place}의 말`;
-      case "pt-BR":
-        return `Nas palavras do ${place}`;
-      case "zh-Hans":
-        return `${place} 的原话`;
-      case "zh-Hant":
-        return `${place} 的原話`;
-      case "en-XA":
-        return `[Îñ ${place}'š ŵöŕðš ~~~~]`;
-      case "ar-XB":
-        return `‮In ‬${place}‮'s words‬`;
-    }
-    return `In ${place}'s words`;
+    return `${asker} asks before “${action}”`;
   }
   function integrationsConnectOfferBody(input2) {
     const name = input2.name;
@@ -119364,15 +119194,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverWontStopText,
     handoverWontStopTitle,
     integrationsClientFileNotTaken,
-    integrationsConfirmChoice,
-    integrationsConfirmLeadFirstmate,
-    integrationsConfirmLeadPanel,
-    integrationsConfirmLeadTask,
+    integrationsConfirmKeeps,
     integrationsConfirmNotNow,
-    integrationsConfirmSend,
     integrationsConfirmTitle,
-    integrationsConfirmWays,
-    integrationsConfirmWords,
     integrationsConnectOfferBody,
     integrationsConnectOfferButton,
     integrationsConnectOfferNotNow,
@@ -123149,15 +122973,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
     "integrationsClientFileNotTaken": ["name"],
-    "integrationsConfirmChoice": ["place"],
-    "integrationsConfirmLeadFirstmate": ["place"],
-    "integrationsConfirmLeadPanel": ["panel", "place"],
-    "integrationsConfirmLeadTask": ["place", "task"],
+    "integrationsConfirmKeeps": ["asker"],
     "integrationsConfirmNotNow": [],
-    "integrationsConfirmSend": ["place"],
-    "integrationsConfirmTitle": ["action", "place"],
-    "integrationsConfirmWays": ["place"],
-    "integrationsConfirmWords": ["place"],
+    "integrationsConfirmTitle": ["action", "asker"],
     "integrationsConnectOfferBody": ["name"],
     "integrationsConnectOfferButton": [],
     "integrationsConnectOfferNotNow": [],
@@ -125841,7 +125659,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      * refusal; `task` allows it for the rest of the asking task, sent only to
      * a view that lists `integration-task-allow` (INF-2993).
      */
-    integration: _enum(["always", "task", "once", "deny"]).optional()
+    integration: _enum(["always", "task", "once", "deny"]).optional(),
+    /**
+     * The place's own choice this button sends with `once`: one of the
+     * values a place's question offers (Google's confirmation,
+     * docs/integrations.md, "Google"). Only the host's card for that question
+     * declares it.
+     */
+    pick: string().min(1).max(256).optional()
   });
   const signInOnSchema = object({
     deviceId: string().min(1).max(64),

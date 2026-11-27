@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agent-hover-sidebar-drawn-rails",
+      "reason": "The crewmate hover journey waits for moved rail panels to draw before hovering and measures the summary and the rail controls in one read; no app behavior changes."
+    }
+  ]
+}

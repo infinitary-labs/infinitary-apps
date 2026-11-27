@@ -368,6 +368,7 @@ export async function renamedFrom(cwd: string, branch: string): Promise<string[]
   const log = await git(cwd, [
     "log",
     "--walk-reflogs",
+    // i18n-exempt: git's own words for a rename in a branch's log, never shown to a person
     "--grep-reflog=^Branch: renamed ",
     "--format=%gs",
     `refs/heads/${branch}`,

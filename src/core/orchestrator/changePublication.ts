@@ -58,6 +58,7 @@ export const BATCH_OPEN_WORDS = {
   around:
     "This change has no pull request of its own: it merges in this project's batch, so there are no words around its story to change. Pass presentation alone.",
   /** A branch renamed from the task's own, which would open a pull request that merges alone (INF-7081). */
+  // i18n-exempt: served to the crewmate in open_change's and show_merge_card's answers, never shown to a person
   renamed: (own: string, renamed: string) =>
     `Nothing was published: this project merges approved changes together, as one batch pull request, and a change joins its batch only from its task's own branch, ${own}. ${renamed} was renamed from it, so it would open a pull request of its own that merges alone. Keep the task's branch name: rename it back and push it under that name (git branch -m ${own}, then git push -u origin ${own}). If you pushed ${renamed}, delete it there (git push origin --delete ${renamed}). Its story stays with the branch it was prepared on, so pass the story again.`,
 } as const;

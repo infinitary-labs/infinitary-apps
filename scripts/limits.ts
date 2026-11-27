@@ -756,6 +756,11 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       "past it the home names staged skills only for sessions that computer still holds",
     ),
   },
+  "src/shared/workCopies.ts": {
+    RENAMED_FROM_LIMIT: physical(
+      "names past the 32 oldest are left out of the reading; the task's own branch, its first name, stays in it",
+    ),
+  },
   "src/shared/writeAsk.ts": {
     WRITE_ASK_CAP: physical(
       "answered asks drop first; a waiting one that drops is refused at once; ask again",

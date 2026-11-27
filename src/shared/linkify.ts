@@ -1,11 +1,15 @@
 /**
  * What counts as an address in a card's words, and which addresses a card
- * may open. A plain-text body is split here (`splitCardBodyUrls`); the card
- * frame's bridge links the addresses an HTML body writes as words
- * (src/shared/plugins/frameLinkScript.ts). Only the data below is spliced
- * into the bridge's text; the bridge keeps its own twins of the trimming and
- * opener logic (`addressIn`, `unmatched` and `opens`), which a change to
- * `trimTrailingUrlPunctuation` or `isSafeCardHref` must mirror.
+ * may open. A plain-text body is split here (`splitCardBodyUrls`), and so is
+ * a thread reply on the computer (`splitCardAddresses`); the card frame's
+ * bridge links the addresses an HTML body writes as words
+ * (src/shared/plugins/frameLinkScript.ts), and the phone links a reply's
+ * (PhoneLinkedWords.swift in the phone's kit). Only the data below is spliced
+ * into the bridge's text and generated into the phone's contract; each keeps
+ * its own twins of the trimming and opener logic (the bridge's `addressIn`,
+ * `unmatched` and `opens`; the phone's `PhoneLinkedWords`), which a change to
+ * `trimTrailingUrlPunctuation` or `isSafeCardHref` must mirror. The phone's
+ * kit tests read this file's own split of the same replies.
  */
 
 export type CardBodyPart = { type: "text"; value: string } | { type: "url"; value: string };
@@ -83,12 +87,25 @@ export function isSafeCardHref(value: string): boolean {
 }
 
 export function splitCardBodyUrls(body: string): CardBodyPart[] {
+  return splitUrls(body, isHttpUrl);
+}
+
+/**
+ * A card thread's reply split at the addresses it writes as words, on the
+ * computer and the phone alike: only an address the safe opener takes is a
+ * part of its own, so a link never stands where a press would open nothing.
+ */
+export function splitCardAddresses(text: string): CardBodyPart[] {
+  return splitUrls(text, isSafeCardHref);
+}
+
+function splitUrls(body: string, takes: (url: string) => boolean): CardBodyPart[] {
   const parts: CardBodyPart[] = [];
   let cursor = 0;
   for (const match of body.matchAll(URL_RE)) {
     const start = match.index ?? 0;
     const { url } = trimTrailingUrlPunctuation(match[0]);
-    if (!url || !isHttpUrl(url)) continue;
+    if (!url || !takes(url)) continue;
     if (start > cursor) {
       parts.push({ type: "text", value: body.slice(cursor, start) });
     }

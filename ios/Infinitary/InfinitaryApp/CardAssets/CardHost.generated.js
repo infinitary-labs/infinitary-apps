@@ -127478,12 +127478,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
   }
   function splitCardBodyUrls(body) {
+    return splitUrls(body, isHttpUrl);
+  }
+  function splitUrls(body, takes) {
     const parts = [];
     let cursor = 0;
     for (const match of body.matchAll(URL_RE)) {
       const start = match.index ?? 0;
       const { url } = trimTrailingUrlPunctuation(match[0]);
-      if (!url || !isHttpUrl(url)) continue;
+      if (!url || !takes(url)) continue;
       if (start > cursor) {
         parts.push({ type: "text", value: body.slice(cursor, start) });
       }

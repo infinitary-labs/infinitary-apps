@@ -54,10 +54,10 @@ import { DictationMark, PastedTextChip } from "../design/voice/VoiceInput";
 import { isCardOverlayPage } from "../overlay/overlayPage";
 import { AnnotationControls, NO_NOTES, NoteAnchor, QueuedNotes } from "./AnnotationControls";
 import { FOLLOW_SLACK_PX } from "./CrewmateView";
+import { LinkedText } from "./LinkedText";
 import type { CollectAnswers } from "./PrototypeBody";
 import { RevisionLinks } from "./RevisionNavigation";
 import { useMessageEntrance, useWorkingEntrance } from "./SurfaceReveal";
-import { KeyedText } from "./TaskKey";
 import {
   contributorWords,
   messageCountWords,
@@ -1172,7 +1172,7 @@ function WorkingRow({ entrance, doing }: { entrance: boolean; doing?: string | u
 /**
  * One line of the thread, from any author: its words, with every recorded
  * task's key in them a link to that task, the card's own task's included
- * (FI3-1271).
+ * (FI3-1271), and every address the opener takes a link to that address.
  */
 function Message({ message }: { message: CardMessage }) {
   const reveal = useMessageEntrance(message.id, message.at);
@@ -1213,7 +1213,7 @@ function Message({ message }: { message: CardMessage }) {
       >
         {/* Line breaks kept: a multi-line reply reads the way it was typed. */}
         <span style={{ alignSelf: "stretch", overflowWrap: "anywhere", whiteSpace: "pre-wrap" }}>
-          <KeyedText text={message.text} />
+          <LinkedText text={message.text} />
           <span
             style={{
               fontFamily: "var(--font-mono)",

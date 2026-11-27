@@ -99,6 +99,7 @@ try {
   }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
   const { satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
   const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
+  const { splitCardAddresses } = await runner.import<typeof import("../src/shared/linkify.ts")>(join(REPO_ROOT, "src/shared/linkify.ts"));
   const outputs = {
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json": {
       orbit: DEFAULT_ORBIT, remoteTrip: REMOTE_TRIP, program: Object.fromEntries(Object.entries(CONSTELLATION).filter(([, value]) => typeof value === "number")),
@@ -127,7 +128,27 @@ try {
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneRowMoves.generated.json": taskMoveReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneCardDeparture.generated.json": departureReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhonePanelOrder.generated.json": panelOrderReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneLinkedWords.generated.json": addressReadings(),
   };
+  /**
+   * INF-7045's plan, part 2: thread replies as the computer splits them at the addresses the opener takes
+   * (src/shared/linkify.ts), for the phone's twin of that split to replay.
+   */
+  function addressReadings() {
+    return [
+      "Open https://openrouter.ai/settings/keys and sign in.",
+      "I kept your harbour reply with this chart. Its survey is at https://www.charts.noaa.gov/ChartCatalog/, and the older copy at http://www.charts.noaa.gov/old.",
+      "PR is up: https://github.com/acme/repo.",
+      "Run it at http://localhost:5173/ or http://127.0.0.1:8080/health, or http://[::1]:3000/; the preview is http://app.localhost:5173/ and not http://localhost.example.com/.",
+      "(see https://en.wikipedia.org/wiki/API_(disambiguation)) and [https://openrouter.ai/docs]",
+      "打开 https://openrouter.ai/settings/keys。然后登录（https://openrouter.ai/docs）",
+      "Tracked at https://acme.atlassian.net/browse/INF-12 as INF-12.",
+      "openrouter.ai/keys has no scheme, and javascript:alert(1) or file:///etc/hosts open nothing.",
+      "Two lines\nhttps://openrouter.ai/activity\nend",
+      "HTTPS://OpenRouter.ai/Keys in capitals 🚢 then https://openrouter.ai/models?order=top&q=neon#list!",
+      "Done, thanks.",
+    ].map((text) => ({ text, parts: splitCardAddresses(text) }));
+  }
   /** INF-3830 piece 2: the computer's rails read as one column, left top to right bottom, for the phone's panel order to replay. */
   function panelOrderReadings() {
     type Slot = { x: "left" | "right"; y: "top" | "bottom" };

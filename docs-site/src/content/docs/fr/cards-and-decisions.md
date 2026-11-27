@@ -1,5 +1,5 @@
 ---
-source: 86bf487dacd685ea
+source: fddef151ac47ef10
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -128,6 +128,7 @@ Une adresse web dans une carte s’ouvre dans votre navigateur par défaut quand
 Cela vaut aussi pour une adresse qu’un membre d’équipage a écrite en texte simple, comme une étape qui dit d’ouvrir une page de connexion, sur votre ordinateur et sur votre iPhone ou iPad.
 Cela concerne les adresses qui commencent par https://, et les adresses http:// de votre propre ordinateur.
 Une longue adresse passe à la ligne dans la carte.
+Une adresse dans le fil d’une carte, dans vos réponses comme dans celles de l’équipage, s’ouvre de la même façon.
 
 ## Cartes de fusion {#merge-cards}
 

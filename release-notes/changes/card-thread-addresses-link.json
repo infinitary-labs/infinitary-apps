@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "card-thread-addresses-link",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Web addresses in a card's thread open with a click or a tap",
+      "body": "A web address written in a card's thread, in your replies or the crew's, is now a link on your computer and on your iPhone and iPad. Click it, tap it or press Enter on it to open it in your browser.",
+      "picture": {
+        "dark": "card-thread-addresses-link-dark.webp",
+        "light": "card-thread-addresses-link-light.webp",
+        "alt": "A card's thread whose answer from the first mate shows a sign-in page's address underlined as a link"
+      },
+      "docsSite": ["cards-and-decisions"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

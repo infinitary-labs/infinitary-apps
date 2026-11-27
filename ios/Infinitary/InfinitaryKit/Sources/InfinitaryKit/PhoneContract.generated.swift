@@ -329,6 +329,14 @@ public enum PhoneSSHCommand {
     public static let noCurl = "no-curl"
 }
 
+public enum PhoneAddressRule {
+    public static let pattern = "https?:\\/\\/[^\\s<>\"'`\\u3000-\\u303f\\uff01-\\uff0f\\uff1a-\\uff20\\uff3b-\\uff40\\uff5b-\\uff65]+"
+    public static let trailing = ".,;:!?'"
+    public static let closers: [Character: Character] = [")": "(", "]": "[", "}": "{"]
+    public static let loopbackHosts = ["localhost","127.0.0.1","::1","[::1]"]
+    public static let localhostSuffix = ".localhost"
+}
+
 public enum PhoneDiagnosticEvent: String, Sendable, CaseIterable {
     case `launch` = "ios_launch"
     case `opened` = "ios_opened"

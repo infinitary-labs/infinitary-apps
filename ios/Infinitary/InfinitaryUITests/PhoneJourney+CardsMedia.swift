@@ -186,14 +186,26 @@ extension PhoneJourney {
         let cue = app.buttons["thread-cue"]
         XCTAssertTrue(cue.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(back.waitForAbsence(timeout: 10), "The face hides the back")
-        _ = try await home("thread-answer")
+        let answered = try await home("thread-answer")
         XCTAssertTrue(waitForPhonePredicate(NSPredicate { _, _ in cue.value as? String == "1 new" }, object: cue, timeout: 10) == .completed,
                       app.debugDescription)
         XCTAssertTrue(app.buttons["put-aside-card"].exists, "A landing reply never turns the card")
         picture("card-thread-unread")
         tapOnPhone(cue)
-        XCTAssertTrue(app.staticTexts["I kept your harbour reply with this chart."].waitForPresence(timeout: 10))
+        let threadAnswer = try XCTUnwrap(answered["threadAnswer"] as? String)
+        XCTAssertTrue(app.staticTexts[threadAnswer].waitForPresence(timeout: 10), app.debugDescription)
         picture("card-thread")
+        // INF-7045's plan, part 2: the answer's https address is a link that a tap opens in the browser; its comma and
+        // the older public http address stay words.
+        let address = try XCTUnwrap(answered["threadAddress"] as? String)
+        let link = back.links[address]
+        XCTAssertTrue(link.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(back.links.matching(NSPredicate(format: "label BEGINSWITH 'http'")).count, 1, app.debugDescription)
+        tapOnPhone(link)
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 20), "A tap on the address opens it in the browser")
+        app.activate()
+        XCTAssertTrue(back.waitForPresence(timeout: 10), app.debugDescription)
         _ = try await home("capture-stop")
         // Command-backslash turns it back, as on the Mac; the line is read now.
         try await pressPhoneKey("\\", modifiers: .command, in: app)

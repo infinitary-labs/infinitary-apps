@@ -1,5 +1,5 @@
 ---
-source: 86bf487dacd685ea
+source: fddef151ac47ef10
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -128,6 +128,7 @@ Una dirección web en una tarjeta se abre en tu navegador predeterminado cuando 
 Eso incluye una dirección que un tripulante escribió como texto normal, como un paso que dice que abras una página de inicio de sesión, en tu computadora y en tu iPhone o iPad.
 Se aplica a las direcciones que empiezan por https:// y a las direcciones http:// de tu propia computadora.
 Una dirección larga se ajusta dentro de la tarjeta.
+Una dirección en el hilo de una tarjeta, en tus respuestas y en las de la tripulación, se abre de la misma manera.
 
 ## Tarjetas de fusión {#merge-cards}
 

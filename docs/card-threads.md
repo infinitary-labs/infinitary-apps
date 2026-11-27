@@ -415,6 +415,10 @@ The rails keep their panels while folded, which is why `--rail-docked-*` (what t
 
 In place is the last rung - a segmented control in the card's head swaps the body for the message list - and needs a stage under 720px: the window's 960px minimum never gives one, and the card overlay's narrow panel always does (`docs/card-overlay.md`).
 
+A message's words link every recorded task's key (`KeyedText`) and every address the safe opener takes, an https address anywhere or an http one to this computer, written as words (INF-7045's plan, part 2; `LinkedText`).
+The split is `splitCardAddresses` in `src/shared/linkify.ts`, so trailing punctuation and an unmatched closing bracket stay outside the link, and a key inside an address stays part of it.
+A click or Enter on the address, only the captain's own, opens it in the default browser through the app's opener; the phone's thread splits a message the same way (`docs/ios.md`, "Cards on the phone").
+
 A request card for the captain's help in a task's browser has a second place: beside the page in the browser view opened from it, as a column of its own with the card on top, its thread under it and its field at the foot (`docs/task-browser.md`, "The request beside the page").
 
 ### Collapsing the thread

@@ -1,36 +1,43 @@
-import { splitCardBodyUrls } from "@shared/linkify";
+import { splitCardAddresses } from "@shared/linkify";
+import { KeyedText } from "./TaskKey";
 
 /**
- * Plain-text card body with http(s) URLs as accent links. Clicks go through
- * the app IPC opener (system browser); they do not rely on window.open.
+ * A card thread's words with each address the safe opener takes a link, and
+ * every recorded task's key in the rest linked as `KeyedText` links it
+ * (INF-7045's plan, part 2). Addresses come first, so a key inside an
+ * address never cuts it short. A click or Enter - only the captain's own -
+ * opens the address in the default browser through the app's opener, never
+ * by the window following the link.
  */
 export function LinkedText({ text }: { text: string }) {
-  const parts = splitCardBodyUrls(text);
   let offset = 0;
   return (
-    <span style={{ whiteSpace: "pre-wrap" }}>
-      {parts.map((part) => {
-        const key = `${offset}:${part.type}:${part.value}`;
+    <>
+      {splitCardAddresses(text).map((part) => {
+        const at = offset;
         offset += part.value.length;
-        if (part.type !== "url") return part.value;
+        if (part.type === "text") return <KeyedText key={at} text={part.value} />;
         return (
           <a
-            key={key}
+            key={at}
             href={part.value}
+            data-thread-address=""
             onClick={(event) => {
               event.preventDefault();
+              if (!event.nativeEvent.isTrusted) return;
               void window.infinitary.app.openExternal(part.value).catch(() => {});
             }}
             style={{
               color: "var(--accent)",
               textDecoration: "underline",
               textUnderlineOffset: 2,
+              overflowWrap: "anywhere",
             }}
           >
             {part.value}
           </a>
         );
       })}
-    </span>
+    </>
   );
 }

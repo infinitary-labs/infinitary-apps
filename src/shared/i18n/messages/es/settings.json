@@ -758,6 +758,8 @@
   "settingsKeyboardCardOverlayNotAllowed": "{key} no puede mostrar las tarjetas: elige una tecla con Control, Opción o Comando, que no sea Esc, Tab, Retorno, Espacio ni Borrar.",
   "settingsKeyboardCardOverlayPress": "Presiona una tecla con Control, Opción o Comando. Esc cancela.",
   "settingsKeyboardCardOverlayRecording": "Grabando una tecla para las tarjetas sobre otras apps",
+  "settingsKeyboardCardOverlaySystem": "macOS usa {key} para uno de sus propios atajos. Elige otra tecla.",
+  "settingsKeyboardCardOverlaySystemKept": "macOS usa {key} para uno de sus propios atajos. Las tarjetas siguen con {kept}.",
   "settingsKeyboardCardOverlayTaken": "macOS no aceptó {key}, así que ahora no hace nada. Elige otra tecla.",
   "settingsKeyboardChanged": "Cambiado",
   "settingsKeyboardClashMovesKeeps": "{clash}. Al guardar, pasa aquí y «{command}» conserva sus otras teclas.",

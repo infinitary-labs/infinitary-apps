@@ -958,6 +958,13 @@ function overlayError(
   const label = (chord: KeyChord) => chordLabel(chord, system);
   if (refused?.reason === "not-allowed")
     return m.settingsKeyboardCardOverlayNotAllowed({ key: label(refused.key) });
+  if (refused?.reason === "system")
+    return overlay.on
+      ? m.settingsKeyboardCardOverlaySystemKept({
+          key: label(refused.key),
+          kept: label(overlay.key),
+        })
+      : m.settingsKeyboardCardOverlaySystem({ key: label(refused.key) });
   if (refused?.reason === "taken")
     return overlay.on
       ? m.settingsKeyboardCardOverlayKept({ key: label(refused.key), kept: label(overlay.key) })
@@ -970,8 +977,8 @@ function overlayError(
 /**
  * The card overlay's switch and key (docs/card-overlay.md), on a Mac alone:
  * on, the key shows the card stack over any app, a full-screen game
- * included. A key the system will not register is refused and the one
- * before it keeps working; recording saves the first press that may summon.
+ * included. A key the system will not register, or one of macOS's own
+ * shortcuts, is refused and the one before it keeps working; recording saves the first press that may summon.
  */
 function CardOverlayRow({
   recording,

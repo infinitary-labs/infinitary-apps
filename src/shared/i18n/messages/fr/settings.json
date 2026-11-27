@@ -758,6 +758,8 @@
   "settingsKeyboardCardOverlayNotAllowed": "{key} ne peut pas afficher les cartes : choisissez une touche avec Contrôle, Option ou Commande, autre qu’Échap, Tab, Retour, Espace ou Supprimer.",
   "settingsKeyboardCardOverlayPress": "Appuyez sur une touche avec Contrôle, Option ou Commande. Échap annule.",
   "settingsKeyboardCardOverlayRecording": "Capture d’un raccourci pour les cartes par-dessus les autres apps",
+  "settingsKeyboardCardOverlaySystem": "macOS utilise {key} pour l’un de ses propres raccourcis. Choisissez un autre raccourci.",
+  "settingsKeyboardCardOverlaySystemKept": "macOS utilise {key} pour l’un de ses propres raccourcis. Les cartes gardent {kept}.",
   "settingsKeyboardCardOverlayTaken": "macOS n’a pas accepté {key}, il ne fait donc rien pour le moment. Choisissez un autre raccourci.",
   "settingsKeyboardChanged": "Modifié",
   "settingsKeyboardClashMovesKeeps": "{clash}. L’enregistrement le déplace ici, et « {command} » garde ses autres raccourcis.",

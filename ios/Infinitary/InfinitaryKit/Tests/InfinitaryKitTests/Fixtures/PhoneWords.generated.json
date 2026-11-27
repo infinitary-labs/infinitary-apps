@@ -2742,6 +2742,8 @@
   {"said":{"m":"settingsKeyboardCardOverlayNotAllowed","a":{"key":"‹key›"}},"words":"‹key› cannot show the cards: choose a key with Control, Option or Command, other than Escape, Tab, Return, Space or Delete."},
   {"said":{"m":"settingsKeyboardCardOverlayPress"},"words":"Press a key with Control, Option or Command. Escape cancels."},
   {"said":{"m":"settingsKeyboardCardOverlayRecording"},"words":"Recording a key for cards over other apps"},
+  {"said":{"m":"settingsKeyboardCardOverlaySystem","a":{"key":"‹key›"}},"words":"macOS uses ‹key› for one of its own shortcuts. Choose another key."},
+  {"said":{"m":"settingsKeyboardCardOverlaySystemKept","a":{"kept":"‹kept›","key":"‹key›"}},"words":"macOS uses ‹key› for one of its own shortcuts. The cards keep ‹kept›."},
   {"said":{"m":"settingsKeyboardCardOverlayTaken","a":{"key":"‹key›"}},"words":"macOS did not accept ‹key›, so it does nothing now. Choose another key."},
   {"said":{"m":"settingsKeyboardChanged"},"words":"Changed"},
   {"said":{"m":"settingsKeyboardClashMovesKeeps","a":{"clash":"‹clash›","command":"‹command›"}},"words":"‹clash›. Saving moves it here, and “‹command›” keeps its other keys."},

@@ -80416,6 +80416,63 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Recording a key for cards over other apps`;
   }
+  function settingsKeyboardCardOverlaySystem(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم macOS المفتاح ${key} لأحد اختصاراته. اختر مفتاحًا آخر.`;
+      case "de":
+        return `macOS nutzt ${key} für eines seiner eigenen Kürzel. Wähl eine andere Taste.`;
+      case "es":
+        return `macOS usa ${key} para uno de sus propios atajos. Elige otra tecla.`;
+      case "fr":
+        return `macOS utilise ${key} pour l’un de ses propres raccourcis. Choisissez un autre raccourci.`;
+      case "ja":
+        return `${key} は macOS 自身のショートカットに使われています。別のキーを選んでください。`;
+      case "ko":
+        return `${key}는 macOS가 자체 단축키로 쓰고 있어요. 다른 키를 골라 주세요.`;
+      case "pt-BR":
+        return `O macOS usa ${key} em um de seus próprios atalhos. Escolha outra tecla.`;
+      case "zh-Hans":
+        return `macOS 自身的快捷键已使用 ${key}。请选择其他按键。`;
+      case "zh-Hant":
+        return `macOS 自身的快速鍵已使用 ${key}。請選擇其他按鍵。`;
+      case "en-XA":
+        return `[ɱáçÖŠ ûšéš ${key} ƒöŕ öñé öƒ îţš öŵñ šĥöŕţçûţš. Çĥööšé áñöţĥéŕ ķéý. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮macOS uses ‬${key}‮ for one of its own shortcuts. Choose another key.‬`;
+    }
+    return `macOS uses ${key} for one of its own shortcuts. Choose another key.`;
+  }
+  function settingsKeyboardCardOverlaySystemKept(input2) {
+    const kept = input2.kept;
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يستخدم macOS المفتاح ${key} لأحد اختصاراته. تحتفظ البطاقات بـ ${kept}.`;
+      case "de":
+        return `macOS nutzt ${key} für eines seiner eigenen Kürzel. Die Karten behalten ${kept}.`;
+      case "es":
+        return `macOS usa ${key} para uno de sus propios atajos. Las tarjetas siguen con ${kept}.`;
+      case "fr":
+        return `macOS utilise ${key} pour l’un de ses propres raccourcis. Les cartes gardent ${kept}.`;
+      case "ja":
+        return `${key} は macOS 自身のショートカットに使われています。カードは ${kept} のままです。`;
+      case "ko":
+        return `${key}는 macOS가 자체 단축키로 쓰고 있어요. 카드는 ${kept}를 그대로 써요.`;
+      case "pt-BR":
+        return `O macOS usa ${key} em um de seus próprios atalhos. Os cartões continuam com ${kept}.`;
+      case "zh-Hans":
+        return `macOS 自身的快捷键已使用 ${key}。卡片仍使用 ${kept}。`;
+      case "zh-Hant":
+        return `macOS 自身的快速鍵已使用 ${key}。卡片仍使用 ${kept}。`;
+      case "en-XA":
+        return `[ɱáçÖŠ ûšéš ${key} ƒöŕ öñé öƒ îţš öŵñ šĥöŕţçûţš. Ţĥé çáŕðš ķééþ ${kept}. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮macOS uses ‬${key}‮ for one of its own shortcuts. The cards keep ‬${kept}‮.‬`;
+    }
+    return `macOS uses ${key} for one of its own shortcuts. The cards keep ${kept}.`;
+  }
   function settingsKeyboardCardOverlayTaken(input2) {
     const key = input2.key;
     switch (currentLanguage()) {
@@ -119104,6 +119161,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsKeyboardCardOverlayNotAllowed,
     settingsKeyboardCardOverlayPress,
     settingsKeyboardCardOverlayRecording,
+    settingsKeyboardCardOverlaySystem,
+    settingsKeyboardCardOverlaySystemKept,
     settingsKeyboardCardOverlayTaken,
     settingsKeyboardChanged,
     settingsKeyboardClashMovesKeeps,
@@ -122831,6 +122890,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsKeyboardCardOverlayNotAllowed": ["key"],
     "settingsKeyboardCardOverlayPress": [],
     "settingsKeyboardCardOverlayRecording": [],
+    "settingsKeyboardCardOverlaySystem": ["key"],
+    "settingsKeyboardCardOverlaySystemKept": ["kept", "key"],
     "settingsKeyboardCardOverlayTaken": ["key"],
     "settingsKeyboardChanged": [],
     "settingsKeyboardClashMovesKeeps": ["clash", "command"],

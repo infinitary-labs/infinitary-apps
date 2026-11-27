@@ -3575,6 +3575,8 @@ public enum PhoneMessages {
     public static func `settingsKeyboardCardOverlayNotAllowed`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlayNotAllowed", [`key`]) }
     public static func `settingsKeyboardCardOverlayPress`() -> String { PhoneWords.format("settingsKeyboardCardOverlayPress", []) }
     public static func `settingsKeyboardCardOverlayRecording`() -> String { PhoneWords.format("settingsKeyboardCardOverlayRecording", []) }
+    public static func `settingsKeyboardCardOverlaySystem`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlaySystem", [`key`]) }
+    public static func `settingsKeyboardCardOverlaySystemKept`(`kept`: String, `key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlaySystemKept", [`kept`, `key`]) }
     public static func `settingsKeyboardCardOverlayTaken`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlayTaken", [`key`]) }
     public static func `settingsKeyboardChanged`() -> String { PhoneWords.format("settingsKeyboardChanged", []) }
     public static func `settingsKeyboardClashMovesKeeps`(`clash`: String, `command`: String) -> String { PhoneWords.format("settingsKeyboardClashMovesKeeps", [`clash`, `command`]) }
@@ -8406,6 +8408,8 @@ extension PhoneWords {
         "settingsKeyboardCardOverlayNotAllowed": ["key"],
         "settingsKeyboardCardOverlayPress": [],
         "settingsKeyboardCardOverlayRecording": [],
+        "settingsKeyboardCardOverlaySystem": ["key"],
+        "settingsKeyboardCardOverlaySystemKept": ["kept", "key"],
         "settingsKeyboardCardOverlayTaken": ["key"],
         "settingsKeyboardChanged": [],
         "settingsKeyboardClashMovesKeeps": ["clash", "command"],

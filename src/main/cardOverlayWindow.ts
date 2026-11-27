@@ -1,13 +1,19 @@
 import { execFile } from "node:child_process";
 import { join } from "node:path";
 import { hostEnv } from "@core/hostEnv";
-import { cardOverlayArgument, overlayBounds, overlayRunsCommand } from "@shared/cardOverlay";
+import {
+  cardOverlayArgument,
+  overlayBounds,
+  overlayRunsCommand,
+  type SavedCardOverlay,
+} from "@shared/cardOverlay";
 import {
   COMMAND_IDS,
   isWindowCommand,
   SHELL_COMMAND_IDS,
   type WindowCommandId,
 } from "@shared/keyboard";
+import { isSystemHotKey, type SymbolicHotKey, systemHotKeys } from "@shared/macSystemShortcuts";
 import {
   app,
   BrowserWindow,
@@ -60,6 +66,8 @@ export type CardOverlayWindowOptions = {
 
 export type CardOverlayHost = {
   controller: CardOverlayController;
+  /** A person's change of the switch or key, checked against macOS's own shortcuts as they are now. */
+  set(next: SavedCardOverlay): Promise<ReturnType<CardOverlayController["set"]>>;
   /** The overlay's panel when `sender` is its page now, for the channels only it may use. */
   panelOf(sender: WebContents): OverlayPanel | null;
   /** The pointer moved onto the card or off it: elsewhere, clicks go to the app behind. */
@@ -162,6 +170,8 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     return panel;
   };
 
+  // macOS's own shortcuts as last read; read again before each change of the key (`readHotKeys`).
+  let hotKeys: SymbolicHotKey[] = systemHotKeys(null);
   const controller = new CardOverlayController(
     {
       supported: options.supported,
@@ -173,6 +183,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
         }
       },
       unregister: (accelerator) => globalShortcut.unregister(accelerator),
+      systemShortcut: (chord) => isSystemHotKey(chord, hotKeys),
       openPanel,
       later: (run, ms) => setTimeout(run, ms),
       cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
@@ -191,6 +202,10 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
 
   return {
     controller,
+    set: async (next) => {
+      if (options.supported) hotKeys = systemHotKeys(await readHotKeys());
+      return controller.set(next);
+    },
     panelOf: (sender) =>
       shown && !shown.win.isDestroyed() && shown.win.webContents === sender ? shown.panel : null,
     wide: (sender, wide) => {
@@ -202,6 +217,41 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       shown.win.setIgnoreMouseEvents(!over, { forward: true });
     },
   };
+}
+
+/**
+ * macOS's own shortcuts as a person set them (`AppleSymbolicHotKeys`), or null when they cannot
+ * be read. `defaults` asks the preferences daemon, whose copy is newer than the file on disk.
+ */
+function readHotKeys(): Promise<unknown> {
+  return new Promise((resolve) => {
+    const options = {
+      env: hostEnv(),
+      encoding: "utf8" as const,
+      timeout: 2_000,
+      maxBuffer: 1 << 20,
+    };
+    const json = execFile(
+      "/usr/bin/plutil",
+      ["-extract", "AppleSymbolicHotKeys", "json", "-o", "-", "-"],
+      options,
+      (error, out) => {
+        try {
+          resolve(error ? null : JSON.parse(out));
+        } catch {
+          resolve(null);
+        }
+      },
+    );
+    const exported = execFile(
+      "/usr/bin/defaults",
+      ["export", "com.apple.symbolichotkeys", "-"],
+      options,
+      () => {},
+    );
+    if (exported.stdout && json.stdin) exported.stdout.pipe(json.stdin);
+    else resolve(null);
+  });
 }
 
 /** The app in front now, by its running instance (`asn`), or null when the system does not say. */

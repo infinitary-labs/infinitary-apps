@@ -11,6 +11,7 @@ import {
   type SavedCardOverlay,
   savedCardOverlaySchema,
 } from "@shared/cardOverlay";
+import type { KeyChord } from "@shared/keyboardCommands";
 
 /**
  * The card overlay's main-process side (docs/card-overlay.md): the system
@@ -37,6 +38,8 @@ export type CardOverlayDeps = {
   supported: boolean;
   /** Registers a system-wide shortcut; false when the system will not take it (a key another program holds is not refused on a Mac). */
   register(accelerator: string, run: () => void): boolean;
+  /** Whether the chord is one of macOS's own shortcuts, which would take the key first. */
+  systemShortcut(chord: KeyChord): boolean;
   unregister(accelerator: string): void;
   /** Makes the panel, hidden, and starts its page; `gone` hears it close, however it closes. */
   openPanel(gone: () => void): OverlayPanel;
@@ -121,6 +124,8 @@ export class CardOverlayController {
     if (next.on && this.deps.supported) {
       const accelerator = overlayAccelerator(next.key);
       if (accelerator !== this.registered) {
+        if (this.deps.systemShortcut(next.key))
+          return { overlay: this.current(), refused: "system" };
         if (!this.deps.register(accelerator, () => this.summon())) {
           return { overlay: this.current(), refused: "taken" };
         }

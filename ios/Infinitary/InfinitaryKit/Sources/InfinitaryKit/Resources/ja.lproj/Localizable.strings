@@ -3420,6 +3420,8 @@
 "settingsKeyboardCardOverlayNotAllowed" = "%1$@ ではカードを表示できません。Control、Option、Command のいずれかを含み、Esc、Tab、Return、Space、Delete 以外のキーを選んでください。";
 "settingsKeyboardCardOverlayPress" = "Control、Option、Command のいずれかと一緒にキーを押してください。Esc でキャンセルします。";
 "settingsKeyboardCardOverlayRecording" = "ほかのアプリの上にカードを表示するキーを記録中";
+"settingsKeyboardCardOverlaySystem" = "%1$@ は macOS 自身のショートカットに使われています。別のキーを選んでください。";
+"settingsKeyboardCardOverlaySystemKept" = "%2$@ は macOS 自身のショートカットに使われています。カードは %1$@ のままです。";
 "settingsKeyboardCardOverlayTaken" = "macOS が %1$@ を受け付けなかったため、今は何も起きません。別のキーを選んでください。";
 "settingsKeyboardChanged" = "変更済み";
 "settingsKeyboardClashMovesKeeps" = "%1$@。保存するとこちらに移り、「%2$@」はほかのキーをそのまま使います。";

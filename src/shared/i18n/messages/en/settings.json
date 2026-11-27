@@ -741,6 +741,8 @@
   "settingsKeyboardCardOverlayNotAllowed": "{key} cannot show the cards: choose a key with Control, Option or Command, other than Escape, Tab, Return, Space or Delete.",
   "settingsKeyboardCardOverlayPress": "Press a key with Control, Option or Command. Escape cancels.",
   "settingsKeyboardCardOverlayRecording": "Recording a key for cards over other apps",
+  "settingsKeyboardCardOverlaySystem": "macOS uses {key} for one of its own shortcuts. Choose another key.",
+  "settingsKeyboardCardOverlaySystemKept": "macOS uses {key} for one of its own shortcuts. The cards keep {kept}.",
   "settingsKeyboardCardOverlayTaken": "macOS did not accept {key}, so it does nothing now. Choose another key.",
   "settingsKeyboardChanged": "Changed",
   "settingsKeyboardClashMovesKeeps": "{clash}. Saving moves it here, and “{command}” keeps its other keys.",

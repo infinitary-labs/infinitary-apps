@@ -3420,6 +3420,8 @@
 "settingsKeyboardCardOverlayNotAllowed" = "لا يمكن لـ %1$@ إظهار البطاقات: اختر مفتاحًا مع Control أو Option أو Command، غير Esc وTab وReturn والمسافة وDelete.";
 "settingsKeyboardCardOverlayPress" = "اضغط مفتاحًا مع Control أو Option أو Command. يلغي Esc.";
 "settingsKeyboardCardOverlayRecording" = "جارٍ تسجيل مفتاح لإظهار البطاقات فوق التطبيقات الأخرى";
+"settingsKeyboardCardOverlaySystem" = "يستخدم macOS المفتاح %1$@ لأحد اختصاراته. اختر مفتاحًا آخر.";
+"settingsKeyboardCardOverlaySystemKept" = "يستخدم macOS المفتاح %2$@ لأحد اختصاراته. تحتفظ البطاقات بـ %1$@.";
 "settingsKeyboardCardOverlayTaken" = "لم يقبل macOS %1$@، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.";
 "settingsKeyboardChanged" = "مُغيَّر";
 "settingsKeyboardClashMovesKeeps" = "%1$@. الحفظ ينقله إلى هنا، ويحتفظ «%2$@» بمفاتيحه الأخرى.";

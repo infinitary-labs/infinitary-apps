@@ -35,9 +35,15 @@ function panel() {
 
 /** The system's shortcut registry, a store and a clock, as the controller meets them. */
 function harness(
-  options: { saved?: SavedCardOverlay; held?: KeyChord[]; supported?: boolean } = {},
+  options: {
+    saved?: SavedCardOverlay;
+    held?: KeyChord[];
+    system?: KeyChord[];
+    supported?: boolean;
+  } = {},
 ) {
   const held = new Set((options.held ?? []).map(overlayAccelerator));
+  const system = new Set((options.system ?? []).map(overlayAccelerator));
   const registered = new Map<string, () => void>();
   const timers = new Map<number, { at: number; run: () => void }>();
   let now = 0;
@@ -55,6 +61,7 @@ function harness(
         return true;
       },
       unregister: (accelerator) => void registered.delete(accelerator),
+      systemShortcut: (chord) => system.has(overlayAccelerator(chord)),
       openPanel: (closed) => {
         const made = panel();
         panels.push(made);
@@ -113,10 +120,22 @@ describe("the card overlay's key", () => {
     expect(h.writes.map((w) => w.on)).toEqual([true, false]);
   });
 
-  it("refuses a key another program holds and keeps the one that works", () => {
+  it("refuses a key the system will not register and keeps the one that works", () => {
     const h = harness({ saved: ON, held: [OTHER] });
     const answer = h.controller.set({ on: true, key: OTHER });
     expect(answer.refused).toBe("taken");
+    expect(answer.overlay.key).toEqual(ON.key);
+    expect(held(h.registered)).toEqual([overlayAccelerator(ON.key)]);
+    expect(h.writes).toEqual([]);
+  });
+
+  // Intent: the captain's answer to the review - "Also refuse the Mac's own shortcuts, like the
+  // screenshot key", since a Mac registers a key another program holds without complaint.
+  it("refuses one of macOS's own shortcuts and keeps the one that works", () => {
+    const screenshot: KeyChord = { key: "4", meta: true, shift: true };
+    const h = harness({ saved: ON, system: [screenshot] });
+    const answer = h.controller.set({ on: true, key: screenshot });
+    expect(answer.refused).toBe("system");
     expect(answer.overlay.key).toEqual(ON.key);
     expect(held(h.registered)).toEqual([overlayAccelerator(ON.key)]);
     expect(h.writes).toEqual([]);
@@ -139,7 +158,7 @@ describe("the card overlay's key", () => {
     expect(held(h.registered)).toEqual([overlayAccelerator(ON.key)]);
   });
 
-  it("says a saved key another program took since does not work", () => {
+  it("says a saved key the system will not register does not work", () => {
     const h = harness({ saved: ON, held: [ON.key] });
     expect(h.controller.current().problem).toBe("taken");
     expect(h.registered.size).toBe(0);

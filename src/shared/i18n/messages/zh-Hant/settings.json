@@ -724,6 +724,8 @@
   "settingsKeyboardCardOverlayNotAllowed": "{key} 無法顯示卡片：請選擇帶 Control、Option 或 Command 的按鍵，且不是 Esc、Tab、Return、空白鍵或 Delete。",
   "settingsKeyboardCardOverlayPress": "按下帶 Control、Option 或 Command 的按鍵。按 Esc 取消。",
   "settingsKeyboardCardOverlayRecording": "正在錄製在其他 App 上方顯示卡片的按鍵",
+  "settingsKeyboardCardOverlaySystem": "macOS 自身的快速鍵已使用 {key}。請選擇其他按鍵。",
+  "settingsKeyboardCardOverlaySystemKept": "macOS 自身的快速鍵已使用 {key}。卡片仍使用 {kept}。",
   "settingsKeyboardCardOverlayTaken": "macOS 未接受 {key}，所以它現在沒有作用。請選擇其他按鍵。",
   "settingsKeyboardChanged": "已變更",
   "settingsKeyboardClashMovesKeeps": "{clash}。儲存後它會移到這裡，「{command}」會保留它的其他按鍵。",

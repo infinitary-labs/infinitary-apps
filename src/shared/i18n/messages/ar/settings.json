@@ -809,6 +809,8 @@
   "settingsKeyboardCardOverlayNotAllowed": "لا يمكن لـ {key} إظهار البطاقات: اختر مفتاحًا مع Control أو Option أو Command، غير Esc وTab وReturn والمسافة وDelete.",
   "settingsKeyboardCardOverlayPress": "اضغط مفتاحًا مع Control أو Option أو Command. يلغي Esc.",
   "settingsKeyboardCardOverlayRecording": "جارٍ تسجيل مفتاح لإظهار البطاقات فوق التطبيقات الأخرى",
+  "settingsKeyboardCardOverlaySystem": "يستخدم macOS المفتاح {key} لأحد اختصاراته. اختر مفتاحًا آخر.",
+  "settingsKeyboardCardOverlaySystemKept": "يستخدم macOS المفتاح {key} لأحد اختصاراته. تحتفظ البطاقات بـ {kept}.",
   "settingsKeyboardCardOverlayTaken": "لم يقبل macOS {key}، لذا لا يفعل شيئًا الآن. اختر مفتاحًا آخر.",
   "settingsKeyboardChanged": "مُغيَّر",
   "settingsKeyboardClashMovesKeeps": "{clash}. الحفظ ينقله إلى هنا، ويحتفظ «{command}» بمفاتيحه الأخرى.",

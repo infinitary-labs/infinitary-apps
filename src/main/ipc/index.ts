@@ -204,9 +204,7 @@ export function registerIpc(options: IpcOptions): void {
     keyReminders.setOn(on),
   );
   handleInvoke("inf:overlay:settings", rendererSource, () => cardOverlay.controller.current());
-  handleInvoke("inf:overlay:settings:set", rendererSource, (_event, next) =>
-    cardOverlay.controller.set(next),
-  );
+  handleInvoke("inf:overlay:settings:set", rendererSource, (_event, next) => cardOverlay.set(next));
   // The rest are the overlay page's alone: any other page asking changes nothing.
   handleInvoke("inf:overlay:start", rendererSource, (event) => ({
     cardId: cardOverlay.panelOf(event.sender) ? noticedCard() : null,

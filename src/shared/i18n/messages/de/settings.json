@@ -741,6 +741,8 @@
   "settingsKeyboardCardOverlayNotAllowed": "{key} kann die Karten nicht zeigen: Wähl eine Taste mit Control, Option oder Command, außer Esc, Tab, Return, Leertaste oder Löschen.",
   "settingsKeyboardCardOverlayPress": "Drück eine Taste mit Control, Option oder Command. Esc bricht ab.",
   "settingsKeyboardCardOverlayRecording": "Taste für Karten über anderen Apps wird aufgenommen",
+  "settingsKeyboardCardOverlaySystem": "macOS nutzt {key} für eines seiner eigenen Kürzel. Wähl eine andere Taste.",
+  "settingsKeyboardCardOverlaySystemKept": "macOS nutzt {key} für eines seiner eigenen Kürzel. Die Karten behalten {kept}.",
   "settingsKeyboardCardOverlayTaken": "macOS hat {key} nicht angenommen, daher tut die Taste gerade nichts. Wähl eine andere Taste.",
   "settingsKeyboardChanged": "Geändert",
   "settingsKeyboardClashMovesKeeps": "{clash}. Beim Speichern wandert sie hierher, und „{command}“ behält seine anderen Tasten.",

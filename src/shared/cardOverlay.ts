@@ -43,11 +43,12 @@ export type CardOverlay = z.infer<typeof cardOverlaySchema>;
 /**
  * A person's change answered: the switch and key as they are now, and why
  * the change was not made, if it was not - the system would not register
- * the key (`taken`), or the key may not summon (`not-allowed`, `overlayKeyAllowed`).
+ * the key (`taken`), it is one of macOS's own shortcuts (`system`,
+ * `isSystemHotKey`), or it may not summon (`not-allowed`, `overlayKeyAllowed`).
  */
 export const cardOverlaySetSchema = z.object({
   overlay: cardOverlaySchema,
-  refused: z.enum(["taken", "not-allowed"]).nullable(),
+  refused: z.enum(["taken", "system", "not-allowed"]).nullable(),
 });
 export type CardOverlaySet = z.infer<typeof cardOverlaySetSchema>;
 export type CardOverlayRefusal = NonNullable<CardOverlaySet["refused"]>;

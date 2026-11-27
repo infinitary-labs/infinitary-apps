@@ -270,6 +270,8 @@ export function registerIpc(options: IpcOptions): void {
   });
   // Whether someone is at this computer, for the ambient music (../presence.ts).
   handleInvoke("inf:window:presence", rendererSource, () => presenceWatch().presence());
+  // How long this computer went untouched, for a card's seen report (../presence.ts).
+  handleInvoke("inf:window:idle", rendererSource, () => presenceWatch().idle());
   // The window's fence: it comes back on the push queue, after the pending
   // announcements and every push sent to this window before it, which an
   // answer on the invoke queue can overtake (docs/architecture.md section 17).

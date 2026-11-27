@@ -1,4 +1,4 @@
-import type { Presence } from "@shared/channels/shell";
+import type { Idle, Presence } from "@shared/channels/shell";
 
 /**
  * Why nobody is at this computer: its screen turned off, it locked, its
@@ -16,10 +16,18 @@ export class PresenceWatch {
   readonly #reasons = new Set<AwayReason>();
   readonly #listeners = new Set<(presence: Presence) => void>();
 
-  constructor(readonly watched: boolean) {}
+  /** `idleSeconds` reads the system's time since the last touch; it never makes anyone away. */
+  constructor(
+    readonly watched: boolean,
+    private readonly idleSeconds: () => number = () => 0,
+  ) {}
 
   presence(): Presence {
     return { away: this.#reasons.size > 0, watched: this.watched };
+  }
+
+  idle(): Idle {
+    return { seconds: this.watched ? this.idleSeconds() : 0 };
   }
 
   set(reason: AwayReason, on: boolean): void {

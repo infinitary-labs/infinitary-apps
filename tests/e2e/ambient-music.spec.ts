@@ -424,7 +424,11 @@ test("ambient music pauses while the screen is locked and plays again at the unl
 }, async () => {
   // A Linux desktop tells the app nothing of a lock, so it never pauses there.
   test.skip(process.platform !== "darwin", "only a Mac and a Windows PC say a lock");
-  const { app, page, close, userDataDir } = await launchApp({ withMockProvider: true });
+  // An isolated run reads no presence unless asked (src/main/presence.ts).
+  const { app, page, close, userDataDir } = await launchApp({
+    withMockProvider: true,
+    env: { INFINITARY_PRESENCE: "system" },
+  });
   try {
     await settings(page).click();
     await appearance(page).click();

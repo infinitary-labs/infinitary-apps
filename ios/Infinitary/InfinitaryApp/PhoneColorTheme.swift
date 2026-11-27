@@ -90,10 +90,10 @@ enum PhoneOwnPalettes {
 
     private static let table = OSAllocatedUnfairLock(initialState: [String: Entry]())
 
-    /// Keeps the drawable ones of `themes`, those whose every token reads as a color, in place of the last list.
+    /// Keeps `themes` in place of the last list, each drawn on its base's colors wherever a token does not read.
     static func keep(_ themes: [PhoneOwnTheme]) {
-        let entries = themes.compactMap { theme -> Entry? in
-            guard let palette = PhonePalette(tokens: theme.tokens) else { return nil }
+        let entries = themes.map { theme -> Entry in
+            let palette = PhonePalette(tokens: theme.tokens, base: theme.isDark ? .dark : .light)
             var print = Hasher()
             for (name, value) in theme.tokens.sorted(by: { $0.key < $1.key }) { print.combine(name); print.combine(value) }
             return Entry(key: "\(theme.id)#\(UInt(bitPattern: print.finalize()))", theme: theme, palette: palette)

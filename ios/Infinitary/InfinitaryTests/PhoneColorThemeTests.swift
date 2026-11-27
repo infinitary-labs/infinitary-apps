@@ -95,6 +95,18 @@ import XCTest
         assertClose(rgb(UIColor(PhoneTheme.accent), redrawn), (127, 214, 255), "The new accent")
     }
 
+    /// The review of the own themes on the phone: a token the computer did not send, as an older computer leaves out
+    /// one a later phone reads, takes the base's color, and the theme still draws its own colors everywhere else.
+    func testAnOwnThemeMissingATokenStillDrawsOnItsBase() {
+        var older = Self.oldTerminal.tokens
+        older["--accent"] = nil
+        PhoneOwnPalettes.keep([PhoneOwnTheme(id: "own-old-terminal", name: "Old terminal", base: "dark", tokens: older)])
+        defer { PhoneOwnPalettes.keep([]) }
+        let shown = UITraitCollection { $0.userInterfaceStyle = .dark; $0[PhoneColorThemeTrait.self] = PhoneLook.own("own-old-terminal").traitValue }
+        assertClose(rgb(UIColor(PhoneTheme.background), shown), (2, 10, 3), "The old terminal's own background")
+        assertClose(rgb(UIColor(PhoneTheme.accent), shown), rgb(UIColor(PhoneTheme.accent), traits(.dark, nil)), "Dark's accent")
+    }
+
     /// A pick the computer no longer lists goes back to its base, as the computer's own window keeps its base.
     func testARemovedOwnPickGoesBackToItsBase() {
         let appearance = PhoneAppearance(), was = appearance.look

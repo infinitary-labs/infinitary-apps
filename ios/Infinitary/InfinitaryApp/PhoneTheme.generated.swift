@@ -78,11 +78,11 @@ extension PhonePalette {
 }
 
 extension PhonePalette {
-    /// A person's own theme from the tokens the computer worked out (`PhoneOwnTheme`); nil when one is missing or unreadable.
-    init?(tokens: [String: String]) {
+    /// A person's own theme from the tokens the computer worked out (`PhoneOwnTheme`). A token missing or unreadable,
+    /// such as one a later phone reads that an older computer never sent, takes `base`'s color, so the theme still draws.
+    init(tokens: [String: String], base: PhonePalette) {
         func color(_ name: String) -> UIColor? { tokens[name].flatMap(PhonePalette.color) }
-        guard let background = color("--bg-0"), let surface = color("--bg-2"), let line = color("--line-1"), let text = color("--fg-1"), let secondary = color("--fg-2"), let accent = color("--accent"), let ok = color("--ok"), let warning = color("--warn"), let danger = color("--danger"), let muted = color("--fg-3"), let panel = color("--bg-1"), let captain = color("--captain"), let wire = color("--wire-accent"), let wireDim = color("--wire-dim"), let wireHot = color("--wire-hot"), let hot = color("--hot"), let lineStrong = color("--line-2"), let idle = color("--idle"), let raised = color("--bg-3"), let accentDim = color("--accent-dim"), let slotPremium = color("--slot-premium"), let slotHigh = color("--slot-high"), let slotMedium = color("--slot-medium"), let slotLow = color("--slot-low"), let onAccent = color("--on-accent") else { return nil }
-        self.init(background: background, surface: surface, line: line, text: text, secondary: secondary, accent: accent, ok: ok, warning: warning, danger: danger, muted: muted, panel: panel, captain: captain, wire: wire, wireDim: wireDim, wireHot: wireHot, hot: hot, lineStrong: lineStrong, idle: idle, raised: raised, accentDim: accentDim, slotPremium: slotPremium, slotHigh: slotHigh, slotMedium: slotMedium, slotLow: slotLow, onAccent: onAccent)
+        self.init(background: color("--bg-0") ?? base.background, surface: color("--bg-2") ?? base.surface, line: color("--line-1") ?? base.line, text: color("--fg-1") ?? base.text, secondary: color("--fg-2") ?? base.secondary, accent: color("--accent") ?? base.accent, ok: color("--ok") ?? base.ok, warning: color("--warn") ?? base.warning, danger: color("--danger") ?? base.danger, muted: color("--fg-3") ?? base.muted, panel: color("--bg-1") ?? base.panel, captain: color("--captain") ?? base.captain, wire: color("--wire-accent") ?? base.wire, wireDim: color("--wire-dim") ?? base.wireDim, wireHot: color("--wire-hot") ?? base.wireHot, hot: color("--hot") ?? base.hot, lineStrong: color("--line-2") ?? base.lineStrong, idle: color("--idle") ?? base.idle, raised: color("--bg-3") ?? base.raised, accentDim: color("--accent-dim") ?? base.accentDim, slotPremium: color("--slot-premium") ?? base.slotPremium, slotHigh: color("--slot-high") ?? base.slotHigh, slotMedium: color("--slot-medium") ?? base.slotMedium, slotLow: color("--slot-low") ?? base.slotLow, onAccent: color("--on-accent") ?? base.onAccent)
     }
 }
 

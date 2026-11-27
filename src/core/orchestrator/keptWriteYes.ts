@@ -42,7 +42,7 @@ export function notStandingWords(allowance: string): string {
 /** The line a kept write's answer ends with when the allowance it named could not pass it. */
 export function passedNothingWords(allowance: string): string {
   // i18n-exempt: served to the crewmate as a tool answer
-  return `The allowance ${allowance} passed nothing: a named yes passes only a write this task would keep on its own project or through the github.com sign-in, never an unsafe data reader's write, one through an integration or one to another project.`;
+  return `The allowance ${allowance} passed nothing: a named yes passes only a write this task would keep on its own project or through the github.com sign-in, never an unsafe data reader's write, one through an integration, or one to another project outside the github.com sign-in.`;
 }
 
 /** What the crewmate hears of a write sent once on the yes it named, by what came of it. */

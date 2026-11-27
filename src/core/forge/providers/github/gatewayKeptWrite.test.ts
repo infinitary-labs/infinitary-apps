@@ -4,8 +4,8 @@
  * side-effect task keeps on its own project, or any write through the
  * github.com sign-in, goes once with no card on a yes of the captain's the
  * crewmate names as its allowance. An unsafe data reader's write and a
- * write to another project stay kept for the click whatever yes they name
- * (the captain's pick: reader route A).
+ * write to another project through the project's own API stay kept for the
+ * click whatever yes they name (the captain's pick: reader route A).
  */
 import type { ForgeWriteAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it } from "vitest";
@@ -82,6 +82,49 @@ describe("a kept write passed by a yes that still stands", () => {
       ok: false,
       outcome: { kind: "refused" },
     });
+    expect(sent()).toHaveLength(1);
+  });
+
+  it("sends a reply an answer task keeps on its own project once on a heard direction, and keeps its write to another project for the click", async () => {
+    const { knowledge, writeAs, asks, sent } = await gateway();
+    knowledge.directions.change({
+      op: "add",
+      id: "intake-replies",
+      scope: METER.id,
+      text: INTAKE_RULE,
+      reason: "The captain said so in their own words.",
+      heard: { from: "turn" },
+    });
+    const answer = writeAs("task-3");
+    expect((await answer.run({ ...REPLY, allowance: "d:intake-replies" })).text).toContain(
+      "Sent once on d:intake-replies, which still stands, with no card",
+    );
+    expect(sent()).toEqual(["POST /repos/octo/meter/issues/1/comments"]);
+
+    const elsewhere = (
+      await answer.run({
+        method: "POST",
+        path: "/repos/acme/site/issues/5/comments",
+        body: '{"body":"The fix for this shipped in meter 1.4."}',
+        allowance: "d:intake-replies",
+      })
+    ).text;
+    expect(elsewhere).toContain(
+      "Not sent: this task only answers, so every write it makes but a run start or rerun on its own project asks the captain",
+    );
+    expect(elsewhere).toContain(
+      "The allowance d:intake-replies passed nothing: a named yes passes only a write this task would keep on its own project or through the github.com sign-in",
+    );
+    const kept = asks("task-3");
+    expect(kept).toHaveLength(2);
+    expect(kept.find((ask) => ask.path === REPLY.path)).toMatchObject({
+      yes: "d:intake-replies",
+      outcome: { kind: "answered", status: 201 },
+    });
+    const elsewhereAsk = kept.find((ask) => ask.path !== REPLY.path);
+    expect(elsewhereAsk?.path).toBe("/repos/acme/site/issues/5/comments");
+    expect(elsewhereAsk).toEqual(expect.not.objectContaining({ yes: expect.anything() }));
+    expect(elsewhereAsk).toEqual(expect.not.objectContaining({ sentAt: expect.anything() }));
     expect(sent()).toHaveLength(1);
   });
 
@@ -188,7 +231,7 @@ describe("a kept write passed by a yes that still stands", () => {
       heard: { from: "turn" },
     });
     const allowance = "d:intake-replies";
-    const passedNothing = `The allowance ${allowance} passed nothing: a named yes passes only a write this task would keep on its own project or through the github.com sign-in, never an unsafe data reader's write, one through an integration or one to another project.`;
+    const passedNothing = `The allowance ${allowance} passed nothing: a named yes passes only a write this task would keep on its own project or through the github.com sign-in, never an unsafe data reader's write, one through an integration, or one to another project outside the github.com sign-in.`;
 
     const reader = (await writeAs("task-reader").run({ ...REPLY, allowance })).text;
     expect(reader).toContain(

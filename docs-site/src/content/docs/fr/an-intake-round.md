@@ -1,5 +1,5 @@
 ---
-source: 45d634c8e641e2e6
+source: f2e3bc29a54d982b
 title: Une tournée de réception
 description: Faites lire par votre équipage les nouveaux tickets et demandes de tirage d’un projet selon un horaire, rédiger les réponses et publier les plus simples sous une consigne dans vos propres mots.
 ---
@@ -45,6 +45,7 @@ Voir [Qui suit une consigne](/fr/knowledge/#who-follows-a-direction).
 - Tout ce que l’équipier qui lit envoie lui-même, quoi que dise une consigne.
 - Une modification par une intégration, qui garde sa règle dans **Réglages** → **Intégrations**.
 - Une modification d’un autre projet.
+  Une tâche sans projet sur GitHub, GitLab ou Bitbucket passe plutôt par votre connexion GitHub, et là un oui de votre part peut laisser partir une modification vers n’importe quel dépôt.
 - Une fusion, qui ne passe que par sa carte de fusion.
 
 ## Voir ce qui est parti {#see-what-went-out}

@@ -1,5 +1,5 @@
 ---
-source: 45d634c8e641e2e6
+source: f2e3bc29a54d982b
 title: Uma rodada de recepção
 description: Faça sua tripulação ler as novas issues e solicitações de pull de um projeto em um horário, rascunhar as respostas e publicar as simples sob uma diretriz nas suas próprias palavras.
 ---
@@ -45,6 +45,7 @@ Veja [Quem segue uma diretriz](/pt-br/knowledge/#who-follows-a-direction).
 - Tudo o que o tripulante que lê enviar por conta própria, diga o que disser uma diretriz.
 - Uma mudança por uma integração, que mantém a regra dela em **Ajustes** → **Integrações**.
 - Uma mudança em outro projeto.
+  Uma tarefa sem projeto no GitHub, no GitLab ou no Bitbucket trabalha pelo seu login do GitHub, e aí um sim seu pode deixar uma mudança sair para qualquer repositório.
 - Uma mesclagem, que só acontece pelo cartão de mesclagem dela.
 
 ## Ver o que saiu {#see-what-went-out}

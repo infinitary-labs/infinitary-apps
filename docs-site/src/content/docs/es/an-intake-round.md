@@ -1,5 +1,5 @@
 ---
-source: 45d634c8e641e2e6
+source: f2e3bc29a54d982b
 title: Una ronda de recepción
 description: Haz que tu tripulación lea las nuevas incidencias y solicitudes de incorporación de cambios de un proyecto según un horario, redacte las respuestas y publique las sencillas bajo una directriz con tus propias palabras.
 ---
@@ -45,6 +45,7 @@ Consulta [Quién sigue una directriz](/es/knowledge/#who-follows-a-direction).
 - Todo lo que el tripulante que lee envíe por sí mismo, diga lo que diga una directriz.
 - Un cambio a través de una integración, que mantiene su regla en **Configuración** → **Integraciones**.
 - Un cambio en otro proyecto.
+  Una tarea sin proyecto en GitHub, GitLab o Bitbucket trabaja en cambio con tu inicio de sesión de GitHub, y ahí un sí tuyo puede dejar salir un cambio a cualquier repositorio.
 - Una fusión, que solo se hace desde su tarjeta de fusión.
 
 ## Ver lo que salió {#see-what-went-out}

@@ -863,9 +863,9 @@ export class GithubGatewayService {
    * github.com sign-in. It is soft (`kept-write`) where the captain's yes may
    * stand in for the click: a write on the task's own project, or through the
    * github.com sign-in, from a task that is no unsafe data reader. A reader's
-   * writes, the GitHub integration's and a write to another project keep the
-   * click alone (INF-6987's picks: the reader's route A, and each integration
-   * action keeps its Settings rule).
+   * writes, the GitHub integration's and a write to another project through
+   * the project's own API keep the click alone (INF-6987's picks: the
+   * reader's route A, and each integration action keeps its Settings rule).
    */
   private askReason(taskId: string, route: ApiRoute, target: Target): KeepReason | undefined {
     if (this.isReader(taskId))

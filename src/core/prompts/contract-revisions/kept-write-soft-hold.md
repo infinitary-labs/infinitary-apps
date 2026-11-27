@@ -12,8 +12,8 @@ What a crewmate is now told:
 
 - `github_write` takes `allowance`: a yes still standing whose words cover the write, named by a heard direction's `d:` id, an Already allowed card, or `standing`.
   Such a write goes once with no card, kept on the task as a taken ask naming the yes, and the task's timeline says so in the captain's language.
-  A named yes that does not stand keeps and sends nothing; an unsafe data reader's write, one through an integration and one to another project stay kept for the click, whatever allowance they name.
-- The tool's scope sentence says the click or a named yes sends a kept write once.
+  A named yes that does not stand keeps and sends nothing; an unsafe data reader's write, one through an integration and one to another project outside the github.com sign-in stay kept for the click, whatever allowance they name.
+- The tool's scope sentence says the click, or a named yes where `allowance` allows it, sends a kept write once, and its release file parameter says a file for another project is kept like any other write.
 - The validation resource rule, the Already allowed list's closing line, the standing override's words and an unsafe data reader's brief each say how a kept write meets the yes they describe, in place of saying that a kept write always asks.
 
 Homes: the rule and its limits are `github_write`'s `allowance` parameter; the answers a crewmate hears when a write is kept, sent on a yes or refused end in the hold's sentence; the reader's limit is also its brief's, since that brief already owns how its writes wait.

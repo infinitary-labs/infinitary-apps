@@ -44,6 +44,7 @@ See [Who follows a direction](/knowledge/#who-follows-a-direction).
 - Anything the crewmate that reads sends itself, whatever a direction says.
 - A change through an integration, which keeps its rule in **Settings** → **Integrations**.
 - A change to another project.
+  A task with no project on GitHub, GitLab or Bitbucket works through your GitHub sign-in instead, where a yes of yours can let a change go to any repository.
 - A merge, which goes only through its merge card.
 
 ## See what went out

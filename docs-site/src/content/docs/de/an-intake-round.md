@@ -1,5 +1,5 @@
 ---
-source: 45d634c8e641e2e6
+source: f2e3bc29a54d982b
 title: Eine Eingangsrunde
 description: Lass deine Crew die neuen Issues und Pull Requests eines Projekts nach Zeitplan lesen, die Antworten entwerfen und die einfachen unter einer Vorgabe in deinen eigenen Worten posten.
 ---
@@ -45,6 +45,7 @@ Siehe [Wer einer Vorgabe folgt](/de/knowledge/#who-follows-a-direction).
 - Alles, was das Crewmitglied, das liest, selbst sendet, egal was eine Vorgabe sagt.
 - Eine Änderung über eine Integration, die ihre Regel unter **Einstellungen** → **Integrationen** behält.
 - Eine Änderung an einem anderen Projekt.
+  Eine Aufgabe ohne Projekt auf GitHub, GitLab oder Bitbucket arbeitet stattdessen über deine Anmeldung bei GitHub, und dort kann ein Ja von dir eine Änderung an jedes Repository gehen lassen.
 - Ein Zusammenführen, das nur über seine Karte zum Zusammenführen geht.
 
 ## Sehen, was hinausging {#see-what-went-out}

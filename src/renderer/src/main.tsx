@@ -70,12 +70,17 @@ void Promise.all([hydratePreferences(), documentLanguage()]).then(([, computer])
   // and followed after (docs/themes.md).
   followColorTheme(
     () => {
-      const { theme, colorTheme } = useShellStore.getState();
-      return { theme, colorTheme };
+      const { theme, colorTheme, ownColorThemes } = useShellStore.getState();
+      return { theme, colorTheme, own: ownColorThemes };
     },
     (listener) =>
       useShellStore.subscribe((state, previous) => {
-        if (state.theme !== previous.theme || state.colorTheme !== previous.colorTheme) listener();
+        if (
+          state.theme !== previous.theme ||
+          state.colorTheme !== previous.colorTheme ||
+          state.ownColorThemes !== previous.ownColorThemes
+        )
+          listener();
       }),
   );
   // The ambient music, while its switch is on (docs/ambient-music.md).

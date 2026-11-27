@@ -63630,6 +63630,72 @@
             "maxLength": 40,
             "pattern": "^[a-z0-9-]+$"
           },
+          "ownColorThemes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^own-[a-z0-9-]{1,36}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40,
+                  "description": "The theme's name, as the person said it"
+                },
+                "colors": {
+                  "type": "object",
+                  "properties": {
+                    "background": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "text": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "accent": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "hot": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "danger": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "captain": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    }
+                  },
+                  "required": [
+                    "background",
+                    "text",
+                    "accent",
+                    "hot",
+                    "danger",
+                    "captain"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "colors"
+              ]
+            }
+          },
           "defaultCardSize": {
             "type": "string",
             "enum": [
@@ -65460,6 +65526,74 @@
                 "minLength": 1,
                 "maxLength": 40,
                 "pattern": "^[a-z0-9-]+$"
+              },
+              "ownColorThemes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^own-[a-z0-9-]{1,36}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "description": "The theme's name, as the person said it"
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "background": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "text": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "accent": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "hot": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "danger": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "captain": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "text",
+                        "accent",
+                        "hot",
+                        "danger",
+                        "captain"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "colors"
+                  ],
+                  "additionalProperties": false
+                }
               },
               "defaultCardSize": {
                 "type": "string",
@@ -67316,6 +67450,72 @@
             "minLength": 1,
             "maxLength": 40,
             "pattern": "^[a-z0-9-]+$"
+          },
+          "ownColorThemes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^own-[a-z0-9-]{1,36}$"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40,
+                  "description": "The theme's name, as the person said it"
+                },
+                "colors": {
+                  "type": "object",
+                  "properties": {
+                    "background": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "text": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "accent": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "hot": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "danger": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    },
+                    "captain": {
+                      "type": "string",
+                      "pattern": "^#[0-9a-fA-F]{6}$",
+                      "description": "#rrggbb"
+                    }
+                  },
+                  "required": [
+                    "background",
+                    "text",
+                    "accent",
+                    "hot",
+                    "danger",
+                    "captain"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "name",
+                "colors"
+              ]
+            }
           },
           "defaultCardSize": {
             "type": "string",
@@ -69703,6 +69903,72 @@
                 "minLength": 1,
                 "maxLength": 40,
                 "pattern": "^[a-z0-9-]+$"
+              },
+              "ownColorThemes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^own-[a-z0-9-]{1,36}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "description": "The theme's name, as the person said it"
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "background": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "text": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "accent": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "hot": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "danger": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "captain": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "text",
+                        "accent",
+                        "hot",
+                        "danger",
+                        "captain"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "colors"
+                  ]
+                }
               },
               "defaultCardSize": {
                 "type": "string",
@@ -110769,6 +111035,72 @@
                 "minLength": 1,
                 "maxLength": 40,
                 "pattern": "^[a-z0-9-]+$"
+              },
+              "ownColorThemes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^own-[a-z0-9-]{1,36}$"
+                    },
+                    "name": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 40,
+                      "description": "The theme's name, as the person said it"
+                    },
+                    "colors": {
+                      "type": "object",
+                      "properties": {
+                        "background": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "text": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "accent": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "hot": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "danger": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        },
+                        "captain": {
+                          "type": "string",
+                          "pattern": "^#[0-9a-fA-F]{6}$",
+                          "description": "#rrggbb"
+                        }
+                      },
+                      "required": [
+                        "background",
+                        "text",
+                        "accent",
+                        "hot",
+                        "danger",
+                        "captain"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "colors"
+                  ]
+                }
               },
               "defaultCardSize": {
                 "type": "string",

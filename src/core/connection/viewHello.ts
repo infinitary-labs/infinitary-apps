@@ -9,6 +9,7 @@ import {
   COLOR_THEME,
   COMPUTER_UPDATING,
   DEVICE_ADDS_BY_ADDRESS,
+  OWN_COLOR_THEMES,
   SETTINGS_CURRENT,
   WORK_UPDATE_SAVING,
 } from "./cardCompatibility";
@@ -85,6 +86,7 @@ export function unreadLook(hello: ViewHello): string[] {
     ...(listsChange(hello.changes, AMBIENT_STYLE) ? [] : ["ambientStyle"]),
     ...(listsChange(hello.changes, AMBIENT_AWAY) ? [] : ["ambientPlaysWhenAway"]),
     ...(listsChange(hello.changes, COLOR_THEME) ? [] : ["colorTheme"]),
+    ...(listsChange(hello.changes, OWN_COLOR_THEMES) ? [] : ["ownColorThemes"]),
     ...(listsChange(hello.changes, SETTINGS_CURRENT) ? [] : ["settings.current"]),
     ...(listsChange(hello.changes, AMBIENT_OWN_STYLES) &&
     listsChange(hello.changes, AMBIENT_OWN_STYLES_UNCAPPED)

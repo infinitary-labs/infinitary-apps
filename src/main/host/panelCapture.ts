@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { COLOR_THEME_ATTRIBUTE } from "@shared/colorThemes";
+import { COLOR_THEME_ATTRIBUTE, COLOR_THEME_SHEET } from "@shared/colorThemes";
 import { app, BrowserWindow, type WebContents } from "electron";
 import { appWindows } from "../windows";
 import { pngSize } from "./pageProtocol";
@@ -43,6 +43,8 @@ type Snapshot = {
   frames: FramePlace[];
   /** The window's color theme (docs/themes.md), or null for plain Dark or Light. */
   colorTheme: string | null;
+  /** The window's color theme rule and the base it was laid on, or null for plain Dark or Light. */
+  colorSheet: { rule: string; base: string | null } | null;
 };
 
 function appWindow(): BrowserWindow | null {
@@ -158,7 +160,9 @@ function panelSnapshotScript(panelId: string): string {
     const html = clone.outerHTML;
 ${CSS_COLLECTOR}
     const colorTheme = document.body.getAttribute(${JSON.stringify(COLOR_THEME_ATTRIBUTE)});
-    return collectCss().then((css) => ({ html, css, width: box.width, height: box.height, frames, colorTheme }));
+    const sheet = document.getElementById(${JSON.stringify(COLOR_THEME_SHEET.id)});
+    const colorSheet = sheet ? { rule: sheet.textContent || "", base: sheet.getAttribute(${JSON.stringify(COLOR_THEME_SHEET.base)}) } : null;
+    return collectCss().then((css) => ({ html, css, width: box.width, height: box.height, frames, colorTheme, colorSheet }));
   })()`;
 }
 
@@ -311,6 +315,7 @@ async function renderSnapshot(
         frames,
         theme,
         colorTheme: snapshot.colorTheme,
+        colorSheet: snapshot.colorSheet,
         width,
         height,
       }),

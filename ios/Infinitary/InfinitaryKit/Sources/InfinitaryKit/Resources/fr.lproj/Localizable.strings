@@ -2811,6 +2811,11 @@
 "settingsAppearanceThemeDark" = "Sombre";
 "settingsAppearanceThemeDescription" = "Sombre, Clair ou un thème sous le nom donné par ses auteurs. Toutes les couleurs de la fenêtre suivent.";
 "settingsAppearanceThemeLight" = "Clair";
+"settingsAppearanceThemeOwnDescribe" = "Décrire le vôtre";
+"settingsAppearanceThemeOwnDraft" = "Crée mon propre thème de couleurs : ";
+"settingsAppearanceThemeOwnRemove" = "Supprimer";
+"settingsAppearanceThemeOwnRemoveNamed" = "Supprimer %1$@";
+"settingsAppearanceThemeYours" = "Les vôtres";
 "settingsAppearanceWash" = "Voile de la fenêtre";
 "settingsAppearanceWashDescription" = "La part de la couleur du thème qui couvre l’arrière-plan flou. 0 %% est la valeur par défaut.";
 "settingsAppearanceWashValue" = "%1$@ %% d’opacité";

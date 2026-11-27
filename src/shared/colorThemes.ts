@@ -232,6 +232,9 @@ export const APART = { accentHot: 0.12, accentDanger: 0.12, hotDanger: 0.06 } as
 /** The body attribute naming the color theme a window draws, which a still drawing watches beside `data-theme`. */
 export const COLOR_THEME_ATTRIBUTE = "data-color-theme";
 
+/** The id of the window's sheet that lays its color theme, and the attribute on it naming the base it was laid on. */
+export const COLOR_THEME_SHEET = { id: "inf-color-theme", base: "data-base" } as const;
+
 /** Words on accent-filled controls in Dark and Light, as colors.css has them. */
 export const SHIPPED_ON_ACCENT = "#05070d";
 
@@ -510,13 +513,59 @@ export function builtInTheme(id: BuiltInThemeId): WorkedOutTheme {
   return theme;
 }
 
+/** Dark or Light, as a theme's background decides it: Light at 0.6 OKLab lightness or more. */
+export function themeBase(background: string): Theme {
+  return toLch(background).L < 0.6 ? "dark" : "light";
+}
+
 /**
- * The theme a saved name draws on a base: a built-in one sitting on that
- * base, or none for a name this build lacks or a look drawn in the other
- * base, such as a picture of each.
+ * Words for a theme given no text color: near white or near black in the
+ * background's hue, or the accent's on a grey background, as Dark's and
+ * Light's own words sit.
  */
-export function shownTheme(saved: string | undefined | null, base: Theme): BuiltInThemeId | null {
-  return isBuiltInTheme(saved) && builtInTheme(saved).base === base ? saved : null;
+export function textFor(background: string, accent: string): string {
+  const bg = toLch(background);
+  const dark = bg.L < 0.6;
+  return fromLch({
+    L: dark ? 0.948 : 0.224,
+    C: dark ? 0.014 : 0.033,
+    H: bg.C < 0.004 ? toLch(accent).H : bg.H,
+  });
+}
+
+/** A person's own theme as drawing needs it: its id and six colors (src/shared/ownColorThemes.ts). */
+export type OwnThemeColors = { readonly id: string; readonly colors: ThemeSeed };
+
+// Keyed on the saved colors themselves, so a theme saved again under its name is worked out anew.
+const ownWorked = new WeakMap<ThemeSeed, WorkedOutTheme>();
+
+/** The theme a saved name names, built-in or one of the person's own, worked out; null for a name neither has. */
+export function themeOf(
+  saved: string | undefined | null,
+  own: readonly OwnThemeColors[] = [],
+): WorkedOutTheme | null {
+  if (isBuiltInTheme(saved)) return builtInTheme(saved);
+  const mine = own.find((theme) => theme.id === saved);
+  if (!mine) return null;
+  let theme = ownWorked.get(mine.colors);
+  if (!theme) {
+    theme = workOutTheme(mine.colors);
+    ownWorked.set(mine.colors, theme);
+  }
+  return theme;
+}
+
+/**
+ * The theme a saved name draws on a base: a built-in or own one sitting on
+ * that base, or none for a name this build lacks or a look drawn in the
+ * other base, such as a picture of each.
+ */
+export function shownTheme(
+  saved: string | undefined | null,
+  base: Theme,
+  own: readonly OwnThemeColors[] = [],
+): string | null {
+  return themeOf(saved, own)?.base === base ? (saved as string) : null;
 }
 
 /** Dark's or Light's own color tokens, as colors.css has them, `--on-accent` included. */
@@ -541,7 +590,11 @@ export function themeRule(tokens: Record<string, string>): string {
  * own for none, so a frame born in a theme is put back whole when told Dark
  * or Light.
  */
-export function frameThemeRule(base: Theme, saved: string | undefined | null): string {
-  const id = shownTheme(saved, base);
-  return themeRule(id ? builtInTheme(id).tokens : shippedTokens(base));
+export function frameThemeRule(
+  base: Theme,
+  saved: string | undefined | null,
+  own: readonly OwnThemeColors[] = [],
+): string {
+  const theme = themeOf(saved, own);
+  return themeRule(theme?.base === base ? theme.tokens : shippedTokens(base));
 }

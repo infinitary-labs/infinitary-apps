@@ -30,6 +30,7 @@ import {
   savedServedStartersSchema,
   servedBaselinesSchema,
 } from "@shared/modelSlots";
+import { ownColorThemesSchema } from "@shared/ownColorThemes";
 import {
   type Appearance,
   ambientStyleSchema,
@@ -139,6 +140,8 @@ const ambientOwnRowSchema = z.strictObject({ styles: ownStylesSchema });
  * only the `appearance` row: a base that no longer matches is its switch.
  */
 const colorThemeRowSchema = z.strictObject({ theme: colorThemeSchema, base: themeSchema });
+/** The `own-color-themes` row: the person's own color themes (docs/themes.md, "Your own themes"). */
+const ownColorThemesRowSchema = z.strictObject({ themes: ownColorThemesSchema });
 
 export class SettingsStore {
   private projection: Map<string, unknown> | undefined;
@@ -355,6 +358,7 @@ export class SettingsStore {
     const style = ambientStyleRowSchema.safeParse(this.get("ambient-style"));
     const own = ambientOwnRowSchema.safeParse(this.get("ambient-own-styles"));
     const color = colorThemeRowSchema.safeParse(this.get("color-theme"));
+    const ownThemes = ownColorThemesRowSchema.safeParse(this.get("own-color-themes"));
     return foldAmbientPause({
       ...DEFAULT_APPEARANCE,
       ...appearance,
@@ -372,6 +376,9 @@ export class SettingsStore {
         : {}),
       ...(style.success ? { ambientStyle: style.data.style } : {}),
       ...(own.success && own.data.styles.length > 0 ? { ambientOwnStyles: own.data.styles } : {}),
+      ...(ownThemes.success && ownThemes.data.themes.length > 0
+        ? { ownColorThemes: ownThemes.data.themes }
+        : {}),
       // An older build that switched Dark or Light left the theme on the other base: the base wins.
       ...(color.success && color.data.base === appearance.theme
         ? { colorTheme: color.data.theme }
@@ -397,7 +404,8 @@ export class SettingsStore {
    * `ambient-own-styles`; a look without them keeps the saved ones, and an
    * empty list removes the row. The color theme goes to `color-theme` with
    * its base, and a look without one removes the row, as the language does:
-   * picking Dark or Light is a look with no color theme.
+   * picking Dark or Light is a look with no color theme. The person's own
+   * color themes go to `own-color-themes` as own styles go to theirs.
    */
   setAppearance(appearance: Appearance): void {
     const {
@@ -418,6 +426,7 @@ export class SettingsStore {
       ambientStyle,
       ambientOwnStyles,
       colorTheme,
+      ownColorThemes,
       ...look
     } = foldAmbientPause({
       ...was,
@@ -432,6 +441,10 @@ export class SettingsStore {
     if (ambientOwnStyles !== undefined) {
       if (ambientOwnStyles.length === 0) this.remove("ambient-own-styles");
       else this.set("ambient-own-styles", { styles: ambientOwnStyles });
+    }
+    if (ownColorThemes !== undefined) {
+      if (ownColorThemes.length === 0) this.remove("own-color-themes");
+      else this.set("own-color-themes", { themes: ownColorThemes });
     }
     this.remove("ambient-paused");
     if (ambientPlaysWhenAway) this.set("ambient-away-plays", true);

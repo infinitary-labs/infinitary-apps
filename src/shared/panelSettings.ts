@@ -27,7 +27,7 @@ export const PANEL_UNREADABLE = {
   home: "only the computer that holds it reads it, never a view of it",
   read: "a panel reads it through a read of its own (quota.snapshot, automation.list or automation.kept)",
   unchecked: "how the crew's models are chosen: not yet checked field by field for a panel",
-  own: "a person's own ambient styles, in their own words: read by the first mate and Settings, not yet offered to a panel",
+  own: "a person's own ambient styles or color themes, in their own words: read by the first mate and Settings, not yet offered to a panel",
   later:
     "a Settings line the first mate gained beside settings.current: not yet checked field by field for a panel",
 } as const;
@@ -126,6 +126,7 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   purge: { unreadable: "act" },
   dictation: { unreadable: "home" },
   "ambient-own-style": { unreadable: "own" },
+  "own-theme": { unreadable: "own" },
   "firstmate-model": { unreadable: "unchecked" },
   "firstmate-account": { unreadable: "names" },
   "crew-slots": { unreadable: "unchecked" },

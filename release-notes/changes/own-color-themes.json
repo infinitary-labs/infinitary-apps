@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "own-color-themes",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Describe a color theme of your own",
+      "body": "Tell your first mate the colors you want, such as “an old green terminal”, and it saves a theme of your own and puts it on at once. Ask again under the same name to change it. Infinitary keeps every color easy to read, says which colors it adjusted, and sends a theme back when a color would be hard to tell from another, such as working from calm. Your themes are listed under Yours in Settings → Appearance → Theme, where Remove takes the one you have on away.",
+      "picture": {
+        "dark": "own-color-themes-dark.webp",
+        "light": "own-color-themes-light.webp",
+        "alt": "The Theme row in Settings with two themes of your own under Yours, Old terminal worn in a dark window and Morning paper in a light one, above Remove and Describe your own"
+      },
+      "docsSite": ["settings"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

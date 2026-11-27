@@ -2811,6 +2811,11 @@
 "settingsAppearanceThemeDark" = "Escuro";
 "settingsAppearanceThemeDescription" = "Escuro, Claro ou um tema com o nome dado por quem o criou. Todas as cores da janela acompanham.";
 "settingsAppearanceThemeLight" = "Claro";
+"settingsAppearanceThemeOwnDescribe" = "Descrever o seu";
+"settingsAppearanceThemeOwnDraft" = "Crie meu próprio tema de cores: ";
+"settingsAppearanceThemeOwnRemove" = "Remover";
+"settingsAppearanceThemeOwnRemoveNamed" = "Remover %1$@";
+"settingsAppearanceThemeYours" = "Seus";
 "settingsAppearanceWash" = "Véu da janela";
 "settingsAppearanceWashDescription" = "Quanto da cor do tema cobre o fundo desfocado. 0%% é o padrão.";
 "settingsAppearanceWashValue" = "%1$@%% de opacidade";

@@ -1,5 +1,5 @@
 ---
-source: df632c26677efc84
+source: 86bf487dacd685ea
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -52,7 +52,8 @@ Cliquer dans la carte n’envoie jamais rien à lui seul.
 
 ## Le champ de réponse et le fil {#the-reply-field-and-the-thread}
 
-Chaque carte a, sous son corps, un champ qui indique « quelque chose à ajouter ? », sauf la carte de bienvenue et les cartes affichées pendant que votre second est arrêté.
+Chaque carte a, sous son corps, un champ qui indique « quelque chose à ajouter ? », sauf la carte de bienvenue.
+Une réponse sous une carte affichée pendant que votre second est arrêté attend son retour, et la carte reste affichée jusqu’à ce que votre second y réponde.
 
 - Tapez-y et appuyez sur **Discuter** pour envoyer une réponse sans choisir.
 - Tapez-y et appuyez sur un choix pour envoyer vos mots avec ce choix.

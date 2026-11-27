@@ -47,6 +47,19 @@ export const FIRSTMATE_PAUSE_CARD_IDS = [
 export const FIRSTMATE_QUIET_CARD_ID = "card-fm-quiet";
 /** The Firstmate failure card (the agent-down set): Retry, until a turn ends clean. */
 export const FIRSTMATE_FAILURE_CARD_ID = "card-fm-turn-failure";
+/** The first mate's own sign-in card, raised when its turn fails for want of a sign-in. */
+export const FIRSTMATE_SIGN_IN_CARD_ID = "card-fm-auth";
+/**
+ * The cards shown while the first mate is down: a reply under one waits on
+ * the paused seat's inbox, so the host keeps the card up until the first
+ * mate answers in its thread (`HostCardStack`, docs/card-threads.md "A
+ * reply while the first mate is down").
+ */
+export const FIRSTMATE_DOWN_CARD_IDS: readonly string[] = [
+  ...FIRSTMATE_PAUSE_CARD_IDS,
+  FIRSTMATE_FAILURE_CARD_ID,
+  FIRSTMATE_SIGN_IN_CARD_ID,
+];
 export const FIRSTMATE_FAILURE_TITLE = "Your first mate hit a problem";
 /** A message with pictures waits because the first mate's model reads words only. */
 export const FIRSTMATE_PICTURES_CARD_ID = "card-fm-pictures-unread";
@@ -197,16 +210,15 @@ export function firstmatePauseTitle(pause: SeatPauseClass, providerName: string)
 
 /** A card the host puts up, before the stack dates it. */
 type HostCard = Omit<Card, "createdAt">;
+/** What a host card's builder gives: every host card takes a reply, so none turns replies off. */
+type HostCardInput = Omit<Card, "author" | "priority" | "status" | "createdAt" | "replies">;
 
 /**
  * The host's own card, the one builder every card here goes through: the
  * host is its author, a note (no choice to make) sits below every decision,
  * and it is ready as it goes up.
  */
-export function hostCard(
-  card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
-  options: { note?: boolean } = {},
-): HostCard {
+export function hostCard(card: HostCardInput, options: { note?: boolean } = {}): HostCard {
   return {
     ...card,
     author: "host",
@@ -217,17 +229,19 @@ export function hostCard(
 
 /**
  * A host card as it goes up and as it is restored (`CardService.put`, its
- * restart): one that names no answerer and does not turn replies off is
- * answered by the first mate, which can pass words on to a crewmate, so a
- * builder that forgets to name one still draws the reply field, and a card
- * saved before its builder named one takes a reply after an update
- * (docs/card-threads.md, "Who answers a card"). Every other card is
- * returned as it is.
+ * restart): every host card takes a reply, and one that names no answerer
+ * is answered by the first mate, which can pass words on to a crewmate. So
+ * a builder that forgets to name one still draws the reply field, and a card
+ * saved before an update - with no answerer, or turned off as the first
+ * mate's down cards once were - takes a reply after it (docs/card-threads.md,
+ * "Who answers a card"). Every other card is returned as it is: the welcome,
+ * the first mate's own note, keeps the reply it turned off.
  */
 export function withHostAnswerer(card: Card): Card {
-  return card.author === "host" && card.answeredBy === undefined && card.replies !== false
-    ? { ...card, answeredBy: "firstmate" }
-    : card;
+  if (card.author !== "host") return card;
+  if (card.answeredBy !== undefined && card.replies !== false) return card;
+  const { replies: _off, ...rest } = card;
+  return { ...rest, answeredBy: card.answeredBy ?? "firstmate" };
 }
 
 /**
@@ -265,8 +279,6 @@ export function firstmatePauseCard(id: string, input: FirstmatePauseCard): HostC
     meta: FIRSTMATE_CARD_META,
     body: input.body,
     actions: firstmatePauseActions(input),
-    // The paused first mate cannot answer a reply (`Card.replies`).
-    replies: false,
   });
 }
 
@@ -508,15 +520,12 @@ export function authDecisionCard(
     move?: { arg: string; modelName: string };
     /** Claude access set up for Claude Code was refused: renewed there, not signed in here. */
     access?: ClaudeAccessSource;
-    /** The first mate's own sign-in: it cannot answer a reply until it is back (`Card.replies`). */
-    noReply?: true;
   },
 ): HostCard {
   const restoreAccountId = options?.restoreAccountId;
   return hostCard({
     id,
     ...(options?.taskId ? { taskId: options.taskId } : {}),
-    ...(options?.noReply ? { replies: false as const } : {}),
     title: restoreAccountId
       ? body
       : options?.access
@@ -654,8 +663,9 @@ export function firstmateQuietCard(body: string): HostCard {
 
 /**
  * The Firstmate failure card (the agent-down set, ruling D6): the turn
- * failed and no agent can answer, so the host offers the one way out -
- * Retry, a host effect.
+ * failed, so the host offers the one way out - Retry, a host effect. A
+ * reply under it waits as a message on the first mate's inbox and is
+ * answered in the thread once a turn runs.
  */
 export function firstmateFailureCard(body: string): HostCard {
   return hostCard({
@@ -663,7 +673,6 @@ export function firstmateFailureCard(body: string): HostCard {
     title: FIRSTMATE_FAILURE_TITLE,
     meta: FIRSTMATE_CARD_META,
     body,
-    replies: false,
     actions: [
       {
         id: "retry-firstmate",

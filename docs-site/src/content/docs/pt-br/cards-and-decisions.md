@@ -1,5 +1,5 @@
 ---
-source: df632c26677efc84
+source: 86bf487dacd685ea
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -52,7 +52,8 @@ Clicar dentro do cartão nunca envia nada por conta própria.
 
 ## O campo de resposta e a conversa {#the-reply-field-and-the-thread}
 
-Todo cartão tem, embaixo do corpo, um campo que diz “algo a acrescentar?”, exceto o de boas-vindas e os que aparecem enquanto seu imediato está parado.
+Todo cartão tem, embaixo do corpo, um campo que diz “algo a acrescentar?”, exceto o de boas-vindas.
+Uma resposta em um cartão que aparece enquanto seu imediato está parado espera até ele voltar, e o cartão continua ali até seu imediato responder nele.
 
 - Digite nele e pressione **Chat** para enviar uma resposta sem escolher.
 - Digite nele e pressione uma escolha para enviar suas palavras junto com essa escolha.

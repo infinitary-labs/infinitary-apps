@@ -1343,8 +1343,17 @@ export class CardService {
    * every such card goes through (`withHostAnswerer`).
    */
   put(next: Card, options: { revise?: boolean } = {}): void {
+    // A revision keeps the open card's wait for an answer, as an author's
+    // revision does (`CardEmit`): the store writes the row whole, and a hold
+    // lost here would let a card shown while the first mate was down come
+    // down before it answered the captain's reply (`HostCardStack`).
+    const open = this.cards.get(next.id);
     const stamped = this.evidence.stamp({
       ...withHostAnswerer(next),
+      ...(open?.awaiting && next.awaiting === undefined ? { awaiting: open.awaiting } : {}),
+      ...(open?.sentBackAt !== undefined && next.sentBackAt === undefined
+        ? { sentBackAt: open.sentBackAt }
+        : {}),
       width: decidedCardWidth({
         body: next.body,
         pictures: next.pictures,

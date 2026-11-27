@@ -833,12 +833,13 @@ Every class reaches the seat through the one admission ladder, the same for a Pi
   Once the words are a row, that row is their one copy: the failure card's Retry makes the lane due now rather than re-sending them, and a clean turn takes the card down; and the seat lets go of a client that holds its sign-in's store (`ModelSession.detach`), so an idle rejection can ask the client without racing the seat.
   A sign-in or sign-out holds the seat off the account it rewrites and detaches it at an idle boundary first (`AccountVault`'s `holdSeat`, `FirstmateAgent.holdSeatFor`).
 - **Each kept message says so** (FI3-592).
-  A captain message the paused seat keeps - typed in the main input, or a reply under one of its own cards - writes one feed line through `broadcastEvent` and keeps the same words as the message's reply line (`FirstmateAgent.keptReceipt`, words from `keptMessageWords`): that it is saved, the pause's own sentence (`Flagship.pauseSentence`), and the way back that still reaches the captain once the captain has closed the pause card - the class's fact, or another model for the first mate in Settings.
+  A captain message the paused seat keeps - typed in the main input, or a reply under one of its own cards or a card shown while it is down - writes one feed line through `broadcastEvent` and keeps the same words as the message's reply line (`FirstmateAgent.keptReceipt`, words from `keptMessageWords`): that it is saved, the pause's own sentence (`Flagship.pauseSentence`), and the way back that still reaches the captain once the captain has closed the pause card - the class's fact, or another model for the first mate in Settings.
   It is the reply line beside the captain's message the moment the captain sends (`docs/composer.md` "The last turn"), and the feed keeps it across a restart.
   The card asks once; the line answers every message, so closing the card never hides a later one.
   A message kept for another reason (a sign-in rewriting the store, an answer-delivery retry) writes none.
 - **The way back, on the tick - or at once.**
   A paused seat whose account serves again resumes: a feed line, its cards go, its waiting rows are due now.
+  A pause card the captain replied under stays until the first mate answers there (`docs/card-threads.md`, "A reply while the first mate is down").
   A cut-off recorded or cleared on any account is heard at once, as the crew lanes hear it (`AccountVault.onCutOffChange` → `FirstmateAgent.onCutOffChanged`), rather than at the next tick.
   A seat the captain moved off a paused account remembers where it was (`firstmate-moved-from`), and when that account serves again it is offered "Move your first mate back to <provider>?" once (`card-fm-move-back`), which does nothing until clicked.
   The refused card's "Try again" clears the refusal (S7's `tryAgain`) and drains once: that drain is the attempt.

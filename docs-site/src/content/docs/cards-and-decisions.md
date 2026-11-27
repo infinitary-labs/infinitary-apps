@@ -51,7 +51,8 @@ Clicking inside the card never sends anything on its own.
 
 ## The reply field and the thread
 
-Every card has a field under its body that reads "anything to add?", except the welcome and the cards shown while your first mate is down.
+Every card has a field under its body that reads "anything to add?", except the welcome.
+A reply under a card shown while your first mate is down waits until it is back, and the card stays up until your first mate answers there.
 
 - Type in it and press **Chat** to send a reply without choosing.
 - Type in it and press a choice to send your words with that choice.

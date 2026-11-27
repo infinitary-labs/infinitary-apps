@@ -66,6 +66,8 @@ export const appearanceLines = {
     tier: "asked",
     change: "inf:settings:appearance:set",
     current: "inf:settings:appearance:get",
+    // The phone's switch saves through this action's own write.
+    channels: ["inf:settings:crew-grouping:set"],
     value: z.strictObject({ grouping: crewGroupingSchema }),
     // i18n-exempt: served to the first mate, a model, never shown
     line: "How the crew animation groups the crew, when asked: computer (the default) seats each computer's crew together; project seats each project's crew together, whichever computer runs them. It changes only where crew sit in the animation, never tasks, focus or where work runs.",

@@ -295,16 +295,22 @@ extension PhoneJourney {
         XCTAssertEqual(labels.filter { $0 == "Old terminal" }.count, 1, "The own theme is one tile, under its own name")
         XCTAssertLessThan(theme.buttons["Tokyo Night"].frame.maxY, yours.frame.minY, "Yours follows the built-in themes")
         XCTAssertLessThanOrEqual(yours.frame.maxY, terminal.frame.minY)
-        // On an iPhone the built-in themes can fill the sheet, so Yours is brought up into view for its picture.
-        for _ in 0..<3 where !terminal.isHittable { theme.swipeUp(velocity: .slow) }
-        XCTAssertTrue(terminal.isHittable, app.debugDescription)
-        picture("phone-theme-yours")
         let shown = waitForRedraw(scope, from: nil)
+        // On an iPhone the built-in themes fill the sheet, so the list scrolls the tile into view for its picture and
+        // the scope line back for its colors. A tile under the sheet's foot still reads hittable, so its frame decides.
+        let foot = app.frame.maxY - 40
+        func bringUp() { for _ in 0..<4 where terminal.frame.maxY > foot { app.swipeUp(velocity: .slow) } }
+        func bringDown() { for _ in 0..<4 where scope.frame.minY < app.frame.minY + 120 { app.swipeDown(velocity: .slow) } }
+        bringUp()
+        XCTAssertLessThanOrEqual(terminal.frame.maxY, foot, "The own theme's tile shows whole")
+        picture("phone-theme-yours")
         tapOnPhone(terminal)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: terminal, timeout: 10), .completed)
+        bringDown()
         _ = waitForRedraw(scope, from: shown)
         // The computer's workOutTheme gives the old terminal's quiet words (--fg-2) #209a39 from its text #3ddc5a.
         waitForInks("Old terminal", [(0x209a39, scope, 300, "Settings' quiet words")])
+        bringUp()
         try drawn("phone-theme-old-terminal", dark: true)
         _ = try await home("own-theme-remove")
         XCTAssertTrue(terminal.waitForAbsence(timeout: 10), app.debugDescription)

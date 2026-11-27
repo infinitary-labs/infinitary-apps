@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-thread-rows-split",
+      "reason": "Internal: card thread row decoding moves into its own module without changing behavior."
+    }
+  ]
+}

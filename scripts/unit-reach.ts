@@ -155,7 +155,8 @@ const CONTRACT_DEPENDENCIES: ReadonlyArray<{
   // tests/helpers/cardServiceHarness.ts: a query naming a new column failed
   // on their older database.
   {
-    owns: (path) => path === "src/core/storage/cardStore.ts",
+    owns: (path) =>
+      path === "src/core/storage/cardStore.ts" || path === "src/core/storage/cardThreadRows.ts",
     readers: ["src/core/storage/cardThreadMigrations.test.ts"],
   },
   // The placed Claude contract reads the call ledger's bytes through

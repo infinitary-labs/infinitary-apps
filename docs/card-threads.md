@@ -233,6 +233,8 @@ Nothing reads anyone's words.
 - `guidance`: nothing else holds the author, and it has not answered yet.
 
 A running turn shows `working` in its place.
+The turn is the card's answerer's: the first mate's on a card it wrote or answers, the app's own cards it answers included, such as the stuck alert or an integration ask with no crewmate behind it, and otherwise the crewmate of the card's task (`entryWorking`, the phone's `PhoneCard.working`; INF-7111).
+The first mate's busy flag is its whole turn, not this card's, so such a card shows `working` during any first mate turn, as the first mate's own cards do.
 On a crewmate's card the captain replied under, `working` is followed by what the crewmate did last since the captain's newest line: its task record's Now line (`nowOf`, `docs/task-record.md` "The Now line"), usually the description it gave the command it runs (`useReplyDoing`).
 The thread reads it off `tasks.detail` only while that turn runs, and that read re-reads on each of the crewmate's calls (`tool_start`, `tool_end`), so the line follows the work command by command; before its first doing since the reply, `working` stands alone.
 A collapsed thread's latest line shows the same words in place of the newest message.

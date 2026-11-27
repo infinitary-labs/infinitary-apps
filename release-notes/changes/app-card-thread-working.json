@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "app-card-thread-working",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The app's own cards show working while the first mate answers you",
+      "body": "When you reply under one of the app's own cards that the first mate answers, such as an approval card or a stuck task alert, its thread now shows working while the first mate writes its answer. Before, the thread showed only your message until the answer landed, on your computer and on your iPhone or iPad.",
+      "picture": {
+        "dark": "app-card-thread-working-dark.webp",
+        "light": "app-card-thread-working-light.webp",
+        "alt": "An approval card whose thread shows the word working under the reply you sent"
+      },
+      "noDocsSite": "No docs site page describes the working line in a card's thread.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

@@ -68,6 +68,18 @@ struct CardValuesTests {
         #expect(!signIn.takesReplies)
     }
 
+    /// INF-7111, the captain: "this card thread was not showing the "working" state, while i think first mate was the
+    /// one working on it". The Mac's own card the first mate answers shows the first mate's turn, not its task's.
+    @Test func appCardTheFirstMateAnswersWorksWithTheFirstMate() throws {
+        let approval = try PhoneCard(.object([
+            "id": .string("write-ask-a99caa29"), "title": .string("Allow writes on GitHub?"),
+            "author": .string("host"), "taskId": .string("a99caa29"), "answeredBy": .string("firstmate"),
+            "body": .string("<p>Each row is one call and the request it sends.</p>"), "actions": .array([])
+        ]))
+        #expect(approval.working(firstmateBusy: true, taskActivity: "idle"))
+        #expect(!approval.working(firstmateBusy: false, taskActivity: "running"))
+    }
+
     /// INF-6265 piece 1: the Mac's own card for a crewmate's ask takes a reply on the phone as on the Mac, answered by
     /// the crewmate that asked; without its task nobody can answer it.
     @Test func appAskTakesAReplyForItsCrewmate() throws {

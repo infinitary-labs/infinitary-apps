@@ -404,8 +404,9 @@ export class BesideWindow {
   }
 
   /**
-   * The window came to the front or left it: the first mate pushes no card
-   * to a phone while it is in front (docs/phone-push.md). A first mate that
+   * The window came to the front or left it: a first mate from before
+   * `inf:window:someone-here` holds a card's push to a phone while it is in
+   * front (docs/phone-push.md); a newer one goes by `here`. A first mate that
    * forgot it as the connection dropped hears it again at the next welcome.
    */
   front(inFront: boolean): void {

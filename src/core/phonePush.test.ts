@@ -6,7 +6,7 @@ import {
   phonePushRelayRequestSchema,
   phonePushWithdrawalSchema,
 } from "@shared/phonePush";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NOTICE_BODY_LIMIT } from "./notifications";
 import { APPLE_PAYLOAD_LIMIT, cardNotifiers, PhonePushes, WITHDRAW_SPACING_MS } from "./phonePush";
 import { SomeoneHere } from "./someoneHere";
@@ -928,5 +928,66 @@ describe("each phone's box of letters", () => {
     expect(reads).toHaveLength(2);
     notifier.stop();
     expect(stopped).toBe(1);
+  });
+});
+
+// INF-7038's approved plan, Part 2, with the captain's answers: the phone waits only while
+// someone is at a computer showing the first mate. A window in front with nobody at it, on the
+// computer whose program runs the first mate, no longer holds the phone quiet; a first mate
+// whose program reads no computer of its own keeps the rule before, quiet while focused.
+describe("the phone sender beside a window that has the focus", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function focusedNotifiers() {
+    const relay = relayStandIn();
+    vi.stubGlobal("fetch", relay.fetch);
+    const phone = registration();
+    const someoneHere = new SomeoneHere();
+    const notifier = cardNotifiers({
+      notifications: { supported: () => true, focused: () => true, show: () => {} },
+      someoneHere,
+      switchedOn: () => true,
+      phones: {
+        pushTargets: () => [{ deviceId: PHONE, registration: phone }],
+        forgetPush: () => {},
+        letterBoxes: () => [],
+        noteLetterRead: () => {},
+        takeLetter: () => "ignored",
+      },
+      relay: "https://push.getinfinitary.com/v1/push",
+      every: () => () => {},
+    });
+    const stage: Card[] = [];
+    notifier.observe(stage);
+    /** A new card on the stage; the card ids the relay was posted, as the phone opens them. */
+    const arrive = (id: string) => {
+      stage.push(stageCard(id));
+      notifier.observe([...stage]);
+    };
+    const pushed = () =>
+      relay.posts.map(
+        (post) =>
+          openAsThePhone(phone.key, phonePushRelayRequestSchema.parse(JSON.parse(post.body)).sealed)
+            .cardId,
+      );
+    return { someoneHere, arrive, pushed };
+  }
+
+  it("pushes at once when its own program reads nobody, and holds while it reads someone", () => {
+    const { someoneHere, arrive, pushed } = focusedNotifiers();
+    someoneHere.own(false);
+    arrive("card-nobody-at-the-window");
+    expect(pushed()).toEqual(["card-nobody-at-the-window"]);
+    someoneHere.own(true);
+    arrive("card-someone-at-the-window");
+    expect(pushed()).toEqual(["card-nobody-at-the-window"]);
+    someoneHere.own(false);
+    expect(pushed()).toEqual(["card-nobody-at-the-window", "card-someone-at-the-window"]);
+  });
+
+  it("stays quiet while focused where its own program reads nothing", () => {
+    const { arrive, pushed } = focusedNotifiers();
+    arrive("card-while-focused");
+    expect(pushed()).toEqual([]);
   });
 });

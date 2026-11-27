@@ -763,10 +763,10 @@ export class ViewBackend {
   }
 
   /**
-   * This Mac's window came to the front or left it: the first mate there
-   * pushes no card to a phone while it is in front (docs/phone-push.md).
-   * Said again at each welcome, since the first mate forgets it as the
-   * connection drops.
+   * This Mac's window came to the front or left it: a first mate there from
+   * before `inf:window:someone-here` holds a card's push to a phone while it
+   * is in front (docs/phone-push.md); a newer one goes by `here`. Said again
+   * at each welcome, since the first mate forgets it as the connection drops.
    */
   front(inFront: boolean): void {
     this.inFront = inFront;

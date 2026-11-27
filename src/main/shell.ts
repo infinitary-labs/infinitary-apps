@@ -38,6 +38,7 @@ import { Attendance, type AttendanceOptions } from "./attendance";
 import { type BesideOptions, BesideWindow } from "./besideWindow";
 import type { PictureSource } from "./frames/frameProtocol";
 import { InstalledKeymap, type SizeCommandHandlers } from "./keyboard";
+import { PresenceWatch } from "./presenceWatch";
 import { type OwnedRun, sameRun } from "./runCommand";
 import { LocalWindow, type LocalWindowOptions } from "./view/localWindow";
 import { ViewBackend, type ViewBackendOptions } from "./view/viewBackend";
@@ -187,13 +188,6 @@ export type ShellOptions = {
   keySystem?: KeySystem;
 };
 
-/** A computer that cannot tell whether someone is at it: someone is while a window is in front. */
-const CANNOT_TELL: AttendanceOptions["presence"] = {
-  presence: () => ({ away: false, watched: false }),
-  idle: () => ({ seconds: 0 }),
-  listen: () => () => {},
-};
-
 /**
  * Whether this computer may run its home's work (docs/devices.md, "Joining"):
  * a Mac, a Linux computer and a Windows PC all may.
@@ -297,7 +291,8 @@ export class Shell {
   async start(): Promise<void> {
     if (!this.options.headless) {
       const attendance = new Attendance({
-        presence: this.options.presence?.() ?? CANNOT_TELL,
+        // A computer that cannot tell: someone is here while a window is in front.
+        presence: this.options.presence?.() ?? new PresenceWatch(false),
         postsNotices: () => this.options.notifications.supported(),
         now: this.now,
       });

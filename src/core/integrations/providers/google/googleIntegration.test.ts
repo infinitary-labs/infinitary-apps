@@ -10,6 +10,7 @@ import {
 import { fencedListReminder, fencedSpans, fenceReminder } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
+import { attachmentIdOf } from "../../../../../tests/helpers/googleMcpStandIn";
 import {
   type GoogleStandIn,
   STAND_IN_ACCOUNT,
@@ -33,6 +34,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
 import { ScheduleStore } from "../../../storage/scheduleStore";
 import { atUtilityQos } from "../../../utilityQos";
 import {
+  CALENDAR_CHANGED_EVENT,
   GOOGLE_DATA_FENCE,
   GOOGLE_SCOPES,
   googleIntegration,
@@ -173,6 +175,8 @@ describe("Google as an integration", () => {
           expect.objectContaining({
             name: "event_changed",
             label: "A calendar event changes",
+            // The captain's choice on INF-7017's review: a Calendar rule looks every 5 minutes.
+            every: 5,
             filters: [{ name: "calendar", label: "Calendar", defaultValue: "primary" }],
           }),
         ],
@@ -339,15 +343,26 @@ describe("Google as an integration", () => {
       "To perform the task’s requested action.",
     );
     expect(found.refused).toBeUndefined();
+    // Gmail's MCP server lists conversations, each with its messages.
     expect(parsed(found.text)).toEqual({
-      messages: [
-        expect.objectContaining({
-          id,
-          from: ARRIVING.from,
-          subject: ARRIVING.subject,
-          labels: ["UNREAD", "CATEGORY_PERSONAL", "INBOX"],
-        }),
+      threads: [
+        {
+          thread: id,
+          count: 1,
+          messages: [
+            expect.objectContaining({
+              id,
+              from: ARRIVING.from,
+              subject: ARRIVING.subject,
+              labels: ["UNREAD", "CATEGORY_PERSONAL", "INBOX"],
+            }),
+          ],
+        },
       ],
+    });
+    expect(google.calls("gmail").find((call) => call.tool === "search_threads")?.args).toEqual({
+      query: "invoice",
+      pageSize: 10,
     });
     const message = parsed(
       (
@@ -360,11 +375,12 @@ describe("Google as an integration", () => {
         )
       ).text,
     );
+    // Gmail's MCP server names no attachment's size.
     expect(message).toMatchObject({
       id,
       subject: ARRIVING.subject,
       text: ARRIVING.text,
-      attachments: [ARRIVING.attachment],
+      attachments: [{ name: ARRIVING.attachment.name, type: ARRIVING.attachment.type, part: "1" }],
     });
     expect(google.seen.every((request) => request.authorization?.startsWith("Bearer ya29."))).toBe(
       true,
@@ -431,17 +447,25 @@ describe("Google as an integration", () => {
       kind: "ran",
     });
     expect((await integrations.sendAsk("task-1", send?.id ?? "")).outcome).toEqual({ kind: "ran" });
-    expect(google.drafts).toHaveLength(1);
-    expect(google.drafts[0]?.threadId).toBe(id);
-    expect(google.drafts[0]?.text).toContain(`Subject: Re: ${ARRIVING.subject}`);
-    expect(google.drafts[0]?.text).toContain(`In-Reply-To: <CAF${id}@mail.gmail.com>`);
-    expect(google.sent).toHaveLength(1);
-    expect(google.sent[0]?.text).toContain(
-      `Subject: =?UTF-8?B?${Buffer.from("Paid: invoice 2214 ✓").toString("base64")}?=`,
-    );
-    expect(google.sent[0]?.text).toContain(
-      Buffer.from("Sent the payment today.").toString("base64"),
-    );
+    // The reply answers the message in its conversation, and Gmail's MCP
+    // server takes each address plain, without its name.
+    expect(google.drafts).toEqual([
+      {
+        to: ["lena@ortiz-studio.com"],
+        subject: `Re: ${ARRIVING.subject}`,
+        body: "Thanks Lena, paying it this week.",
+        replyToMessageId: id,
+        threadId: id,
+      },
+    ]);
+    expect(google.sent).toEqual([
+      {
+        to: ["lena@ortiz-studio.com"],
+        subject: "Paid: invoice 2214 ✓",
+        body: "Sent the payment today.",
+        threadId: expect.any(String),
+      },
+    ]);
 
     // The first mate's seat cannot send: only a crewmate's card carries the exact call.
     const seat = await integrations.call(
@@ -460,7 +484,7 @@ describe("Google as an integration", () => {
   // INF-2466, the captain's approved plan: "a Google integration action that
   // saves a Gmail attachment into the task's hand-over folder", with the
   // card-name answer "avoid rigid logic. let agents decide what's appropriate".
-  it("saves an attachment the captain approved into the task's folder byte for byte, inline or fetched on its own, answering only its name, type, size and path", async () => {
+  it("saves an attachment the captain approved into the task's folder byte for byte, from Gmail's own API by the id Gmail's MCP server names, answering only its name, type, size and path", async () => {
     const { google, tasks, integrations, reads } = await signedIn();
     const pdf = randomBytes(48_211);
     const fetched = google.deliver({
@@ -473,17 +497,11 @@ describe("Google as an integration", () => {
       },
     });
     const notes = Buffer.from("Shot list\nRoof, 6am\n", "utf8");
-    const inline = google.deliver({
+    const second = google.deliver({
       from: ARRIVING.from,
       subject: "Shot list",
       text: "Attached.",
-      attachment: {
-        name: "shot list.txt",
-        type: "text/plain",
-        size: notes.length,
-        inline: true,
-        bytes: notes,
-      },
+      attachment: { name: "shot list.txt", type: "text/plain", size: notes.length, bytes: notes },
     });
     const crew = integrations.forTask("task-1");
     const reason = "Read the attached invoice 2214 to check the amount due.";
@@ -493,7 +511,7 @@ describe("Google as an integration", () => {
       (await crew.call("Google", "read_message", { id: fetched }, undefined, reason)).text,
     );
     expect(read.attachments).toEqual([
-      { name: "invoice-2214.pdf", type: "application/pdf", size: pdf.length, part: "1" },
+      { name: "invoice-2214.pdf", type: "application/pdf", part: "1" },
     ]);
 
     // At Asks you, the call is kept with its exact input and reason; Gmail is asked nothing.
@@ -518,9 +536,16 @@ describe("Google as an integration", () => {
 
     const sent = await integrations.sendAsk("task-1", ask?.id ?? "");
     expect(sent.outcome).toEqual({ kind: "ran" });
-    expect(
-      google.seen.some((request) => request.path.startsWith(`/messages/${fetched}/attachments/`)),
-    ).toBe(true);
+    // Gmail's MCP server names the file and refuses a whole message that has one, so its
+    // bytes come from Gmail's own API, as the captain picked on INF-7017's plan-mismatch card:
+    // "Keep saving files through Gmail's own interface until February 1, 2027, then stop".
+    const asked_ = google.seen.slice(before);
+    expect(asked_.flatMap((entry) => (entry.tool ? [[entry.tool, entry.args]] : []))).toEqual([
+      ["get_message", { messageId: fetched, messageFormat: "FULL_CONTENT" }],
+    ]);
+    expect(asked_.flatMap((entry) => (entry.service ? [] : [entry.path]))).toEqual([
+      `/messages/${fetched}/attachments/${attachmentIdOf(fetched)}`,
+    ]);
     const saved = parsed(sent.answer ?? "");
     expect(saved).toEqual({
       name: "invoice-2214.pdf",
@@ -538,12 +563,12 @@ describe("Google as an integration", () => {
       { file: path.split("/").at(-1), label: GOOGLE_DATA_FENCE, at: expect.any(Number) },
     ]);
 
-    // Always allowed, an inline attachment saves at once, from the message itself.
+    // Always allowed, the next saves at once.
     integrations.setRule(google_?.id ?? "", "save_attachment", true);
     const direct = await crew.call(
       "Google",
       "save_attachment",
-      { id: inline, part: "1" },
+      { id: second, part: "1" },
       undefined,
       reason,
     );
@@ -567,6 +592,7 @@ describe("Google as an integration", () => {
       .call("Google", "save_attachment", { id, part: "7" }, undefined, reason);
     expect(wrong).toMatchObject({ refused: "invalid" });
     expect(wrong.text).toContain(`Message ${id} has no part 7`);
+    const asked = google.calls().length;
 
     const row = integrations.view().integrations[0];
     integrations.setRule(row?.id ?? "", "save_attachment", false);
@@ -590,7 +616,7 @@ describe("Google as an integration", () => {
       text: "Not run: update Infinitary on Kun's Mac mini first.",
     });
     expect(tasks.get("task-1")?.delivery?.writeAsks ?? []).toEqual([]);
-    expect(google.seen.some((request) => request.path.includes("/attachments/"))).toBe(false);
+    expect(google.calls()).toHaveLength(asked);
   });
 
   it("reads an HTML-only message as its words in one pass, however its sender wrote the markup", async () => {
@@ -679,25 +705,29 @@ describe("Google as an integration", () => {
     }
     expect(new Set(fences).size).toBe(2);
 
-    // Its sender and subject reach a rule's first mate turn fenced too, with one line after the list.
+    // A rule's first mate turn hears only which conversation got mail, never the sender's
+    // words (the captain's pick B on INF-7017's plan-mismatch card), still fenced as Google's.
+    clock.now += 61_000;
     const { items } = await integrations.look("google", "message_received", start.cursor);
-    expect(items.map((item) => item.id)).toEqual([id]);
     const [summary] = fencedSpans(items[0]?.summary ?? "");
     expect(summary).toMatchObject({
       label: GOOGLE_DATA_FENCE,
       closed: true,
-      words: `From ${steering.from}: ${broken(steering.subject)}`,
+      words: `New mail in Gmail conversation ${google.mail.get(id)?.threadId}`,
     });
     expect(eventsWords(items).split("\n")).toEqual([
-      `- ${items[0]?.summary} (id ${id})`,
+      `- ${items[0]?.summary} (id ${items[0]?.id})`,
       fencedListReminder(GOOGLE_DATA_FENCE),
     ]);
 
-    // A refusal is the app's own words, so it stays as it is.
+    // A refusal is the app's and Google's own words, so it stays as it is.
     const refused = await integrations
       .forTask("task-1")
       .call("Google", "read_message", { id: "18c0ffee00000000" });
-    expect(refused).toEqual({ text: "No message 18c0ffee00000000.", refused: "invalid" });
+    expect(refused).toEqual({
+      text: "Gmail refused: Requested entity was not found.",
+      refused: "refused",
+    });
   });
 
   it("calls a send unknown when Gmail took it and then dropped the connection or failed, and never sends it again", async () => {
@@ -732,11 +762,11 @@ describe("Google as an integration", () => {
 
     expect((await integrations.sendAsk("task-1", send?.id ?? "")).outcome).toEqual({
       kind: "unknown",
-      why: "Google's send_message has an unknown outcome: Gmail did not answer.\nDo not repeat this call; read Google to check what happened first.",
+      why: "Google's send_message has an unknown outcome: Could not reach Gmail. The change may have happened.\nDo not repeat this call; read Google to check what happened first.",
     });
     expect((await integrations.sendAsk("task-1", draft?.id ?? "")).outcome).toEqual({
       kind: "unknown",
-      why: "Google's draft_message has an unknown outcome: Gmail failed (status 500): Backend Error\nDo not repeat this call; read Google to check what happened first.",
+      why: "Google's draft_message has an unknown outcome: Gmail failed (status 500). The change may have happened.\nDo not repeat this call; read Google to check what happened first.",
     });
     expect(google.sent).toHaveLength(1);
     expect(google.drafts).toHaveLength(1);
@@ -761,54 +791,11 @@ describe("Google as an integration", () => {
     expect(answer.refused).toBe("invalid");
   });
 
-  it("tells each message that arrives from its history cursor, and starts again from now when Gmail forgot the cursor or the mailbox changed", async () => {
-    const { google, integrations } = await signedIn();
-    const start = await integrations.look("google", "message_received", null);
-    expect(start.items).toEqual([]);
-
-    const first = google.deliver(ARRIVING);
-    const second = google.deliver({
-      from: "United Airlines <unitedairlines@news.united.com>",
-      subject: "",
-      text: "Your trip to Lisbon is coming up.",
-      labels: ["Label_7"],
-    });
-    const found = await integrations.look("google", "message_received", start.cursor);
-    expect(found.items.map((item) => ({ id: item.id, summary: outside(item.summary) }))).toEqual([
-      { id: first, summary: `From ${ARRIVING.from}: ${ARRIVING.subject}` },
-      {
-        id: second,
-        summary: "From United Airlines <unitedairlines@news.united.com>: (no subject)",
-      },
-    ]);
-    expect(found.resynced).toBeUndefined();
-    const again = await integrations.look("google", "message_received", found.cursor);
-    expect(again.items).toEqual([]);
-
-    // Gmail keeps about a week of history; past that it answers 404.
-    google.forgetHistory();
-    google.deliver({ from: "a@example.com", subject: "Lost in between", text: "x" });
-    const resynced = await integrations.look("google", "message_received", again.cursor);
-    expect(resynced).toMatchObject({ items: [], resynced: true });
-    const after = google.deliver({ from: "b@example.com", subject: "After", text: "y" });
-    expect(
-      (await integrations.look("google", "message_received", resynced.cursor)).items.map(
-        (item) => item.id,
-      ),
-    ).toEqual([after]);
-
-    // A cursor from another mailbox starts again from now.
-    const other = again.cursor.replace(STAND_IN_ACCOUNT, "someone.else@gmail.com");
-    expect(await integrations.look("google", "message_received", other)).toMatchObject({
-      items: [],
-      resynced: true,
-    });
-  });
-
   it("waits as long as Gmail asks when it answers 429, and looks again after", async () => {
     const { google, clock, integrations } = await signedIn();
     const start = await integrations.look("google", "message_received", null);
     const id = google.deliver(ARRIVING);
+    clock.now += 61_000;
     google.knobs.limited.push("30");
 
     await expect(integrations.look("google", "message_received", start.cursor)).rejects.toThrow(
@@ -824,7 +811,9 @@ describe("Google as an integration", () => {
 
     clock.now += 20_000;
     const found = await integrations.look("google", "message_received", start.cursor);
-    expect(found.items.map((item) => item.id)).toEqual([id]);
+    expect(found.items.map((item) => outside(item.summary))).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(id)?.threadId}`,
+    ]);
   });
 
   it("renews the access before it runs out and after Google refuses it, and asks for a new sign-in only when Google refuses the lasting key", async () => {
@@ -899,7 +888,8 @@ describe("Google as an integration", () => {
       if (!ask) throw new Error("the label must have been kept as an ask");
       return ask.id;
     };
-    const modified = () => google.seen.filter((request) => request.path.endsWith("/modify"));
+    const modified = () =>
+      google.calls("gmail").filter((call) => call.tool === "update_message_labels");
 
     // A renewal and signing in again as the same person keep the connection.
     const renewed = await label();
@@ -966,7 +956,8 @@ describe("Google as an integration", () => {
       token: "https://oauth2.googleapis.com/token",
       revoke: "https://oauth2.googleapis.com/revoke",
       gmail: "https://gmail.googleapis.com",
-      calendar: "https://www.googleapis.com",
+      gmailMcp: "https://gmailmcp.googleapis.com/mcp/v1",
+      calendarMcp: "https://calendarmcp.googleapis.com/mcp/v1",
     });
   });
 
@@ -1141,8 +1132,8 @@ describe("Calendar on the shared Google row", () => {
   it("keeps a sign-in that granted calendar.readonly listing calendars and availability after the narrower permissions", async () => {
     // INF-953: GOOGLE_SCOPES asks calendar.calendarlist.readonly and
     // calendar.events.freebusy in place of calendar.readonly, and "existing
-    // connections keep working". The stand-in answers 403 to a key Google
-    // would refuse for calendarList.list or freeBusy.query.
+    // connections keep working". The stand-in refuses a key Google would
+    // refuse for list_calendars or suggest_time.
     const earlier = [
       "https://www.googleapis.com/auth/gmail.modify",
       "https://www.googleapis.com/auth/calendar.events",
@@ -1188,22 +1179,17 @@ describe("Calendar on the shared Google row", () => {
           await crew.call(
             "Google",
             "free_busy",
-            {
-              calendars: [STUDIO_CALENDAR],
-              from: "2026-10-26T00:00:00-07:00",
-              to: "2026-10-27T00:00:00-07:00",
-            },
+            { from: "2026-10-26T00:00:00-07:00", to: "2026-10-27T00:00:00-07:00" },
             undefined,
             "To perform the task’s requested action.",
           )
         ).text,
       ),
-    ).toMatchObject({
-      calendars: {
-        [STUDIO_CALENDAR]: {
-          busy: [{ start: SHOOT_EVENT.start.dateTime, end: SHOOT_EVENT.end.dateTime }],
-        },
-      },
+    ).toEqual({
+      free: [
+        { start: "2026-10-26T07:00:00.000Z", end: "2026-10-26T17:00:00.000Z" },
+        { start: "2026-10-26T18:00:00.000Z", end: "2026-10-27T07:00:00.000Z" },
+      ],
     });
     expect(integrations.view().integrations[0]).toMatchObject({ health: "ok" });
   });
@@ -1258,7 +1244,7 @@ describe("Calendar on the shared Google row", () => {
           "Google",
           "free_busy",
           {
-            calendars: [STUDIO_CALENDAR, "missing"],
+            people: ["lena@ortiz-studio.com"],
             from: "2026-10-26T00:00:00-07:00",
             to: "2026-10-27T00:00:00-07:00",
           },
@@ -1267,13 +1253,17 @@ describe("Calendar on the shared Google row", () => {
         )
       ).text,
     );
-    expect(availability).toMatchObject({
-      calendars: {
-        [STUDIO_CALENDAR]: {
-          busy: [{ start: SHOOT_EVENT.start.dateTime, end: SHOOT_EVENT.end.dateTime }],
-        },
-        missing: { errors: [{ reason: "notFound" }] },
-      },
+    // INF-7012's approved plan: free_busy asks Calendar's MCP server to suggest free times.
+    expect(availability).toEqual({
+      free: [
+        { start: "2026-10-26T07:00:00.000Z", end: "2026-10-26T17:00:00.000Z" },
+        { start: "2026-10-26T18:00:00.000Z", end: "2026-10-27T07:00:00.000Z" },
+      ],
+    });
+    expect(google.calls("calendar").find((call) => call.tool === "suggest_time")?.args).toEqual({
+      attendeeEmails: ["lena@ortiz-studio.com"],
+      startTime: "2026-10-26T00:00:00-07:00",
+      endTime: "2026-10-27T00:00:00-07:00",
     });
     const before = google.seen.length;
     await crew.call(
@@ -1342,7 +1332,16 @@ describe("Calendar on the shared Google row", () => {
       description: SHOOT_EVENT.description,
       attendees: SHOOT_EVENT.attendees,
     });
-    expect(google.seen.filter((r) => r.path.includes("sendUpdates=all"))).toHaveLength(1);
+    // INF-7012's approved plan: no guest is told of a change unless the call asks.
+    expect(
+      google
+        .calls("calendar")
+        .filter((call) => call.tool === "create_event" || call.tool === "update_event")
+        .map((call) => [call.tool, call.args.notificationLevel]),
+    ).toEqual([
+      ["create_event", "NONE"],
+      ["update_event", "ALL"],
+    ]);
     // Both APIs received the very same access key; there was only one consent.
     const profile = google.seen.find((r) => r.path === "/profile");
     expect(google.seen.every((r) => r.authorization === profile?.authorization)).toBe(true);
@@ -1418,7 +1417,7 @@ describe("Calendar on the shared Google row", () => {
         "To perform the task’s requested action.",
       );
       const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
-      google.calendar.knobs.afterTaking.push(failure);
+      google.knobs.afterTaking.push(failure);
       expect((await integrations.sendAsk("task-1", ask?.id ?? "")).outcome).toMatchObject({
         kind: "unknown",
       });
@@ -1428,9 +1427,10 @@ describe("Calendar on the shared Google row", () => {
     }
   });
 
-  it("polls only the chosen calendar, pages every sync, reports later revisions and cancellations, and re-baselines on 410 or another calendar", async () => {
+  it("polls only the chosen calendar by its last changes, reads every page, never tells a cancellation, and starts again for another calendar or a cursor from before Calendar's MCP server", async () => {
+    // INF-7012's approved plan: event_changed reads list_events by lastModified, and cancelled events don't fire.
     const { google, integrations } = await signedIn();
-    google.calendar.knobs.pageSize = 1;
+    google.knobs.pageSize = 1;
     const original = google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
     google.calendar.change(STUDIO_CALENDAR, { ...SHOOT_EVENT, summary: "Lighting setup" });
     await expect(
@@ -1451,17 +1451,23 @@ describe("Calendar on the shared Google row", () => {
     expect(next.items).toHaveLength(2);
     expect(next.items[0]?.summary).toContain(changed.summary);
     expect(next.items[0]?.summary).not.toContain(SHOOT_EVENT.description);
-    // Looking again from the same cursor tells the same revisions, each fenced afresh.
+    // Looking again from the same cursor tells the same changes, each fenced afresh.
     const told = (items: readonly { id: string; summary: string }[]) =>
       items.map((item) => ({ id: item.id, summary: outside(item.summary) }));
     expect(told((await look(initial.cursor)).items)).toEqual(told(next.items));
     expect((await look(next.cursor)).items).toEqual([]);
+    // Calendar may list a cancelled event, as its event schema allows; the look still tells none.
+    google.knobs.listsCancelled = true;
     google.calendar.change(STUDIO_CALENDAR, { id: original.id, status: "cancelled" });
     const cancelled = await look(next.cursor);
-    expect(cancelled.items[0]?.summary).toContain("Cancelled");
-    expect(cancelled.items[0]?.id).not.toBe(next.items[0]?.id);
-    google.calendar.forget();
-    const resync = await look(cancelled.cursor);
+    expect(cancelled.items).toEqual([]);
+    // A cursor an earlier version kept, a sync token, starts again from now.
+    const older = JSON.stringify({
+      account: STAND_IN_ACCOUNT,
+      calendar: STUDIO_CALENDAR,
+      token: "sync-4",
+    });
+    const resync = await look(older);
     expect(resync).toMatchObject({ items: [], resynced: true });
     google.calendar.change(STUDIO_CALENDAR, { ...SHOOT_EVENT, summary: "November planning" });
     const resumed = await look(resync.cursor);
@@ -1470,14 +1476,60 @@ describe("Calendar on the shared Google row", () => {
     expect(
       await integrations.look("google", "event_changed", resumed.cursor, { calendar: "primary" }),
     ).toMatchObject({ items: [], resynced: true });
-    const syncRequests = google.seen.filter((r) => r.path.includes("syncToken="));
-    expect(syncRequests.every((r) => !/timeMin|timeMax|orderBy|singleEvents/.test(r.path))).toBe(
-      true,
-    );
+    // Each look reads the chosen calendar from a day ago to a year ahead, by when events last changed.
+    const reads = google.calls("calendar").filter((call) => call.tool === "list_events");
+    expect(
+      reads.every(
+        (call) => call.args.calendarId === STUDIO_CALENDAR || call.args.calendarId === "primary",
+      ),
+    ).toBe(true);
+    expect(reads.at(-1)?.args).toEqual({
+      calendarId: "primary",
+      startTime: "2026-10-21T16:00:00+00:00",
+      endTime: "2027-10-23T16:00:00+00:00",
+      orderBy: "lastModified",
+      pageSize: 250,
+    });
+    expect(reads.some((call) => call.args.pageToken !== undefined)).toBe(true);
     console.info(
       "Calendar polling proof",
       JSON.stringify({ initial, changed: next, cancelled, resync, resumed }),
     );
+  });
+
+  it("asks Calendar to add and remove guests when the guest list is replaced", async () => {
+    // INF-7012's approved plan: a replaced attendee list maps to added and removed lists.
+    const { google, integrations, tasks } = await signedIn();
+    const existing = google.calendar.change(STUDIO_CALENDAR, {
+      ...SHOOT_EVENT,
+      attendees: [{ email: "lena@ortiz-studio.com" }, { email: "Sam@ortiz-studio.com" }],
+    });
+    await integrations.forTask("task-1").call(
+      "Google",
+      "update_event",
+      {
+        calendar: STUDIO_CALENDAR,
+        id: existing.id,
+        changes: {
+          attendees: [{ email: "sam@ortiz-studio.com" }, { email: "jo@ortiz-studio.com" }],
+        },
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
+    const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+    expect((await integrations.sendAsk("task-1", ask?.id ?? "")).outcome).toEqual({ kind: "ran" });
+    expect(google.calls("calendar").find((call) => call.tool === "update_event")?.args).toEqual({
+      calendarId: STUDIO_CALENDAR,
+      eventId: existing.id,
+      addedAttendees: [{ email: "jo@ortiz-studio.com" }],
+      removedAttendeeEmails: ["lena@ortiz-studio.com"],
+      notificationLevel: "NONE",
+    });
+    expect(google.calendar.calendars.get(STUDIO_CALENDAR)?.get(existing.id)?.attendees).toEqual([
+      { email: "Sam@ortiz-studio.com" },
+      { email: "jo@ortiz-studio.com" },
+    ]);
   });
 
   it("renews the shared access for Calendar and honors Calendar backoff without claiming the person signed out", async () => {
@@ -1487,7 +1539,7 @@ describe("Calendar on the shared Google row", () => {
       .forTask("task-1")
       .call("Google", "list_calendars", {}, undefined, "To perform the task’s requested action.");
     expect(google.tokens.filter((t) => t.grant_type === "refresh_token")).toHaveLength(1);
-    google.calendar.knobs.limited.push("60");
+    google.knobs.limited.push("60");
     const crew = integrations.forTask("task-1");
     expect(
       (
@@ -1598,10 +1650,13 @@ it("carries the first mate's selected Calendar through the real tool, saved rule
   });
   const rule = store.list()[0];
   expect(rule?.spec).toMatchObject({ filter: { calendar: STUDIO_CALENDAR } });
+  // The rule looks once in each `every` minutes' ticks, so one step here is one look.
   const tick = async () => {
-    clock.now += 60_000;
-    scheduler.tick(clock.now);
-    await scheduler.settled();
+    for (let minute = 0; minute < CALENDAR_CHANGED_EVENT.every; minute++) {
+      clock.now += 60_000;
+      scheduler.tick(clock.now);
+      await scheduler.settled();
+    }
   };
   await tick();
   expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
@@ -1617,7 +1672,7 @@ it("carries the first mate's selected Calendar through the real tool, saved rule
   // Replay the same revision through an old cursor: no second run or repeated item.
   const saved = store.get(rule.id);
   const parsedCursor = JSON.parse(saved?.cursor ?? "{}");
-  store.setCursor(rule.id, JSON.stringify({ ...parsedCursor, token: "sync-1" }));
+  store.setCursor(rule.id, JSON.stringify({ ...parsedCursor, seen: [] }));
   await tick();
   expect(scheduler.history(rule.id)).toHaveLength(1);
   expect(scheduler.history(rule.id)[0]?.events).toHaveLength(1);

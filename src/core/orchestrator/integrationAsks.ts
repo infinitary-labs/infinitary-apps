@@ -2,6 +2,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import {
   type BuildRowAsk,
+  confirmPickOf,
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
@@ -46,20 +47,26 @@ export class IntegrationAsks {
    * the agent. A crewmate's ask joins the card of its task already waiting
    * for the same connection, revised in place to list it, or raises its own
    * (INF-2993 piece 2); it answers whether it joined one. The waiting asks
-   * the cap dropped to keep it are refused first.
+   * the cap dropped to keep it are refused first. A place's question
+   * (`IntegrationAsk.confirm`) always raises its own card, which no later
+   * ask joins, a reader's too.
    */
   askIntegration(taskId: string, ask: IntegrationAsk, dropped: readonly WriteAsk[] = []): boolean {
     const task = this.options.tasks.get(taskId);
     if (!task || TaskService.isClosed(task)) return false;
-    if (task.shape?.unsafe_data_reader === true) return this.askReader(taskId, ask, dropped);
+    if (task.shape?.unsafe_data_reader === true && !ask.confirm)
+      return this.askReader(taskId, ask, dropped);
     this.refuseDropped(taskId, dropped);
-    const open = waitingIntegrationAsks(task.delivery?.writeAsks).find(
-      (kept) =>
-        kept.id !== ask.id &&
-        kept.connection === ask.connection &&
-        kept.card !== undefined &&
-        this.host.cards.get(kept.card) !== undefined,
-    )?.card;
+    const open = ask.confirm
+      ? undefined
+      : waitingIntegrationAsks(task.delivery?.writeAsks).find(
+          (kept) =>
+            kept.id !== ask.id &&
+            !kept.confirm &&
+            kept.connection === ask.connection &&
+            kept.card !== undefined &&
+            this.host.cards.get(kept.card) !== undefined,
+        )?.card;
     const card = open ?? `integration-ask-${ask.id}`;
     this.options.tasks.delivery.listWriteAsk(taskId, ask.id, card);
     this.showAsks(taskId, card, open ? new Set([ask.id]) : undefined);
@@ -92,7 +99,7 @@ export class IntegrationAsks {
     this.refuseDropped(taskId, dropped);
     const open = [
       ...waitingForgeCardAsks(task.delivery?.writeAsks),
-      ...waitingIntegrationAsks(task.delivery?.writeAsks),
+      ...waitingIntegrationAsks(task.delivery?.writeAsks).filter((kept) => !kept.confirm),
     ].find(
       (kept) =>
         kept.id !== ask.id &&
@@ -123,8 +130,9 @@ export class IntegrationAsks {
     // A reader's one card lists every kind of call it makes; any other
     // crewmate's card lists asks of one kind, each joining only its own.
     const integration = listed.filter((ask): ask is IntegrationAsk => ask.kind === "integration");
+    const confirm = integration.length === 1 && integration[0]?.confirm !== undefined;
     this.host.cards.put(
-      task.shape?.unsafe_data_reader === true || integration.length === 0
+      !confirm && (task.shape?.unsafe_data_reader === true || integration.length === 0)
         ? readerApprovalCard(listed, owner, options)
         : integrationApprovalCard(integration, owner, options),
       revise ? { revise: true } : {},
@@ -202,6 +210,7 @@ export class IntegrationAsks {
     askId: string,
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
+    answers?: readonly { name: string; values: readonly string[] }[],
   ): void {
     const send = this.options.sendTakenIntegrationAsk;
     if (!send) return;
@@ -229,6 +238,9 @@ export class IntegrationAsks {
             ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
               ? { why: sent.outcome.why }
               : {}),
+            ...(sent.outcome.kind === "refused" && sent.outcome.confirming
+              ? { confirming: sent.outcome.confirming }
+              : {}),
             ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
           },
           once: `write-answered:${askId}`,
@@ -237,7 +249,7 @@ export class IntegrationAsks {
         rowId,
       );
     };
-    void send(rowId, taken, choice)
+    void send(rowId, taken, choice, confirmPickOf(answers, askId))
       .then(tell, (caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in taken ? taken.ask : undefined;
@@ -333,6 +345,9 @@ export function writeAnsweredFacts(askId: string, sent: WriteAskSent): WriteAnsw
     ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
     ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
       ? { why: sent.outcome.why }
+      : {}),
+    ...(sent.outcome.kind === "refused" && sent.outcome.confirming
+      ? { confirming: sent.outcome.confirming }
       : {}),
     ...(sent.outcome.kind === "filed"
       ? {

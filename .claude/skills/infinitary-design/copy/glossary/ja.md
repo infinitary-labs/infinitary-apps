@@ -18,6 +18,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | account | アカウント | Standard. |
 | address (of a computer) | アドレス | A computer's SSH address, and a browser page's address. |
 | agent plugins | エージェントプラグイン | Only the plugins turned on in the person's coding agent; a panel stays パネル. |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | AI エージェント | Plain loanword, with a half-width space after AI. |
 | Always use | 常に使う | The setting that sends all crew work to one model; quoted as 「常に使う」 in sentences. |
 | Appearance | 外観 | macOS Japanese. |
 | Approves secret uses (switch) | シークレットの使用を承認 | The computer's Settings → Devices should show the same words. |
@@ -29,6 +30,8 @@ A number placeholder sits directly against its counter with no space (「{count}
 | branch | ブランチ | GitHub Japanese docs. |
 | bring up to date | 最新の状態に更新 | Replaces rebase; 競合 (conflict) is avoided and the clash is said as 食い違い. |
 | built in place | その場で作成 | Delivery with no branch or pull request. |
+| Calendar, Drive, Docs, Sheets (Google's products) | カレンダー、ドライブ、ドキュメント、スプレッドシート | Google's own Japanese names; Gmail stays Gmail. |
+| call (one request an integration action sends) | 呼び出し | 「呼び出しを停止」. |
 | captain | 船長 | The usual word for a ship's captain, used as a form of address (「ようこそ、船長」). |
 | card | カード | Plain loanword. |
 | Careful | 慎重 | Rigor level. |
@@ -104,6 +107,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | machine (avoided) | コンピューター | Vocabulary rule; マシン appears only as a search word. |
 | main message | メインのメッセージ欄 | Command label. |
 | mark (a place marked on a picture or a page) | マーク | 「マーク {mark}」, 「マーク付きの画像」. |
+| MCP service (one turned on in a Google Cloud project) | MCP サービス | 「Gmail の MCP サービス」; on and off are オン and オフ. |
 | median (Usage, Cost per task) | 中央値 | The middle task of a week's finished tasks; never "average". |
 | merge | マージ | GitHub Japanese docs; 「マージ済み」 for the merged state. |
 | merge queue (the host's own) | マージキュー | |
@@ -184,6 +188,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | token (what Usage counts) | トークン | The same unit as the model sizes in the custom API row above; a sign-in or a key is never a トークン. |
 | unsafe data reader | 安全でないデータの読み手 | A crewmate that reads words anyone can write. |
 | Usage | 使用量 | Settings section name. |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | 「Use this client for an AI-powered agent」 | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | ユーザー | "as {user}" is 「{user} として」, as in 「別のユーザーとして実行」. |
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
 | Where changes go | 変更の届け先 | Row title in Settings → Projects; pairs with 届け方 for Delivery. |

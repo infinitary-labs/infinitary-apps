@@ -19,6 +19,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | address (a server's) | 地址 | |
 | address (of a computer) | 地址 | The address used with SSH; also a browser page's address. |
 | agent plugins | 智能体插件 | Only the plugins turned on in the person's coding agent; a panel stays 面板. |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | AI 智能体 | The same 智能体 as agent plugins. |
 | Always use | 始终使用 | The setting that sends all crew work to one model; quoted as “始终使用” in sentences. |
 | Appearance | 外观 | |
 | Approves secret uses (switch) | 批准机密使用 | The computer's Settings → Devices should show the same words. |
@@ -29,6 +30,8 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | branch | 分支 | |
 | bring up to date | 更新到最新 | Used instead of rebase and conflict where the app speaks. |
 | built in place | 就地构建 | |
+| Calendar, Drive, Docs, Sheets (Google's products) | 日历、云端硬盘、文档、表格 | Google's own Simplified Chinese names; Gmail stays Gmail. |
+| call (one request an integration action sends) | 调用 | “停止了这次调用”. |
 | captain | 船长 | The ship's captain, the word a crew uses. |
 | card | 卡片 | Measure word 张. |
 | certificate | 证书 | Only where the person chooses an organization's CA certificate. |
@@ -92,6 +95,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | live validation | 实测验证 | Trying the change for real; kept apart from the checks. |
 | log (a check's kept output) | 日志 | Distinct from the record, 记录. |
 | mark (a place marked on a picture or a page) | 标记 | “标记 {mark}”, “带标记的图片”. |
+| MCP service (one turned on in a Google Cloud project) | MCP 服务 | “Gmail 的 MCP 服务”; on and off are 开启 and 关闭. |
 | median (Usage, Cost per task) | 中位数 | The middle task of a week's finished tasks; never "average". |
 | merge | 合并 | |
 | merge queue (the host's own) | 合并队列 | |
@@ -179,6 +183,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | token (on the Usage page) | token | Billable tokens stay as token, as in the first-run check line. |
 | unsafe data reader | 不安全数据读取者 | A crewmate that reads words anyone can write. |
 | Usage (the Settings section) | 用量 | |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | “Use this client for an AI-powered agent” | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | 用户 | "as {user}" is 以 {user} 身份, as in 以另一个用户身份运行. |
 | version | 版本 | Used instead of SHA, hash or head. |
 | where the project lives | 项目托管处 | Used instead of remote, origin or upstream. |

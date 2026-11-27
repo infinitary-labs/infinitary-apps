@@ -18,6 +18,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | account | cuenta | |
 | add | agregar | Chosen over "añadir" for consistency with "computadora". |
 | agent plugins | plugins de agente | Only the plugins turned on in the person's coding agent; a panel stays "panel". |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | agente con IA | "agentes de IA" for AI agents in general. |
 | Appearance | Apariencia | |
 | Approves secret uses (switch) | Aprueba usos de secretos | The computer's Settings → Devices should show the same words. |
 | automation | automatización | The Settings section and each scheduled prompt in it; feminine ("creada por tu primer oficial"). |
@@ -26,6 +27,8 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | branch | rama | GitHub's Spanish docs say "rama"; "la rama principal". |
 | bring up to date | poner al día | "lo haya puesto al día"; used where English says rebase or resolve a conflict. |
 | built in place, builds in place | construido en el lugar, construye en el lugar | Delivery with no working copy and no pull request. |
+| Calendar, Drive, Docs, Sheets (Google's products) | Calendar, Drive, Documentos, Hojas de cálculo | Google's own Spanish names; Gmail stays Gmail. |
+| call (one request an integration action sends) | llamada | "{place} detuvo la llamada". |
 | captain | capitán | The usual word a crew uses for a ship's captain; masculine default form, see the register lines above; lowercase in the middle of a sentence, also as a form of address. |
 | card | tarjeta | Feminine: "Revisada", "Escrita". |
 | claim (a recorded relationship) | afirmación | "Afirmación registrada". |
@@ -88,6 +91,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | machine, server, host (never said) | computadora, por su nombre | "this machine" in the voice consent reads "esta computadora". |
 | main message | mensaje principal | |
 | mark (a place marked on a picture or a page) | marca | "la marca {mark}", "Imagen marcada". |
+| MCP service (one turned on in a Google Cloud project) | servicio MCP | "el servicio MCP de Gmail", off is "desactivado", turn on is "activar". |
 | median (Usage, Cost per task) | mediana | The middle task of a week's finished tasks; never "average". |
 | merge | fusionar, fusión | GitHub's Spanish docs say "fusionar una solicitud de incorporación de cambios"; the noun is "fusión" ("Tu fusión queda pendiente"). |
 | merge queue (the host's own) | cola de fusión | |
@@ -170,6 +174,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
 | unsafe data reader | lector de datos no seguros | A crewmate that reads words anyone can write. |
 | Usage | Uso | |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | «Use this client for an AI-powered agent» | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | usuario | "as {user}" is "como {user}"; "Se ejecuta como {user}" for running as that user. |
 | where the project lives | donde se aloja el proyecto | |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |

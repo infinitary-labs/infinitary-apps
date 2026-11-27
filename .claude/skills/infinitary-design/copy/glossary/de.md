@@ -18,6 +18,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | account | Konto | |
 | action (an integration action) | Aktion | |
 | agent plugins | Agenten-Plugins | Only the plugins turned on in the person's coding agent; a panel stays "Panel". |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | KI-gestützter Agent | "KI-Agenten" for AI agents in general. |
 | Allow (secrets approval button) | „Erlauben“ |  |
 | allowance reading, as of | Stand | "Stand: vor 5 Min.", "letzter Stand veraltet"; the allowance itself is "gelesen" ("kein Kontingent gelesen"). |
 | Always use | Immer verwenden | Quoted „Immer verwenden“ mid-sentence. |
@@ -33,6 +34,8 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | branch | Branch | Masculine; "main branch" is "Hauptbranch". |
 | bring up to date | auf den neuesten Stand bringen | Replaces rebase and conflict; "kollidiert mit neuerer Arbeit" says what happened. |
 | built in place | direkt im Ordner gebaut | Says where the work happened without "in place" jargon. |
+| Calendar, Drive, Docs, Sheets (Google's products) | Kalender, Drive, Docs, Tabellen | Google's own German names; Gmail stays Gmail. |
+| call (one request an integration action sends) | Aufruf | Masculine; "{place} hat den Aufruf gestoppt". |
 | captain | Kapitän | The usual word a ship's crew uses; masculine default form, see Register. |
 | card | Karte | |
 | certificate | Zertifikat | "CA-Zertifikat" for an organization certificate. |
@@ -96,6 +99,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | log (a check's kept output) | das Log | "Protokoll" already names the task's record. |
 | main message | Hauptnachricht | |
 | mark (a place marked on a picture or a page) | Markierung | "Markierung {mark}", "Bild mit Markierungen". |
+| MCP service (one turned on in a Google Cloud project) | MCP-Dienst | Masculine, plural "MCP-Dienste"; "der MCP-Dienst für Gmail", off is "ausgeschaltet". |
 | median (Usage, Cost per task) | Median | The middle task of a week's finished tasks; never "average". |
 | merge | zusammenführen, Zusammenführen | GitHub's German docs say "Zusammenführen eines Pull Requests"; "mergen" is avoided as jargon. |
 | merge queue (the host's own) | Merge-Warteschlange | |
@@ -177,6 +181,7 @@ The plural forms are "one" and "other"; menu items that open a dialog end in a s
 | token (a sign-in token a command prints) | Token | Neuter ("das Token"); only in the custom API form, plural "Tokens" for counted model tokens. |
 | unsafe data reader | Leser unsicherer Daten | A crewmate that reads words anyone can write. |
 | Usage | Nutzung | |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | „Use this client for an AI-powered agent“ | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | Benutzer | "as {user}" is "als {user}"; "Läuft als {user}" for running as that user. |
 | version (replaces SHA, hash) | Version | |
 | Waiting on you (board lane) | Wartet auf dich | |

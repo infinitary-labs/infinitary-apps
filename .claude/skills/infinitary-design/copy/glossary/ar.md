@@ -17,6 +17,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | account | حساب | |
 | action (an integration action) | إجراء | Plural "إجراءات". |
 | agent plugins | إضافات الوكلاء | Only the plugins turned on in the person's coding agent; a panel stays "لوحة". |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | وكيل مدعوم بالذكاء الاصطناعي | "وكلاء الذكاء الاصطناعي" for AI agents in general. |
 | Allow (secrets approval button) | «سماح» |  |
 | Always use | الاستخدام دائمًا | Quoted «الاستخدام دائمًا» mid-sentence. |
 | an automation | أتمتة | One is "أتمتة" ("هذه الأتمتة"), several are "عمليات الأتمتة". |
@@ -32,6 +33,8 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | board (task board) | لوح المهام | "لوح" kept apart from "لوحة" (panel). |
 | branch | فرع | "الفرع الرئيسي" for the main branch. |
 | bring up to date | تحديثه بآخر التغييرات | Said in place of rebase; neither rebase nor conflict is named as a term. |
+| Calendar, Drive, Docs, Sheets (Google's products) | التقويم، Drive، المستندات، جداول البيانات | Google's own Arabic names, short in a list; Gmail stays Gmail. |
+| call (one request an integration action sends) | استدعاء | Plural "استدعاءات"; "أوقف {place} الاستدعاء". |
 | captain | القبطان | The word a ship's crew uses; masculine default, addressed as "أيها القبطان". |
 | card | بطاقة | Feminine. |
 | Careful | متأنٍّ | Chosen over "حذر", which reads as wary rather than thorough. |
@@ -101,6 +104,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | machine, server, home computer (never said) | الحاسوب باسمه | "هذا الحاسوب" on itself. |
 | main message | الرسالة الرئيسية | |
 | mark (a place marked on a picture or a page) | علامة | Numbered: "العلامة {mark}"; plural "علامات". |
+| MCP service (one turned on in a Google Cloud project) | خدمة MCP | Plural "خدمات MCP"; "خدمة MCP الخاصة بـ Gmail", off is "معطّلة", turn on is "فعّل". |
 | median (Usage, Cost per task) | الوسيط | The middle task of a week's finished tasks; never "average". |
 | merge | دمج | "تعذّر الدمج" for "Cannot merge", "دُمج" for "Merged". |
 | merge card | بطاقة الدمج | |
@@ -190,6 +194,7 @@ Numbers reach the messages as digits from the runtime, a unit follows the number
 | token, credential (never said) | تسجيل الدخول | "رموز" appears only for counted model tokens in Usage. |
 | unsafe data reader | قارئ البيانات غير الآمنة | A crewmate that reads words anyone can write. |
 | Usage | الاستخدام | |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | «Use this client for an AI-powered agent» | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | مستخدم | "as {user}" is "باسم {user}", as in "التشغيل باسم مستخدم آخر". |
 | version | نسخة | Said in place of SHA or head. |
 | Waiting on you (board lane) | بانتظارك | |

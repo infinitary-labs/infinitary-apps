@@ -357,7 +357,7 @@ public enum PhoneDecision {
 
 public enum PhoneGoogleWords {
     public static let signInReturn = "sign-in-return"
-    public static let setupPage = "https://console.cloud.google.com/auth/overview/personal?apis=ws&clientType=desktop"
+    public static let setupPage = "https://console.cloud.google.com/auth/overview/personal?apis=ws,wsmcp,tasksmcp&clientType=desktop&isAgent=true"
     public static let clientFileBytes = 16384
     public static let kind = "google"
     public static let name = "Google"

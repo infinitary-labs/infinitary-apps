@@ -1,5 +1,5 @@
 ---
-source: e71da6c9134d6753
+source: b1df1c08a3c3c75f
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -55,12 +55,12 @@ Sair do GitHub interrompe clones privados e solicitações de pull até você fa
 ## Google: Gmail e Agenda {#google-gmail-and-calendar}
 
 O Google é um único login para o Gmail e para a Agenda.
-O Infinitary os alcança por uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
+O Infinitary os alcança pelos próprios servidores do Gmail e da Agenda do Google para agentes de IA, com uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
 O Google não o revisa, não mostra nenhum alerta e não encerra o login dele depois de 7 dias.
 
 1. Aperte **Google**, que abre **Configure sua própria conexão com o Google**.
 2. Aperte **Abrir a página do Google** e faça login lá com a conta do Google que você vai conectar.
-   Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google.
+   Dê um nome ao projeto, marque “Use this client for an AI-powered agent” e ative os serviços MCP de Gmail, Agenda, Drive, Documentos e Planilhas.
    Depois aceite a política do Google e aperte Continue.
 3. Baixe o arquivo de cliente que o Google mostra, com Download JSON.
 4. Solte esse arquivo em **Solte o arquivo de cliente aqui**, escolha-o com **Escolher arquivo** ou cole o conteúdo dele em **Arquivo de cliente**.
@@ -83,12 +83,24 @@ A linha do Google diz quando a conexão precisa de você:
   Aperte **Configurar de novo** e crie um cliente no modo pessoal.
 - **Seu cliente do Google parou**: o Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud.
   Aperte **Configurar de novo**.
+- **Marque seu cliente para agentes**: os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA, e o seu não está.
+  Aperte **Abrir o Google Cloud**, marque “Use this client for an AI-powered agent” no seu cliente e salve; depois escolha **Verificar agora** no menu da linha.
+- **Um serviço do Google está desativado**: o serviço MCP do Gmail ou da Agenda está desativado no seu projeto do Google Cloud.
+  Aperte **Abrir o Google Cloud**, ative-o e depois escolha **Verificar agora** no menu da linha.
+
+Nesses dois últimos casos, você continua com o login feito, e nada precisa ser configurado de novo.
 
 No seu iPhone ou iPad, a configuração pela linha do Google é feita do mesmo jeito: você escolhe o arquivo de cliente ou cola o conteúdo dele.
 
 Com o Google conectado, seu imediato e sua tripulação podem buscar e ler seus e-mails, salvar um anexo na pasta de uma tarefa, marcar ou arquivar uma mensagem, escrever um rascunho e enviar uma mensagem.
-Na Agenda, eles podem listar suas agendas e eventos, ler um evento, ver quando você está ocupado e criar ou atualizar um evento.
+A partir de 1º de fevereiro de 2027, o Google não deixa nenhum agente de IA buscar um arquivo anexado a uma mensagem; a partir daí, você mesmo o salva pelo Gmail.
+Na Agenda, eles podem listar suas agendas e eventos, ler um evento, encontrar horários em que todos estão livres e criar ou atualizar um evento.
 Nenhuma ação exclui um evento da agenda.
+
+O Google pode parar uma chamada para perguntar a você primeiro, mesmo uma que você permitiu.
+Então o Infinitary mostra a pergunta do Google em um cartão, com as próprias opções do Google e nenhuma escolhida.
+Nada é executado até você escolher uma e apertar **Enviar ao Google**; **Agora não** não envia nada.
+Sua escolha responde só a essa chamada.
 
 O que seu imediato e sua tripulação leem fica nas conversas salvas deles por 30 dias.
 Depois, uma nota toma o lugar disso.
@@ -96,7 +108,7 @@ Para excluir antes, aperte **Excluir** na linha **Excluir conteúdo do Gmail e d
 Um anexo salvo fica na pasta da tarefa até a tarefa ser encerrada ou até passarem 30 dias.
 As palavras que um tripulante leu dentro de um anexo salvo ficam na conversa dele depois dos 30 dias.
 O que seu imediato e sua tripulação escreveram eles mesmos, em cartões, notas e arquivos, fica até você excluir a tarefa.
-Remover o Google não exclui nada do que eles já leram.
+Remover o Google também exclui o que eles já leram, como faz **Excluir conteúdo do Gmail e da Agenda**.
 
 Qualquer pessoa pode enviar a você palavras escritas para manipular uma IA.
 O Infinitary entrega seus e-mails e eventos ao seu imediato e à sua tripulação marcados como informação de fora, nunca como instruções.
@@ -200,6 +212,8 @@ Uma linha aberta lista esses avisos marcados com **avisa**.
 - Gmail: **Chega uma mensagem**.
 - Agenda: **Um evento da agenda muda**.
 - Um servidor MCP que ofereça isso: **Um recurso mudou**.
+
+Uma automação do Gmail fica sabendo qual conversa recebeu e-mail novo um ou dois minutos depois que ele chega; ler o e-mail é uma etapa à parte, sobre a qual o Google pode perguntar a você antes.
 
 Escolha um em **Quando algo acontece**, em Automação.
 Veja [Automação](/pt-br/automation/#when-it-runs).

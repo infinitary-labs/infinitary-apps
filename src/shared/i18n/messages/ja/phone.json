@@ -166,7 +166,12 @@
   "phoneFormatMinutes": "{minutes}分",
   "phoneFormatNow": "今",
   "phoneFormatUnderMinute": "1分未満",
+  "phoneGoogleAgentRefusedDetail": "Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、{computer} の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。",
   "phoneGoogleInvite": "{computer} の一等航海士が Gmail とカレンダーを読めるようにします。サインイン情報は {computer} にとどまります。",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "other": "Google Cloud プロジェクトで {services} の MCP サービスがオフになっているため、Infinitary からアクセスできません。Google Cloud でオンにしてから、{computer} の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。"
+  },
   "phoneGoogleSetupStays": "Infinitary はクライアントのシークレットを {computer} のシークレットに保管します。一等航海士と乗組員がそれを見ることはありません。",
   "phoneGoogleSetupStepFile": "Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここで選択するか、中身を貼り付けてください。",
   "phoneGoogleSignIn": "サインイン",

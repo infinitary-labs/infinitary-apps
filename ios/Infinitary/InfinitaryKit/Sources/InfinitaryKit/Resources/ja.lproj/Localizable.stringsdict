@@ -773,6 +773,20 @@
       <string>%1$ld件のファイルパスをテキストとして追加しました</string>
     </dict>
   </dict>
+  <key>integrationsGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>Google Cloud プロジェクトで %2$@ の MCP サービスがオフになっているため、Infinitary からアクセスできません。Google Cloud でオンにしてから、この行のメニューで「今すぐ確認」を選んでください。</string>
+    </dict>
+  </dict>
   <key>knowledgePanelAllDirections</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1233,6 +1247,20 @@
       <string>ld</string>
       <key>other</key>
       <string>%2$@ %1$ld件</string>
+    </dict>
+  </dict>
+  <key>phoneGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>Google Cloud プロジェクトで %3$@ の MCP サービスがオフになっているため、Infinitary からアクセスできません。Google Cloud でオンにしてから、%1$@ の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>

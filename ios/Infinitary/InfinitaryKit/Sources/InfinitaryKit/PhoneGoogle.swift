@@ -6,13 +6,26 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
     /// What the computer says of the person's own client for a row whose sign-in runs as it (`IntegrationClientView`).
     /// A computer from before INF-6342 sends none, and its sign-in needs no setup.
     public struct Client: Decodable, Sendable, Equatable {
+        /// Google refused the sign-in's calls to its MCP servers, though the sign-in stands: the client is not marked
+        /// for an AI-powered agent (`agent`), or the MCP service of `services` is off (`service`). `link` is the Google
+        /// Cloud page that fixes it.
+        public struct Mcp: Decodable, Sendable, Equatable {
+            public let refused: String
+            public let services: [String]?
+            public let link: String
+            public init(refused: String, services: [String]? = nil, link: String) {
+                self.refused = refused; self.services = services; self.link = link
+            }
+        }
         public let kept: Bool
         public let refused: String?
         public let runClient: Bool?
         /// When Google ends the sign-in, in milliseconds on the computer's clock.
         public let endsAt: Double?
-        public init(kept: Bool, refused: String? = nil, runClient: Bool? = nil, endsAt: Double? = nil) {
-            self.kept = kept; self.refused = refused; self.runClient = runClient; self.endsAt = endsAt
+        /// A computer from before the move to Google's MCP servers sends none.
+        public let mcp: Mcp?
+        public init(kept: Bool, refused: String? = nil, runClient: Bool? = nil, endsAt: Double? = nil, mcp: Mcp? = nil) {
+            self.kept = kept; self.refused = refused; self.runClient = runClient; self.endsAt = endsAt; self.mcp = mcp
         }
     }
     public struct Row: Decodable, Sendable, Equatable {
@@ -30,31 +43,59 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
     public let addable: [Addable]?
 }
 
-/// What the Google row says of its client when that outranks its health: the computer's `googleClientState`
-/// (src/renderer/src/settings/GoogleClientSetup.tsx), in the same order.
+/// What the Google row says of its client when that outranks its health, and its one next step: the computer's
+/// `googleClientState` (src/renderer/src/settings/GoogleClientSetup.tsx), in the same order.
 public struct PhoneGoogleClientState: Equatable, Sendable {
+    /// `open` opens the Google Cloud page that fixes what Google's MCP servers refused.
+    public enum Next: Equatable, Sendable {
+        case setUpAgain, open(URL)
+        /// Google Cloud's page for an `open` step, which reads nothing on the computer.
+        public var link: URL? { if case .open(let url) = self { url } else { nil } }
+    }
     public enum Tone: Sendable { case danger, warning }
     public let words: String
     public let detail: String
     public let tone: Tone
+    public let next: Next
 
-    public static func of(_ client: PhoneIntegrations.Client?, health: String?) -> PhoneGoogleClientState? {
+    /// `computer` is the computer's name, where Check now asks Google again.
+    public static func of(_ client: PhoneIntegrations.Client?, health: String?, computer: String) -> PhoneGoogleClientState? {
         guard let client else { return nil }
         if client.refused != nil {
             return .init(words: PhoneMessages.integrationsGoogleStopped(), detail: PhoneMessages.integrationsGoogleStoppedDetail(),
-                         tone: .danger)
+                         tone: .danger, next: .setUpAgain)
         }
         guard let health, health != "needs_reauth" else { return nil }
+        if let mcp = client.mcp, let link = URL(string: mcp.link), link.scheme == "https" {
+            if mcp.refused == "agent" {
+                return .init(words: PhoneMessages.integrationsGoogleAgentRefused(),
+                             detail: PhoneMessages.phoneGoogleAgentRefusedDetail(computer: computer), tone: .warning,
+                             next: .open(link))
+            }
+            if mcp.refused == "service" {
+                let names = (mcp.services ?? []).map {
+                    $0 == "gmail" ? PhoneMessages.integrationsGoogleServiceGmail() : PhoneMessages.integrationsGoogleServiceCalendar()
+                }
+                return .init(words: PhoneMessages.integrationsGoogleServiceOff(),
+                             detail: PhoneMessages.phoneGoogleServiceOffDetail(
+                                computer: computer, count: max(names.count, 1), services: PhoneFormats.list(names)),
+                             tone: .warning, next: .open(link))
+            }
+        }
         if let endsAt = client.endsAt {
             let date = Date(timeIntervalSince1970: endsAt / 1000).formatted(date: .abbreviated, time: .omitted)
             return .init(words: PhoneMessages.integrationsGoogleStops(date: date),
-                         detail: PhoneMessages.integrationsGoogleStopsDetail(date: date), tone: .warning)
+                         detail: PhoneMessages.integrationsGoogleStopsDetail(date: date), tone: .warning, next: .setUpAgain)
         }
         return nil
     }
 
-    /// Every client state's one next step sets the client up again.
-    public var nextWords: String { PhoneMessages.integrationsGoogleSetUpAgain() }
+    public var nextWords: String {
+        switch next {
+        case .setUpAgain: PhoneMessages.integrationsGoogleSetUpAgain()
+        case .open: PhoneMessages.integrationsGoogleOpenCloud()
+        }
+    }
 }
 
 private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: PhoneIntegrations }
@@ -122,7 +163,9 @@ private struct PhoneSignedIn: Decodable, Sendable { let id: String; let view: Ph
     }
 
     /// The row's client state, when it outranks the row's health.
-    public var clientState: PhoneGoogleClientState? { PhoneGoogleClientState.of(client, health: row?.health) }
+    public var clientState: PhoneGoogleClientState? {
+        PhoneGoogleClientState.of(client, health: row?.health, computer: session.mac.name)
+    }
 
     /// Sign in: shows Google's notice first, which must be accepted before anything is asked of the computer; with no
     /// client of the person's kept, the setup comes first.

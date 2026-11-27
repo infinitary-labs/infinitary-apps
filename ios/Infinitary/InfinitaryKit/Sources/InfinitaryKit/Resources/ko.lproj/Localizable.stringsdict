@@ -773,6 +773,20 @@
       <string>파일 경로 %1$ld개를 텍스트로 추가했어요</string>
     </dict>
   </dict>
+  <key>integrationsGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>Google Cloud 프로젝트에서 %2$@ MCP 서비스가 꺼져 있어서 Infinitary가 닿을 수 없어요. Google Cloud에서 켠 다음, 이 행의 메뉴에서 지금 확인을 고르세요.</string>
+    </dict>
+  </dict>
   <key>knowledgePanelAllDirections</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -1233,6 +1247,20 @@
       <string>ld</string>
       <key>other</key>
       <string>%2$@ %1$ld개</string>
+    </dict>
+  </dict>
+  <key>phoneGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>Google Cloud 프로젝트에서 %3$@ MCP 서비스가 꺼져 있어서 Infinitary가 닿을 수 없어요. Google Cloud에서 켠 다음, %1$@의 설정 → 연동에 있는 Google 행에서 지금 확인을 고르세요.</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>

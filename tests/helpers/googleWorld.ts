@@ -85,6 +85,8 @@ export async function googleWorld(
   const tasks = new TaskService({ db, strict: true });
   seedTask(tasks, { id: "task-1", title: "Answer Lena", status: "idle" });
   const clock = { now: Date.UTC(2026, 9, 22, 16) };
+  // Google's clock is the app's, so mail arrives and events change at the time the test moved to.
+  google.knobs.now = () => clock.now;
   const opened: string[] = [];
   const pages: string[] = [];
   const pushed: string[] = [];

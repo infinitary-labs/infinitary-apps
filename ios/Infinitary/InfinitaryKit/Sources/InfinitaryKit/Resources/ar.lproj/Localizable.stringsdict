@@ -1323,6 +1323,30 @@
       <string>أُضيف %1$ld مسار ملف كنص</string>
     </dict>
   </dict>
+  <key>integrationsGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>خدمات MCP الخاصة بـ %2$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.</string>
+      <key>one</key>
+      <string>خدمة MCP الخاصة بـ %2$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.</string>
+      <key>two</key>
+      <string>خدمتا MCP الخاصتان بـ %2$@ معطّلتان في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليهما. فعّلهما في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.</string>
+      <key>few</key>
+      <string>خدمات MCP الخاصة بـ %2$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.</string>
+      <key>many</key>
+      <string>خدمات MCP الخاصة بـ %2$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.</string>
+      <key>other</key>
+      <string>خدمات MCP الخاصة بـ %2$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» من قائمة هذا الصف.</string>
+    </dict>
+  </dict>
   <key>knowledgePanelAllDirections</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>
@@ -2113,6 +2137,30 @@
       <string>%2$@: %1$ld</string>
       <key>other</key>
       <string>%2$@: %1$ld</string>
+    </dict>
+  </dict>
+  <key>phoneGoogleServiceOffDetail</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>خدمات MCP الخاصة بـ %3$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.</string>
+      <key>one</key>
+      <string>خدمة MCP الخاصة بـ %3$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.</string>
+      <key>two</key>
+      <string>خدمتا MCP الخاصتان بـ %3$@ معطّلتان في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليهما. فعّلهما في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.</string>
+      <key>few</key>
+      <string>خدمات MCP الخاصة بـ %3$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.</string>
+      <key>many</key>
+      <string>خدمات MCP الخاصة بـ %3$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.</string>
+      <key>other</key>
+      <string>خدمات MCP الخاصة بـ %3$@ معطّلة في مشروعك على Google Cloud، لذا لا يستطيع Infinitary الوصول إليها. فعّلها في Google Cloud، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.</string>
     </dict>
   </dict>
   <key>phoneMediaPicturePosition</key>

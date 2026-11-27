@@ -263,7 +263,7 @@ export async function startPhoneHome(
     },
   });
   const scene = phoneSceneFixture(core, userData, () => connection.settled());
-  const google = phoneGoogleControls(core);
+  const google = phoneGoogleControls(core, googleStandIn);
   const settingsRules = options.settings ? await seedPhoneAutomations(core) : {};
   const panels = phonePanelControls(core, frameLib);
   const cardReads = phoneCardReadControls(core, async () => {
@@ -1196,12 +1196,12 @@ export async function startPhoneHome(
           );
           result = { ok: true };
           break;
-        // INF-3454's phone part: approve on the stand-in Google's page, and what the computer kept.
+        // INF-3454's phone part and INF-7012's plan, piece 1: the stand-in Google (tests/helpers/phoneGoogle.ts).
         case "POST google-approve":
-          result = await google.approve();
-          break;
         case "GET google-state":
-          result = await google.state();
+        case "POST google-agent-refused":
+        case "POST google-agent-marked":
+          result = await google.answer(`${request.method} ${command}`);
           break;
         // INF-3563: what the computer holds after the phone's Settings pages asked it to change something.
         case "GET settings-state":

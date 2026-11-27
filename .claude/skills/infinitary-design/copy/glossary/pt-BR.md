@@ -16,6 +16,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | a stronger model | um modelo mais forte | |
 | account | conta | |
 | agent plugins | plugins de agente | Only the plugins turned on in the person's coding agent; a panel stays "painel". |
+| AI-powered agent (what Google's Gmail and Calendar servers serve) | agente com IA | "agentes de IA" for AI agents in general. |
 | app | app | Short and common in Brazil; "o app". |
 | Appearance | Aparência | |
 | Approves secret uses (switch) | Aprova usos de segredos | The computer's Settings → Devices should show the same words. |
@@ -26,6 +27,8 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | bring up to date | atualizar | Replaces rebase and conflict; "não foi possível atualizá-la". |
 | browser | navegador | |
 | built in place | feito no local | |
+| Calendar, Drive, Docs, Sheets (Google's products) | Agenda, Drive, Documentos, Planilhas | Google's own Brazilian names; Gmail stays Gmail. |
+| call (one request an integration action sends) | chamada | "O {place} parou a chamada". |
 | captain | capitão | The usual word a ship's crew uses; masculine default form, see Register; lowercase in the middle of a sentence, also as a form of address. |
 | card | cartão | |
 | Chat (card button) | Chat | The button is shown in English in every language; pages name it as shown. |
@@ -87,6 +90,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | log (a check's kept output) | o log | "Registro" already names the task's record. |
 | machine (avoided) | computador | Also in the voice consent line, where the English says "this machine". |
 | mark (a place marked on a picture or a page) | marca | "a marca {mark}", "Imagem marcada". |
+| MCP service (one turned on in a Google Cloud project) | serviço MCP | "o serviço MCP do Gmail", off is "desativado", turn on is "ativar". |
 | median (Usage, Cost per task) | mediana | The middle task of a week's finished tasks; never "average". |
 | merge | mesclar, mesclagem | GitHub's Portuguese docs say "mesclar uma solicitação de pull"; the noun is "mesclagem". |
 | merge queue (the host's own) | fila de mesclagem | |
@@ -173,6 +177,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
 | unsafe data reader | leitor de dados não seguros | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Uso | The section's name only; never for the allowance. |
+| Use this client for an AI-powered agent (Google Cloud's checkbox) | “Use this client for an AI-powered agent” | Google's console shows its own translation, which the app cannot check, so the label stays English in quotes. |
 | user (another user account on this computer) | usuário | "as {user}" is "como {user}", as in "Rodando como outro usuário". |
 | where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |
 | window wash | véu da janela | The theme color laid over the blurred background. |

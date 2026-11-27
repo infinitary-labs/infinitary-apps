@@ -325,12 +325,12 @@ export function startHomeCrew({
     // An unsafe data reader's write and web page join the same approval cards:
     // the write is sent where its project lives, the page opened signed out
     // (docs/agents-reach.md, "An unsafe data reader").
-    sendTakenIntegrationAsk: (rowId, taken, choice) =>
+    sendTakenIntegrationAsk: (rowId, taken, choice, picked) =>
       "ask" in taken && taken.ask.kind === "web"
         ? readerWeb.sendTaken(rowId, taken, choice)
         : "ask" in taken && taken.ask.kind !== "integration"
           ? githubGateway.sendTaken(rowId, taken, choice)
-          : integrations.sendTaken(rowId, taken, choice),
+          : integrations.sendTaken(rowId, taken, choice, picked),
     panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber, mergeTask, place) =>

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { NOTICE_ACCEPTED } from "@shared/integrations";
+import { GOOGLE_CLIENTS_PAGE, NOTICE_ACCEPTED } from "@shared/integrations";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   type GoogleStandIn,
@@ -9,6 +9,7 @@ import {
   STAND_IN_ACCOUNT,
   STAND_IN_CLIENT_ID,
   STAND_IN_CLIENT_SECRET,
+  STAND_IN_PROJECT,
 } from "../../../../../tests/helpers/googleStandIn";
 import { type GoogleWorldOptions, googleWorld } from "../../../../../tests/helpers/googleWorld";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
@@ -100,6 +101,18 @@ describe("the person's own Google client", () => {
     await world.binding.keepClient(ownClient());
     await world.integrations.signIn("google", NOTICE_ACCEPTED);
     expect(new GoogleSignInStore(world.dir).read()?.endsAt).toBeUndefined();
+  });
+
+  // INF-7012's approved plan, piece 1: "a row line with a link appears when
+  // Google refuses an unmarked client".
+  it("links the row's line for a client not marked for agents to that client in its own Google Cloud project", async () => {
+    const { google, integrations } = await signedInOwn();
+    google.knobs.agentRefused = true;
+    await integrations.check("google");
+    expect(integrations.view().integrations[0]?.client?.mcp).toEqual({
+      refused: "agent",
+      link: `${GOOGLE_CLIENTS_PAGE}/${OWN_CLIENT_ID}?project=${STAND_IN_PROJECT}`,
+    });
   });
 
   it("reads a deleted or refused client as gone, and a refused lasting key as signed out only", async () => {

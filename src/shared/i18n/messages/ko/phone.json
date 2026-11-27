@@ -166,7 +166,12 @@
   "phoneFormatMinutes": "{minutes}분",
   "phoneFormatNow": "지금",
   "phoneFormatUnderMinute": "1분 미만",
+  "phoneGoogleAgentRefusedDetail": "Google의 Gmail 및 캘린더 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, {computer}의 설정 → 연동에 있는 Google 행에서 지금 확인을 고르세요.",
   "phoneGoogleInvite": "{computer}의 일등항해사가 Gmail과 Calendar를 읽을 수 있게 하세요. 로그인 정보는 {computer}에 머물러요.",
+  "phoneGoogleServiceOffDetail": {
+    "plural": "count",
+    "other": "Google Cloud 프로젝트에서 {services} MCP 서비스가 꺼져 있어서 Infinitary가 닿을 수 없어요. Google Cloud에서 켠 다음, {computer}의 설정 → 연동에 있는 Google 행에서 지금 확인을 고르세요."
+  },
   "phoneGoogleSetupStays": "Infinitary는 클라이언트의 보안 비밀을 {computer}의 비밀 정보에 보관합니다. 일등항해사와 선원들은 그것을 볼 수 없습니다.",
   "phoneGoogleSetupStepFile": "Google에 표시되는 클라이언트 파일을 Download JSON으로 내려받은 뒤 여기에서 선택하거나 내용을 붙여 넣으세요.",
   "phoneGoogleSignIn": "로그인",

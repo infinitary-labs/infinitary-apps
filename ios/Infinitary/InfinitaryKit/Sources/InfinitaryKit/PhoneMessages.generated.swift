@@ -2392,6 +2392,7 @@ public enum PhoneMessages {
     public static func `phoneSettingsBackTo`(`place`: String) -> String { PhoneWords.format("phoneSettingsBackTo", [`place`]) }
     public static func `phoneSettingsCapabilityFull`() -> String { PhoneWords.format("phoneSettingsCapabilityFull", []) }
     public static func `phoneSettingsCapabilityRead`(`update`: String) -> String { PhoneWords.format("phoneSettingsCapabilityRead", [`update`]) }
+    public static func `phoneSettingsComputerSummary`(`computer`: String, `reach`: String) -> String { PhoneWords.format("phoneSettingsComputerSummary", [`computer`, `reach`]) }
     public static func `phoneSettingsConversationStays`() -> String { PhoneWords.format("phoneSettingsConversationStays", []) }
     public static func `phoneSettingsDevices`() -> String { PhoneWords.format("phoneSettingsDevices", []) }
     public static func `phoneSettingsFoldSplit`() -> String { PhoneWords.format("phoneSettingsFoldSplit", []) }
@@ -7202,6 +7203,7 @@ extension PhoneWords {
         "phoneSettingsBackTo": ["place"],
         "phoneSettingsCapabilityFull": [],
         "phoneSettingsCapabilityRead": ["update"],
+        "phoneSettingsComputerSummary": ["computer", "reach"],
         "phoneSettingsConversationStays": [],
         "phoneSettingsDevices": [],
         "phoneSettingsFoldSplit": [],

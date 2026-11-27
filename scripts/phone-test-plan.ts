@@ -144,7 +144,7 @@ export const PHONE_PARTS = [
   { name: "talk-compose", test: "testComposeAndSend", photos: true, devices: ["ipad"], why: "the composer turned beside the wide layout's sidebar, and the iPad's own photo picker" },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.
-  { name: "rest", test: "testCharacterAndPastChoices", photos: true, devices: ["ipad"], why: "the iPad's own photo picker, an approval enrolled as iPad, and the computer's sheet and alert drawn over the scene" },
+  { name: "rest", test: "testCharacterAndPastChoices", photos: true, devices: ["ipad"], why: "the iPad's own photo picker, an approval enrolled as iPad, and Settings' Your computer page and its alert drawn over the scene" },
 ] as const satisfies readonly PhonePartRow[];
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
 

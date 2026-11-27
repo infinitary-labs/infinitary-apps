@@ -60,11 +60,10 @@ struct PhoneView: View {
     @State private var pasting = false
     @State private var addressing = false
     @State private var linkText = ""
-    @State private var details = false
-    /// INF-5265: the way in the computer sheet's Add another computer picked, opened once that sheet has closed.
+    /// INF-5265: the way in Your computer's Add another computer picked, opened once Settings has closed.
     @State private var addWay: PhoneAddWay?
     /// Settings while it shows, and where it opened: a panel's `point.openSettings` names a place, Settings' own button
-    /// none, so each showing carries its own place.
+    /// none, and Command-I, the computer button and the reach line Your computer, so each showing carries its own place.
     @State private var settings: PhoneSettingsOpening?
     @State private var keyboardVisible = false
 
@@ -112,10 +111,11 @@ struct PhoneView: View {
                 }
                 if let session = model.connection, !model.removed {
                     ToolbarItem(placement: .topBarTrailing) {
-                        // The computer's name lives in its sheet, and VoiceOver hears the reach as words.
+                        // The computer's name lives on Settings' Your computer page, and VoiceOver hears the reach as words.
                         // INF-1328: a dot asks for attention, so it shows only while the computer is out of reach.
                         // INF-5265: with more than one computer kept, the button names the one shown.
-                        Button { details = true } label: {
+                        // INF-2820 piece 1: it opens Settings at Your computer, and piece 2 puts Filter in its place.
+                        Button { settings = PhoneSettingsOpening(place: nil, computer: true) } label: {
                             HStack(spacing: PhoneTheme.space2) {
                                 PhoneSymbol.computer.image
                                     .overlay(alignment: .topTrailing) {
@@ -136,14 +136,13 @@ struct PhoneView: View {
                     }
                 }
             }
-            .sheet(isPresented: $details, onDismiss: openAddWay) {
+            .sheet(item: $settings, onDismiss: openAddWay) { opening in
                 if let session = model.connection {
-                    PhoneComputerSheet(session: session, model: model, leave: { named in Task { await model.leave(named) } },
+                    PhoneSettingsSheet(session: session, opening: opening.place, openingComputer: opening.computer, model: model,
+                                       leave: { named in Task { await model.leave(named) } },
                                        forget: { pin in model.forgetMac(pin) }, add: { way in addWay = way })
+                        .environment(model.secrets).environment(model.google).environment(model.settings).environment(model.pushes)
                 }
-            }
-            .sheet(item: $settings) { opening in
-                if let session = model.connection { PhoneSettingsSheet(session: session, opening: opening.place).environment(model.secrets).environment(model.google).environment(model.settings).environment(model.pushes) }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { note in
                 if phoneKeyboardArrives(note) { keyboardVisible = true }
@@ -152,7 +151,7 @@ struct PhoneView: View {
                 keyboardVisible = false
             }
             .onChange(of: model.connection == nil || model.removed) { _, unavailable in
-                if unavailable { details = false; settings = nil }
+                if unavailable { settings = nil }
             }
             .safeAreaInset(edge: .bottom) {
                 if let problem = model.problem {
@@ -214,7 +213,7 @@ struct PhoneView: View {
         }
     }
 
-    /// Opens the way in picked under Add another computer, once the computer sheet has gone.
+    /// Opens the way in picked under Add another computer, once Settings has gone.
     private func openAddWay() {
         guard let way = addWay else { return }
         addWay = nil
@@ -289,6 +288,7 @@ struct PhoneView: View {
             tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))
             .environment(model.secrets)
             .environment(\.phoneOpenSettings) { place in settings = PhoneSettingsOpening(place: place) }
+            .environment(\.phoneOpenComputer) { settings = PhoneSettingsOpening(place: nil, computer: true) }
             .id(session.mac.deviceID)
             // INF-589 item 12: a soft tap when the computer comes back after it was lost.
             .sensoryFeedback(.phone, trigger: session.returns)
@@ -302,8 +302,9 @@ struct PhoneView: View {
 
 }
 
-/// One showing of Settings, and the place a panel opened it at (nil for its list).
+/// One showing of Settings, and the place a panel opened it at (nil for its list), or Your computer.
 struct PhoneSettingsOpening: Identifiable {
     let id = UUID()
     let place: PhoneSettingsPlace?
+    var computer = false
 }

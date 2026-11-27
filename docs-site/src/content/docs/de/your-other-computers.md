@@ -1,5 +1,5 @@
 ---
-source: 3e0fd8cde41ac0cf
+source: 74efc9cd832fcc88
 title: Deine anderen Computer
 description: Füge deine anderen Computer hinzu, damit du deinen ersten Offizier von jedem aus steuern kannst, sie die Arbeit deiner Projekte ausführen lassen kannst und eine Kopie behältst, die übernehmen kann.
 ---
@@ -153,8 +153,8 @@ Deine anderen Computer und dein Telefon finden ihn dort von selbst, ohne neuen L
 Eine Karte dort fragt nach jeder Anmeldung, die fehlt, und du fügst deine Geheimnisse erneut hinzu, außer er hat sie behalten.
 
 Dein Telefon kann einen Computer ebenfalls bitten zu übernehmen.
-Solange dein Computer außer Reichweite ist, tipp auf die Computer-Schaltfläche rechts in der oberen Leiste des Telefons.
-Ihr Blatt bietet **Übernehmen** für jeden Computer an, der eine Kopie behält, und fragt dann nach Face ID oder deinem Code.
+Solange dein Computer außer Reichweite ist, tipp auf die Zeile unter der oberen Leiste des Telefons, die das sagt, oder öffne die Einstellungen des Telefons und tipp auf **Dein Computer**.
+Dort steht **Übernehmen** für jeden Computer, der eine Kopie behält, und danach wirst du nach Face ID oder deinem Code gefragt.
 
 ### Wenn der verlorene Computer zurückkommt {#if-the-lost-computer-comes-back}
 

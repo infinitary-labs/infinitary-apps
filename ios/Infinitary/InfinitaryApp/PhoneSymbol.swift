@@ -9,7 +9,7 @@ enum PhoneSymbol: CaseIterable {
     case link, at, chevron, copy
     /// INF-3746: Point at's outline pointer, the Mac's own (`AnnotationControls.tsx`).
     case pointer
-    /// INF-5265: the computer sheet's Add another computer, Lucide's plus.
+    /// INF-5265: Your computer's Add another computer, Lucide's plus.
     case plus
 
     @MainActor var image: Image { Image(uiImage: Self.images[self]!) }

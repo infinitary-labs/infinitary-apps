@@ -534,6 +534,7 @@
   "phoneSettingsBackTo": "{place} に戻る",
   "phoneSettingsCapabilityFull": "コンピューター上のカードに答え、メッセージを送信し、タスクを操作します。",
   "phoneSettingsCapabilityRead": "カード、アクティビティ、タスクを読み込みます。{update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "会話はコンピューターに残ります。",
   "phoneSettingsDevices": "デバイス",
   "phoneSettingsFoldSplit": "折り目で分ける",

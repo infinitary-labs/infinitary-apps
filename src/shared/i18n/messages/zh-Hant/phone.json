@@ -534,6 +534,7 @@
   "phoneSettingsBackTo": "返回 {place}",
   "phoneSettingsCapabilityFull": "在你的電腦上回答卡片、傳送訊息並控制任務。",
   "phoneSettingsCapabilityRead": "讀取卡片、動態和任務。{update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "對話會留在你的電腦上。",
   "phoneSettingsDevices": "裝置",
   "phoneSettingsFoldSplit": "在摺痕處分開",

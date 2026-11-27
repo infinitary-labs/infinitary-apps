@@ -554,6 +554,7 @@
   "phoneSettingsBackTo": "Back to {place}",
   "phoneSettingsCapabilityFull": "Answers cards, sends messages and controls tasks on your computer.",
   "phoneSettingsCapabilityRead": "Reads cards, Activity and tasks. {update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "Conversation stays on your computer.",
   "phoneSettingsDevices": "Devices",
   "phoneSettingsFoldSplit": "Split at the fold",

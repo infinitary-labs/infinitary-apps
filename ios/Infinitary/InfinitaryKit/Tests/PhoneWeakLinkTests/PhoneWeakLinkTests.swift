@@ -161,7 +161,7 @@ import XCTest
     }
 
     /// The route read beside In reach, looked at on the main actor's first turn after each change of the connection:
-    /// the earliest a screen, such as the computer sheet, can draw the two together.
+    /// the earliest a screen, such as Settings' Your computer page, can draw the two together.
     @MainActor final class RouteWatch {
         private(set) var inReach: [String?] = []
 

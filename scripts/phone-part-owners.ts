@@ -112,7 +112,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/SimulatorNotifications.entitlements",
     "tests/helpers/phonePushRelay.ts",
   ] },
-  // INF-5265: the kept computers, the computer sheet that switches them and the second computer beside the test home.
+  // INF-5265: the kept computers, Settings' Your computer page that switches them and the second computer beside the test home.
   { parts: family("homes"), files: [
     "tests/helpers/phoneSecondHome.ts",
     "tests/helpers/phoneSecondHomeProcess.ts",
@@ -196,11 +196,11 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/JoinLink.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIdentity.swift",
   ] },
-  // INF-4207 piece 9: Take over on the computer's sheet, the link to a computer that keeps a copy and the test home's
-  // computer that keeps a copy beside it; join-activity draws the sheet out of reach, without a copy kept. INF-5265:
-  // the homes part lists the other kept computers on it and adds one.
+  // INF-4207 piece 9: Take over on Settings' Your computer page, the link to a computer that keeps a copy and the test
+  // home's computer that keeps a copy beside it; join-activity draws the page out of reach, without a copy kept.
+  // INF-5265: the homes part lists the other kept computers on it and adds one.
   { parts: [...family("take"), ...family("join"), ...family("homes")], files: [
-    "ios/Infinitary/InfinitaryApp/PhoneComputerSheet.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneComputerPage.swift",
     "ios/Infinitary/InfinitaryApp/PhoneTakeOverSection.swift",
   ] },
   { parts: family("take"), files: [

@@ -6,7 +6,7 @@ The screen is opaque, with the shared void background, raised cards, hairlines a
 Native colors, spacing and radii are generated from the shared tokens; cards use the card radius and fields the control radius.
 The launch screen is the shared void in each appearance, so the first frame is already the app's own surface, never pure white or black.
 Every sheet title is inline in Space Grotesk at the headline size, never the system's large bold title.
-The paste, Settings and computer sheets sit on the panel color with a hairline at their edge.
+The paste and Settings sheets sit on the panel color with a hairline at their edge.
 The phone's button is the Mac's row: rounded rectangles at the control radius, each its own width, drawn 37 points tall inside a 44-point touch area, at the trailing edge with the default last and filled with the accent, a danger choice in a red outline and the rest in a hairline outline; no button fills the width.
 Where a choice is a way in or a thing to pick rather than a decision, it is a row in a list instead.
 A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
@@ -42,7 +42,7 @@ An alert names the computer address reached through the link, with Cancel beside
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
-Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; with one computer kept its name is in its sheet, not the bar.
+Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks, Activity and, while the computer has panels to draw, Panels strip in the middle and the computer button at the right; with one computer kept its name is on Settings' Your computer page, not the bar.
 The strip is Apple's segmented control of three or four icons, a house for Home, a checklist for Tasks, a pulse line for Activity and three stacked panes for Panels, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
 The computer button is the Lucide computer glyph; a dot in the warning color sits at its corner only while the computer is out of reach, because a dot asks for attention, and VoiceOver hears the reach as its value.
 With more than one computer kept, the button names the computer shown after its glyph, in the callout size on one line cut with an ellipsis at 120 points, so the person always knows which computer they read; VoiceOver hears that name in place of Your computer.
@@ -50,14 +50,14 @@ In reach the bar says nothing more, and VoiceOver hears "Live".
 Coming back after the words said out of reach, the line under the bar says "Catching up on what was missed" or "Catching up, reading everything again" until what was missed is shown, then goes.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and "since" the last-heard time, with its day when that was not today; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
-The computer button opens a native sheet whose body is one list in the shared list shape, with no heading above it, and which opens just tall enough for its rows, never past half height.
+The computer button, Command-I and, while the computer is not in reach, a press on the line under the bar open Settings at its first page, Your computer, whose body is one list in the shared list shape; the button stays until a Filter button takes its place.
 Its first row is the computer shown, in the shape the Mac gives a device: the computer glyph at the name's height, the name in the headline face, "Current connection" in the caption size, and under them one micro mono line with the reach dot and words, then the address reached in the muted color, which wraps under the reach when both do not fit.
 A small Leave in the hairline outline, Forget while out of reach, sits at that row's trailing edge beside the name, and drops under the row's lines when the name does not fit beside it; the red is kept for its alert.
 Each other kept computer follows as a row, the computer glyph, its name and one line, Answers now with an accent dot before the glyph, Not answering from here, or Looking… while the phone checks; a tap shows it, and the phone never switches by itself.
 The last row is Add another computer with a plus glyph, which offers the first screen's three ways in.
-With other computers kept, the sheet opens with the first of them focused, and the arrows, Return and Space reach every row; a key pressed with Command held presses no row.
-The Settings button, the Lucide gear, opens a sheet at full height on a list of General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
-Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape.
+With other computers kept, the page opens with the first of them focused, and the arrows, Return and Space reach every row; a key pressed with Command held presses no row.
+The Settings button, the Lucide gear, opens a sheet at full height on a list of Your computer, General, Appearance, Projects, Intelligence, Runbooks, Usage, Automation, Integrations and Devices, the desktop's names in the desktop's order.
+Each row has no icon: its section name, one current-state line and a trailing chevron, in the shared list shape; Your computer's line is the computer shown and its reach, such as Test Mac mini · Live.
 A row opens its page in the same sheet, on iPad as on iPhone, never a sidebar.
 General shows Infinitary and the version, Appearance shows Theme, Language and, on a device that folds, Split at the fold, and Devices shows This phone (This iPad on a tablet), its current capability and the existing Approves secret uses switch when the computer offers it.
 Sections with nothing to show stay off the list.
@@ -106,7 +106,7 @@ A choice the project's setup fixes shows as its words in the muted color in plac
 
 Runbooks lists the built-in runbooks and the person's own under their labels, each as its name over one caption line with Apple's switch tinted with the accent; a runbook the computer could not read says why in the warning color.
 Theme is Apple's segmented control worded Device, Dark and Light, like the computer's Dark and Light pills, under one secondary line saying it is set on this iPhone only and the computer keeps its own; it starts on Device and never changes the computer's Theme.
-Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I the computer.
+Command-1 to Command-4 switch tabs in the strip's order, Command-Comma opens Settings and Command-I opens it at Your computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave on the computer's row asks in an alert that keeps Keep it beside a red Leave and explains that a new link is needed to return; VoiceOver hears the button as Leave <computer>.
 **Taking over** (INF-4207 piece 9).
@@ -160,7 +160,7 @@ A sideways swipe anywhere on the card moves the row with the finger, the dragged
 On release the row carries on from the finger's speed on a spring with no bounce that settles over `--dur-page` and never overshoots, and the card it brings arrives with its body already drawn.
 A swipe that starts on the body's own slider, canvas, dragged drawing or sideways scroller stays the body's, a mostly vertical drag scrolls, two fingers never swipe, and while the keyboard is up only the chevrons change cards.
 The chevrons slide the row one card as a swipe does; under reduced motion the row stays still, the card dims toward a chevron at the side it heads to, and the next card fades in over `--dur-fade`.
-The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet; on an iPad the card's head can maximize it to the stage's whole width.
+The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor Settings' Your computer page; on an iPad the card's head can maximize it to the stage's whole width.
 A card is the Mac's raised surface: a solid fill, a thin edge, a light line inside its top and a soft drop shadow, and the cards beside it in the row are raised the same way.
 The head, footer buttons and reply field are native controls outside the body’s web view.
 The head reads as the Mac's: the kind chip (Attention in red), the task's key in mono, which opens its record, where the task runs, the model chip and the risk, then the title and the revised line; it names no sender.

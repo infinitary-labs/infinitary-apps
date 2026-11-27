@@ -1,5 +1,5 @@
 ---
-source: a8120adef7569dc8
+source: b50d1979307a8fc4
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -34,11 +34,11 @@ Conecte-se só ao seu próprio computador.
 ## Mais de um computador {#more-than-one-computer}
 
 Seu celular pode manter mais de um computador, como um em casa e outro no trabalho, e mostra um de cada vez.
-Para adicionar outro, toque no botão do computador à direita da barra superior do celular e escolha **Adicionar outro computador**, depois leia o código dele, cole o link dele ou conecte-se pelo endereço dele.
+Para adicionar outro, abra Ajustes no celular, toque em **Seu computador** e escolha **Adicionar outro computador**, depois leia o código dele, cole o link dele ou conecte-se pelo endereço dele.
 O computador que você estava mostrando continua mantido.
 
-Com mais de um mantido, o botão do computador diz o nome do computador mostrado.
-A folha dele lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
+Com mais de um mantido, o botão do computador à direita da barra superior do celular diz o nome do computador mostrado.
+**Seu computador**, a primeira linha de Ajustes no celular, também diz o nome dele, lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
 Toque em um, ou pressione Return nele com um teclado, para mostrá-lo.
 O celular nunca troca sozinho: ele fica na sua escolha até você escolher outro.
 
@@ -91,7 +91,7 @@ Cada computador continua enviando as notificações enquanto você mostra outro:
 
 ## Sair ou remover {#leave-or-remove}
 
-Para parar de mostrar seu computador, toque no botão do computador à direita da barra superior do celular e escolha **Sair de** seguido do nome do seu computador.
+Para parar de mostrar seu computador, abra Ajustes no celular, toque em **Seu computador** e escolha **Sair de** seguido do nome do seu computador.
 O celular esquece esse computador e as notificações dele, e deixa para ele um bilhete lacrado para que ele pare de enviá-las em até um dia, mesmo fora de alcance.
 Quando ele está fora de alcance, **Esquecer** faz o mesmo só no celular.
 Seus outros computadores mantidos continuam: o que você mostrou mais recentemente aparece em seguida e, se não sobrar nenhum, o celular dá as boas-vindas como no início.

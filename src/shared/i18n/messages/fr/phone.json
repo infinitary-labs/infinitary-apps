@@ -574,6 +574,7 @@
   "phoneSettingsBackTo": "Retour à {place}",
   "phoneSettingsCapabilityFull": "Répond aux cartes, envoie des messages et pilote les tâches sur votre ordinateur.",
   "phoneSettingsCapabilityRead": "Lit les cartes, l’Activité et les tâches. {update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "La conversation reste sur votre ordinateur.",
   "phoneSettingsDevices": "Appareils",
   "phoneSettingsFoldSplit": "Séparer au pli",

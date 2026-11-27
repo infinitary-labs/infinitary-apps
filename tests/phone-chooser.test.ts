@@ -187,6 +187,8 @@ describe("affected phone requests", () => {
     // Replay only the real UI-test hunks: its other product edits include shared style.
     expect(request("2dbbedc52", false, true)).toEqual(["join", "talk"]);
     // INF-4241 removed the relaunch parts, so the table's relaunch part owns no file today and nothing reaches it.
+    // The fixture names the computer sheet by its name today, PhoneComputerPage.swift: under its old name no part
+    // owns it, and an unowned file reaches every part, relaunch included.
     expect(request("2dbbedc52")).toEqual(
       BEFORE_SPLIT.map((part) => part.name).filter((part) => part !== "relaunch"),
     );

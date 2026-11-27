@@ -33,11 +33,11 @@ Only join your own computer.
 ## More than one computer
 
 Your phone can keep more than one computer, such as one at home and one at work, and shows one at a time.
-To add another, tap the computer button at the right of the phone's top bar and choose **Add another computer**, then scan its code, paste its link or join by its address.
+To add another, open the phone's Settings, tap **Your computer** and choose **Add another computer**, then scan its code, paste its link or join by its address.
 The computer you were showing stays kept.
 
-With more than one kept, the computer button names the computer shown.
-Its sheet lists your other computers and marks each one that answers from where you are now, such as when your phone is on that computer's network or private network.
+With more than one kept, the computer button at the right of the phone's top bar names the computer shown.
+**Your computer**, the first row of the phone's Settings, names it too and lists your other computers and marks each one that answers from where you are now, such as when your phone is on that computer's network or private network.
 Tap one, or press Return on it with a keyboard, to show it.
 The phone never switches by itself: it stays on your choice until you pick another.
 
@@ -90,7 +90,7 @@ Each computer keeps sending them while you show another one: your phone leaves i
 
 ## Leave or remove
 
-To stop showing your computer, tap the computer button at the right of the phone's top bar and choose **Leave** with your computer's name.
+To stop showing your computer, open the phone's Settings, tap **Your computer** and choose **Leave** with your computer's name.
 The phone forgets that computer and its notifications, and leaves it a sealed note so it stops sending them within a day, even while it is out of reach.
 When it is out of reach, **Forget** does the same on the phone alone.
 Your other kept computers stay: the one you showed most recently shows next, and with none left the phone welcomes you as at first.

@@ -554,6 +554,7 @@
   "phoneSettingsBackTo": "Zurück zu {place}",
   "phoneSettingsCapabilityFull": "Beantwortet Karten, sendet Nachrichten und steuert Aufgaben auf deinem Computer.",
   "phoneSettingsCapabilityRead": "Liest Karten, Aktivität und Aufgaben. {update}",
+  "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "Die Unterhaltung bleibt auf deinem Computer.",
   "phoneSettingsDevices": "Geräte",
   "phoneSettingsFoldSplit": "An der Falz teilen",

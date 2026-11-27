@@ -5,6 +5,8 @@ import Observation
 extension EnvironmentValues {
     /// Opens the phone's Settings sheet at a place, which the window that presents Settings supplies; with none, nothing opens.
     @Entry var phoneOpenSettings: @MainActor (PhoneSettingsPlace) -> Void = { _ in }
+    /// Opens Settings at Your computer, which the same window supplies; with none, nothing opens.
+    @Entry var phoneOpenComputer: @MainActor () -> Void = {}
 }
 
 /// Only the entry actually on screen points a message at its card or task.
@@ -128,6 +130,7 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
     @Environment(PhoneAppearance.self) private var appearance: PhoneAppearance?
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @Environment(\.phoneOpenSettings) private var openSettings
+    @Environment(\.phoneOpenComputer) private var openComputer
     @State private var selection = PhoneTab.home
     /// INF-1590: whether the bar and the tab controller show the wide layout, which a rotation reaches once its
     /// animation has ended, and whether one into the wide layout already shows Home (see `PhoneResizeWatch`).
@@ -491,11 +494,16 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
     /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach
     /// with its time while the computer is not in reach, and nothing while it is. INF-589 item 11: said once.
     /// INF-3462: on Home the line stands bare over the crew scene, so no band of its own cuts the scene straight.
+    /// INF-2820 piece 1: a press on the line opens Settings at Your computer, so leaving, forgetting or taking over stays
+    /// one press away while it shows. It takes a tap rather than becoming a Button, which would fold its words into one
+    /// label; Command-I reaches the same page from a keyboard.
     @ViewBuilder private func reachLine(_ tab: PhoneTab) -> some View {
         if session.reach != "in-reach" {
             PhoneReach(session: session, oneLine: true)
                 .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
                 .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { openComputer() }
                 .background(tab == .home ? .clear : PhoneTheme.background)
                 .accessibilityElement(children: .contain).accessibilityIdentifier("reach-line")
         }

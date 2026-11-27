@@ -498,8 +498,8 @@ export function DeviceSignInAside({
   const home = useFirstMatePlace();
   // Callers key this aside by the sign-in and prompt. Leaving the box,
   // ending the flow or answering it destroys its draft, never publishing it.
-  const [typed, setTyped] = useState("");
   const { prompt, notice, ended, link } = flow;
+  const [typed, setTyped] = useState(prompt?.kind === "text" ? (prompt.value ?? "") : "");
   const openLink = link
     ? () => void window.infinitary.app.openExternal(link).catch(() => {})
     : undefined;

@@ -1,5 +1,5 @@
 ---
-source: 2bc19810a789f3f6
+source: b36cddf31c037a39
 title: O que sai do seu computador
 description: O que o Infinitary envia, para onde vai e o único botão que envia algo para nós.
 ---
@@ -14,6 +14,7 @@ Seu imediato e sua tripulação pensam por meio das assinaturas de IA em que voc
 Suas mensagens, e o que um tripulante lê do seu projeto para fazer a tarefa dele, vão para esse provedor pela sua assinatura.
 Com o Claude, o Infinitary usa o Claude Code que você instalou, com login na sua própria conta.
 Com um provedor personalizado, tudo vai para o endereço que você digitou.
+Com o Amazon Bedrock enviado pelo endereço da sua organização, tudo vai para esse endereço em vez da AWS.
 
 Seus logins ficam no seu computador.
 

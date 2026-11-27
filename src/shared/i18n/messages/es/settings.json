@@ -1416,6 +1416,7 @@
     "many": "{count} restablecimientos guardados · usa uno en {site}",
     "other": "{count} restablecimientos guardados · usa uno en {site}"
   },
+  "settingsSubscriptionsSentThrough": "enviado a través de {host}",
   "settingsSubscriptionsSignIn": "Iniciar sesión",
   "settingsSubscriptionsSignInAgainState": "Vuelve a iniciar sesión.",
   "settingsSubscriptionsSignedIn": "sesión iniciada",

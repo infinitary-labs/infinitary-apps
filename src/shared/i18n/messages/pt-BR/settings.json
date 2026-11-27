@@ -1416,6 +1416,7 @@
     "many": "{count} redefinições salvas · use uma em {site}",
     "other": "{count} redefinições salvas · use uma em {site}"
   },
+  "settingsSubscriptionsSentThrough": "enviado por {host}",
   "settingsSubscriptionsSignIn": "Fazer login",
   "settingsSubscriptionsSignInAgainState": "Faça login de novo.",
   "settingsSubscriptionsSignedIn": "login feito",

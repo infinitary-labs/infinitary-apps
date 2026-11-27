@@ -150,5 +150,15 @@ See `custom-api.md`.
 Add Amazon Bedrock under Add account with a named AWS profile already on this computer or a long-term Bedrock API key and an AWS region.
 Infinitary checks which Claude models that sign-in can use in the chosen region; AWS may bill those small requests.
 The first mate and crew run them through the built-in agent, not through Claude Code.
+After the region the sign-in asks where requests go: straight to AWS, or the organization's own address.
+The person types the address; Infinitary reads the network class from every DNS answer of its name (this computer, a private network or the public internet, as a custom API's address is read) and shows the host and class with one button, Send requests there.
+The address and its class are saved beside the region (`INFINITARY_BEDROCK_ADDRESS`, `INFINITARY_BEDROCK_NETWORK`); a saved address without its class is no sign-in.
+Each new connection resolves the name again and connects only to answers in the approved class, over HTTP/1.1, with no redirect and no proxy; plain http is only for an address on this computer.
+Nothing around the app moves a request: proxy variables, AWS endpoint variables and a profile's `endpoint_url` are never read.
+Every Bedrock connection, to AWS's own address too, checks certificates against this computer's trusted list (`src/core/trustedRoots.ts`, the one Claude's usage reporting uses), and a sign-in says a certificate this computer does not trust apart from an address it cannot reach.
+A third sign-in method, No key: my organization's address signs requests, skips the where step and sends with no credentials at all, so the computer's own AWS credentials never sign a request; without an organization address a key or profile stays required.
+When Claude Code's settings turn Bedrock on (`CLAUDE_CODE_USE_BEDROCK`), from the organization's managed tier or the person's own settings file, the region, address and profile prompts start filled from `AWS_REGION`, `ANTHROPIC_BEDROCK_BASE_URL` and `AWS_PROFILE` and say where the values came from, and `CLAUDE_CODE_SKIP_BEDROCK_AUTH` is named beside the method question (`readClaudeBedrockSetup`); no key is ever read, and the approval step still shows.
+Signing in again answers every step from what was saved but the key; when the address's name now reads as another network class, the approval step shows the new class for the person to approve.
+The account's row says sent through and the address's host.
 Connect separately on each computer that runs work.
 The account is billed by use and shows this month's estimate from Infinitary's own usage record, not an allowance meter or an AWS bill.

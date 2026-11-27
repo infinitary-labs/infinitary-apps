@@ -1,0 +1,22 @@
+{
+  "bedrockAddressInvalid": "这个地址无法使用：请写出完整地址，以 https:// 开头，不要包含登录信息、查询或 #。",
+  "bedrockAddressMoved": "{host} 现在指向的地方与你批准时不同。请重新登录 Amazon Bedrock 来批准它。",
+  "bedrockAddressNotFound": "找不到 {host}。",
+  "bedrockAddressPlainHttp": "普通 http 只能用于这台电脑上的地址：请使用你所在组织的 https 地址。",
+  "bedrockAddressRefused": "{host} 指向 Infinitary 不会连接的地方。",
+  "bedrockSecureConnectionFailed": "无法与 {host} 建立安全连接。请确认这台电脑信任它的证书。",
+  "bedrockSignInAddress": "输入你所在组织的 Amazon Bedrock 地址。",
+  "bedrockSignInApproveLocal": "请求将发送到 {host}，位于这台电脑上。",
+  "bedrockSignInApprovePrivate": "请求将发送到 {host}，位于你所在组织的网络中。",
+  "bedrockSignInApprovePublic": "请求将发送到 {host}，位于公共互联网上。",
+  "bedrockSignInChooseWhere": "请选择 Amazon Bedrock 请求的发送位置。",
+  "bedrockSignInFromClaudeSettings": "已根据你的 Claude Code 设置填写。",
+  "bedrockSignInFromOrganization": "已根据你所在组织的 Claude Code 设置填写。",
+  "bedrockSignInNoKey": "不用密钥：由我所在组织的地址为请求签名",
+  "bedrockSignInOrganization": "我所在组织的地址",
+  "bedrockSignInSend": "将请求发送到那里",
+  "bedrockSignInSettingsNoKey": "这些 Claude Code 设置会在不带密钥的情况下发送 Amazon Bedrock 请求。",
+  "bedrockSignInStraightToAws": "直接发送到 AWS",
+  "bedrockSignInWhere": "Amazon Bedrock 请求应发送到哪里？",
+  "bedrockUnreachable": "无法连接到 {host}。请检查你的网络和地址。"
+}

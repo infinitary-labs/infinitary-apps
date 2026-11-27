@@ -145,7 +145,7 @@ export function FirstRunGate() {
     refresh();
     const offPrompt = window.infinitary.auth.onPrompt((incoming) => {
       setPrompt(incoming);
-      setPromptValue("");
+      setPromptValue(incoming.kind === "text" ? (incoming.value ?? "") : "");
     });
     const offNotice = window.infinitary.auth.onNotice((incoming) => setNotice(incoming));
     return () => {

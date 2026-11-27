@@ -1354,6 +1354,7 @@
     "plural": "count",
     "other": "保存済みのリセット {count} 回分 · {site} で使用"
   },
+  "settingsSubscriptionsSentThrough": "{host} 経由で送信",
   "settingsSubscriptionsSignIn": "サインイン",
   "settingsSubscriptionsSignInAgainState": "もう一度サインインしてください。",
   "settingsSubscriptionsSignedIn": "サインイン済み",

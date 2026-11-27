@@ -24,9 +24,11 @@ import { loginPathCapture } from "../hostEnv";
  * every session whatever `settingSources` says. Of the person's own
  * settings only these two keys, and the custom headers a gateway asks for
  * (`ANTHROPIC_CUSTOM_HEADERS`, such as a team id), reach a session as the
- * app's own flag settings (`accessSettings`). The only other part of that
- * file read is a company's usage reporting setup, which the app's receiver
- * passes on (`claudeReporting.ts`); everything else stays out. The headers
+ * app's own flag settings (`accessSettings`). The only other parts of that
+ * file read are a company's usage reporting setup, which the app's receiver
+ * passes on (`claudeReporting.ts`), and the Amazon Bedrock address, region
+ * and profile the Bedrock sign-in starts from (`readClaudeBedrockSetup`);
+ * everything else stays out. The headers
  * may also come from the person's login shell, where the settings file's own
  * win, as they do in the client.
  */
@@ -81,6 +83,21 @@ export function resolvePlacedClaudePolicyFixture(path: string): ResolveClaudeSet
   };
 }
 
+/** How Claude Code reads a setting that turns something on. */
+const BEDROCK_ON = /^(?:1|true|yes|on)$/i;
+
+/**
+ * The Amazon Bedrock setup Claude Code's settings name (`readClaudeBedrockSetup`):
+ * values the Bedrock sign-in starts with, never a key.
+ */
+export type BedrockClaudeSetup = {
+  source: ClaudeAccessSource;
+  address?: string;
+  region?: string;
+  profile?: string;
+  skipAuth?: boolean;
+};
+
 /** The shared admission check for home and placed Claude work. A failed read is not a safe setting. */
 export async function assertClaudeWorkSettings(
   resolve: ResolveClaudeSettings = resolveSettings,
@@ -93,7 +110,7 @@ export async function assertClaudeWorkSettings(
   for (const source of settings.sources) {
     if (source.source !== "managed") continue;
     const enabled = source.settings?.env?.CLAUDE_CODE_USE_BEDROCK;
-    if (/^(?:1|true|yes|on)$/i.test(String(enabled).trim()))
+    if (BEDROCK_ON.test(String(enabled).trim()))
       throw new Error(
         "This computer’s Claude settings send work to Amazon Bedrock. Connect Amazon Bedrock in Infinitary to use it here.",
       );
@@ -194,4 +211,67 @@ function accessDigest(source: ClaudeAccessSource, command: string, address: stri
  */
 export function accessFlagSettings(read: ClaudeAccessRead | undefined): ClaudeAccessSettings {
   return read?.settings ?? {};
+}
+
+/** What one tier's `env` names for Amazon Bedrock, and nothing else of it: never a key. */
+function bedrockKeys(settings: unknown) {
+  const env =
+    settings && typeof settings === "object" && "env" in settings
+      ? ((settings as { env?: unknown }).env as Record<string, unknown> | undefined)
+      : undefined;
+  if (!env || typeof env !== "object") return {};
+  const text = (name: string) => {
+    const value = env[name];
+    return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  };
+  const on = (name: string) =>
+    env[name] === undefined ? undefined : BEDROCK_ON.test(String(env[name]).trim());
+  return {
+    enabled: on("CLAUDE_CODE_USE_BEDROCK"),
+    address: text("ANTHROPIC_BEDROCK_BASE_URL"),
+    region: text("AWS_REGION"),
+    profile: text("AWS_PROFILE"),
+    skipAuth: on("CLAUDE_CODE_SKIP_BEDROCK_AUTH"),
+  };
+}
+
+/**
+ * The Amazon Bedrock setup Claude Code's settings name, which the Bedrock
+ * sign-in starts from (docs/subscriptions-tab.md, "Amazon Bedrock"): read
+ * only when a tier turns Bedrock on, from the organization's tier and the
+ * person's own settings file, the organization's winning. Only the address,
+ * region, profile and whether requests go without a key are read; a key
+ * such as `AWS_BEARER_TOKEN_BEDROCK` never is. A reader that fails reads as
+ * no setup.
+ */
+export async function readClaudeBedrockSetup(
+  resolve: ResolveClaudeSettings = resolveSettings,
+): Promise<BedrockClaudeSetup | undefined> {
+  let resolved: ResolvedSettings;
+  try {
+    resolved = await resolve({ settingSources: ["user"] });
+  } catch {
+    return;
+  }
+  let organization: ReturnType<typeof bedrockKeys> = {};
+  let own: ReturnType<typeof bedrockKeys> = {};
+  for (const tier of resolved.sources ?? []) {
+    const keys = bedrockKeys(tier.settings);
+    const defined = Object.fromEntries(Object.entries(keys).filter(([, v]) => v !== undefined));
+    if (tier.source === "managed") organization = { ...organization, ...defined };
+    if (tier.source === "user") own = { ...own, ...defined };
+  }
+  const merged = { ...own, ...organization };
+  if (!merged.enabled) return;
+  // Named the organization's only when no value it fills came from the person's own file.
+  const ownValue = (["address", "region", "profile", "skipAuth"] as const).some(
+    (key) => merged[key] !== undefined && organization[key] === undefined,
+  );
+  return {
+    source: organization.enabled && !ownValue ? "organization" : "claude-settings",
+    ...(merged.address ? { address: merged.address } : {}),
+    ...(merged.region ? { region: merged.region } : {}),
+    ...(merged.profile ? { profile: merged.profile } : {}),
+    ...(merged.skipAuth ? { skipAuth: true } : {}),
+  };
 }

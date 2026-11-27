@@ -107,21 +107,20 @@ extension PhoneJourney {
                       "At All projects the panel hears no project\n\(app.debugDescription)")
 
         // From the keyboard: Shift-Command-P opens the sheet on the checked row, Escape closes it, and the arrows and
-        // Return pick.
+        // Return pick. Focus is read by what the keys do, as the Settings journeys read it: from All projects, the
+        // checked row, one Down and Return pick north-pier, the first project. As PhoneKeys owns, Xcode emits the
+        // physical Return for LF, not CR.
         let all = app.buttons["project-filter-all-projects"]
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(all.waitForPresence(timeout: 10), "Shift-Command-P opens Filter\n\(app.debugDescription)")
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "hasFocus == true"), object: all, timeout: 10), .completed,
-                       "The sheet opens on the checked row")
         app.typeKey(XCUIKeyboardKey.escape.rawValue, modifierFlags: [])
         XCTAssertTrue(all.waitForAbsence(timeout: 10), "Escape closes Filter")
         XCTAssertEqual(filter.value as? String, "All projects", "Escape picks nothing")
         app.typeKey("p", modifierFlags: [.command, .shift])
         XCTAssertTrue(all.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(all)
         app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "hasFocus == true"), object: row, timeout: 10), .completed,
-                       "Down moves to the first project")
-        app.typeKey("\r", modifierFlags: [])
+        app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(all.waitForAbsence(timeout: 10), "Return picks and closes Filter")
         focused(on: northName, elsewhere: 1)
         tapOnPhone(app.buttons["project-focus-clear"])

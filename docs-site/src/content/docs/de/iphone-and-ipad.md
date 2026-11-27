@@ -1,5 +1,5 @@
 ---
-source: a56a7d992b185889
+source: b6b6aafda3cee48d
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---

@@ -1,5 +1,5 @@
 ---
-source: a56a7d992b185889
+source: b6b6aafda3cee48d
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---

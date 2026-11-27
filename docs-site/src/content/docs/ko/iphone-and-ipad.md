@@ -1,5 +1,5 @@
 ---
-source: a56a7d992b185889
+source: b6b6aafda3cee48d
 title: iPhone과 iPad
 description: iPhone과 iPad용 Infinitary의 비공개 TestFlight 초대를 요청하고, 컴퓨터에 연결해 카드를 읽고 메시지를 보내세요.
 ---

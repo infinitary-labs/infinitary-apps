@@ -1,5 +1,5 @@
 ---
-source: a56a7d992b185889
+source: b6b6aafda3cee48d
 title: iPhone 和 iPad
 description: 申請 iPhone 和 iPad 版 Infinitary 的私人 TestFlight 邀請，然後加入你的電腦來讀卡片、傳訊息。
 ---

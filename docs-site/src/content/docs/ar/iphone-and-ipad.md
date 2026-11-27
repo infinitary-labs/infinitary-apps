@@ -1,5 +1,5 @@
 ---
-source: a56a7d992b185889
+source: b6b6aafda3cee48d
 title: iPhone وiPad
 description: اطلب دعوة خاصة عبر TestFlight إلى Infinitary على iPhone وiPad، ثم انضم إلى حاسوبك لقراءة البطاقات وإرسال الرسائل.
 ---

@@ -2,17 +2,18 @@ import { PHONE_PUSH_RELAY } from "@shared/phonePush";
 import type { HostCapabilities } from "./host";
 import { authorAnswer } from "./notifications";
 import { cardNotifiers } from "./phonePush";
+import { SomeoneHere } from "./someoneHere";
 import type { CardStore } from "./storage/cardStore";
 import type { SettingsStore } from "./storage/settingsStore";
 import type { TaskService } from "./tasks/taskService";
-import { WindowsInFront } from "./windowsInFront";
 import type { RepoRegistry } from "./workspace/repoRegistry";
 
 /**
- * Home wiring for the card notifiers: Notification Center and each paired
- * phone that asked through Infinitary's relay (docs/phone-push.md), while no
- * window is in front (P2). The card/feed split is the noise filter, so feed
- * lines never notify, and e2e windows stay hidden and unfocused.
+ * Home wiring for the card notifiers: Notification Center while the window is
+ * not front (P2), and each paired phone that asked through Infinitary's relay
+ * once nobody is at a computer showing this first mate (docs/phone-push.md).
+ * The card/feed split is the noise filter, so feed lines never notify, and
+ * e2e windows stay hidden and unfocused.
  */
 export function startHomeNotifier({
   host,
@@ -32,10 +33,10 @@ export function startHomeNotifier({
   repos: Pick<RepoRegistry, "get">;
   cardStore: Pick<CardStore, "messages">;
 }) {
-  const windowsInFront = new WindowsInFront();
+  const someoneHere = new SomeoneHere();
   const notifier = cardNotifiers({
     notifications: host.notifications,
-    windowsInFront: () => windowsInFront.any(),
+    someoneHere,
     switchedOn: () => settings.getNotificationsEnabled(),
     phones: devices,
     relay: relayUrl ?? PHONE_PUSH_RELAY,
@@ -53,5 +54,5 @@ export function startHomeNotifier({
       };
     },
   });
-  return { notifier, windowsInFront };
+  return { notifier, someoneHere };
 }

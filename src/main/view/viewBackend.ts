@@ -271,6 +271,8 @@ export type ViewBackendOptions = {
    * Update app waits for too. Absent, some always may, so it never starts again.
    */
   wordsLeft?: () => boolean;
+  /** The first mate there said the captain acted on a phone (`inf:window:captain-on-phone`). */
+  phoneActed?: () => void;
 };
 
 /** What this Mac's window found of its work half, told to its home (`work-setup.md`). */
@@ -290,6 +292,9 @@ function toldHome(
 
 /** A window that says whether it is in front (`window-front.md`). */
 const WINDOW_FRONT = contractChange("window-front");
+
+/** A window that says whether someone is at its computer (`someone-here.md`). */
+const SOMEONE_HERE = contractChange("someone-here");
 
 /** An app that follows its home's version and tells it each step (`app-follows-home.md`). */
 const APP_FOLLOWS = contractChange(APP_FOLLOWS_HOME);
@@ -318,6 +323,8 @@ export class ViewBackend {
   private disposed = false;
   /** Whether this Mac's window is in front, as it last said (`front`). */
   private inFront = false;
+  /** Whether someone is at this Mac, as its program last read it (`here`). */
+  private someoneHere: boolean | null = null;
   /** The fold was asked on this view (`foldOnce`). */
   private folded = false;
   /**
@@ -438,6 +445,7 @@ export class ViewBackend {
         if (channel === "inf:secrets:changed") void this.approver.refresh();
         if (channel === "inf:cards") this.notices.observe(payload);
         if (channel === "inf:app:open-page") this.openPage(payload, replayed);
+        if (channel === "inf:window:captain-on-phone" && !replayed) options.phoneActed?.();
         if (channel === "inf:app:sign-in-page") void this.openSignInPage(payload, replayed);
         if (channel === "inf:app:sign-in-ended") this.signInEnded(payload);
         // The first mate's look stays its own; only its panels switch is heard here.
@@ -504,6 +512,7 @@ export class ViewBackend {
         this.taking?.heardAgain();
         // The first mate there forgot it with the last connection.
         if (this.inFront) this.sayFront(true);
+        if (this.someoneHere !== null) this.sayHere(this.someoneHere);
         if (!this.look.seeded()) void this.seedLook();
         void this.readPanels();
         void this.approver.refresh();
@@ -754,10 +763,10 @@ export class ViewBackend {
   }
 
   /**
-   * This Mac's window came to the front or left it: the first mate there
-   * pushes no card to a phone while it is in front (docs/phone-push.md).
-   * Said again at each welcome, since the first mate forgets it as the
-   * connection drops.
+   * This Mac's window came to the front or left it: a first mate there from
+   * before `inf:window:someone-here` holds a card's push to a phone while it
+   * is in front (docs/phone-push.md); a newer one goes by `here`. Said again
+   * at each welcome, since the first mate forgets it as the connection drops.
    */
   front(inFront: boolean): void {
     this.inFront = inFront;
@@ -783,6 +792,25 @@ export class ViewBackend {
     if (!homeAnswersUpdate(state.homeVersion, state.homeChanges)) return null;
     const parsed = homeUpdateSchema.safeParse(await this.link.invoke(HOME_UPDATE_STATUS, []));
     return parsed.success ? parsed.data.version : null;
+  }
+
+  /**
+   * Whether someone is at this Mac changed (../attendance.ts): the first
+   * mate there holds a card's push to a phone while someone is
+   * (docs/phone-push.md), and forgets it when this connection drops, so the
+   * next welcome says it again.
+   */
+  here(someoneHere: boolean): void {
+    this.someoneHere = someoneHere;
+    this.sayHere(someoneHere);
+  }
+
+  /** A first mate from before the request is not told, and holds its phone only on the front. */
+  private sayHere(someoneHere: boolean): void {
+    if (this.disposed || !listsChange(this.link.state().homeChanges, SOMEONE_HERE)) return;
+    this.link.invoke("inf:window:someone-here", [someoneHere]).catch(() => {
+      // Out of reach: the first mate forgot it, and the next welcome says it again.
+    });
   }
 
   /** A first mate from before the request is not told, and its phone pushes as it did. */

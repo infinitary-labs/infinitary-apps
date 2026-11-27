@@ -654,6 +654,7 @@ describe("ipc contract", () => {
       "inf:usage:tasks",
       "inf:view:answer",
       "inf:window:front",
+      "inf:window:someone-here",
     ]);
   });
 

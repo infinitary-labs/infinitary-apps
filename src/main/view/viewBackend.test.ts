@@ -796,6 +796,91 @@ it("tells the first mate there when this Mac's window is in front and when it le
   expect(said()).toEqual([[true], [false], [true], [true]]);
 });
 
+// INF-7038's approved plan, Part 2, with the captain's answers: the phone stays quiet while
+// someone is at a computer showing the first mate, and acting on the phone counts as having left
+// it. A view says whether someone is at this Mac at each change and again at each welcome, never
+// to a first mate that does not list the request, and hears when the captain acted on a phone.
+it("tells the first mate there whether someone is at this Mac, again at each welcome, and hears when the captain acted on a phone", async () => {
+  let changes: HomeLinkState["homeChanges"] = null;
+  let caughtUp: HomeLinkOptions["onCaughtUp"];
+  let pushed: HomeLinkOptions["onPush"] | undefined;
+  let phoneActs = 0;
+  const invoke = vi.fn(async (_channel: string, _args: unknown[]) => ({ ok: true }));
+  const view = new ViewBackend({
+    joined: new JoinedHome(scratchDir("view-someone-here-")),
+    record: {
+      version: 1,
+      grant: {
+        at: "127.0.0.1:1",
+        homeKey: "unused",
+        deviceId: "view",
+        kind: "view",
+        key: "unused",
+        cert: "unused",
+      },
+      name: null,
+      joinedAt: 1,
+    },
+    broadcast: () => {},
+    notifications: { supported: () => false, focused: () => true, show: () => {} },
+    onThisMac: () => {},
+    onRemoved: () => {},
+    updates: unusedUpdates,
+    phoneActed: () => {
+      phoneActs += 1;
+    },
+    link: (options) => {
+      caughtUp = options.onCaughtUp;
+      pushed = options.onPush;
+      return {
+        start: () => {},
+        state: () => ({
+          contact: "in-reach",
+          access: "full",
+          homeVersion: PROTOCOL_VERSION,
+          homeChanges: changes,
+          name: null,
+          takesWork: null,
+          onHomeMac: null,
+          heardAt: null,
+          removed: false,
+        }),
+        invoke: invoke as never,
+        leave: async () => true,
+        close: () => {},
+      };
+    },
+  });
+  views.push(view);
+  const said = () =>
+    invoke.mock.calls
+      .filter(([channel]) => channel === "inf:window:someone-here")
+      .map(([, args]) => args);
+
+  // Before the first welcome there is nobody to tell; the welcome says it.
+  view.here(true);
+  expect(said()).toEqual([]);
+  changes = [...CONTRACT_CHANGES.names];
+  caughtUp?.("reload");
+  expect(said()).toEqual([[true]]);
+  view.here(false);
+  expect(said()).toEqual([[true], [false]]);
+  caughtUp?.("replay");
+  expect(said()).toEqual([[true], [false], [false]]);
+
+  pushed?.("inf:window:captain-on-phone", {}, false);
+  expect(phoneActs).toBe(1);
+  // A push heard again on a catch-up is not a new act.
+  pushed?.("inf:window:captain-on-phone", {}, true);
+  expect(phoneActs).toBe(1);
+
+  // A first mate from before the request is not asked.
+  changes = CONTRACT_CHANGES.names.filter((name) => name !== "someone-here");
+  view.here(true);
+  caughtUp?.("reload");
+  expect(said()).toEqual([[true], [false], [false]]);
+});
+
 // INF-5326's piece 4 review: a panel in this Mac's window reads this Mac's own
 // look (docs/view.md, "The switch and the layout"), which a change here never
 // sends to the other Mac, and only the settings the other Mac holds are asked

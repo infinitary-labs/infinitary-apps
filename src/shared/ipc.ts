@@ -426,6 +426,10 @@ export const pushContract = {
   // returns to the first mate's computer").
   "inf:app:sign-in-page": { payload: signInPageSchema, surface: "core" },
   "inf:app:sign-in-ended": { payload: signInEndedSchema, surface: "core" },
+  // The captain's own input came from a paired phone or iPad: each window's
+  // program untouched in the moments before says nobody is at its computer
+  // until its next touch (`inf:window:someone-here`; docs/phone-push.md).
+  "inf:window:captain-on-phone": { payload: z.strictObject({}), surface: "core" },
   ...ownWindowPushes,
 } as const;
 

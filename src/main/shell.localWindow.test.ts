@@ -11,6 +11,7 @@ import {
 } from "../../tests/helpers/firstMatesOwnWords";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { ownCore, ownUpdates, stopEachTest, stops } from "../../tests/helpers/shellStandIns";
+import { PresenceWatch } from "./presenceWatch";
 import { Shell, type ShellOptions } from "./shell";
 
 /**
@@ -28,7 +29,14 @@ describe("the window on the first mate's own computer", () => {
   type StandInLink = NonNullable<NonNullable<ShellOptions["localWindow"]>["link"]>;
   type LinkOptions = Parameters<StandInLink>[0];
 
-  function homeShell(options: { link?: StandInLink; readyMs?: number; door?: boolean } = {}) {
+  function homeShell(
+    options: {
+      link?: StandInLink;
+      readyMs?: number;
+      door?: boolean;
+      presence?: PresenceWatch;
+    } = {},
+  ) {
     const own = ownCore();
     const pushes: { channel: string; payload: unknown }[] = [];
     const doorDir = join(scratchDir("infinitary-shell-door-"), "local-door");
@@ -60,6 +68,7 @@ describe("the window on the first mate's own computer", () => {
             },
           }
         : {}),
+      ...(options.presence ? { presence: () => options.presence as PresenceWatch } : {}),
       broadcast: (channel, payload) => pushes.push({ channel, payload }),
       notifications: { supported: () => false, focused: () => true, show: () => {} },
       deviceName: async () => "MacBook Pro",
@@ -221,5 +230,29 @@ describe("the window on the first mate's own computer", () => {
     });
     heard.options?.onCaughtUp?.("reload");
     expect(at.shell.thisMac()).toEqual({ role: "home", left: null, caughtUp: 1, linkBack: 2 });
+  });
+
+  // INF-7038's approved plan, Part 2, with the captain's answers: the phone stays quiet while
+  // someone is at a computer showing the first mate, and acting on the phone counts as having
+  // left it. Here the window's program runs the first mate itself and tells it directly; this
+  // program posts no notification of its own, so only its window in front counts.
+  it("tells its own first mate whether someone is at this computer, and nobody after the phone acted", async () => {
+    let idle = 0;
+    const presence = new PresenceWatch(true, () => idle);
+    const at = homeShell({ presence });
+    await at.shell.start();
+    const someoneHere = at.own.core.services.someoneHere;
+    expect(someoneHere.readsOwn()).toBe(true);
+    expect(someoneHere.any()).toBe(false);
+    at.shell.windowFront(true);
+    expect(someoneHere.any()).toBe(true);
+    presence.set("locked", true);
+    expect(someoneHere.any()).toBe(false);
+    presence.set("locked", false);
+    expect(someoneHere.any()).toBe(true);
+    // A minute untouched, then the captain acts on the phone.
+    idle = 60;
+    at.own.core.events.emit("inf:window:captain-on-phone", {});
+    expect(someoneHere.any()).toBe(false);
   });
 });

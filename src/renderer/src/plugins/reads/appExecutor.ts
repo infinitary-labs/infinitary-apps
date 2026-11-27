@@ -77,6 +77,9 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // applies them (docs/run.md, "The window opened beside it"); no page hears.
   "inf:own-window:ask": () => () => {},
   "inf:presence:dock": () => () => {},
+  // The captain acted on a phone: the window's main process reads whether
+  // this computer was touched just before (src/main/attendance.ts); no page hears.
+  "inf:window:captain-on-phone": () => () => {},
   // A paired view started this computer's update: the update notice subscribes directly.
   "inf:update:asked": (_channel, listener) => window.infinitary.update.onAsked(listener),
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),

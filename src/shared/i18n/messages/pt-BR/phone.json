@@ -583,6 +583,8 @@
   "phoneSettingsCapabilityRead": "Lê cartões, Atividade e tarefas. {update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "A conversa fica no seu computador.",
+  "phoneSettingsCrewGrouping": "Agrupar a animação da tripulação por projeto",
+  "phoneSettingsCrewGroupingScope": "Na animação da tripulação, os tripulantes de cada projeto orbitam juntos, seja qual for o computador que os executa. Definido em {computer}, então as janelas dele também seguem.",
   "phoneSettingsDevices": "Dispositivos",
   "phoneSettingsFoldSplit": "Dividir na dobra",
   "phoneSettingsFoldSplitScope": "Aberto como um livro, este celular mostra Tarefas e Atividade de um lado da dobra e Início do outro. Desative para organizar como um iPad.",

@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "搜尋指令";
 "commandComputersNext" = "下一組工作電腦";
 "commandComputersPrevious" = "上一組工作電腦";
+"commandCrewGroupingToggle" = "按專案或按電腦分組船員動畫";
+"commandCrewGroupingToggleWords" = "船員, 動畫, 軌道, 專案, 電腦, 分組";
 "commandDevicesTryAgain" = "再次嘗試連絡你的電腦";
 "commandDevicesTryAgainWords" = "裝置, 重新連線, 連線, 電腦";
 "commandFeedbackStart" = "傳送意見回饋";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "大副 - %1$@";
 "crewModelNames" = "船員的模型名稱";
 "crewNextComputers" = "下一組電腦";
+"crewNextProjects" = "下一組專案";
 "crewOrbitLabel" = "船員 - %2$@ 位工作中，%1$@ 位閒置";
 "crewOutOfReach" = "連絡不上";
 "crewPartsCount" = "%1$@ 個已完成，%2$@ 個執行中，%3$@ 個等待中";
 "crewPreviousComputers" = "上一組電腦";
+"crewPreviousProjects" = "上一組專案";
 "crewProgramsAndParts" = "程序及其部分";
+"crewProjectGroups" = "專案分組";
 "crewStateIdle" = "閒置";
 "crewStateWorking" = "工作中";
 "crewSummaryAnotherTask" = "另一項任務";
@@ -2333,6 +2338,8 @@
 "phoneSettingsCapabilityRead" = "讀取卡片、動態和任務。%1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "對話會留在你的電腦上。";
+"phoneSettingsCrewGrouping" = "按專案分組船員動畫";
+"phoneSettingsCrewGroupingScope" = "在船員動畫中，每個專案的船員一起環繞，無論它們在哪台電腦上執行。此設定保存在 %1$@ 上，因此它的視窗也會跟著變。";
 "phoneSettingsDevices" = "裝置";
 "phoneSettingsFoldSplit" = "在摺痕處分開";
 "phoneSettingsFoldSplitScope" = "像書一樣展開時，這支手機會在摺痕一側顯示「任務」和「動態」，另一側顯示「首頁」。關閉後會以 iPad 的方式排列。";
@@ -2848,6 +2855,10 @@
 "settingsAppearanceCardSizeDescription" = "選擇卡片開啟時的大小。你仍然可以調整每張卡片的大小。";
 "settingsAppearanceCardUsual" = "一般";
 "settingsAppearanceCardWide" = "寬";
+"settingsAppearanceCrewGroupedByComputer" = "船員動畫已按電腦分組";
+"settingsAppearanceCrewGroupedByProject" = "船員動畫已按專案分組";
+"settingsAppearanceCrewGrouping" = "按專案分組船員動畫";
+"settingsAppearanceCrewGroupingDescription" = "在船員動畫中，每個專案的船員一起環繞，無論它們在哪台電腦上執行。";
 "settingsAppearanceCrewModelNames" = "船員模型名稱";
 "settingsAppearanceCrewModelNamesDescription" = "船員只使用一個軌道時，顯示模型名稱。";
 "settingsAppearanceHeading" = "外觀";

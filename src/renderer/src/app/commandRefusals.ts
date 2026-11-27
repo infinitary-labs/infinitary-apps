@@ -468,6 +468,7 @@ const REFUSALS: Readonly<
   // This window's own music, wherever the first mate lives.
   "ambient.toggle": () => null,
   "ambient.style": () => null,
+  "crew-grouping.toggle": () => null,
   "usage.unit": refusedUntilUpdate,
   // The allowance is read where the first mate lives, from any Mac.
   "allowance.recheck": refusedUntilUpdate,

@@ -799,9 +799,15 @@ export function CrewOrbit({
   // surface move, whatever the stage's own rate. An open summary lights its
   // crewmate's project in place of the window's light; it follows the
   // summary, not the pointer, so a sweep across the crew waits its beat.
+  const byProject = computers?.byProject === true;
   const lit = useMemo(
-    () => restedLight(focus ?? NO_FOCUS, shown !== null && !leaving ? shown : null),
-    [focus, shown, leaving],
+    () =>
+      restedLight(
+        focus ?? NO_FOCUS,
+        shown !== null && !leaving ? shown : null,
+        byProject ? (id) => (model as ComputerOrbits).computerOf(id) : undefined,
+      ),
+    [focus, shown, leaving, byProject, model],
   );
   const focusRef = useRef(lit);
   focusRef.current = lit;
@@ -1246,7 +1252,7 @@ export function CrewOrbit({
                   if (event.key === "Escape") event.currentTarget.blur();
                 }}
               >
-                {computers && (!namedClusters.has(computers.computerOf(id)) || !names?.[id]) ? (
+                {computers && (!namedClusters.has(computers.groupOf(id)) || !names?.[id]) ? (
                   <span className="fm-computer-crew-accessible">{name}</span>
                 ) : (
                   name
@@ -1340,7 +1346,7 @@ export function CrewOrbit({
       {computers && computers.pages > 1 && (
         <nav
           className="fm-computer-pages"
-          aria-label={m.crewWorkComputers()}
+          aria-label={byProject ? m.crewProjectGroups() : m.crewWorkComputers()}
           style={{ top: extent / 2 + Math.min(248, (viewportHeight - CREW_FIT.reservePx) / 2) }}
         >
           <ComputerPageButton
@@ -1348,7 +1354,7 @@ export function CrewOrbit({
             disabled={computers.page === 0 || !interactive}
             onClick={() => computers.setPage(computers.page - 1)}
           >
-            {m.crewPreviousComputers()}
+            {byProject ? m.crewPreviousProjects() : m.crewPreviousComputers()}
           </ComputerPageButton>
           <span>
             {computers.page + 1} / {computers.pages}
@@ -1358,7 +1364,7 @@ export function CrewOrbit({
             disabled={computers.page + 1 === computers.pages || !interactive}
             onClick={() => computers.setPage(computers.page + 1)}
           >
-            {m.crewNextComputers()}
+            {byProject ? m.crewNextProjects() : m.crewNextComputers()}
           </ComputerPageButton>
         </nav>
       )}

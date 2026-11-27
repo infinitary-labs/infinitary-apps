@@ -71,6 +71,8 @@
   "commandCommandsSearch": "Search commands",
   "commandComputersNext": "Next work computers",
   "commandComputersPrevious": "Previous work computers",
+  "commandCrewGroupingToggle": "Group crew animation by project or by computer",
+  "commandCrewGroupingToggleWords": "crew, animation, orbit, project, computer, group",
   "commandDevicesTryAgain": "Try again to reach your computers",
   "commandDevicesTryAgainWords": "devices, ssh, reconnect, connect, macs",
   "commandFeedbackStart": "Send feedback",

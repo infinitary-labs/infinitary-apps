@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "Search commands";
 "commandComputersNext" = "Next work computers";
 "commandComputersPrevious" = "Previous work computers";
+"commandCrewGroupingToggle" = "Group crew animation by project or by computer";
+"commandCrewGroupingToggleWords" = "crew, animation, orbit, project, computer, group";
 "commandDevicesTryAgain" = "Try again to reach your computers";
 "commandDevicesTryAgainWords" = "devices, ssh, reconnect, connect, macs";
 "commandFeedbackStart" = "Send feedback";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "First mate - %1$@";
 "crewModelNames" = "Crew model names";
 "crewNextComputers" = "Next computers";
+"crewNextProjects" = "Next projects";
 "crewOrbitLabel" = "Crew - %2$@ working, %1$@ idle";
 "crewOutOfReach" = "Out of reach";
 "crewPartsCount" = "%1$@ finished, %2$@ running, %3$@ waiting";
 "crewPreviousComputers" = "Previous computers";
+"crewPreviousProjects" = "Previous projects";
 "crewProgramsAndParts" = "Programs and their parts";
+"crewProjectGroups" = "Project groups";
 "crewStateIdle" = "Idle";
 "crewStateWorking" = "Working";
 "crewSummaryAnotherTask" = "another task";
@@ -2333,6 +2338,8 @@
 "phoneSettingsCapabilityRead" = "Reads cards, Activity and tasks. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "Conversation stays on your computer.";
+"phoneSettingsCrewGrouping" = "Group crew animation by project";
+"phoneSettingsCrewGroupingScope" = "Each project's crew orbit together in the crew animation, whichever computer runs them. Set on %1$@, so its windows follow it too.";
 "phoneSettingsDevices" = "Devices";
 "phoneSettingsFoldSplit" = "Split at the fold";
 "phoneSettingsFoldSplitScope" = "Open like a book, this phone shows Tasks and Activity on one side of the fold and Home on the other. Turn it off to lay out as an iPad does.";
@@ -2848,6 +2855,10 @@
 "settingsAppearanceCardSizeDescription" = "Choose how cards open. You can still resize each card.";
 "settingsAppearanceCardUsual" = "Usual";
 "settingsAppearanceCardWide" = "Wide";
+"settingsAppearanceCrewGroupedByComputer" = "Crew animation grouped by computer";
+"settingsAppearanceCrewGroupedByProject" = "Crew animation grouped by project";
+"settingsAppearanceCrewGrouping" = "Group crew animation by project";
+"settingsAppearanceCrewGroupingDescription" = "In the crew animation, each project's crew orbit together, whichever computer runs them.";
 "settingsAppearanceCrewModelNames" = "Crew model names";
 "settingsAppearanceCrewModelNamesDescription" = "Show model names while crewmates use only one orbit.";
 "settingsAppearanceHeading" = "Appearance";

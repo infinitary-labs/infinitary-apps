@@ -1,5 +1,5 @@
 ---
-source: 0a2abffa6cee2faa
+source: b54d92169707b7c1
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -65,6 +65,9 @@ No computador em que seu imediato vive, eles ficam em **Sites com login** em **S
   Você ainda pode redimensionar cada cartão.
 - **Manter os cartões maximizados** mantém todos os cartões maximizados depois que você maximiza um, até você restaurar um.
 - **Nomes dos modelos da tripulação** mostra os nomes dos modelos enquanto seus tripulantes usam só uma órbita.
+- **Agrupar a animação da tripulação por projeto** reúne os tripulantes de cada projeto na animação da tripulação, seja qual for o computador que os executa.
+  Vem desligado e aparece enquanto você tiver dois projetos ou mais.
+  A busca de comandos e o seu imediato também podem alterá-lo.
 - **Véu da janela**, no Mac, define quanto da cor do tema cobre o fundo desfocado.
   0% é o padrão.
 - **Tema** é **Escuro**, **Claro** ou um de treze temas com o nome que o autor deu, como **Dracula**, **Catppuccin Mocha** ou **Rosé Pine Dawn**.

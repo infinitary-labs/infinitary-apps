@@ -119,6 +119,27 @@ describe("SettingsStore preferences", () => {
     expect(new SettingsStore(db).getAppearance().ambientPlaysWhenAway).toBeUndefined();
   });
 
+  // INF-6955's plan: grouping the crew animation by project is off on a
+  // fresh or older install and kept in its own row, which an older build's
+  // stricter look never meets; a later write of the look keeps the choice.
+  it("keeps grouping the crew animation by project only in its own row, and only while chosen", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const readRow = (key: string) =>
+      db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+    expect(settings.getAppearance().crewGrouping).toBeUndefined();
+    settings.setAppearance({ theme: "dark", crewGrouping: "project" });
+    expect(readRow("crew-grouping")).toBeDefined();
+    expect(String((readRow("appearance") as { value: string }).value)).not.toContain(
+      "crewGrouping",
+    );
+    settings.setAppearance({ theme: "light", washStrength: 30 });
+    expect(new SettingsStore(db).getAppearance().crewGrouping).toBe("project");
+    settings.setAppearance({ theme: "light", crewGrouping: "computer" });
+    expect(readRow("crew-grouping")).toBeUndefined();
+    expect(new SettingsStore(db).getAppearance().crewGrouping).toBeUndefined();
+  });
+
   it("persists an OpenRouter decision pick and versioned consent without a credential", () => {
     const settings = store();
     const decisions = {

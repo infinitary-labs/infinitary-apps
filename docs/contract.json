@@ -64852,6 +64852,13 @@
           "showCrewModelNames": {
             "type": "boolean"
           },
+          "crewGrouping": {
+            "type": "string",
+            "enum": [
+              "computer",
+              "project"
+            ]
+          },
           "ambientMusic": {
             "type": "boolean"
           },
@@ -66750,6 +66757,13 @@
               },
               "showCrewModelNames": {
                 "type": "boolean"
+              },
+              "crewGrouping": {
+                "type": "string",
+                "enum": [
+                  "computer",
+                  "project"
+                ]
               },
               "ambientMusic": {
                 "type": "boolean"
@@ -68673,6 +68687,13 @@
           "showCrewModelNames": {
             "type": "boolean"
           },
+          "crewGrouping": {
+            "type": "string",
+            "enum": [
+              "computer",
+              "project"
+            ]
+          },
           "ambientMusic": {
             "type": "boolean"
           },
@@ -70439,6 +70460,73 @@
         ]
       }
     },
+    "inf:settings:crew-grouping:get": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "items": false,
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "grouping": {
+            "type": "string",
+            "enum": [
+              "computer",
+              "project"
+            ]
+          }
+        },
+        "required": [
+          "grouping"
+        ]
+      }
+    },
+    "inf:settings:crew-grouping:set": {
+      "effect": "change",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "grouping": {
+                "type": "string",
+                "enum": [
+                  "computer",
+                  "project"
+                ]
+              }
+            },
+            "required": [
+              "grouping"
+            ],
+            "additionalProperties": false
+          }
+        ],
+        "items": false,
+        "minItems": 1,
+        "maxItems": 1
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "grouping": {
+            "type": "string",
+            "enum": [
+              "computer",
+              "project"
+            ]
+          }
+        },
+        "required": [
+          "grouping"
+        ]
+      }
+    },
     "inf:settings:current": {
       "effect": "read",
       "reach": "views",
@@ -71125,6 +71213,13 @@
               },
               "showCrewModelNames": {
                 "type": "boolean"
+              },
+              "crewGrouping": {
+                "type": "string",
+                "enum": [
+                  "computer",
+                  "project"
+                ]
               },
               "ambientMusic": {
                 "type": "boolean"
@@ -85366,6 +85461,7 @@
                       "window-wash",
                       "window-size",
                       "crew-model-names",
+                      "crew-grouping",
                       "ambient-music",
                       "ambient-own-style",
                       "ambient-away",
@@ -86043,6 +86139,7 @@
                       "window-wash",
                       "window-size",
                       "crew-model-names",
+                      "crew-grouping",
                       "ambient-music",
                       "ambient-own-style",
                       "ambient-away",
@@ -110534,6 +110631,7 @@
                       "window-wash",
                       "window-size",
                       "crew-model-names",
+                      "crew-grouping",
                       "ambient-music",
                       "ambient-own-style",
                       "ambient-away",
@@ -111211,6 +111309,7 @@
                       "window-wash",
                       "window-size",
                       "crew-model-names",
+                      "crew-grouping",
                       "ambient-music",
                       "ambient-own-style",
                       "ambient-away",
@@ -112269,6 +112368,13 @@
               },
               "showCrewModelNames": {
                 "type": "boolean"
+              },
+              "crewGrouping": {
+                "type": "string",
+                "enum": [
+                  "computer",
+                  "project"
+                ]
               },
               "ambientMusic": {
                 "type": "boolean"

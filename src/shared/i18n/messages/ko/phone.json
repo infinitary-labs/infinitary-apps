@@ -541,6 +541,8 @@
   "phoneSettingsCapabilityRead": "카드, 활동, 작업을 읽어요. {update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "대화는 컴퓨터에 머물러요.",
+  "phoneSettingsCrewGrouping": "선원 애니메이션을 프로젝트별로 묶기",
+  "phoneSettingsCrewGroupingScope": "선원 애니메이션에서 어느 컴퓨터에서 실행되든 프로젝트마다 선원들이 함께 궤도를 돌아요. {computer}에서 설정되므로 그 창들도 똑같이 따라요.",
   "phoneSettingsDevices": "기기",
   "phoneSettingsFoldSplit": "접히는 부분에서 나누기",
   "phoneSettingsFoldSplitScope": "책처럼 펼치면 이 휴대폰은 접히는 부분 한쪽에 작업과 활동을, 다른 쪽에 홈을 표시해요. 끄면 iPad처럼 배치돼요.",

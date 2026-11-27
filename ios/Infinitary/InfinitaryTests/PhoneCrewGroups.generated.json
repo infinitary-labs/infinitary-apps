@@ -1,0 +1,305 @@
+{
+  "projects": [
+    {
+      "id": "scratch",
+      "name": "Scratch",
+      "builtIn": true
+    },
+    {
+      "id": "workspace",
+      "name": "Workspace",
+      "builtIn": true
+    },
+    {
+      "id": "website",
+      "name": "website",
+      "builtIn": false
+    },
+    {
+      "id": "shop",
+      "name": "shop",
+      "builtIn": false
+    }
+  ],
+  "rosters": [
+    {
+      "name": "by computer",
+      "grouping": "computer",
+      "focus": null,
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "shop-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "shop"
+        }
+      ],
+      "plan": null,
+      "groups": null
+    },
+    {
+      "name": "one project of the person's own",
+      "grouping": "project",
+      "focus": null,
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "web-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "scratch-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "scratch"
+        },
+        {
+          "id": "workspace-home",
+          "computer": "home",
+          "away": false,
+          "project": "workspace"
+        }
+      ],
+      "plan": {
+        "middle": "website",
+        "groups": []
+      },
+      "groups": {
+        "web-home": "home",
+        "web-studio": "home",
+        "scratch-studio": "home",
+        "workspace-home": "home"
+      }
+    },
+    {
+      "name": "two projects, nothing focused",
+      "grouping": "project",
+      "focus": null,
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "web-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "shop-home",
+          "computer": "home",
+          "away": false,
+          "project": "shop"
+        },
+        {
+          "id": "shop-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "shop"
+        },
+        {
+          "id": "scratch-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "scratch"
+        }
+      ],
+      "plan": {
+        "middle": null,
+        "groups": [
+          {
+            "id": "project:website",
+            "name": "website"
+          },
+          {
+            "id": "project:shop",
+            "name": "shop"
+          }
+        ]
+      },
+      "groups": {
+        "web-home": "project:website",
+        "web-studio": "project:website",
+        "shop-home": "project:shop",
+        "shop-studio": "project:shop",
+        "scratch-studio": "home"
+      }
+    },
+    {
+      "name": "two projects, one focused",
+      "grouping": "project",
+      "focus": "shop",
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "web-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "shop-home",
+          "computer": "home",
+          "away": false,
+          "project": "shop"
+        },
+        {
+          "id": "shop-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "shop"
+        }
+      ],
+      "plan": {
+        "middle": "shop",
+        "groups": [
+          {
+            "id": "project:website",
+            "name": "website"
+          }
+        ]
+      },
+      "groups": {
+        "web-home": "project:website",
+        "web-studio": "project:website",
+        "shop-home": "home",
+        "shop-studio": "home"
+      }
+    },
+    {
+      "name": "a built-in project focused",
+      "grouping": "project",
+      "focus": "scratch",
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "shop-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "shop"
+        },
+        {
+          "id": "scratch-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "scratch"
+        }
+      ],
+      "plan": {
+        "middle": null,
+        "groups": [
+          {
+            "id": "project:website",
+            "name": "website"
+          },
+          {
+            "id": "project:shop",
+            "name": "shop"
+          }
+        ]
+      },
+      "groups": {
+        "web-home": "project:website",
+        "shop-studio": "project:shop",
+        "scratch-studio": "home"
+      }
+    },
+    {
+      "name": "an away computer's crew",
+      "grouping": "project",
+      "focus": null,
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "shop-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "shop"
+        },
+        {
+          "id": "web-away",
+          "computer": "away-mac",
+          "away": true,
+          "project": "website"
+        },
+        {
+          "id": "shop-away",
+          "computer": "away-mac",
+          "away": true,
+          "project": "shop"
+        }
+      ],
+      "plan": {
+        "middle": null,
+        "groups": [
+          {
+            "id": "project:website",
+            "name": "website"
+          },
+          {
+            "id": "project:shop",
+            "name": "shop"
+          }
+        ]
+      },
+      "groups": {
+        "web-home": "project:website",
+        "shop-studio": "project:shop",
+        "web-away": "away-mac",
+        "shop-away": "away-mac"
+      }
+    },
+    {
+      "name": "a project the board does not name",
+      "grouping": "project",
+      "focus": null,
+      "crew": [
+        {
+          "id": "web-home",
+          "computer": "home",
+          "away": false,
+          "project": "website"
+        },
+        {
+          "id": "shop-studio",
+          "computer": "studio",
+          "away": false,
+          "project": "gone"
+        }
+      ],
+      "plan": null,
+      "groups": null
+    }
+  ]
+}

@@ -156,6 +156,11 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var homeTakesBack = false
     /// Whether the revert icon and Edit may stand beside the newest message now.
     public var canTakeBack: Bool { homeTakesBack && canChange }
+    /// How the computer's crew animation groups the crew (`crew-grouping`, docs/ios.md, "Grouping the crew by
+    /// project"): `project` seats each project's crew together, as the computer's own Appearance chose.
+    public private(set) var crewGrouping = "computer"
+    /// Whether the computer reads and sets the grouping, so the phone's Appearance offers its switch.
+    public private(set) var homeGroupsCrew = false
     /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
     /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
     public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
@@ -842,6 +847,21 @@ public struct PhoneNotice: Equatable, Sendable {
     }
 
     /// Reads every open card's draft, once the cards are read at each welcome and whenever a card or opening arrives.
+    private func readCrewGrouping() {
+        guard homeGroupsCrew, contact == "in-reach" else { return }
+        Task { [weak self] in
+            guard let value = try? await self?.request(.crewGrouping, as: PhoneJSON.self), let self, self.homeGroupsCrew,
+                  let grouping = value["grouping"].text else { return }
+            self.crewGrouping = grouping
+        }
+    }
+
+    /// The phone's Appearance switch: the computer's own look changes, and every screen of it follows.
+    public func setCrewGrouping(_ grouping: String) async throws {
+        let value = try await request(.crewGroupingSet, args: [["grouping": grouping]], as: PhoneJSON.self)
+        crewGrouping = value["grouping"].text ?? grouping
+    }
+
     private func readDrafts() {
         guard homeKeepsDrafts, contact == "in-reach" else { return }
         Task { [weak self] in
@@ -1177,7 +1197,8 @@ public struct PhoneNotice: Equatable, Sendable {
             "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk,
                         PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts, PhoneContract.settingsCurrent,
                         PhoneContract.choiceAttachments, PhoneContract.cardAnsweredByCrewmate, PhoneContract.catchUpShown,
-                        PhoneContract.removalNotice]]
+                        PhoneContract.removalNotice,
+                        PhoneContract.crewGrouping]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         // Its own version, as Settings shows it, which the computer's Devices lists.
         if let version = PhoneAppVersion.forHello(Bundle.main.infoDictionary) { hello["appVersion"] = version }
@@ -1321,6 +1342,8 @@ public struct PhoneNotice: Equatable, Sendable {
             homeTakesChoiceAttachments = (frame["changes"] as? [String] ?? []).contains(PhoneContract.choiceAttachments)
             homeHearsShown = (frame["changes"] as? [String] ?? []).contains(PhoneContract.catchUpShown)
             homeTakesBack = (frame["changes"] as? [String] ?? []).contains(PhoneContract.takeBackMessage)
+            homeGroupsCrew = (frame["changes"] as? [String] ?? []).contains(PhoneContract.crewGrouping)
+            if !homeGroupsCrew { crewGrouping = "computer" }
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
@@ -1443,6 +1466,11 @@ public struct PhoneNotice: Equatable, Sendable {
                 for page in readPages.values { page.push(channel, value) }
             }
             if frame["channel"] as? String == "inf:secrets:changed" { onSecretsChanged?() }
+            // The look, pushed whole whenever a screen changes it; a computer that lists the change always names its grouping's absence.
+            if homeGroupsCrew, frame["channel"] as? String == "inf:shell:preferences",
+               let look = (frame["payload"] as? [String: Any])?["appearance"] as? [String: Any] {
+                crewGrouping = look["crewGrouping"] as? String ?? "computer"
+            }
             // A replay ends in reach, where the open page reads again anyway.
             if !replayed, let channel = frame["channel"] as? String,
                Self.settingsPushes.contains(channel)
@@ -1552,7 +1580,7 @@ public struct PhoneNotice: Equatable, Sendable {
         if reached { reachRoute() }
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
-        if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage(); onReached?(); readDrafts()
+        if reached { reaches += 1; onSecretsChanged?(); wakeReachWaiters(); handUsage(); onReached?(); readDrafts(); readCrewGrouping()
             conversationReadable = true; readStrip()
             if let id = openOnReach { openOnReach = nil; openCard(id) }
         }

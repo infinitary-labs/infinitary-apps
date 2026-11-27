@@ -173,6 +173,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/CharacterWarp.swift",
     "ios/Infinitary/InfinitaryApp/PenBatch.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCharacter.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneCrewGroups.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCrewPainter.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCrewScene.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCrewSummary.swift",

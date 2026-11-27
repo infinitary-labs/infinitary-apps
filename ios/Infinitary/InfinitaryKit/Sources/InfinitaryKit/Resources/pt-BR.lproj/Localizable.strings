@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "Buscar comandos";
 "commandComputersNext" = "Próximos computadores de trabalho";
 "commandComputersPrevious" = "Computadores de trabalho anteriores";
+"commandCrewGroupingToggle" = "Agrupar a animação da tripulação por projeto ou por computador";
+"commandCrewGroupingToggleWords" = "tripulação, animação, órbita, projeto, computador, agrupar";
 "commandDevicesTryAgain" = "Tentar alcançar seus computadores de novo";
 "commandDevicesTryAgainWords" = "dispositivos, ssh, reconectar, conectar, computadores";
 "commandFeedbackStart" = "Enviar feedback";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "Imediato - %1$@";
 "crewModelNames" = "Nomes dos modelos da tripulação";
 "crewNextComputers" = "Próximos computadores";
+"crewNextProjects" = "Próximos projetos";
 "crewOrbitLabel" = "Tripulação - %2$@ trabalhando, %1$@ ociosos";
 "crewOutOfReach" = "Fora de alcance";
 "crewPartsCount" = "%1$@ concluídas, %2$@ em execução, %3$@ aguardando";
 "crewPreviousComputers" = "Computadores anteriores";
+"crewPreviousProjects" = "Projetos anteriores";
 "crewProgramsAndParts" = "Programas e suas partes";
+"crewProjectGroups" = "Grupos de projetos";
 "crewStateIdle" = "Ocioso";
 "crewStateWorking" = "Trabalhando";
 "crewSummaryAnotherTask" = "outra tarefa";
@@ -2333,6 +2338,8 @@
 "phoneSettingsCapabilityRead" = "Lê cartões, Atividade e tarefas. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "A conversa fica no seu computador.";
+"phoneSettingsCrewGrouping" = "Agrupar a animação da tripulação por projeto";
+"phoneSettingsCrewGroupingScope" = "Na animação da tripulação, os tripulantes de cada projeto orbitam juntos, seja qual for o computador que os executa. Definido em %1$@, então as janelas dele também seguem.";
 "phoneSettingsDevices" = "Dispositivos";
 "phoneSettingsFoldSplit" = "Dividir na dobra";
 "phoneSettingsFoldSplitScope" = "Aberto como um livro, este celular mostra Tarefas e Atividade de um lado da dobra e Início do outro. Desative para organizar como um iPad.";
@@ -2848,6 +2855,10 @@
 "settingsAppearanceCardSizeDescription" = "Escolha como os cartões abrem. Você ainda pode redimensionar cada cartão.";
 "settingsAppearanceCardUsual" = "Normal";
 "settingsAppearanceCardWide" = "Largo";
+"settingsAppearanceCrewGroupedByComputer" = "Animação da tripulação agrupada por computador";
+"settingsAppearanceCrewGroupedByProject" = "Animação da tripulação agrupada por projeto";
+"settingsAppearanceCrewGrouping" = "Agrupar a animação da tripulação por projeto";
+"settingsAppearanceCrewGroupingDescription" = "Na animação da tripulação, os tripulantes de cada projeto orbitam juntos, seja qual for o computador que os executa.";
 "settingsAppearanceCrewModelNames" = "Nomes dos modelos da tripulação";
 "settingsAppearanceCrewModelNamesDescription" = "Mostra os nomes dos modelos enquanto os tripulantes usam só uma órbita.";
 "settingsAppearanceHeading" = "Aparência";

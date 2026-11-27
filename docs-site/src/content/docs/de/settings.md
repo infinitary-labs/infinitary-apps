@@ -1,5 +1,5 @@
 ---
-source: 0a2abffa6cee2faa
+source: b54d92169707b7c1
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -65,6 +65,9 @@ Auf dem Computer, auf dem dein erster Offizier lebt, stehen sie unter **Angemeld
   Du kannst jede Karte trotzdem in der Größe ändern.
 - **Karten maximiert lassen** hält jede Karte maximiert, nachdem du eine maximiert hast, bis du eine wiederherstellst.
 - **Modellnamen der Crew** zeigt Modellnamen, während deine Crewmitglieder nur eine Umlaufbahn nutzen.
+- **Crew-Animation nach Projekt gruppieren** setzt die Crew jedes Projekts in der Crew-Animation zusammen, egal auf welchem Computer sie läuft.
+  Es ist standardmäßig aus und erscheint, solange du zwei oder mehr Projekte hast.
+  Auch die Befehlssuche und dein erster Offizier können es umschalten.
 - **Fenstertönung** legt auf einem Mac fest, wie viel von der Farbe des Designs den unscharfen Hintergrund bedeckt.
   0 % ist die Standardeinstellung.
 - **Design** ist **Dunkel**, **Hell** oder eines von dreizehn Designs unter den Namen ihrer Macher, etwa **Dracula**, **Catppuccin Mocha** oder **Rosé Pine Dawn**.

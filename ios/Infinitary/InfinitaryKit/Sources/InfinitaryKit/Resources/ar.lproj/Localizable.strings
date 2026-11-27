@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "البحث في الأوامر";
 "commandComputersNext" = "حواسيب العمل التالية";
 "commandComputersPrevious" = "حواسيب العمل السابقة";
+"commandCrewGroupingToggle" = "تجميع رسوم الطاقم المتحركة حسب المشروع أو حسب الحاسوب";
+"commandCrewGroupingToggleWords" = "طاقم, رسوم متحركة, مدار, مشروع, حاسوب, تجميع";
 "commandDevicesTryAgain" = "محاولة الوصول إلى حواسيبك مجددًا";
 "commandDevicesTryAgainWords" = "أجهزة, إعادة الاتصال, اتصال, حواسيب";
 "commandFeedbackStart" = "إرسال ملاحظات";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "نائب القبطان - %1$@";
 "crewModelNames" = "أسماء نماذج الطاقم";
 "crewNextComputers" = "الحواسيب التالية";
+"crewNextProjects" = "المشاريع التالية";
 "crewOrbitLabel" = "الطاقم - %2$@ قيد العمل، %1$@ خامل";
 "crewOutOfReach" = "خارج المتناول";
 "crewPartsCount" = "%1$@ منتهٍ، %2$@ قيد التشغيل، %3$@ بالانتظار";
 "crewPreviousComputers" = "الحواسيب السابقة";
+"crewPreviousProjects" = "المشاريع السابقة";
 "crewProgramsAndParts" = "البرامج وأجزاؤها";
+"crewProjectGroups" = "مجموعات المشاريع";
 "crewStateIdle" = "خامل";
 "crewStateWorking" = "يعمل";
 "crewSummaryAnotherTask" = "مهمة أخرى";
@@ -2333,6 +2338,8 @@
 "phoneSettingsCapabilityRead" = "يقرأ البطاقات والنشاط والمهام. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "تبقى المحادثة على حاسوبك.";
+"phoneSettingsCrewGrouping" = "تجميع رسوم الطاقم المتحركة حسب المشروع";
+"phoneSettingsCrewGroupingScope" = "يدور طاقم كل مشروع معًا في رسوم الطاقم المتحركة، أيًّا كان الحاسوب الذي يشغّله. يُضبط على %1$@، فتتبعه نوافذه أيضًا.";
 "phoneSettingsDevices" = "الأجهزة";
 "phoneSettingsFoldSplit" = "التقسيم عند الطيّة";
 "phoneSettingsFoldSplitScope" = "عند فتح هذا الهاتف ككتاب، تظهر المهام والنشاط على جانب من الطيّة والرئيسية على الجانب الآخر. عند إيقافه، يُعرض كما يُعرض على iPad.";
@@ -2848,6 +2855,10 @@
 "settingsAppearanceCardSizeDescription" = "اختر كيف تُفتح البطاقات. يظل بإمكانك تغيير حجم كل بطاقة.";
 "settingsAppearanceCardUsual" = "عادي";
 "settingsAppearanceCardWide" = "عريض";
+"settingsAppearanceCrewGroupedByComputer" = "جُمّعت رسوم الطاقم المتحركة حسب الحاسوب";
+"settingsAppearanceCrewGroupedByProject" = "جُمّعت رسوم الطاقم المتحركة حسب المشروع";
+"settingsAppearanceCrewGrouping" = "تجميع رسوم الطاقم المتحركة حسب المشروع";
+"settingsAppearanceCrewGroupingDescription" = "في رسوم الطاقم المتحركة، يدور طاقم كل مشروع معًا، أيًّا كان الحاسوب الذي يشغّله.";
 "settingsAppearanceCrewModelNames" = "أسماء نماذج الطاقم";
 "settingsAppearanceCrewModelNamesDescription" = "إظهار أسماء النماذج ما دام أفراد الطاقم يشغلون مدارًا واحدًا فقط.";
 "settingsAppearanceHeading" = "المظهر";

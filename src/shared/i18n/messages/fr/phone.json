@@ -583,6 +583,8 @@
   "phoneSettingsCapabilityRead": "Lit les cartes, l’Activité et les tâches. {update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "La conversation reste sur votre ordinateur.",
+  "phoneSettingsCrewGrouping": "Grouper l’animation de l’équipage par projet",
+  "phoneSettingsCrewGroupingScope": "Dans l’animation de l’équipage, les équipiers de chaque projet gravitent ensemble, quel que soit l’ordinateur qui les exécute. Réglé sur {computer}, donc ses fenêtres le suivent aussi.",
   "phoneSettingsDevices": "Appareils",
   "phoneSettingsFoldSplit": "Séparer au pli",
   "phoneSettingsFoldSplitScope": "Ouvert comme un livre, ce téléphone affiche Tâches et Activité d’un côté du pli et Accueil de l’autre. Désactivez-le pour une disposition comme sur un iPad.",

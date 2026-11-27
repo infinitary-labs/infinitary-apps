@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "コマンドを検索";
 "commandComputersNext" = "次の作業コンピューター";
 "commandComputersPrevious" = "前の作業コンピューター";
+"commandCrewGroupingToggle" = "乗組員のアニメーションをプロジェクトごとまたはコンピューターごとにまとめる";
+"commandCrewGroupingToggleWords" = "乗組員, アニメーション, 軌道, プロジェクト, コンピューター, グループ";
 "commandDevicesTryAgain" = "コンピューターへの接続を再試行";
 "commandDevicesTryAgainWords" = "デバイス, 再接続, 接続, マック";
 "commandFeedbackStart" = "フィードバックを送信";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "一等航海士 - %1$@";
 "crewModelNames" = "乗組員のモデル名";
 "crewNextComputers" = "次のコンピューター";
+"crewNextProjects" = "次のプロジェクト";
 "crewOrbitLabel" = "乗組員 - %2$@人が作業中、%1$@人が待機中";
 "crewOutOfReach" = "連絡がつきません";
 "crewPartsCount" = "%1$@件完了、%2$@件実行中、%3$@件待機中";
 "crewPreviousComputers" = "前のコンピューター";
+"crewPreviousProjects" = "前のプロジェクト";
 "crewProgramsAndParts" = "プログラムとそのパート";
+"crewProjectGroups" = "プロジェクトのグループ";
 "crewStateIdle" = "待機中";
 "crewStateWorking" = "作業中";
 "crewSummaryAnotherTask" = "別のタスク";
@@ -2333,6 +2338,8 @@
 "phoneSettingsCapabilityRead" = "カード、アクティビティ、タスクを読み込みます。%1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "会話はコンピューターに残ります。";
+"phoneSettingsCrewGrouping" = "乗組員のアニメーションをプロジェクトごとにまとめる";
+"phoneSettingsCrewGroupingScope" = "乗組員のアニメーションで、どのコンピューターで動いていても、プロジェクトごとの乗組員が一緒に周回します。%1$@ で設定されるため、そのウインドウも同じになります。";
 "phoneSettingsDevices" = "デバイス";
 "phoneSettingsFoldSplit" = "折り目で分ける";
 "phoneSettingsFoldSplitScope" = "本のように開くと、このスマートフォンは折り目の片側に「タスク」と「アクティビティ」、もう片側に「ホーム」を表示します。オフにすると iPad と同じ配置になります。";
@@ -2848,6 +2855,10 @@
 "settingsAppearanceCardSizeDescription" = "カードを開くときの大きさを選びます。各カードのサイズはあとから変更できます。";
 "settingsAppearanceCardUsual" = "通常";
 "settingsAppearanceCardWide" = "ワイド";
+"settingsAppearanceCrewGroupedByComputer" = "乗組員のアニメーションをコンピューターごとにまとめました";
+"settingsAppearanceCrewGroupedByProject" = "乗組員のアニメーションをプロジェクトごとにまとめました";
+"settingsAppearanceCrewGrouping" = "乗組員のアニメーションをプロジェクトごとにまとめる";
+"settingsAppearanceCrewGroupingDescription" = "乗組員のアニメーションで、どのコンピューターで動いていても、プロジェクトごとの乗組員が一緒に周回します。";
 "settingsAppearanceCrewModelNames" = "乗組員のモデル名";
 "settingsAppearanceCrewModelNamesDescription" = "乗組員が1つの軌道だけを使うとき、モデル名を表示します。";
 "settingsAppearanceHeading" = "外観";

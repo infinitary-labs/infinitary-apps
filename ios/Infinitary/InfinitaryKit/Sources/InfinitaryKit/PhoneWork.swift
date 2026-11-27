@@ -355,7 +355,11 @@ public struct PhoneBoard: Decodable, Sendable {
         public let archived: Bool?
         /// The project's own tags, alphabetical (`projectTagViewSchema`); absent while it has none, and from an older Mac.
         public let tags: [PhoneTask.Tag]?
-        public struct Repo: Decodable, Sendable { public let name: String }
+        public struct Repo: Decodable, Sendable {
+            public let name: String
+            /// `personal` for the app's own workspace; absent from an older Mac.
+            public let kind: String?
+        }
 
         /// A task's Project fact (the Mac's `projectFact`): the project's name, and the repository the task works
         /// in beside it when the project holds more than one.

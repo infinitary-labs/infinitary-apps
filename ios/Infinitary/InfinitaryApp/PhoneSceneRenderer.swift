@@ -1,3 +1,4 @@
+import InfinitaryKit
 import Metal
 import QuartzCore
 import SwiftUI
@@ -231,7 +232,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
         let frame = lit(crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
                                    supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27)),
-                        project: input.lit, elapsed: lightElapsed, duration: still ? 0 : PhoneTheme.surfaceSeconds)
+                        project: input.lit, byProject: roster.byProject, elapsed: lightElapsed, duration: still ? 0 : PhoneTheme.surfaceSeconds)
         let palette = input.palette
         // A warp's wormhole and stars lie behind every crewmate and the first mate.
         if let warp = crew.warp {
@@ -256,8 +257,10 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
 
 extension PhoneSceneRenderer {
     /// The frame with each crewmate's light eased toward the lit project and folded into its alpha; nothing moves.
-    fileprivate func lit(_ frame: PhoneSceneMotion.Frame, project: String?, elapsed: Double, duration: Double) -> PhoneSceneMotion.Frame {
-        lightMoving = PhoneFocusLight.step(frame.glyphs.map { ($0.task.id, $0.task.projectId) }, lit: project, state: &lights,
+    fileprivate func lit(_ frame: PhoneSceneMotion.Frame, project: String?, byProject: Bool, elapsed: Double, duration: Double) -> PhoneSceneMotion.Frame {
+        // Grouped by project, a crewmate's project is already its group: the light names its computer instead (`restedLight`).
+        let key = { (task: PhoneTask) in byProject ? PhoneSceneRoster.computerID(task) : task.projectId }
+        lightMoving = PhoneFocusLight.step(frame.glyphs.map { ($0.task.id, key($0.task)) }, lit: project, state: &lights,
                                            elapsed: elapsed, duration: duration)
         guard lights.values.contains(where: { $0 != 1 }) else { return frame }
         var drawn = frame

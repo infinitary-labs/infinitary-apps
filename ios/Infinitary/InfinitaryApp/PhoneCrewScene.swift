@@ -26,7 +26,8 @@ struct PhoneCrewScene: View {
 
     var body: some View {
         let roster = rosters.read(board: session.board, presence: session.computers, homeName: session.mac.name,
-                                  inReach: session.contact == "in-reach", generation: session.sceneGeneration, revision: session.workRevision)
+                                  inReach: session.contact == "in-reach", generation: session.sceneGeneration, revision: session.workRevision,
+                                  grouping: session.crewGrouping)
         let still = reduceMotion || phase != .active || !messageContext.cardsVisible || !visible || record != nil
         GeometryReader { geometry in
             let viewport = PhoneSceneViewport(scene: CGSize(width: roster.width, height: roster.height),
@@ -47,8 +48,9 @@ struct PhoneCrewScene: View {
                 PhoneSceneBackdrop(stage: stage, renderer: renderer, roster: roster, state: session.firstmateBusy ? .working : .idle,
                                    fold: CharacterFold(folding: session.firstmateFolding, starts: session.firstmateFoldStarts), still: still,
                                    running: !still && preview == nil, offset: viewport.offset, selection: selectedCrew,
-                                   bracketed: preview.map { ($0.id, previewComputer ?? PhoneSceneRoster.computerID($0)) },
-                                   lit: PhoneFocusLight.project(held: nil, rested: (preview ?? selectedCrew.flatMap { roster.task(selected: $0) })?.projectId))
+                                   bracketed: preview.map { ($0.id, previewComputer ?? roster.groupID($0)) },
+                                   lit: PhoneFocusLight.project(held: nil, rested: (preview ?? selectedCrew.flatMap { roster.task(selected: $0) })
+                                       .map { roster.byProject ? PhoneSceneRoster.computerID($0) : $0.projectId }))
             }
             .overlay {
                 RoundedRectangle(cornerRadius: PhoneTheme.controlRadius)
@@ -100,7 +102,7 @@ struct PhoneCrewScene: View {
             switch shown {
             case .summary(let task):
                 PhoneCrewSummary(session: session, task: task, tasks: roster.allTasks,
-                                 show: { task in preview = task; previewComputer = PhoneSceneRoster.computerID(task) },
+                                 show: { task in preview = task; previewComputer = roster.groupID(task) },
                                  open: { task in
                                      // INF-1208's direction C: on a foldable's pages the record opens in the Tasks
                                      // panel's place, as a panel's own press opens it, never as a sheet over both pages.
@@ -164,7 +166,7 @@ struct PhoneCrewScene: View {
     }
     private func keyboardTargets(roster: PhoneSceneRoster) -> [KeyboardTarget] {
         let glyphs = renderer.crew.current.glyphs.filter { roster.order[$0.task.id] != nil }.map {
-            KeyboardTarget(id: $0.task.id, task: $0.task, computer: PhoneSceneRoster.computerID($0.task), point: $0.point)
+            KeyboardTarget(id: $0.task.id, task: $0.task, computer: $0.group, point: $0.point)
         }
         let marks = renderer.crew.current.marks.filter { mark in
             roster.computers.contains { $0.id == mark.computerID && $0.programs.contains { $0.id == mark.task.id } }

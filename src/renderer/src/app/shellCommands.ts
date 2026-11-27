@@ -456,6 +456,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
     s.setAmbientMusic(!s.ambientMusic);
   },
   "ambient.style": () => openStyleList(),
+  "crew-grouping.toggle": () => {
+    const s = useShellStore.getState();
+    s.setCrewGrouping(s.crewGrouping === "project" ? "computer" : "project");
+  },
   // The other unit, saved by the core, seen in Usage.
   "usage.unit": () => {
     const s = useShellStore.getState();

@@ -36,6 +36,7 @@ A project with nothing waiting and nothing working reads dimmer.
 - The task board opens on the focused project, and Hide keeps it.
 - On the stage every crewmate of another project keeps a quarter of its light; nothing hides or moves.
   While a crewmate's summary is open, on the desktop or the phone, the stage lights that crewmate's project in the same way instead, and closing the summary puts the focus's light back (`docs/crew-orbits.md`, "The project focus").
+  While the crew animation is grouped by project, the focused project sits with the first mate when more than one of the person's projects has crew, and a summary lights its crewmate's computer's crew instead (`docs/crew-orbits.md`, "Grouping by project").
 - The first mate hears the filter with every message the captain sends (below).
 - Activity lists only the lines about the focused project's tasks and the lines about no task: the captain's own turns, the first mate's and the app's (the captain's answer to INF-1091's question 3, "Hide them while focus is on").
   A line's task key says its project, because a task's key starts with its project's key and a project's key never changes, so a line about a task the board no longer lists follows the same rule (`linesInFocus`).

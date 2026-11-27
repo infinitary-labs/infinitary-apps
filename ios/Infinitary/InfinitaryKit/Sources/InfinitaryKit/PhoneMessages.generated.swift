@@ -777,6 +777,8 @@ public enum PhoneMessages {
     public static func `commandCommandsSearch`() -> String { PhoneWords.format("commandCommandsSearch", []) }
     public static func `commandComputersNext`() -> String { PhoneWords.format("commandComputersNext", []) }
     public static func `commandComputersPrevious`() -> String { PhoneWords.format("commandComputersPrevious", []) }
+    public static func `commandCrewGroupingToggle`() -> String { PhoneWords.format("commandCrewGroupingToggle", []) }
+    public static func `commandCrewGroupingToggleWords`() -> String { PhoneWords.format("commandCrewGroupingToggleWords", []) }
     public static func `commandDevicesTryAgain`() -> String { PhoneWords.format("commandDevicesTryAgain", []) }
     public static func `commandDevicesTryAgainWords`() -> String { PhoneWords.format("commandDevicesTryAgainWords", []) }
     public static func `commandFeedbackStart`() -> String { PhoneWords.format("commandFeedbackStart", []) }
@@ -915,11 +917,14 @@ public enum PhoneMessages {
     public static func `crewFirstmateLabel`(`state`: String) -> String { PhoneWords.format("crewFirstmateLabel", [`state`]) }
     public static func `crewModelNames`() -> String { PhoneWords.format("crewModelNames", []) }
     public static func `crewNextComputers`() -> String { PhoneWords.format("crewNextComputers", []) }
+    public static func `crewNextProjects`() -> String { PhoneWords.format("crewNextProjects", []) }
     public static func `crewOrbitLabel`(`idle`: String, `working`: String) -> String { PhoneWords.format("crewOrbitLabel", [`idle`, `working`]) }
     public static func `crewOutOfReach`() -> String { PhoneWords.format("crewOutOfReach", []) }
     public static func `crewPartsCount`(`finished`: String, `running`: String, `waiting`: String) -> String { PhoneWords.format("crewPartsCount", [`finished`, `running`, `waiting`]) }
     public static func `crewPreviousComputers`() -> String { PhoneWords.format("crewPreviousComputers", []) }
+    public static func `crewPreviousProjects`() -> String { PhoneWords.format("crewPreviousProjects", []) }
     public static func `crewProgramsAndParts`() -> String { PhoneWords.format("crewProgramsAndParts", []) }
+    public static func `crewProjectGroups`() -> String { PhoneWords.format("crewProjectGroups", []) }
     public static func `crewStateIdle`() -> String { PhoneWords.format("crewStateIdle", []) }
     public static func `crewStateWorking`() -> String { PhoneWords.format("crewStateWorking", []) }
     public static func `crewSummaryAnotherTask`() -> String { PhoneWords.format("crewSummaryAnotherTask", []) }
@@ -2443,6 +2448,8 @@ public enum PhoneMessages {
     public static func `phoneSettingsCapabilityRead`(`update`: String) -> String { PhoneWords.format("phoneSettingsCapabilityRead", [`update`]) }
     public static func `phoneSettingsComputerSummary`(`computer`: String, `reach`: String) -> String { PhoneWords.format("phoneSettingsComputerSummary", [`computer`, `reach`]) }
     public static func `phoneSettingsConversationStays`() -> String { PhoneWords.format("phoneSettingsConversationStays", []) }
+    public static func `phoneSettingsCrewGrouping`() -> String { PhoneWords.format("phoneSettingsCrewGrouping", []) }
+    public static func `phoneSettingsCrewGroupingScope`(`computer`: String) -> String { PhoneWords.format("phoneSettingsCrewGroupingScope", [`computer`]) }
     public static func `phoneSettingsDevices`() -> String { PhoneWords.format("phoneSettingsDevices", []) }
     public static func `phoneSettingsFoldSplit`() -> String { PhoneWords.format("phoneSettingsFoldSplit", []) }
     public static func `phoneSettingsFoldSplitScope`() -> String { PhoneWords.format("phoneSettingsFoldSplitScope", []) }
@@ -2990,6 +2997,10 @@ public enum PhoneMessages {
     public static func `settingsAppearanceCardSizeDescription`() -> String { PhoneWords.format("settingsAppearanceCardSizeDescription", []) }
     public static func `settingsAppearanceCardUsual`() -> String { PhoneWords.format("settingsAppearanceCardUsual", []) }
     public static func `settingsAppearanceCardWide`() -> String { PhoneWords.format("settingsAppearanceCardWide", []) }
+    public static func `settingsAppearanceCrewGroupedByComputer`() -> String { PhoneWords.format("settingsAppearanceCrewGroupedByComputer", []) }
+    public static func `settingsAppearanceCrewGroupedByProject`() -> String { PhoneWords.format("settingsAppearanceCrewGroupedByProject", []) }
+    public static func `settingsAppearanceCrewGrouping`() -> String { PhoneWords.format("settingsAppearanceCrewGrouping", []) }
+    public static func `settingsAppearanceCrewGroupingDescription`() -> String { PhoneWords.format("settingsAppearanceCrewGroupingDescription", []) }
     public static func `settingsAppearanceCrewModelNames`() -> String { PhoneWords.format("settingsAppearanceCrewModelNames", []) }
     public static func `settingsAppearanceCrewModelNamesDescription`() -> String { PhoneWords.format("settingsAppearanceCrewModelNamesDescription", []) }
     public static func `settingsAppearanceHeading`() -> String { PhoneWords.format("settingsAppearanceHeading", []) }
@@ -5668,6 +5679,8 @@ extension PhoneWords {
         "commandCommandsSearch": [],
         "commandComputersNext": [],
         "commandComputersPrevious": [],
+        "commandCrewGroupingToggle": [],
+        "commandCrewGroupingToggleWords": [],
         "commandDevicesTryAgain": [],
         "commandDevicesTryAgainWords": [],
         "commandFeedbackStart": [],
@@ -5806,11 +5819,14 @@ extension PhoneWords {
         "crewFirstmateLabel": ["state"],
         "crewModelNames": [],
         "crewNextComputers": [],
+        "crewNextProjects": [],
         "crewOrbitLabel": ["idle", "working"],
         "crewOutOfReach": [],
         "crewPartsCount": ["finished", "running", "waiting"],
         "crewPreviousComputers": [],
+        "crewPreviousProjects": [],
         "crewProgramsAndParts": [],
+        "crewProjectGroups": [],
         "crewStateIdle": [],
         "crewStateWorking": [],
         "crewSummaryAnotherTask": [],
@@ -7334,6 +7350,8 @@ extension PhoneWords {
         "phoneSettingsCapabilityRead": ["update"],
         "phoneSettingsComputerSummary": ["computer", "reach"],
         "phoneSettingsConversationStays": [],
+        "phoneSettingsCrewGrouping": [],
+        "phoneSettingsCrewGroupingScope": ["computer"],
         "phoneSettingsDevices": [],
         "phoneSettingsFoldSplit": [],
         "phoneSettingsFoldSplitScope": [],
@@ -7881,6 +7899,10 @@ extension PhoneWords {
         "settingsAppearanceCardSizeDescription": [],
         "settingsAppearanceCardUsual": [],
         "settingsAppearanceCardWide": [],
+        "settingsAppearanceCrewGroupedByComputer": [],
+        "settingsAppearanceCrewGroupedByProject": [],
+        "settingsAppearanceCrewGrouping": [],
+        "settingsAppearanceCrewGroupingDescription": [],
         "settingsAppearanceCrewModelNames": [],
         "settingsAppearanceCrewModelNamesDescription": [],
         "settingsAppearanceHeading": [],

@@ -1,5 +1,9 @@
 {
+  "placeAs": "as {user}",
   "placeHere": "here",
   "placeOn": "on {computer}",
+  "placeOnOther": "on the other computer",
+  "placeOther": "The other computer",
+  "placeRunningAs": "Running as {user}",
   "placeThisComputer": "this computer"
 }

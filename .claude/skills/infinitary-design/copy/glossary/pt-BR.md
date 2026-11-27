@@ -147,6 +147,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | session (avoided in sentences) | conversa | "sessão" survives only as the crewmate's log name and a search word. |
 | Settings | Ajustes | Follows Apple's Brazilian Portuguese; macOS's own is "Ajustes do Sistema". |
 | sign-in / sign in | login, fazer login | "seu login do GitHub", "faça login de novo". |
+| standing reply (your words kept on a task, which pass its holds) | resposta permanente | Feminine. |
 | start | iniciar, começar | |
 | starter | ponto de partida | |
 | Steer (button) | Orientar |  |
@@ -170,6 +171,7 @@ The plural forms are "one", "many" and "other"; "many" repeats the "other" wordi
 | unmerged work | trabalho não mesclado | What another computer still holds when it is removed: "O trabalho não mesclado dele vem primeiro para este computador". |
 | unsafe data reader | leitor de dados não seguros | A crewmate that reads words anyone can write. |
 | Usage (Settings section) | Uso | The section's name only; never for the allowance. |
+| user (another user account on this computer) | usuário | "as {user}" is "como {user}", as in "Rodando como outro usuário". |
 | where the project lives | onde o projeto fica | "o host do projeto" where the English says the project's host. |
 | window wash | véu da janela | The theme color laid over the blurred background. |
 | working copy | cópia de trabalho | |

@@ -4,7 +4,7 @@ import { AskButton, Block, Words } from "./inspector";
 import { Pager } from "./lists";
 import * as m from "./messages.generated";
 import type { Section } from "./place";
-import { directionOrigin, OP_WORDS, whenOf } from "./words";
+import { directionHeard, directionOrigin, OP_WORDS, whenOf } from "./words";
 
 export function DirectionInspector({
   read,
@@ -105,6 +105,11 @@ export function DirectionInspector({
               <p>{directionOrigin(note.origin)}</p>
               <p className="fm-kb-count">{note.origin}</p>
             </Block>
+            <Block title={m.knowledgePanelHeardTitle()}>
+              <p data-knowledge-direction-heard={note.heard?.from ?? "none"}>
+                {directionHeard(note.heard)}
+              </p>
+            </Block>
             <p className="fm-kb-note">{m.knowledgePanelDirectionNote()}</p>
             <p className="fm-kb-count">
               {m.knowledgePanelDirectionDates({
@@ -138,6 +143,9 @@ export function DirectionInspector({
                   })}
                 </div>
                 <p>{directionOrigin(revision.origin)}</p>
+                <p data-knowledge-direction-heard={revision.heard?.from ?? "none"}>
+                  {directionHeard(revision.heard)}
+                </p>
                 <p>
                   <Words text={revision.text ?? m.knowledgePanelDirectionRetiredRevision()} />
                 </p>

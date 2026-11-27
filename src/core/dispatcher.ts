@@ -53,6 +53,7 @@ import type { OutgoingHomeMove } from "./homeMove/outgoing";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/cardActions";
+import { projectFilterOf } from "./orchestrator/projectFilter";
 import type { OwnWindow } from "./ownWindow";
 import { appPanelGatesOf, appPanelsFor, appPanelVersion } from "./personal/appPanelsServed";
 import { panelChange } from "./personal/panelChange";
@@ -302,7 +303,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     }),
     "inf:converse": async (turn) => {
       // Acceptance (including thread replies) stamps first-run state inside Firstmate.
-      await services.firstmate.converse(prepareComposerTurn(turn));
+      const projectFilter = projectFilterOf(turn, services.captainPlaces.fromPhone());
+      await services.firstmate.converse({ ...prepareComposerTurn(turn), projectFilter });
       return { ok: true as const };
     },
     "inf:conversation:take-back": ({ askId }) => services.firstmate.takeBack(askId),
@@ -752,20 +754,13 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     // A reply never moves its card (docs/card-threads.md); an older view's
     // fourth argument, whether the card was leaving, is read no more.
-    "inf:cards:reply": (cardId, payload, submission) => {
-      if (typeof payload === "string") {
-        return services.supervisor.cardActions.replyToCard(cardId, payload, undefined, submission);
-      }
-      return services.supervisor.cardActions.replyToCard(
+    "inf:cards:reply": (cardId, payload, submission) =>
+      services.supervisor.cardActions.replyFromView(
         cardId,
-        payload.text ?? "",
-        payload.images,
+        payload,
         submission,
-        payload.answers,
-        payload.files,
-        payload.notes,
-      );
-    },
+        projectFilterOf(payload, services.captainPlaces.fromPhone()),
+      ),
 
     "inf:app:first-run": () => services.firstRun.view(),
     "inf:app:first-run:crew-word": (word) => services.firstRun.noteCrewWord(word),

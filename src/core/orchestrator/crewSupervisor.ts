@@ -644,6 +644,7 @@ export class CrewSupervisor {
         this.integrationAsks.askForge(taskId, ask, dropped);
       },
       startNow: (key) => this.starts.startQueuedNow(key, { audience: "captain" }),
+      notifyOp: (wake, origin, ref) => this.hooks.notifyOp(wake, origin, ref),
       now: this.now,
     });
     this.reportIntake = new ReportIntake(options, {
@@ -1356,6 +1357,11 @@ export class CrewSupervisor {
       before,
       mergeSent: this.settling.locks.mergeWasSent(taskId),
     });
+  }
+
+  /** The work a task waits on, as the idle ladder reads it, for the Heartbeat's standing list. */
+  get waits(): Pick<IdleLadder, "unstartedWaits" | "underwayWaits"> {
+    return this.ladder;
   }
 
   /**

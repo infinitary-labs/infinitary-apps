@@ -2787,6 +2787,222 @@
       <string>المعرفة: %1$ld</string>
     </dict>
   </dict>
+  <key>recordPartsClosedFold</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld جزء مغلق</string>
+      <key>one</key>
+      <string>%1$ld جزء مغلق</string>
+      <key>two</key>
+      <string>%1$ld جزآن مغلقان</string>
+      <key>few</key>
+      <string>%1$ld أجزاء مغلقة</string>
+      <key>many</key>
+      <string>%1$ld جزءًا مغلقًا</string>
+      <key>other</key>
+      <string>%1$ld جزء مغلق</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountBacklog</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld في المهام المؤجلة لديك</string>
+      <key>one</key>
+      <string>%1$ld في المهام المؤجلة لديك</string>
+      <key>two</key>
+      <string>%1$ld في المهام المؤجلة لديك</string>
+      <key>few</key>
+      <string>%1$ld في المهام المؤجلة لديك</string>
+      <key>many</key>
+      <string>%1$ld في المهام المؤجلة لديك</string>
+      <key>other</key>
+      <string>%1$ld في المهام المؤجلة لديك</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountIdle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld خامل</string>
+      <key>one</key>
+      <string>%1$ld خامل</string>
+      <key>two</key>
+      <string>%1$ld خامل</string>
+      <key>few</key>
+      <string>%1$ld خامل</string>
+      <key>many</key>
+      <string>%1$ld خامل</string>
+      <key>other</key>
+      <string>%1$ld خامل</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountInterrupted</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld متوقف</string>
+      <key>one</key>
+      <string>%1$ld متوقف</string>
+      <key>two</key>
+      <string>%1$ld متوقف</string>
+      <key>few</key>
+      <string>%1$ld متوقف</string>
+      <key>many</key>
+      <string>%1$ld متوقف</string>
+      <key>other</key>
+      <string>%1$ld متوقف</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountQueued</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld في قائمة الانتظار</string>
+      <key>one</key>
+      <string>%1$ld في قائمة الانتظار</string>
+      <key>two</key>
+      <string>%1$ld في قائمة الانتظار</string>
+      <key>few</key>
+      <string>%1$ld في قائمة الانتظار</string>
+      <key>many</key>
+      <string>%1$ld في قائمة الانتظار</string>
+      <key>other</key>
+      <string>%1$ld في قائمة الانتظار</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountStarting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld قيد البدء</string>
+      <key>one</key>
+      <string>%1$ld قيد البدء</string>
+      <key>two</key>
+      <string>%1$ld قيد البدء</string>
+      <key>few</key>
+      <string>%1$ld قيد البدء</string>
+      <key>many</key>
+      <string>%1$ld قيد البدء</string>
+      <key>other</key>
+      <string>%1$ld قيد البدء</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld ينتظرك</string>
+      <key>one</key>
+      <string>%1$ld ينتظرك</string>
+      <key>two</key>
+      <string>%1$ld ينتظرك</string>
+      <key>few</key>
+      <string>%1$ld ينتظرك</string>
+      <key>many</key>
+      <string>%1$ld ينتظرك</string>
+      <key>other</key>
+      <string>%1$ld ينتظرك</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountWorking</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>%1$ld قيد العمل</string>
+      <key>one</key>
+      <string>%1$ld قيد العمل</string>
+      <key>two</key>
+      <string>%1$ld قيد العمل</string>
+      <key>few</key>
+      <string>%1$ld قيد العمل</string>
+      <key>many</key>
+      <string>%1$ld قيد العمل</string>
+      <key>other</key>
+      <string>%1$ld قيد العمل</string>
+    </dict>
+  </dict>
+  <key>recordPartsOpen</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>zero</key>
+      <string>بانتظار %1$@ من أجزائها الـ %2$ld</string>
+      <key>one</key>
+      <string>بانتظار %1$@ من جزئها الواحد</string>
+      <key>two</key>
+      <string>بانتظار %1$@ من جزأيها الاثنين</string>
+      <key>few</key>
+      <string>بانتظار %1$@ من أجزائها الـ %2$ld</string>
+      <key>many</key>
+      <string>بانتظار %1$@ من أجزائها الـ %2$ld</string>
+      <key>other</key>
+      <string>بانتظار %1$@ من أجزائها الـ %2$ld</string>
+    </dict>
+  </dict>
   <key>recordShowEarlier</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

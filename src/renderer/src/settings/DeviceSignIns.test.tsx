@@ -1,4 +1,5 @@
 import type { AccountView } from "@shared/accounts";
+import { inLanguage } from "@shared/i18n/current";
 import {
   KEYCHAIN_VALUE_FAILURE_DETAIL,
   KEYCHAIN_VALUE_FAILURE_THERE,
@@ -9,6 +10,7 @@ import {
   deviceSignInFlowSchema,
   returnsToLoopback,
   signInPlace,
+  wordedPlace,
 } from "@shared/signIns";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
@@ -48,12 +50,43 @@ function render(flow: Partial<Flow>, place = MINI, providerName = "Codex") {
 
 describe("a sign-in on a computer that runs work", () => {
   it("names another Mac by its name, and another user on this Mac as the design does", () => {
-    expect(MINI).toEqual({ label: "Mac mini", where: "on Mac mini", who: "Mac mini" });
-    expect(BUILDER).toEqual({
+    expect(wordedPlace(MINI)).toEqual({ label: "Mac mini", where: "on Mac mini", who: "Mac mini" });
+    expect(wordedPlace(BUILDER)).toEqual({
       label: "Running as Builder",
       where: "as Builder",
       who: "Builder",
     });
+    expect(MINI).toMatchObject(wordedPlace(MINI));
+    expect(BUILDER).toMatchObject(wordedPlace(BUILDER));
+  });
+
+  it("says where the sign-in goes in the window's own language", () => {
+    const html = inLanguage("de", () =>
+      renderToStaticMarkup(
+        <DeviceSignInAside
+          flow={deviceSignInFlowSchema.parse({
+            signInId: "s1",
+            deviceId: "builder",
+            providerId: "openrouter",
+            target: "account",
+            phase: "running",
+            prompt: {
+              promptId: "p1",
+              providerId: "openrouter",
+              kind: "secret",
+              message: "Enter key",
+            },
+          })}
+          providerName="OpenRouter"
+          place={wordedPlace(BUILDER)}
+          onThisMac
+          onAnswer={noop}
+          onStop={noop}
+        />,
+      ),
+    );
+    expect(html).toContain("Bei OpenRouter als Builder anmelden");
+    expect(html).not.toContain("as Builder");
   });
 
   it("asks for a key for that computer, and says where it goes and that nothing stays here", () => {

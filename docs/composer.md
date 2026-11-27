@@ -187,6 +187,7 @@ A round is one thing the captain did and what came back: a message and the reply
   A message withdrawn before any turn read it gets a typed line from the core (`withdrawn` on the reply, `TakeBacks`), which the window words Reverted before your first mate read it; a message a turn was reading keeps no line until the undo turn's arrives.
   A line whose `askId` names neither round is not drawn.
   A round from a core without the change carries no `askId` or `sentAt`, and draws no revert icon.
+  The iPhone and iPad app offers the same take back and replacement: the revert icon beside the newest bubble, and a long press on it for Revert your last message and Edit your last message, which recalls the words as Up does (`docs/ios.md`, "Talk and tasks").
 - **What stays.**
   A message sent becomes the newest round at once (`user_turn`, which carries its `askId` and `sentAt`, so a message sent from a card, the command or the phone can be taken back too), the round it follows becomes the older one, and the round before that leaves; one sent while the first mate is busy keeps the spinning mark.
   A new card round does the same once the strip reads it.

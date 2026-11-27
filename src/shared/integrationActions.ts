@@ -122,13 +122,13 @@ export const integrationLines = {
         throw new Error(`${name} cannot be signed in to in this version of the app.`);
       return {
         cardId: `app-integration-add-${kind}`,
-        title: `Connect ${name}`,
+        title: m.integrationsConnectOfferTitle({ name }),
         paragraphs: [
-          `Your first mate and your crew can then reach ${name} with your sign-in: reads run, and every change asks you on a card first.`,
-          `Open Integrations to sign in to ${name}.`,
+          m.integrationsConnectOfferBody({ name }),
+          m.integrationsConnectOfferOpen({ name }),
         ],
-        label: "Open Integrations",
-        decline: "Not now",
+        label: m.integrationsConnectOfferButton(),
+        decline: m.integrationsConnectOfferNotNow(),
         // GitHub's sign-in is the forge's, by its host; any other kind signs in by its kind.
         arrival: {
           signIn: v.host

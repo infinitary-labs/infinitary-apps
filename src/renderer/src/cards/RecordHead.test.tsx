@@ -280,6 +280,70 @@ describe("the head above the goal", () => {
     ).toBe("");
   });
 
+  // INF-6805: "there's no way to see children parts", and "the parts list
+  // should be foldable".
+  it("lists a parent's parts in filing order in a fold, each with its word", () => {
+    const merged = task({
+      id: "p1",
+      key: "DEMO-51",
+      title: "Plan the import",
+      status: "done",
+      activity: null,
+      closedReason: "merged",
+    });
+    const open = task({
+      id: "p2",
+      key: "DEMO-52",
+      title: "Bring secrets",
+      status: "open",
+      activity: null,
+      startPolicy: "on-request",
+    });
+    const answered = task({
+      id: "p3",
+      key: "DEMO-53",
+      title: "Ask about vaults",
+      status: "done",
+      activity: null,
+      closedReason: "answered",
+    });
+    const parts = (list: TaskDetail[], open = true) =>
+      renderToStaticMarkup(
+        <RecordRelations
+          detail={task({
+            children: {
+              total: list.length,
+              closed: list.filter((p) => p.status === "done").length,
+            },
+            parts: list,
+          })}
+          parentKey={undefined}
+          partsOpen={open}
+        />,
+      );
+    const html = parts([merged, open, answered]);
+    const rows = [...html.matchAll(/data-record-part="([^"]+)"/g)].map((match) => match[1]);
+    expect(rows).toEqual(["DEMO-51", "DEMO-52", "DEMO-53"]);
+    expect(textOf(find(html, "data-record-fact"))).toBe("2 of 3 closed");
+    expect(html).toMatch(/Plan the import.*DEMO-51.*Merged/);
+    expect(html).toMatch(/Bring secrets.*DEMO-52.*Backlog/);
+    expect(html).toMatch(/Ask about vaults.*DEMO-53.*Answered/);
+    expect(find(html, "data-record-parts")?.attribs?.open).toBeDefined();
+    expect(find(parts([merged, open], false), "data-record-parts")?.attribs?.open).toBeUndefined();
+    // Past eight parts, the closed ones fold behind one counted line; the open ones always show.
+    const closed = Array.from({ length: 8 }, (_, index) =>
+      task({ ...merged, id: `c${index}`, key: `DEMO-6${index}` }),
+    );
+    const many = parts([...closed, open]);
+    expect(textOf(find(many, "data-record-parts-closed"))).toBe("8 closed parts");
+    expect([...many.matchAll(/data-record-part="([^"]+)"/g)].map((match) => match[1])).toEqual([
+      "DEMO-52",
+    ]);
+    const eight = parts([...closed.slice(1), open]);
+    expect(find(eight, "data-record-parts-closed")).toBeUndefined();
+    expect([...eight.matchAll(/data-record-part=/g)]).toHaveLength(8);
+  });
+
   // INF-6426's piece A: the record keeps the outside issue a task answers as a
   // typed link, shown on its Info tab.
   it("links the outside issue the task answers under Issue", () => {

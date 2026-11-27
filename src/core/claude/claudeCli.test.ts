@@ -127,6 +127,27 @@ describe("resolveClaudeExecutable: the installed client (F14)", () => {
     expect(installed).toBeTruthy();
   });
 
+  /**
+   * The Windows report behind INF-7031: `npm install -g @anthropic-ai/claude-code`
+   * leaves only the launchers `claude`, `claude.cmd` and `claude.ps1` in npm's
+   * folder (%APPDATA%\npm), which a spawn without a shell cannot start, and the
+   * client itself under that folder's node_modules. The layout is the one the
+   * reproduction listed on a fresh Windows profile with npm 11.19.1.
+   */
+  it("finds the client npm install -g put beside its launchers, never the launchers", () => {
+    const home = tree();
+    const npm = join(home, "AppData", "Roaming", "npm");
+    for (const launcher of ["claude", "claude.cmd", "claude.ps1"]) {
+      mkdirSync(npm, { recursive: true });
+      writeFileSync(join(npm, launcher), "@ECHO off\n");
+    }
+    const installed = client(
+      join(npm, "node_modules", "@anthropic-ai", "claude-code", "bin", "claude.exe"),
+    );
+    const env = { ...hermetic(home), PATH: npm };
+    expect(resolveClaudeExecutable(env, { homes: [] })).toBe(installed);
+  });
+
   it("ignores a directory or an unexecutable file named like the client", () => {
     const home = tree();
     mkdirSync(join(home, "dir", "claude"), { recursive: true });

@@ -155,7 +155,7 @@ test("a started crewmate idle on one blocker circles it past queued work, and it
     await expect(summary.locator(`[data-crew-blocked-wait="${blocker.key}"]`)).toHaveText(
       blocker.key,
     );
-    // The exact recorded date, with the unknown end time (INF-2215), is the task card's.
+    // The exact recorded date is the task card's (INF-2215).
     const dependency = waiter.waits?.find((wait) => wait.kind === "dependency");
     if (!dependency) throw new Error("Missing the standing dependency wait");
     expect(dependency.since).toBe(since);
@@ -175,7 +175,9 @@ test("a started crewmate idle on one blocker circles it past queued work, and it
     if (!grouped) throw new Error("Missing grouped tile wait");
     await expect(tile.locator("[data-board-status]")).toContainText(reading.word);
     await expect(tile.locator("[data-board-wait]")).toContainText(grouped.names);
-    await expect(tile.locator("[data-board-wait]")).toContainText(grouped.event);
+    // INF-6805: a wait with no recorded event shows no time, never "time unknown".
+    expect(grouped.event).toBeNull();
+    await expect(tile.locator("[data-board-wait-event]")).toHaveCount(0);
     await expect(tile.locator("[data-board-wait-since]")).toHaveCount(0);
     await hideBoard(page).click();
     await expect(boardsOnStage(page)).toHaveCount(0);

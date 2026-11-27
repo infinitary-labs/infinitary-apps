@@ -1,5 +1,5 @@
 ---
-source: e0f16d58d735b925
+source: c51b6ca36743cf77
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -134,7 +134,12 @@ Mientras un proyecto está en el centro:
 - Las tarjetas de otros proyectos esperan hasta que cambie el centro.
   No se cierra nada, y todos los proyectos siguen enviando notificaciones.
 - Una línea corta junto a la píldora dice cuántas tareas te esperan en otros lugares, como «2 esperando en otro lugar».
-- Tu primer oficial pone el trabajo nuevo que pides en ese proyecto, a menos que nombres otro.
+- Tu primer oficial conoce el enfoque con cada mensaje que envías.
+  A menos que nombres otro proyecto, pone el trabajo nuevo en ese proyecto, y sus respuestas y sus acciones sobre muchas tareas cubren solo ese proyecto y dicen lo que dejaron fuera.
+
+Para ver dónde corre el trabajo de un proyecto sin concentrarte en él, apunta a un tripulante en el centro de la ventana, o tócalo en tu teléfono.
+Mientras su resumen está abierto, cada tripulante de otro proyecto baja a una cuarta parte de su luz, en cada computadora, y nadie se mueve.
+Cierra el resumen y la luz vuelve.
 
 Presiona la **×** junto a la píldora (**Mostrar todos los proyectos**), o elige **Todos los proyectos** en la fila, para volver a ver todo.
 Infinitary recuerda tu centro cuando lo reinicias.
@@ -172,6 +177,7 @@ Cambia la línea y pulsa **Guardar**, o desactiva el interruptor para no incluir
 
 Quitarlo saca el proyecto de la lista.
 Su carpeta y sus tareas terminadas se quedan.
+Si lo vuelves a agregar, se usa la carpeta que dejó en tu carpeta de proyectos en lugar de clonar una segunda copia, y el proyecto empieza de nuevo con la configuración predeterminada.
 Si el proyecto todavía tiene tareas, Infinitary las nombra, y primero las terminas o las abandonas.
 
 En un proyecto de varios repositorios, **Quitar** saca el repositorio cuya pestaña está elegida, y el proyecto conserva los demás.

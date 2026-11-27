@@ -16,6 +16,7 @@ import {
   type SavedKeymap,
   type SavedKeymapRead,
 } from "@shared/keymap";
+import { findOwnTheme, noOwnTheme } from "@shared/ownColorThemes";
 import type { KeySystem } from "@shared/platform";
 import { type ReadName, readCatalog } from "@shared/reads";
 import { DEFAULT_USAGE_QUERY, USAGE_TASK_PAGE } from "@shared/usage";
@@ -145,6 +146,19 @@ export const APP_READS = {
       const style = findOwnStyle(saved, name);
       if (!style) throw new Error(noOwnStyle(name, saved));
       return style;
+    },
+  },
+  "theme.own-theme": {
+    // i18n-exempt: served to the first mate, a model, never shown
+    about:
+      "One of the person's own color themes, whole, by its name or id, as the own-theme line's current value names them: its name and six colors, as asked. Read it before saving it changed.",
+    args: ownStyleArgs,
+    run: async (dispatch, args) => {
+      const { name } = ownStyleArgs.parse(args);
+      const saved = (await dispatch("inf:settings:appearance:get", [])).ownColorThemes ?? [];
+      const theme = findOwnTheme(saved, name);
+      if (!theme) throw new Error(noOwnTheme(name, saved));
+      return theme;
     },
   },
   "runbooks.crew": {

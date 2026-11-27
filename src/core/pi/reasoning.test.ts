@@ -1,5 +1,12 @@
+import { reasoningWord } from "@shared/reasoning";
 import { describe, expect, it } from "vitest";
 import { claudeCodingReasoning, claudeReasoningCapabilities } from "../claude/reasoning";
+import {
+  customCapabilities,
+  customCatalog,
+  customPiModel,
+  customStatedCapabilities,
+} from "./customApiModels";
 import { clampThinkingLevel, piReasoningCapabilities } from "./reasoning";
 import type { ModelRuntime } from "./types";
 
@@ -59,4 +66,38 @@ describe("backend-owned reasoning choices", () => {
       ).toEqual({ level: "medium", lower: "quick" });
     }
   });
+});
+
+// INF-7003: GLM-5.3 on a custom connection offers Low, High and Max, and the
+// app dropped Max, so requests were held at High. Max is its own choice above
+// Extra high (the captain's pick), and Extra high stays off a model without it.
+describe("a model whose top reasoning level is Max", () => {
+  const limits = { context: 200_000, output: 32_000 };
+  const glm = (capabilities: ReturnType<typeof customStatedCapabilities>) =>
+    customPiModel({ protocol: "openai-completions", model: "glm-5.3", limits, capabilities });
+  for (const [name, model] of [
+    [
+      "the catalog's zai/glm-5.3 profile",
+      () => glm(customCapabilities("openai-completions", "zai/glm-5.3", customCatalog())),
+    ],
+    [
+      "a connection file's stated levels",
+      () =>
+        glm(
+          customStatedCapabilities("openai-completions", {
+            thinkingLevelMap: { low: "low", medium: null, high: "high", xhigh: null, max: "max" },
+            compat: { thinkingFormat: "zai" },
+          }),
+        ),
+    ],
+  ] as const) {
+    it(`offers and opens at Max through ${name}`, () => {
+      const def = model();
+      const r = { getModel: () => def } as unknown as ModelRuntime;
+      expect(piReasoningCapabilities(def)).toEqual({ levels: ["low", "high", "max"] });
+      expect(clampThinkingLevel(ref, r, "max")).toEqual({ level: "max" });
+      expect(clampThinkingLevel(ref, r, "xhigh")).toEqual({ level: "high", lower: "capped" });
+      expect(reasoningWord({ level: "max" })).toBe("Max");
+    });
+  }
 });

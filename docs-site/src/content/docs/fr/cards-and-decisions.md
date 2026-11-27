@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 6359195aeec7c814
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -52,12 +52,13 @@ Cliquer dans la carte n’envoie jamais rien à lui seul.
 
 ## Le champ de réponse et le fil {#the-reply-field-and-the-thread}
 
-Chaque carte de votre second ou d’un équipier a, sous son corps, un champ qui indique « quelque chose à ajouter ? ».
+Chaque carte a, sous son corps, un champ qui indique « quelque chose à ajouter ? », sauf la carte de bienvenue et les cartes affichées pendant que votre second est arrêté.
 
 - Tapez-y et appuyez sur **Discuter** pour envoyer une réponse sans choisir.
 - Tapez-y et appuyez sur un choix pour envoyer vos mots avec ce choix.
 
 Une réponse va à celui qui a écrit la carte.
+Sur une carte qu’Infinitary affiche lui-même, une réponse va à l’équipier qui l’a demandée, sinon à votre second.
 La première réponse ouvre un fil à côté de la carte, et l’auteur y répond.
 Quand l’auteur modifie la carte en réponse, la carte est révisée sur place, et le fil le signale.
 Pour replier le fil dans la carte, appuyez sur ⌘\ (Ctrl+\ sous Linux et Windows).

@@ -5,7 +5,9 @@
  * - a pull request from one of this project's own branches, the crew's and
  *   the merge batches', passes at once;
  * - an outside pull request passes when its description carries Infinitary's
- *   Careful record for its newest version (`readRecord`);
+ *   Careful record for its newest version (`readRecord`), or for an earlier
+ *   version the maintainer's crew brought up to date to the newest one
+ *   (`crewUpdates`);
  * - otherwise it fails and keeps one comment, edited in place, saying how to
  *   raise the pull request with Infinitary at the Careful rigor level.
  *
@@ -40,6 +42,16 @@ const REQUIRED_STEPS = ["review", "test", "document"];
 const MARK = "<!-- careful-review-check -->";
 /** The account the workflow's token writes as, the only author of the check's comment. */
 const BOT = "github-actions[bot]";
+/**
+ * The mark the maintainer's crew ends its comment with before it pushes an
+ * update to the author's own branch (docs/outside-intake.md, "Carrying it
+ * to the merge"): the version the update starts from and the version it pushes.
+ */
+const UPDATE_MARK = /<!-- infinitary-crew-update v1 from=([0-9a-f]{40}) to=([0-9a-f]{40}) -->/g;
+/** GitHub's collaborator permissions that can write to the project. */
+const WRITERS = new Set(["admin", "write"]);
+/** At most this many updates in a row, so a cycle of marks ends. */
+const MOST_UPDATES = 20;
 
 /**
  * Why a description's record does not pass, as one short status line and a
@@ -136,14 +148,59 @@ export function readRecord(body, head) {
   return { ok: true, live: { verdict, live: live.live, total: live.total } };
 }
 
+/** Every update a comment's marks name, as `{from, to}` pairs. */
+export function readUpdates(body) {
+  return [...String(body ?? "").matchAll(UPDATE_MARK)].map((match) => ({
+    from: match[1],
+    to: match[2],
+  }));
+}
+
+/**
+ * Whether the crew's updates lead from `named`, the version the author's
+ * record names, to `head`, each named by a comment from an account that can
+ * write. Commit authorship is never read: a contributor can write any name on
+ * a commit, but cannot write a comment as an account that can write.
+ */
+async function crewUpdates({ github, owner, repo, comments, named, head }) {
+  const marked = comments
+    .map((comment) => ({ login: comment.user?.login, updates: readUpdates(comment.body) }))
+    .filter((each) => each.login && each.updates.length > 0);
+  const writes = new Map();
+  const canWrite = async (login) => {
+    if (!writes.has(login)) {
+      const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+        owner,
+        repo,
+        username: login,
+      });
+      writes.set(login, WRITERS.has(data.permission));
+    }
+    return writes.get(login);
+  };
+  const next = new Map();
+  for (const each of marked) {
+    if (!(await canWrite(each.login))) continue;
+    for (const update of each.updates) next.set(update.from, update.to);
+  }
+  let at = named;
+  for (let step = 0; step < MOST_UPDATES && next.has(at); step += 1) {
+    at = next.get(at);
+    if (at === head) return true;
+  }
+  return false;
+}
+
 /** A version as inert Markdown: only its first twelve hexadecimal characters, in a code span. */
 const version = (sha) => `\`${String(sha ?? "").replace(/[^0-9a-f]/gi, "").slice(0, 12) || "none"}\``;
 
 /** The status line for a verdict, at most 140 characters. */
 export function statusLine(verdict) {
-  const line = verdict.ok
-    ? `Infinitary's Careful record covers this version: live validation ${verdict.live.verdict}, ${verdict.live.live} of ${verdict.live.total} passed live.`
-    : PROBLEMS[verdict.problem].status;
+  const line = !verdict.ok
+    ? PROBLEMS[verdict.problem].status
+    : verdict.updatedFrom
+      ? `The Careful record covers ${verdict.updatedFrom.slice(0, 12)}, brought up to date by the maintainer's crew: ${verdict.live.verdict}, ${verdict.live.live} of ${verdict.live.total} live.`
+      : `Infinitary's Careful record covers this version: live validation ${verdict.live.verdict}, ${verdict.live.live} of ${verdict.live.total} passed live.`;
   return line.length > 140 ? `${line.slice(0, 139)}…` : line;
 }
 
@@ -205,20 +262,31 @@ export async function check({ github, context, core, pullNumber }) {
     await status("success", "A pull request from this project's own branch needs no record.");
     return "own branch";
   }
-  const verdict = readRecord(pull.body, head);
-  const outcome = verdict.ok ? "passed" : `failed: ${verdict.problem}`;
+  const comments = await github.paginate(github.rest.issues.listComments, {
+    owner,
+    repo,
+    issue_number: number,
+    per_page: 100,
+  });
+  let verdict = readRecord(pull.body, head);
+  if (
+    !verdict.ok &&
+    verdict.problem === "another version" &&
+    (await crewUpdates({ github, owner, repo, comments, named: verdict.named, head }))
+  ) {
+    const earlier = readRecord(pull.body, verdict.named);
+    if (earlier.ok) verdict = { ...earlier, updatedFrom: verdict.named };
+  }
+  const outcome = !verdict.ok
+    ? `failed: ${verdict.problem}`
+    : verdict.updatedFrom
+      ? "passed: crew update"
+      : "passed";
   core.summary.addRaw(`#${number} at ${version(head)}: ${statusLine(verdict)}\n`);
   await core.summary.write();
   if (own) return `read ${outcome}`;
 
-  const comment = (
-    await github.paginate(github.rest.issues.listComments, {
-      owner,
-      repo,
-      issue_number: number,
-      per_page: 100,
-    })
-  ).find((each) => each.user?.login === BOT && each.body?.startsWith(MARK));
+  const comment = comments.find((each) => each.user?.login === BOT && each.body?.startsWith(MARK));
   const write = async (body) => {
     if (comment?.body === body) return;
     if (comment)

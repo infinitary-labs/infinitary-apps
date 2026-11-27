@@ -1,4 +1,5 @@
 import { expect, type FrameLocator, type Page } from "@playwright/test";
+import { renderWake } from "../../src/core/orchestrator/wakes";
 import {
   cardBuildRowIssue,
   cardBuildRowLater,
@@ -128,4 +129,42 @@ export async function expectBuildRowFiled(page: Page, requests: string[]): Promi
     number: row.issue,
     url: expect.stringMatching(BUILD_ROW_ISSUE_PATH),
   });
+}
+
+/**
+ * INF-6845's approved plan, piece 2: "When a reader's work row is filed, the
+ * first mate's notice names the item's address the app already verified."
+ * Keep for later reaches the first mate's next turn naming the filed task and
+ * the reader by key and the address the app read for the issue, which the
+ * record keeps as the task's typed link; `provider` is the scripted one.
+ */
+export async function expectBuildRowNotice(
+  page: Page,
+  readerId: string,
+  provider: { requestBodies(): string[] } | undefined,
+): Promise<string> {
+  const filed = await buildRowTask(page);
+  if (!filed) throw new Error("The captain's click filed no Build row task");
+  const [detail, reader] = await page.evaluate(
+    (ids) => Promise.all(ids.map((taskId) => window.infinitary.tasks.detail(taskId))),
+    [filed.id, readerId],
+  );
+  const url = detail?.issue?.url ?? "";
+  expect(url).toMatch(BUILD_ROW_ISSUE_PATH);
+  const notice = renderWake({
+    facts: {
+      kind: "build-row-filed",
+      task: { id: filed.id, key: filed.key },
+      reader: { id: readerId, key: reader?.key || readerId },
+      issue: UNSAFE_DATA_READER_BUILD_ROW.issue,
+      url,
+      start: false,
+    },
+  });
+  await expect
+    .poll(() => firstmateTurnWith(provider?.requestBodies() ?? [], notice) !== undefined, {
+      timeout: 45_000,
+    })
+    .toBe(true);
+  return notice;
 }

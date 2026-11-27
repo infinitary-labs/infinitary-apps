@@ -39,13 +39,14 @@ Nothing else works until a subscription can answer your first mate.
 ## Connect a subscription
 
 Choose **This computer** to keep your first mate here.
-A button appears for each provider your first mate can use: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock and Custom API.
+A button appears for each provider your first mate can use: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock and Custom API.
 
 1. Pick your provider's button.
 2. Sign in the way that provider asks.
    Some open the sign-in page in your browser.
    Copilot and Kimi Code show a code: press **Copy code**, then enter it on the provider's site.
    OpenRouter takes an API key you paste.
+   OpenCode Go takes the key you paste from the OpenCode Console.
    With Amazon Bedrock, choose a region and use an AWS profile on this computer or paste a Bedrock API key.
    A provider that offers both asks whether to **Sign in with your browser** or paste an **API key**.
 3. Wait while the window says it is connecting.
@@ -165,8 +166,8 @@ Press **Got it** to put it away whenever you like.
 
 The first time your first mate hands an ask to a crewmate, a card titled **A crewmate is on it** appears.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="The A crewmate is on it card: the first mate sending a crewmate off, a Now panel saying a crewmate works and there is no need to watch it, a Later panel saying a card comes back here with an answer or a choice, and Got it." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="The A crewmate is on it card: the first mate sending a crewmate off, a Now panel saying a crewmate works and there is no need to watch it, a Later panel saying a card comes back here with an answer or a choice, and Got it." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="The A crewmate is on it card: the first mate sending a crewmate off, a Now panel saying a crewmate works and there is no need to watch it, a Later panel saying a card comes back here with an answer or a choice, and Got it." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="The A crewmate is on it card: the first mate sending a crewmate off, a Now panel saying a crewmate works and there is no need to watch it, a Later panel saying a card comes back here with an answer or a choice, and Got it." width="1163" height="654" />
 
 It says the crewmate works in the background, which can take a while, and that you need not watch it.
 When the crewmate has an answer, or needs you to choose, it comes back as a card.

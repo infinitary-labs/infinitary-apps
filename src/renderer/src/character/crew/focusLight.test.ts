@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type FocusLightState, lightFrame, OUT_OF_FOCUS_LIGHT } from "./focusLight";
+import { type FocusLightState, lightFrame, OUT_OF_FOCUS_LIGHT, restedLight } from "./focusLight";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
 
 /**
@@ -64,5 +64,36 @@ describe("lightFrame", () => {
     expect(alphaOf(dim, "t-app")).toBeCloseTo(full * OUT_OF_FOCUS_LIGHT);
     const back = lightFrame(frame, { project: null, projectOf }, state, 1, 0);
     expect(alphaOf(back, "t-app")).toBe(full);
+  });
+});
+
+// INF-6951, the captain's approved plan: while a crewmate's summary is open,
+// the stage lights that crewmate's project with the same light, nothing moved.
+describe("restedLight", () => {
+  it("lights the project of the crewmate whose summary is open", () => {
+    const frame = ring();
+    const lit = lightFrame(
+      frame,
+      restedLight({ project: null, projectOf }, "t-app"),
+      new Map(),
+      0,
+      0,
+    );
+    expect(alphaOf(lit, "t-app")).toBe(alphaOf(frame, "t-app"));
+    expect(alphaOf(lit, "t-site-1")).toBeCloseTo(
+      (alphaOf(frame, "t-site-1") ?? 0) * OUT_OF_FOCUS_LIGHT,
+    );
+  });
+
+  it("gives way over a held focus while the summary is open, and puts it back after", () => {
+    const held = { project: "p-site", projectOf };
+    expect(restedLight(held, "t-app").project).toBe("p-app");
+    expect(restedLight(held, null).project).toBe("p-site");
+  });
+
+  it("keeps the window's light for a crewmate whose project the board does not name", () => {
+    const held = { project: "p-site", projectOf };
+    expect(restedLight(held, "t-unknown").project).toBe("p-site");
+    expect(restedLight({ project: null, projectOf }, "t-unknown").project).toBeNull();
   });
 });

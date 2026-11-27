@@ -25,7 +25,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   On the first mate's own computer, Work in a folder on my computer opens the system's folder picker instead and adds the chosen folder as a project; a quiet line under the card's title then names it and points at the message box, where focus goes, and a refusal takes the card's error line.
   The note has the shared minimize corner and no reply row; on a first installation no What's new card follows it, and the Tasks panel shows collapsed on the right from its creation on.
   When a new person's first crewmate starts, the app shows one more note, once, titled "A crewmate is on it" (INF-5532; copy in the app's `src/shared/firstCrewmateNote.ts`): one sentence on the handoff, a 180 px stage where the real first mate sends the crewmate off into its orbit (INF-5609), two wrapping text panels side by side - Now, beside the real crewmate at 40 px, working, and Later, beside a card on `--accent-dim` with an `--accent` border - then two sentences saying cards are the only part that needs the person and the card can be put away.
-  Regular width, no reply row, one Got it; a welcome still open steps aside for it.
+  Regular width, a reply row the first mate answers, one Got it; a welcome still open steps aside for it.
   Older installations and preconfigured starts are skipped; pending survives restart, creation is atomic and once-only, dismissal stays final, and an accepted first ask skips any still-uncreated introduction.
   A paused account alone does not qualify.
   Existing cards stay shown, and focus and panel choices stay unchanged.
@@ -100,7 +100,7 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Once three of the captain's crewmates have finished their tasks and the captain has no panel of their own, the left rail opens with the create-your-own-panel slot, an empty dashed outline that invites one (`components/panel/Panel.prompt.md`); a panel of the captain's that names no place lands there.
   A panel declares its size: `content` hugs what it shows, `fill` takes the rail height its siblings leave.
   The app never attributes its own panels; a third party's panel carries its name in the header.
-- **Subscriptions** - users add AI subscriptions (Claude, Codex, Grok, Kimi Code, Copilot) and connect OpenRouter with a browser sign-in or API key.
+- **Subscriptions** - users add AI subscriptions (Claude, Codex, Grok, Kimi Code, Copilot, OpenCode Go) and connect OpenRouter with a browser sign-in or API key.
   The app discovers each subscription's models; you place them in four slots - premium, high, medium, low - and a starter placement is filled in when a subscription connects; it routes tasks by slot and remaining quota.
   Users can override model choice.
 - **Where your projects live** - the app's own sign-ins to the places projects live (GitHub, GitHub Enterprise and GitLab), and each other computer's own GitHub sign-in, all in Settings -> Integrations (`components/projects/ForgeRow`, `components/integrations/IntegrationRow`): a chip row and a browser-code aside like the subscriptions'; Settings -> Projects holds no sign-in.
@@ -197,6 +197,9 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   Exactly two chromatic families: ice cyan for everything calm (accent, ok, medium bucket) and ember/lava (`--hot #ffa257`, `--danger #ff6b52`) for the occasional hot thing — energy, sun, fire: warnings, high-intelligence bucket, the working first mate.
   Everything else is neutral gray.
   Light theme via `[data-theme="light"]`.
+  **Themes:** a color theme lays its own values over every color token (the app's `docs/themes.md`), so the two families hold in it too: its accent is the calm family and its hot and danger the hot one, kept apart by the theme's distance checks.
+  A view reads only the tokens and never names a color a theme would have to override; words on an accent fill use `--on-accent`, never a fixed dark.
+  A theme sits on Dark or Light, its base, so a view that asks `data-theme` still gets one of the two.
   One accent at a time within each thing being read - a screen's chrome, and inside a card each figure on its own, so a card with several figures may light one element per figure; large areas are the tint over the desktop - `--material-tint`, the void at 0% by default - and read against the blurred desktop rather than as a fixed opaque color.
 - **Type:** Space Grotesk (UI/display, weights 300–600); JetBrains Mono (data).
   **The font choice:** Settings → Appearance lets a person put any installed font, or the computer's own, in three places - the app (`--font-ui`), reading, what the crew writes on cards (`--font-text`, the app's face unless chosen), and code (`--font-mono`).

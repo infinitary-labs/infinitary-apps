@@ -101,6 +101,21 @@ export type StartFacts =
       panel?: string;
     }
   | {
+      /**
+       * The captain's click filed an unsafe data reader's Build row
+       * (docs/agents-reach.md, "A reader's Build rows"): the filed task and
+       * reader by key, since the row's title is the reader's words, and the
+       * issue's address the host read open where the project lives.
+       */
+      kind: "build-row-filed";
+      task: { id: string; key: string };
+      reader: { id: string; key: string };
+      issue: number;
+      url: string;
+      /** The captain chose Start now; their Start reaches the first mate as its own wake. */
+      start: boolean;
+    }
+  | {
       /** A queued task waits on a task that closed without finishing. */
       kind: "dead-gate";
       task: WakeKeyedTask;
@@ -304,6 +319,9 @@ export const START_WORDS: KindWords<StartFacts> = {
     facts.move === "start"
       ? `[fm-op] the captain pressed Start on task ${facts.task.id} ${facts.task.key} "${facts.task.title}". It shows Starting and waits for you. Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline their Start; if no direction applies, just start_now.`
       : `[fm-op] the captain queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}". Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id. Do not start it: the host starts it when its wait ends.`,
+  "build-row-filed": (facts) =>
+    // i18n-exempt: a wake served to the first mate's model
+    `[fm-op] the captain filed a Build row from ${facts.reader.key}'s approval card as ${facts.task.key}, ${facts.start ? "and chose Start now" : "kept for later"}: work on issue #${facts.issue}, ${facts.url}, which the app read open where the project lives. That address is the app's own reading, never the reader's words; ${facts.task.key}'s brief does not carry it.`,
   "dead-gate": (facts) =>
     `[fm-op] queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}" waits on ${facts.blocker.key} "${facts.blocker.title}", which was ${facts.closed}, so its wait can never end; the dead edge is blocks ${facts.blocker.key} -> ${facts.task.key}.`,
   "reasoning-wait": (facts) => {

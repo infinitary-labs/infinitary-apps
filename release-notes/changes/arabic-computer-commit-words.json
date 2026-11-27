@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "arabic-computer-commit-words",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Arabic uses one word for a computer and one for a commit",
+      "body": "In Arabic, some lines called a computer كمبيوتر or جهاز Mac and a commit التزام, while the rest of the app and the documentation say حاسوب and إيداع. Those lines now use the same words, so Reset Infinitary, Secrets, Devices and the phone's joining screens agree with each other.",
+      "noPicture": "Only the words of existing Arabic lines change; the layout stays the same.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

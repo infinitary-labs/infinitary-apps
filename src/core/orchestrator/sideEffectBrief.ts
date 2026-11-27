@@ -1,11 +1,22 @@
 import type { TaskRecord } from "../storage/taskRecords";
 import { TaskGraph } from "../tasks/taskGraph";
 
-/** One wait of a side-effect task as its brief names it, from the record alone. */
+/**
+ * One wait of a side-effect task as its brief names it: the record, and the
+ * typed result its newest report carried (`TaskService.latestResult`).
+ */
 export type SideEffectWait = Pick<
   TaskRecord,
-  "id" | "key" | "title" | "status" | "closedReason" | "delivery"
->;
+  | "id"
+  | "key"
+  | "title"
+  | "status"
+  | "closedReason"
+  | "delivery"
+  | "outcome"
+  | "outcomeSummary"
+  | "shape"
+> & { result?: Record<string, unknown> };
 
 /** How a wait closed, in the record's own words: a merge is a fact, never read from a report. */
 function closedWords(wait: SideEffectWait): string {
@@ -37,12 +48,31 @@ function closedWords(wait: SideEffectWait): string {
  * reads the rule. Model-facing words stay English.
  */
 export function renderSideEffectSection(waits: readonly SideEffectWait[]): string {
-  const lines = waits.map(
-    (wait) => `- ${wait.key || wait.id} "${wait.title}": ${closedWords(wait)}`,
-  );
+  const lines = waits.flatMap((wait) => {
+    const line = `- ${wait.key || wait.id} "${wait.title}": ${closedWords(wait)}`;
+    // Only a finished wait's report says what the work found; an open
+    // wait's latest report is progress.
+    if (wait.status !== "done" && wait.status !== "dropped") return [line];
+    // A reader's saved headline is the host's own line, and its report takes
+    // no result (`readerReportRefusal`): its report itself, kept between
+    // reader-data marks with their reminder (`readerReport`), is what it found.
+    if (wait.shape?.unsafe_data_reader === true) {
+      const report = wait.outcome?.trim();
+      // i18n-exempt: a crewmate's brief, never shown to a person
+      return report ? [line, "  Reported:", report] : [line];
+    }
+    const said = wait.outcomeSummary?.trim();
+    const result = wait.result ? JSON.stringify(wait.result) : undefined;
+    // i18n-exempt: a crewmate's brief, never shown to a person
+    return [
+      line,
+      ...(said ? [`  Reported: ${said}`] : []),
+      ...(result ? [`  Typed result: ${result}`] : []),
+    ];
+  });
   // i18n-exempt: a crewmate's brief, never shown to a person
   return [
-    "This is a side-effect task: its only job is the outside action its words name, such as closing a work item, sending a message or posting an update, once the work it waits on is done. Each task it waits on, and how the record says it closed:",
+    "This is a side-effect task: its only job is the outside action its words name, such as closing a work item, sending a message or posting an update, once the work it waits on is done. Each task it waits on, and how the record says it closed, with a finished wait's reported summary and typed result, which say what that work found:",
     ...(lines.length ? lines : ["- none"]),
     "Act only when every wait that ships a change merged; a wait done with no change, such as an answer, counts as done. When the words name a release as the moment and a merged wait is in no release yet, report with needs_firstmate naming those tasks, so the first mate holds you until the work ships in a release, and end your turn. Do the action through the integration for the item's tracker, or where the project lives, and say in your report what you did and where. When a wait was dropped, or its change closed with no merge, do nothing outside: report which wait and how it closed.",
   ].join("\n");

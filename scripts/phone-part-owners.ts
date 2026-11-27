@@ -36,6 +36,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneConversationSheet.swift",
     // The conversation's rounds every part's strip reads (ReadOnlySession.swift).
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneConversation.swift",
+    // Which newest message the revert icon and Edit may name on every part's strip (MessageComposer.swift).
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneTakeBack.swift",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-LICENSE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-asn1-NOTICE.txt",
     "ios/Infinitary/InfinitaryApp/Notices/swift-certificates-LICENSE.txt",
@@ -110,13 +112,15 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/SimulatorNotifications.entitlements",
     "tests/helpers/phonePushRelay.ts",
   ] },
-  // INF-5265: the kept computers, the computer sheet that switches them and the second computer beside the test home.
+  // INF-5265: the kept computers, Settings' Your computer page that switches them and the second computer beside the test home.
   { parts: family("homes"), files: [
     "tests/helpers/phoneSecondHome.ts",
     "tests/helpers/phoneSecondHomeProcess.ts",
   ] },
   // INF-5608's plan, piece 2: the cards-carried part's card on the test home.
   { parts: ["cards-carried"], files: ["tests/helpers/phoneCarried.ts"] },
+  // INF-6865: the cards-revised-scroll part's long card on the test home.
+  { parts: ["cards-revised-scroll"], files: ["tests/helpers/phoneRevisedCard.ts"] },
   { parts: family("cards"), files: [
     "ios/Infinitary/CardRuntime/cardHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/CardHost.generated.js",
@@ -169,6 +173,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneCrewScene.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCrewSummary.swift",
     "ios/Infinitary/InfinitaryApp/PhoneFixedStars.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneFocusLight.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSceneCompanions.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSceneData.generated.json",
     "ios/Infinitary/InfinitaryApp/PhoneSceneRate.swift",
@@ -192,11 +197,11 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/JoinLink.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneIdentity.swift",
   ] },
-  // INF-4207 piece 9: Take over on the computer's sheet, the link to a computer that keeps a copy and the test home's
-  // computer that keeps a copy beside it; join-activity draws the sheet out of reach, without a copy kept. INF-5265:
-  // the homes part lists the other kept computers on it and adds one.
+  // INF-4207 piece 9: Take over on Settings' Your computer page, the link to a computer that keeps a copy and the test
+  // home's computer that keeps a copy beside it; join-activity draws the page out of reach, without a copy kept.
+  // INF-5265: the homes part lists the other kept computers on it and adds one.
   { parts: [...family("take"), ...family("join"), ...family("homes")], files: [
-    "ios/Infinitary/InfinitaryApp/PhoneComputerSheet.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneComputerPage.swift",
     "ios/Infinitary/InfinitaryApp/PhoneTakeOverSection.swift",
   ] },
   { parts: family("take"), files: [

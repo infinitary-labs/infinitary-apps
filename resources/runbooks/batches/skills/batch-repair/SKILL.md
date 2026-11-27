@@ -43,7 +43,10 @@ The tests, test data, generated files, check lists, pinned versions and comments
   Keep every later version of the fix on top of that version, without rewriting the commits it carries: once its approval or the batch has measured the fix from it, a version that no longer builds on it is left out of the batch, and this repair stays measured from that version.
   A fix that must start again from the batch's newer version is a new repair's, not a rebuild of this one.
   A fix built on the default branch still joins when it touches nothing a change in the batch wrote.
-  Push it, confirm its story with `open_change` and show its merge card as for any change: once approved, it joins the held batch with every change waiting in line behind it, and ends the hold.
+  Push it, confirm its story with `open_change` and show its merge card as for any change.
+  Once its story is confirmed, the batch runs its own checks at the held version plus your fix, on the batch's pull request, before any approval; read them there, and never run the full set on a pull request of the fix's own.
+  If they fail, you hear it: repair the fix in a new version on the same held version and confirm its story again, and the batch runs its checks with that version.
+  Approved at the version whose run passed, the batch merges as it is; approved otherwise, it joins the held batch with every change waiting in line behind it, and ends the hold.
   A change already approved at its current version joins as you declare it, with no new merge card.
 - **Send back.** Only when a change at fault needs its code under test changed, when the fix needs a decision only its crewmate or the captain can make, or when the fix is not small.
   Send each such change back with `check_change` `batch.sendBack`: each change's task key, and the reason its crewmate reads, saying what its change broke.
@@ -53,7 +56,7 @@ The tests, test data, generated files, check lists, pinned versions and comments
   In each reason, also name the batch's checks that were cancelled or never ran, so its crewmate proves those too before showing the change again.
   Before sending a change back, read its task for earlier send-backs: one already sent back for a collision is better fixed forward than sent round again.
 - **Both at once.** When some changes must go back and the rest can be fixed forward, give `batch.sendBack` and `batch.fix` in the same declaration.
-  The named changes leave, and the batch stays held at its version, combining nothing, until your fix is approved, even once every change has left it; then it is combined once, with the fix and every change waiting in line, without the changes sent back.
+  The named changes leave, and the batch stays held at its version, combining nothing, until your fix is approved, even once every change has left it; then it is combined once, with the fix and every change waiting in line, without the changes sent back, unless the batch's own run with your fix, without them, passed at the approved version: then that run merges as it is.
   Build that fix on the held version too: the batch takes only its own difference, never the work of a change sent back.
 - **Merge the version that passed on a rerun.** When a rerun already passed every failed test on the held version, such as a step of the batch's own run that runs the failed tests again, or the failed checks run again where the project lives, the version merges as it is.
   Declare it with `check_change` `batch.passed`, naming the held version by its full commit id: the failed checks it held for are answered at that version, and the batch merges once every other check passed.

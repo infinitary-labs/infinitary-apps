@@ -1,5 +1,5 @@
 ---
-source: 47dc716341146fd8
+source: 0f80b78b2636fcc9
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -53,7 +53,7 @@ Par exemple, une tâche de la réserve sur cet ordinateur affiche <svg class="ta
 
 Une tâche découpée en parties liste ses parties en dessous.
 Dès que l’une de ses parties démarre, la tâche se range sous En cours, avec ses parties ouvertes en dessous.
-La tâche y garde sa propre marque, si bien qu’une tâche dont les parties font le travail peut afficher la marque Réserve ou En attente sous En cours.
+Une tâche en attente y garde la marque En attente, tandis qu’une tâche de la réserve dont les parties font le travail prend la marque de sa partie ouverte la plus urgente, comme En attente de vous pendant que la carte d’une partie attend.
 
 Pour lire en toutes lettres l’état d’une tâche et sa raison, laissez le pointeur sur sa ligne, ou placez-vous sur la ligne avec le clavier.
 
@@ -93,6 +93,16 @@ Sous son titre se trouve une rangée d’onglets :
   Voir [Le navigateur de l’équipage](/fr/the-crews-browser/).
 
 Un onglet n’apparaît qu’une fois que la tâche a quelque chose à y montrer.
+
+## Une tâche découpée en parties {#a-task-split-into-parts}
+
+Dans l’onglet **Infos** d’une tâche découpée en parties, la ligne **Parties** compte les parties closes et liste chaque partie avec son statut, dans l’ordre où elles ont été créées.
+Appuyez sur le décompte pour replier la liste, et appuyez de nouveau pour l’ouvrir.
+Au-delà de huit parties, les parties closes se replient derrière une ligne que vous pouvez ouvrir.
+Pour ouvrir la carte d’une partie, cliquez dessus, ou atteignez-la au clavier et appuyez sur Entrée ; démarrez-la ou répondez-y là.
+
+Une tâche de votre réserve dont les parties font le travail ne vous demande jamais son propre **Démarrer**.
+Le haut de son onglet **Infos** dit plutôt ce qu’attendent ses parties, par exemple « Sa dernière partie attend que vous appuyiez sur Démarrer », et la tâche se ferme d’elle-même une fois ses parties closes.
 
 ## Étiquettes {#tags}
 

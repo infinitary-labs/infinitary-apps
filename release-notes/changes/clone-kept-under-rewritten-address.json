@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "clone-kept-under-rewritten-address",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Tasks start on another computer whose git settings send your project's address another way",
+      "body": "When you added a project by its SSH address and another computer's git settings fetch that address over HTTPS, tasks in that project now keep starting there after Infinitary restarts on it. Before, every later task failed to start there, saying that computer's copy of the project named another origin. Work a deleted task left on that computer also comes back here again.",
+      "noPicture": "This changes whether a task starts on another computer, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

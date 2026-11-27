@@ -52,7 +52,7 @@ const slotMembershipSchema = z
   .union([slotSchema, z.array(slotSchema)])
   .transform((value) => (Array.isArray(value) ? value : [value]));
 
-export const reasoningChoiceSchema = z.enum(["low", "medium", "high", "xhigh"]);
+export const reasoningChoiceSchema = z.enum(["low", "medium", "high", "xhigh", "max"]);
 export type ReasoningChoice = z.infer<typeof reasoningChoiceSchema>;
 export const reasoningCapabilitiesSchema = z.object({
   levels: z.array(reasoningChoiceSchema),
@@ -158,6 +158,15 @@ export const STARTER_SLOTS: StarterMap = {
     "claude-opus-5.5": ["high"],
     "claude-sonnet-5.5": ["medium"],
   },
+  // OpenCode Go starts each model where the captain already placed it
+  // elsewhere, and nothing in premium (INF-6873): Kimi Code's K3 high, Grok
+  // 4.7 medium on every provider, GPT-6 Luna and Claude Haiku 5.5 low.
+  "opencode-go": {
+    "kimi-k3": ["high"],
+    "grok-4.7": ["medium"],
+    "gpt-6-luna": ["low"],
+    "claude-haiku-5-5": ["low"],
+  },
 };
 
 /**
@@ -183,6 +192,8 @@ export const TRACKED_FAMILIES: Readonly<
   // Copilot serves several makers' families, filtered to what the account
   // may use; each family's newest generation is its row, as elsewhere.
   "github-copilot": "every",
+  // OpenCode Go serves many makers' families too.
+  "opencode-go": "every",
   // OpenRouter lists 388 ids from 47 vendors. Its own `~…-latest` aliases
   // already follow each family's newest generation, so the rows are those
   // aliases for the families Infinitary itself serves.

@@ -15,6 +15,7 @@
   --accent-strong: #38aae6;
   --accent-dim: rgba(127, 220, 255, 0.14);
   --accent-glow: rgba(127, 220, 255, 0.35);
+  --on-accent: #05070d; /* words and marks on an accent-filled control */
   /* semantic — two chromatic families only: ice cyan (calm) and ember (hot) */
   --ok: #7fdcff; /* calm cyan — done, pace ahead (same family as accent) */
   --ok-dim: rgba(127, 220, 255, 0.14);
@@ -62,6 +63,7 @@
   --accent-strong: #0a72a8;
   --accent-dim: rgba(14, 143, 208, 0.1);
   --accent-glow: rgba(14, 143, 208, 0.25);
+  --on-accent: #05070d;
   --ok: #0e8fd0;
   --ok-dim: rgba(14, 143, 208, 0.1);
   --hot: #d97a1f;

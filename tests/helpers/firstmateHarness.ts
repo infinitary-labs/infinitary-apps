@@ -12,6 +12,7 @@ import { parseServedInput, type ServedWakeOrigin } from "@shared/servedFrame";
 import { decode } from "@toon-format/toon";
 import { afterEach, beforeEach, expect, vi } from "vitest";
 import { z } from "zod";
+import { heardFromActor } from "../../src/core/dispatcher/catalogDispatch";
 import type { IntegrationBinding, IntegrationsService } from "../../src/core/integrations";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
@@ -310,6 +311,8 @@ export function setup(
     quotaModels?: () => ModelsCatalogView | undefined;
     slotsOf?: (ref: { provider: string; id: string }) => Slot[];
     listedModels?: () => { provider: string; id: string }[];
+    readsPictures?: ConstructorParameters<typeof FirstmateAgent>[0]["readsPictures"];
+    modelName?: ConstructorParameters<typeof FirstmateAgent>[0]["modelName"];
     /** Task records that exist before the agent boots (a crew already at work). */
     seedTasks?: TaskSeed[];
     /** Open cards the supervisor restores at boot (a crewmate's card on screen). */
@@ -453,6 +456,8 @@ export function setup(
       quotaModels: options.quotaModels ?? (() => undefined),
       ...(options.slotsOf ? { slotsOf: options.slotsOf } : {}),
       ...(options.listedModels ? { listedModels: options.listedModels } : {}),
+      ...(options.readsPictures ? { readsPictures: options.readsPictures } : {}),
+      ...(options.modelName ? { modelName: options.modelName } : {}),
       quotaLine: () => "codex 62% weekly on_pace",
       repos,
       supervisor,
@@ -720,8 +725,9 @@ export const FIX_MERGE_RULE =
 /**
  * The core's catalog path for the `direction` line, as the dispatcher runs
  * it for the first mate (src/core/dispatcher.ts): the line's permission for
- * the wake the agent stamps, the knowledge service's change, and the
- * trail's word back to the agent.
+ * the wake the agent stamps, where the captain's words for it were heard
+ * as the dispatcher sets it (`heardFromActor`), the knowledge service's
+ * change, and the trail's word back to the agent.
  */
 export function bindDirections(agent: FirstmateAgent, knowledge: KnowledgeService): void {
   let operations = 0;
@@ -733,7 +739,12 @@ export function bindDirections(agent: FirstmateAgent, knowledge: KnowledgeServic
     if (channel !== "inf:knowledge:direction:set") throw new Error(`Not a direction: ${channel}`);
     const refusal = actor?.kind === "firstmate" && actionRefusal(ACTIONS.direction, actor);
     if (refusal) throw new Error(refusal);
-    const changed = knowledge.directions.change((args as [KnowledgeDirectionChange])[0]);
+    const [change] = heardFromActor(
+      channel,
+      args as [KnowledgeDirectionChange],
+      actor?.kind === "firstmate" ? actor : { kind: "captain" },
+    );
+    const changed = knowledge.directions.change(change);
     operations += 1;
     agent.appActionRecorded(`op-${operations}`, "direction", {
       op: changed.op,

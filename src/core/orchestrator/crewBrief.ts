@@ -282,7 +282,14 @@ export class CrewBrief {
     if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
     // The waits' closes are read now, at the start they cleared for.
     if (record?.shape?.side_effect)
-      sections.push([renderSideEffectSection(this.options.tasks.graph.blockers(taskId))]);
+      sections.push([
+        renderSideEffectSection(
+          this.options.tasks.graph.blockers(taskId).map((wait) => {
+            const result = this.options.tasks.latestResult(wait.id)?.value;
+            return result ? { ...wait, result } : wait;
+          }),
+        ),
+      ]);
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.
     if (record?.shape?.result_schema)
@@ -655,7 +662,8 @@ export class CrewBrief {
 
   /**
    * The closed facts the runbook selectors read for a task (docs/runbooks.md,
-   * "Typed crew reach"): its kind, place, delivery, care, backend and project.
+   * "Typed crew reach"): its kind, place, delivery, care, backend, project
+   * and whether it is a side-effect task.
    */
   runbookFacts(taskId: string, procedure: CrewmateProcedureFacts, backend: string): RunbookFacts {
     const record = this.options.tasks.get(taskId);
@@ -667,6 +675,7 @@ export class CrewBrief {
       care: procedure.rigor,
       backend,
       ...(record?.repoId ? { project: record.repoId } : {}),
+      sideEffect: record?.shape?.side_effect === true,
     };
   }
 

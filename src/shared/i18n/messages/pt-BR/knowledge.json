@@ -159,6 +159,12 @@
     "many": "Grafo · {count} conceitos",
     "other": "Grafo · {count} conceitos"
   },
+  "knowledgePanelHeardCard": "Ouvida de você, no cartão “{title}”",
+  "knowledgePanelHeardStanding": "Ouvida de você, na sua resposta permanente em {task}",
+  "knowledgePanelHeardTab": "Ouvida de você, na aba Tripulante de {task}",
+  "knowledgePanelHeardTitle": "Onde você disse",
+  "knowledgePanelHeardTurn": "Ouvida de você, nas suas palavras ao seu imediato",
+  "knowledgePanelHeardWindow": "Alterada por você no Conhecimento",
   "knowledgePanelHops": {
     "plural": "count",
     "one": "{count} salto",
@@ -197,6 +203,7 @@
   "knowledgePanelNoSources": "Nenhuma fonte foi guardada com ela.",
   "knowledgePanelNoUses": "Nenhum trabalho declarou ainda que usou isto.",
   "knowledgePanelNone": "Nenhum",
+  "knowledgePanelNotHeard": "Não ouvida de você, por isso não aprova nada sozinha",
   "knowledgePanelNothingRecorded": "Nada registrado ainda",
   "knowledgePanelObservedBy": "Observada · por {author}",
   "knowledgePanelOpLink": "Vinculado",

@@ -146,6 +146,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | session, transcript (never said) | conversación, notas | |
 | Settings | Configuración | The app's settings window and menu item; a project's own settings are "los ajustes de este proyecto". |
 | sign-in / sign in | inicio de sesión / iniciar sesión | "tu inicio de sesión", "vuelve a iniciar sesión". |
+| standing reply (your words kept on a task, which pass its holds) | respuesta vigente | Feminine. |
 | start | iniciar, empezar | "Iniciada" for a task; "empezar" for the person beginning something. |
 | starter | sugerencia | The welcome's buttons that begin a sentence: "presiona una sugerencia de abajo". |
 | Steer (button) | Orientar |  |
@@ -167,6 +168,7 @@ A count in a message without a plural form sits after a colon ("nuevos: 3", "eli
 | unmerged work | trabajo sin fusionar | What another computer still holds when it is removed: "Su trabajo sin fusionar viene primero a esta computadora". |
 | unsafe data reader | lector de datos no seguros | A crewmate that reads words anyone can write. |
 | Usage | Uso | |
+| user (another user account on this computer) | usuario | "as {user}" is "como {user}"; "Se ejecuta como {user}" for running as that user. |
 | where the project lives | donde se aloja el proyecto | |
 | window wash | velo de la ventana | The theme color laid over the blurred background. |
 | working copy | copia de trabajo | |

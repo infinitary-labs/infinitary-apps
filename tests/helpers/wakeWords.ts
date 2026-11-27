@@ -59,6 +59,7 @@ export type FirstmateWakeKind =
   | "commit-failed"
   | "program-bound"
   | "program-ended"
+  | "build-row-filed"
   | "report"
   | "review-orphan"
   | "review-unstated"
@@ -89,7 +90,8 @@ export type FirstmateWakeKind =
   | "answer-missing"
   | "model-unasked"
   | "seat-moved"
-  | "taken-back";
+  | "taken-back"
+  | "directions-to-confirm";
 
 /**
  * The first mate's kinds each wake family words, read from the family's own
@@ -137,7 +139,12 @@ export type CorrectionWakeKind =
  * mate hears, a crewmate's send-back, and the steer that its approved change
  * waits in a line (the batch line or the host's merge queue).
  */
-export type OwnBatchWakeKind = "batch-held" | "batch-sent-back" | "batch-rebuild" | "merge-line";
+export type OwnBatchWakeKind =
+  | "batch-held"
+  | "batch-sent-back"
+  | "batch-rebuild"
+  | "batch-trial-failed"
+  | "merge-line";
 
 /** A card button the app could not carry out has its own byte-exact cases (INF-4072). */
 export type CardActionWakeKind = "card-action-undone";

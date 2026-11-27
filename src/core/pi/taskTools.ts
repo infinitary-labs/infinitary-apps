@@ -197,6 +197,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
     description: [
       "File, add, note or backlog without starting, including saved plans, waits and containers.",
       "when-ready can start now; declare blocked_by. Basis checked at start.",
+      "When its close ends held work's wait, link_tasks blocks from it to that work this turn and lift the hold that named it; a hold's reason wakes nothing.",
     ].join(" "),
     parameters: Type.Object({
       title: Type.String({
@@ -262,6 +263,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "True when its only job is an outside action that waits on work, such as closing a work item: each blocked_by, added later too, holds until merged, never at approval, and its brief says how each closed.",
         }),
       ),
+      unsafe_data_reader: Type.Optional(
+        Type.Boolean({ description: "As spawn_crewmate's shape.unsafe_data_reader." }),
+      ),
       branch: Type.Optional(Type.String({ description: "As spawn_crewmate's branch." })),
       tags: Type.Optional(TAGS_PARAM),
     }),
@@ -288,6 +292,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           : {}),
         ...(params.needs_merge?.length ? { needs_merge: params.needs_merge } : {}),
         ...(params.side_effect ? { side_effect: true } : {}),
+        ...(params.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
         ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
       };
       const intent = parseSpawnIntent({
@@ -506,7 +511,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         Type.Unsafe<HoldParam | null>({
           anyOf: [{ type: "object", additionalProperties: true }, { type: "null" }],
           description:
-            "Hold started idle work for time or an outside event no message can speed. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update or a newer one on its computer. Only unanswered captain replies remind; one notice at the deadline. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
+            "Hold started idle work for time, an outside event or an app update no message can speed. A wait on another task's end, or on the captain's go for it, is a link_tasks blocks from that task alone, never a hold beside it; file that task first if needed, captain_stop true when it waits on their word. until: ISO deadline; reason: one-line wait; on_event?: {integration, event, filter?} as in Automation; on_update?: {version?} waits for that Infinitary update or a newer one on its computer. Only unanswered captain replies remind; one notice at the deadline. Any turn, on_event or on_update ends it sooner, telling the task what arrived. null lifts it. Hold keeps work started; park for backlog.",
         }),
       ),
       take_back_yes: Type.Optional(

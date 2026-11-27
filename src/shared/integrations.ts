@@ -203,8 +203,10 @@ export const integrationClientViewSchema = z
     /** The place refused that client itself (Google's `invalid_client` or `deleted_client`). */
     refused: z.enum(["invalid_client", "deleted_client"]).optional(),
     /**
-     * The sign-in was made with the app's own client, which still renews it
-     * but takes no new sign-in: the row asks the person to set up their own.
+     * Sent only by a home from before the app's own Google client was
+     * retired, and read by no view. A desktop view reads this schema
+     * strictly, so it stays here for such a home until the contract's next
+     * major removes it.
      */
     retiring: z.literal(true).optional(),
     /** A new sign-in needs no client of the person's: the run names its own, as a development or test run does. */

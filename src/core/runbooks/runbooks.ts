@@ -51,6 +51,7 @@ export const BUILTIN_RUNBOOK_ORDER = [
   "lessons",
   "batches",
   "pull-comments",
+  "outside-work-items",
   "heartbeat",
   "computer-cleanup",
   "bring-secrets",

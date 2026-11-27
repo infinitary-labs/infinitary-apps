@@ -249,6 +249,13 @@ export type MergeAuthorization = {
    * merge gate again on every run, so turning autonomy off ends it.
    */
   issuer: "captain" | "autonomy";
+  /**
+   * Kept in the captain's name from the captain's words recorded as passing
+   * asking first, never from a click (`SettleService.mergeOnCaptainWords`):
+   * like the first mate's merge it stands for, it still waits on the
+   * decisions hold at every last look. An older app reads it as a click.
+   */
+  fromWords?: true;
   at: number;
   /** The offer the captain clicked: the card, its occurrence and version, the action and the gesture. */
   card: {

@@ -180,6 +180,16 @@ function DevicesTab(){
     </div>
   </div>;
 }
+/** Dark, Light and a few of the built-in themes under their makers' names, as the app's Theme row draws them. */
+const THEME_TILES=[
+  {value:"dark",label:"Dark",bg:"#05070d",card:"#0f1424",text:"#e9eef8",accent:"#7fdcff",hot:"#ffa257"},
+  {value:"light",label:"Light",bg:"#eef1f7",card:"#ffffff",text:"#151b2b",accent:"#0e8fd0",hot:"#d97a1f"},
+  {value:"rose-pine",label:"Rosé Pine",bg:"#191724",card:"#292341",text:"#e0def4",accent:"#9ccfd8",hot:"#f6c177"},
+  {value:"catppuccin-latte",label:"Catppuccin Latte",bg:"#eff1f5",card:"#ffffff",text:"#4c4f69",accent:"#8839ef",hot:"#fd6309"},
+  {value:"dracula",label:"Dracula",bg:"#282a36",card:"#363954",text:"#f8f8f2",accent:"#bd93f9",hot:"#ffb86c"},
+  {value:"tokyo-night",label:"Tokyo Night",bg:"#1a1b26",card:"#282942",text:"#c0caf5",accent:"#7aa2f7",hot:"#e0af68"},
+];
+
 function SettingsScreen({theme,onTheme}){
   const [tab,setTab]=React.useState("general");
   const [wash,setWash]=React.useState(0);
@@ -244,19 +254,35 @@ function SettingsScreen({theme,onTheme}){
         <SectionLabel>Appearance</SectionLabel>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
-            <div>
-              <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Theme</div>
-              <div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Deep-space dark, or daylight light.</div>
-            </div>
-            <GroupedPills name="Theme" htmlName="theme" value={theme} options={[{value:"dark",label:"Dark"},{value:"light",label:"Light"}]} onChange={v=>{if(v!==theme)onTheme();}}/>
+            <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Crew model names</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Show model names while crewmates use only one orbit.</div></div>
+            <Switch checked={modelNames} onChange={setModelNames}/>
           </div>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
             <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Window wash</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>How much of the theme color covers the blurred background. 0% is the default.</div></div>
             <label><input aria-label="Window wash" type="range" min={0} max={100} value={wash} onChange={e=>setWash(Number(e.target.value))}/><span style={{fontFamily:"var(--font-mono)"}}>{wash}%</span></label>
           </div>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
-            <div><div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Crew model names</div><div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Show model names while crewmates use only one orbit.</div></div>
-            <Switch checked={modelNames} onChange={setModelNames}/>
+          <div style={{padding:"14px 18px",background:"var(--bg-1)",border:"1px solid var(--line-1)",borderRadius:"var(--radius-m)"}}>
+            <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Theme</div>
+            <div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Dark, Light, or a theme its maker named. Every color in the window follows.</div>
+            {/* One group of tiles, each a small window in its own colors; the arrow keys move the pick (the app's docs/themes.md). */}
+            <div role="radiogroup" aria-label="Theme" style={{display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(124px, 1fr))",gap:"var(--space-2)",marginTop:"var(--space-3)"}}>
+              {THEME_TILES.map(t=>{
+                const checked=t.value===theme;
+                return (
+                  <label key={t.value} style={{position:"relative",display:"flex",flexDirection:"column",gap:"var(--space-2)",padding:"var(--space-2)",borderRadius:"var(--radius-m)",border:`1px solid ${checked?"var(--accent)":"var(--line-1)"}`,background:checked?"var(--accent-dim)":"transparent",cursor:"pointer"}}>
+                    <input type="radio" name="theme" value={t.value} checked={checked} onChange={()=>{if((t.value==="dark"||t.value==="light")&&t.value!==theme)onTheme();}} style={{position:"absolute",inset:0,opacity:0,margin:0}}/>
+                    <span aria-hidden="true" style={{display:"flex",alignItems:"flex-end",height:44,padding:6,borderRadius:"var(--radius-s)",background:t.bg}}>
+                      <span style={{flex:1,display:"flex",alignItems:"center",gap:4,padding:"5px 6px",borderRadius:4,background:t.card}}>
+                        <span style={{flex:1,height:3,borderRadius:2,background:t.text}}/>
+                        <span style={{width:8,height:8,borderRadius:"50%",background:t.accent}}/>
+                        <span style={{width:8,height:8,borderRadius:"50%",background:t.hot}}/>
+                      </span>
+                    </span>
+                    <span style={{fontSize:"var(--text-xs)",fontWeight:500,color:checked?"var(--fg-1)":"var(--fg-2)",overflowWrap:"anywhere"}}>{t.label}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>}

@@ -137,7 +137,7 @@ Inside the frame it exposes `window.inf` and nothing more:
 | `inf.subscribe(read, args, onValue, onError?)` | a read-catalog subscription; the host pushes the first value and every later one as `data` messages | the plugin's declared reads; the catalog's own args schema; `FRAME_MAX_SUBSCRIPTIONS` per mount |
 | `inf.action(id, value?)` | a declared action with a bounded value | the mount's declared action ids; `ACTION_VALUE_MAX_BYTES` |
 | `inf.fetch(alias, request)` | kept for older pages: a request of the page's own | forwarded to `inf:plugins:fetch`, which refuses every call; a panel calls its integrations through the `integrations` action instead |
-| `inf.theme` / `inf.onTheme(cb)` | theme as data; the bridge applies `data-theme` itself | - |
+| `inf.theme` / `inf.onTheme(cb)` | theme as data, Dark or Light; the bridge applies `data-theme` itself, and the window's color theme rule with it (`docs/themes.md`) | - |
 | `inf.store(request)` / `inf.onStore(cb)` | the mount's own store slice (a panel in the frame realm's `PanelProps.store`): get, set, delete, list by key; `onStore` hears its keys change | the slice the HOST bound to the mount (`FrameMountSpec.store`); refused on a mount bound to none |
 | `inf.data(src)` | the text of a data file a card's body names by `src` (`docs/card-authoring.md`, "Data by reference") | the names the HOST read from the card's body (`FrameMountSpec.data`); refused on a mount with none and for any other address |
 | `inf.stage(name, value, apply?)` | a JSON snapshot staged under a name beside a card body's form; kept in the card's unsent draft, which every window shows (`docs/card-authoring.md`, "Unsent picks follow you"), and sent only with a footer click or author-directed reply; `apply(snapshot)` sets the preview's own controls to a setting from another window or a later birth, and a press sends only what the preview stages back; with no `apply`, or one that fails, the preview keeps what it shows and sends | the answers' 64 KiB bound at submission |
@@ -352,6 +352,7 @@ The captain's picks on the task popup board (2026-09-28: "1C 2B 3C 4A", then "sh
 FI3-565 direction A piece 4 gave them one shape: every open record's footer is the action bar (`RecordPaneFooter`, `cards/RecordPaneChrome.tsx`) - one row of buttons under the fact strip, the end slot at its left edge and the next slot at its right (FI3-948, the captain's layout B), so neither button moves between states.
 The bar says nothing of its own at rest: the status reason beside the pill says what happens next, and the body's attention box carries what the reason cannot - a blocker, a dropped dependency, a parent whose parts do the work, a hold or another need.
 The one exception is a start that could not begin: Could not start and its reason sit between Drop task and Try again, never in the title row (`RecordPaneFooter`'s `notice`).
+The shared `recordStartOf` (`src/shared/recordStart.ts`) reads that line and the pill's reason while a start is in flight from the task's typed start fields and the time, for the record and for the phone's record alike.
 Its state is read only from the task's typed fields through the shared `recordBarOf` (`src/shared/recordBar.ts`), never its prose; Done records and rows with no button have no bar; eligible dropped work offers Start again in the next slot (`docs/task-record.md`, "Starting dropped work again").
 The design skill's `TaskRecord` owns the layout and the attention box's words.
 
@@ -360,7 +361,7 @@ The design skill's `TaskRecord` owns the layout and the attention box's words.
 | Backlog: open work on request, held or not, no parts, no blockers | Drop task | Start (primary) |
 | Backlog, could not start: open work on request with a start notice | Drop task | Try again (primary); Could not start and its reason between the slots |
 | Backlog or Queued with live blockers, or a dropped dependency edge | Drop task | Start, disabled; the attention box names what it waits on |
-| Backlog or Queued with parts of its own | Drop task. Open parts refuse the drop. | empty: the status reason and the attention box say the parts do the work |
+| Backlog or Queued with parts of its own | Drop task. Open parts refuse the drop. | empty: the attention box says what its open parts wait on, or on a queued parent or a program its queue line, Waiting for its parts |
 | Queued: when-ready work, held for a later start or not | Drop task | empty: no Start now |
 | Working or Idle | Drop task | empty: nothing needs the captain |
 | Interrupted | Drop task | Continue (primary) |
@@ -448,7 +449,7 @@ The home checks both when the card is emitted (`cardReadsOf` in `src/core/pi/car
 The first mate's `emit_card` has neither parameter: its cards and the host's stay static.
 The card keeps both on its row (`cards.live_reads_json`), and a revision passes them again, as it passes its actions.
 
-The window grants them only while the card is open: the stack passes a card's reads to its body (`PrototypeBody`'s `cardFrameSpec`, through `frameReads` in `src/shared/reads.ts`, the same helper a personal panel's mount uses), and an ended card or a past card passes none.
+The window grants them only while the card is open: the stack passes a card's reads to its body (`cardFrameSpec` in `PrototypeBody.tsx`, through `frameReads` in `src/shared/reads.ts`, the same helper a personal panel's mount uses), and an ended card or a past card passes none.
 When a card's declaration changes under a mounted frame - the card closed, or a revision dropped a read or changed its views - the frame controller ends each subscription the new declaration no longer grants and tells the script's `onError` with `read_not_declared`; the body keeps what it last drew.
 An older desktop view reads a card without the two fields (`liveReads` in `src/core/connection/cardCompatibility.ts`, the `card-live-reads` contract change); the phone's card page answers them through the same executor, catalog and subscription owner (`docs/ios.md`, "Cards on the phone").
 The security review is `docs/live-prototype-security.md`, "Live reads on a crewmate's card".

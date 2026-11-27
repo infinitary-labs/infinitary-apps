@@ -12,6 +12,7 @@ import {
 } from "./actionCoverage";
 import { ACTION_NAMES, ACTIONS, actionRefusal } from "./actions";
 import { deviceUpdateBody, sourceMatchCard } from "./deviceUpdateNudge";
+import { inLanguage } from "./i18n/current";
 import * as m from "./i18n/messages.generated.ts";
 import {
   CORE_INVOKE_CHANNELS,
@@ -32,6 +33,7 @@ const inventoryFiles = [
   "src/shared/quota.ts",
   "src/shared/settingsActs.ts",
   "src/shared/sharing.ts",
+  "src/shared/themeActions.ts",
   "src/shared/update.ts",
 ] as const;
 // The selector reads this declaration statically, never by importing a test.
@@ -104,6 +106,31 @@ describe("action permissions and channel parity", () => {
     expect(() =>
       add.offer?.({ kind: "google", host: "code.example.com" }, view, { platform: "darwin" }),
     ).toThrow("host is used only");
+  });
+  // INF-950: every action of a new connection, reads included, starts at Asks you.
+  it("integration-add's Connect card says each action, reads included, asks until Always allow, in the app's language", () => {
+    const add = ACTIONS["integration-add"];
+    const view = { integrations: [], addable: [{ kind: "gitlab", name: "GitLab" }] };
+    const connect = () => add.offer?.({ kind: "gitlab" }, view, { platform: "darwin" });
+    expect(connect()).toMatchObject({
+      cardId: "app-integration-add-gitlab",
+      title: "Connect GitLab",
+      paragraphs: [
+        "Your first mate and your crew can then reach GitLab with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.",
+        "Open Integrations to sign in to GitLab.",
+      ],
+      label: "Open Integrations",
+      decline: "Not now",
+    });
+    expect(inLanguage("ja", connect)).toMatchObject({
+      title: "GitLab に接続",
+      paragraphs: [
+        "その後、一等航海士と乗組員はあなたのサインインで GitLab を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。",
+        "連携を開いて GitLab にサインインしてください。",
+      ],
+      label: "連携を開く",
+      decline: "今はしない",
+    });
   });
   it("INF-5348: integration-add for the inbox opens the Infinitary command's switch, never a server key form", () => {
     const add = ACTIONS["integration-add"];
@@ -178,7 +205,7 @@ describe("action permissions and channel parity", () => {
     ]);
     expect(action.done(choice)).toBe("xai/grok-4 at high: High");
     expect(action.done({ ...choice, level: null })).toBe("xai/grok-4 at high: Use level default");
-    expect(action.value.safeParse({ ...choice, level: "max" }).success).toBe(false);
+    expect(action.value.safeParse({ ...choice, level: "minimal" }).success).toBe(false);
   });
   it("projects the current default wash when a saved appearance predates that field", () => {
     expect(ACTIONS["window-wash"].readValue({ theme: "dark", showCrewModelNames: true })).toEqual({
@@ -212,6 +239,27 @@ describe("action permissions and channel parity", () => {
   it("composes the accepted notification trail wording", () => {
     expect(ACTIONS.notifications.done({ enabled: false })).toBe("notifications off");
     expect(ACTIONS.notifications.done({ enabled: true })).toBe("notifications on");
+  });
+  // The approved plan for color themes (INF-6888, part 1): the theme line takes a built-in
+  // theme's id, saves its base beside it, clears it for Dark or Light and refuses an unknown id.
+  it("saves a built-in theme with its base, clears it for Dark or Light, and refuses an unknown id", () => {
+    const action = ACTIONS.theme;
+    const saved = { theme: "light" as const, washStrength: 20, colorTheme: "one-light" };
+    expect(action.toRequest({ theme: "dracula" }, saved, (path) => path)).toEqual([
+      { ...saved, theme: "dark", colorTheme: "dracula" },
+    ]);
+    expect(action.toRequest({ theme: "dark" }, saved, (path) => path)).toEqual([
+      { theme: "dark", washStrength: 20 },
+    ]);
+    expect(action.readValue(saved)).toEqual({ theme: "one-light" });
+    expect(action.readValue({ theme: "dark" })).toEqual({ theme: "dark" });
+    expect(action.done({ theme: "catppuccin-frappe" })).toBe(
+      "switched to the Catppuccin Frappé theme",
+    );
+    const refused = action.value.safeParse({ theme: "solarized" });
+    expect(refused.success).toBe(false);
+    expect(refused.error?.issues[0]?.message).toContain("dark, light, rose-pine,");
+    expect(refused.error?.issues[0]?.message).toContain("tokyo-night");
   });
   it("composes migrated theme and panel trail wording", () => {
     expect(ACTIONS.theme.done({ theme: "light" })).toBe("switched to the light theme");
@@ -448,6 +496,31 @@ describe("action permissions and channel parity", () => {
       "automation-delete",
     ]);
     expect(ACTIONS["automation-edit"].tier).toBe("asked");
+  });
+  // INF-6925 finding 1: the first mate reads a rule's failing mark as
+  // Settings shows it, from the same record.
+  it("hands the first mate an event rule's failing mark as Settings reads it", () => {
+    const failing = { since: 1_795_000_000_000, reason: "The integration answered 401." };
+    const value = ACTIONS["automation-edit"].readValue({
+      state: "ready",
+      rules: [
+        {
+          id: "r1",
+          name: "New issues",
+          state: "enabled",
+          spec: { kind: "event", integration: "github", event: "issue-opened" },
+          prompt: "Triage the new issue.",
+          revision: 1,
+          nextFire: null,
+          lastFired: 1_794_990_000_000,
+          captainRequested: true,
+          failing,
+        },
+      ],
+    });
+    expect(value.rules).toEqual([
+      expect.objectContaining({ lastFired: 1_794_990_000_000, failing }),
+    ]);
   });
 });
 

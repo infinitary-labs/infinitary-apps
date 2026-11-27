@@ -49,5 +49,6 @@
     "other": "{count} tareas abiertas se unen a {project}, con sus claves:"
   },
   "projectsMoveTitleInto": "¿Mover {repositories} a {project}?",
-  "projectsMoveTitleOwn": "¿Mover {repositories} a un proyecto propio?"
+  "projectsMoveTitleOwn": "¿Mover {repositories} a un proyecto propio?",
+  "projectsSetupLeftFolder": "Su carpeta sigue en tu carpeta de proyectos, así que al agregarlo se vincula esa carpeta en lugar de clonar el proyecto otra vez."
 }

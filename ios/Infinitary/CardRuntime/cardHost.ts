@@ -294,6 +294,11 @@ window.phoneCard = {
     frame.setAttribute("sandbox", FRAME_SANDBOX);
     frame.style.cssText = value.expanded ? "display:block;width:100%;height:100%;border:0" : "display:block;width:100%;height:48px;border:0";
     if (value.expanded) window.document.documentElement.style.height = window.document.body.style.height = "100%";
+    // INF-6865: a face's frame grows to its body, so the card's own scroller is the only one. WebKit can keep a frame's
+    // inner scroller measured at a stale height after a revision in place (folded sections with marked parts, read at
+    // the card's end); that scroller then takes the swipe, slides the words up inside the frame and leaves the choices
+    // out of reach. The frame never scrolled sideways either: a line wider than the card is clipped, as on the Mac.
+    else frame.setAttribute("scrolling", "no");
     // INF-1263 / INF-1651: native code keeps the web view out of reach and out of accessibility until it holds the
     // drawn body's height. Hiding the frame here would stick on iOS 27.0, which never exposes the body again.
     frame.srcdoc = document;

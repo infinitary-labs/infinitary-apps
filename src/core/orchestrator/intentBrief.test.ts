@@ -13,6 +13,7 @@ import {
   LOOK_DEEPER_LABEL,
   NO_WORDS_FOR_THIS_TASK,
   parseSpawnIntent,
+  QUICK_ANSWER_ACT_WORDS,
   QUICK_ANSWER_FIRST_WORDS,
   QUICK_ANSWER_GENERAL_KNOWLEDGE_WORDS,
   QUICK_ANSWER_LINE_WORDS,
@@ -665,6 +666,7 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
 describe("a quick answer's instructions", () => {
   const QUICK_WORDS = [
     QUICK_ANSWER_REACH_WORDS,
+    QUICK_ANSWER_ACT_WORDS,
     QUICK_ANSWER_FIRST_WORDS,
     QUICK_ANSWER_LINE_WORDS,
     QUICK_ANSWER_STRAIGHT_DEEPER_WORDS,
@@ -706,6 +708,22 @@ describe("a quick answer's instructions", () => {
     );
     expect(QUICK_ANSWER_GENERAL_KNOWLEDGE_WORDS).toContain('begins "Not checked here:"');
     expect(QUICK_ANSWER_GENERAL_KNOWLEDGE_WORDS).toContain("never replaces the hand-off");
+  });
+
+  // INF-6952 part B, the captain's "any ask to publish or merge goes back to
+  // be done": two intake reviews sorted as lookups each showed a status card
+  // instead of the review their goal named.
+  it("tells a retrieval crewmate to hand back a goal that asks for something done", () => {
+    const section = renderAnswerShapeSection(false, "retrieval");
+    expect(section).toContain(QUICK_ANSWER_ACT_WORDS);
+    for (const asks of ["published", "merged", "a merge card shown"]) {
+      expect(QUICK_ANSWER_ACT_WORDS).toContain(asks);
+    }
+    expect(QUICK_ANSWER_ACT_WORDS).toContain("show no card, and report with needs_firstmate");
+    // Read before the card rules, so no status card is drawn first.
+    expect(section.indexOf(QUICK_ANSWER_ACT_WORDS)).toBeLessThan(
+      section.indexOf(QUICK_ANSWER_LINE_WORDS),
+    );
   });
 
   it("leaves research, and a retrieval step handed to the next step, without it", () => {

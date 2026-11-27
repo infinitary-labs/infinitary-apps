@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-part-deadline-full-length",
+      "reason": "Tests only: a test deadline longer than ten minutes, such as a phone check part's, now runs its own length instead of ending at the load clock's ten-minute wall cap; nothing in the app changes."
+    }
+  ]
+}

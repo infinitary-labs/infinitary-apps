@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "sign-in-places-translated",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Sign-ins on your other computers say where they are in your language",
+      "body": "In a language other than English, the words that name where a sign-in or connection lives, such as on another computer or as another user on this one, now read in your language. That covers sign-ins and custom APIs in Settings, where each project runs, connections to GitHub and other hosts, the card about saved resets, Activity lines and the phone's settings.",
+      "noPicture": "Every view keeps its layout and English stays word for word the same; only the words change in the other languages.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

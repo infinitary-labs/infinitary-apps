@@ -32,6 +32,8 @@ public struct PhoneIntent: Sendable, Equatable, Identifiable {
         /// Steer a crewmate: the words show as sent in its transcript. `before` counts the captain's steers the
         /// transcript showed at the tap, sending ones included, as a reply's does.
         case steer(task: String, text: String, before: Int)
+        /// Take back the newest message (INF-6763's plan): the strip reads it Reverted, its words struck.
+        case takeBack(ask: String)
     }
 
     /// `sent` waits on the home's result; `accepted` on the snapshot that holds the change; `unknown` lost its result
@@ -204,6 +206,10 @@ public struct PhoneIntentLedger: Sendable {
         case let (.steer(id, _, before), .crew(crew)):
             guard crew.taskId == id else { return nil }
             return captainSteers(crew) > before ? .holds : .lacks
+        case let (.takeBack(ask), .turn(turn)):
+            // A last turn that no longer holds the message moved past it; a message it holds settles by its mark.
+            guard let turn else { return .lacks }
+            return turn.takenBack(ask).map { $0 ? .holds : .lacks } ?? .void
         default: return nil
         }
     }
@@ -276,12 +282,16 @@ public enum PhoneIntentFold {
         return threads
     }
 
-    /// The message sent is the newest round, with no reply yet; the round it follows becomes the older one.
+    /// The message sent is the newest round, with no reply yet; the round it follows becomes the older one. A message
+    /// taken back reads taken back wherever it stands.
     public static func lastTurn(_ synced: PhoneLastTurn?, _ intents: [PhoneIntent]) -> PhoneLastTurn? {
         var turn = synced
         for intent in intents {
-            guard case let .send(text, _) = intent.kind else { continue }
-            turn = PhoneLastTurn(you: text, reply: nil, previous: turn.map { PhoneLastRound(you: $0.you, reply: $0.reply) })
+            switch intent.kind {
+            case let .send(text, _): turn = PhoneLastTurn(you: text, reply: nil, previous: turn?.round)
+            case let .takeBack(ask): turn = turn?.marking(ask)
+            default: break
+            }
         }
         return turn
     }
@@ -336,8 +346,10 @@ extension PhoneIntent {
     /// Where an iPhone on its side says why the intent was taken back: its card's own line, or the composer's for a
     /// message.
     public var place: String? {
-        if case .send = kind { return Self.messagePlace }
-        return cardID
+        switch kind {
+        case .send, .takeBack: return Self.messagePlace
+        default: return cardID
+        }
     }
     public static let messagePlace = "message"
 

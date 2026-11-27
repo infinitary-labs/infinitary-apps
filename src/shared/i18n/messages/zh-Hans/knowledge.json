@@ -133,6 +133,12 @@
     "plural": "count",
     "other": "图谱 · {count} 个概念"
   },
+  "knowledgePanelHeardCard": "听你说过，在卡片“{title}”上",
+  "knowledgePanelHeardStanding": "听你说过，在你对 {task} 的有效回复里",
+  "knowledgePanelHeardTab": "听你说过，在 {task} 的“船员”标签页里",
+  "knowledgePanelHeardTitle": "在哪里听你说的",
+  "knowledgePanelHeardTurn": "听你说过，在你对大副说的话里",
+  "knowledgePanelHeardWindow": "由你在知识中修改",
   "knowledgePanelHops": {
     "plural": "count",
     "other": "{count} 步"
@@ -167,6 +173,7 @@
   "knowledgePanelNoSources": "没有随它保存任何来源。",
   "knowledgePanelNoUses": "还没有工作申报用到了它。",
   "knowledgePanelNone": "无",
+  "knowledgePanelNotHeard": "没有听你说过，因此它本身不批准任何事",
   "knowledgePanelNothingRecorded": "还没有记录任何内容",
   "knowledgePanelObservedBy": "观察得出 · 由 {author}",
   "knowledgePanelOpLink": "已关联",

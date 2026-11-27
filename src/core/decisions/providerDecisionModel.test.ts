@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { DECIDE_TIMEOUT_MS } from "./decisionModel";
-import { OpenRouterDecisionModel } from "./openRouterDecisionModel";
+import { ProviderDecisionModel } from "./providerDecisionModel";
 
 const questions = {
   kind: {
@@ -15,7 +15,8 @@ afterEach(() => vi.restoreAllMocks());
 
 it("honors caller cancellation while the selected account runtime is still being built", async () => {
   const runtimeFor = vi.fn(() => new Promise<never>(() => {}));
-  const model = new OpenRouterDecisionModel({
+  const model = new ProviderDecisionModel({
+    provider: "openrouter",
     model: "typesafe/jev-1.13",
     selectAccount: () => "acct",
     runtimeFor,
@@ -42,7 +43,8 @@ it("does not construct a runtime after cancellation overtakes account selection"
     selected = resolve;
   });
   const runtimeFor = vi.fn(() => new Promise<never>(() => {}));
-  const model = new OpenRouterDecisionModel({
+  const model = new ProviderDecisionModel({
+    provider: "openrouter",
     model: "typesafe/jev-1.13",
     selectAccount: () => account,
     runtimeFor,
@@ -64,7 +66,8 @@ it("does not construct a runtime after cancellation overtakes account selection"
 it("bounds runtime construction as well as the request to fifteen seconds", async () => {
   const deadline = new AbortController();
   const clock = vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
-  const model = new OpenRouterDecisionModel({
+  const model = new ProviderDecisionModel({
+    provider: "openrouter",
     model: "typesafe/jev-1.13",
     selectAccount: () => "acct",
     runtimeFor: () => new Promise<never>(() => {}),
@@ -86,7 +89,8 @@ it("bounds runtime construction as well as the request to fifteen seconds", asyn
 
 it("does not select an account for an already expired caller deadline", async () => {
   const selectAccount = vi.fn(() => "acct");
-  const model = new OpenRouterDecisionModel({
+  const model = new ProviderDecisionModel({
+    provider: "openrouter",
     model: "typesafe/jev-1.13",
     selectAccount,
     runtimeFor: () => new Promise<never>(() => {}),

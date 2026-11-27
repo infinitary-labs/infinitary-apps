@@ -560,7 +560,9 @@ export function validInjection(input: Injection): boolean {
     typeof input?.id === "string" &&
     Object.keys(input).every((key) => ["id", "reason", "env", "argv", "cwd"].includes(key)) &&
     (input.cwd === undefined ||
-      (typeof input.cwd === "string" && input.cwd.startsWith("/") && !input.cwd.includes("\0"))) &&
+      (typeof input.cwd === "string" &&
+        /^(?:\/|[A-Za-z]:[\\/])/.test(input.cwd) &&
+        !input.cwd.includes("\0"))) &&
     input.id.length > 0 &&
     typeof input.reason === "string" &&
     input.reason.trim().length > 0 &&

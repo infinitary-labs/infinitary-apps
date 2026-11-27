@@ -214,6 +214,10 @@
   color: var(--fg-3);
   cursor: default;
 }
+/* Words beside a model ID read as words, not as part of the ID. */
+.fm-custom-pick-note {
+  font-family: var(--font-ui);
+}
 .fm-custom-rows {
   display: grid;
   gap: var(--space-1);

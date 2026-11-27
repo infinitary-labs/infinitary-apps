@@ -7,7 +7,8 @@ import { openSize, openWindow } from "./window";
 
 // INF-1292, from the project-focus journey: the row opens under the pointer
 // that pressed the pill, and the pill it lands on lit its project with no
-// movement, dimming the rest.
+// movement, dimming the rest. INF-1294: the click leaves focus in the message
+// box, out of the row's own reach, so the window's Escape is what folds it.
 
 const PROJECTS = [
   { repoId: "repo-inf", name: "infinitary", key: "INF" },
@@ -42,7 +43,7 @@ const option = (key: string) => part(`[data-project-focus-option="${key}"]`);
 
 const nextFrame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 
-test("a still click opens the row without dimming any crew, and moving onto a pill lights its project", async () => {
+test("a still click opens the row without dimming any crew, moving onto a pill lights its project, and Esc folds it", async () => {
   const home = subscribed(await seededHome({ projects: PROJECTS, work: WORK, waitsOn: WAITS_ON }));
   const bridge = fakeBridge(home);
   await openSize();
@@ -79,6 +80,17 @@ test("a still click opens the row without dimming any crew, and moving onto a pi
     await expect.poll(() => crewLight("lab-1")).toBeGreaterThan(0.6);
     await userEvent.hover(option("all"));
     for (const work of WORK) await expect.poll(() => crewLight(work.id)).toBeGreaterThan(0.6);
+
+    // Section: Esc folds the row the pointer opened, from the message box that kept focus.
+    expect(document.activeElement).toBe(messageBox());
+    await userEvent.keyboard("{Escape}");
+    await expect
+      .poll(() =>
+        document.querySelector("[data-project-focus]")?.getAttribute("data-project-focus"),
+      )
+      .toBe("closed");
+    expect(document.querySelector("[data-project-focus-row]")).toBeNull();
+    expect(document.activeElement).toBe(messageBox());
   } finally {
     window.removeEventListener("pointerover", noteEntered, true);
   }

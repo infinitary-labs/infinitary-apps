@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "outside-checks-waiting-on-main",
+      "reason": "Internal: an outside pull request whose every failed check also fails on main now gets a comment saying so and no waiting-on-author label, and this project's intake round offers the maintainer a rerun of those checks once main passes; nothing in the app changes."
+    }
+  ]
+}

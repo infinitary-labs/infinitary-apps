@@ -4,7 +4,6 @@ import {
   linuxDiskWaits,
   requestDeadlinesOnLoadClock,
   startLoadClock,
-  waitCap,
 } from "./budgets";
 import { tickedLoadClock } from "./loadClock";
 
@@ -157,14 +156,48 @@ it("counts every tick once the disk counter cannot be read, not the share it las
   expectFiredAfter(run.fired(), DISK_STALL_MS, LIMIT_MS - held);
 });
 
+// The wall cap of the 5 s limit: 20 times it.
+const LIMIT_CAP_MS = 100_000;
+
 it("still ends a limit by its wall cap when the disk never frees", () => {
   const run = diskClock(true);
-  run.runTo(waitCap(LIMIT_MS) + LOAD_CLOCK_TICK_MS, true);
-  expect(run.fired()).toBe(waitCap(LIMIT_MS));
+  run.runTo(LIMIT_CAP_MS + LOAD_CLOCK_TICK_MS, true);
+  expect(run.fired()).toBe(LIMIT_CAP_MS);
 });
 
 it("counts every tick where the computer keeps no disk counter, as before", () => {
   const run = diskClock(false);
   run.runTo(LIMIT_MS + LOAD_CLOCK_TICK_MS, true);
   expect(run.fired()).toBe(LIMIT_MS);
+});
+
+// A phone check's rest part has a 24-minute deadline on the launcher's load clock: twice its recorded 8 minutes, and
+// two command deadlines for its clean-up. The wall cap of 10 minutes ended it after 10.0 minutes while its journey
+// still ran, and its failure named the 24 minutes (run 45934897666).
+const PART_DEADLINE_MS = 24 * 60_000;
+
+it("runs a limit longer than ten minutes its whole length, and ends it there when its work never runs", () => {
+  // The clock captures the timers it ticks and schedules on as it starts, and this test reads the wall through Date,
+  // so fake them first.
+  vi.useFakeTimers({
+    toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval", "Date"],
+  });
+  for (const runs of [true, false]) {
+    const start = Date.now();
+    // A quiet two-processor computer, so load time is the time the work runs.
+    const clock = startLoadClock(
+      () => Date.now() - start,
+      () => 0,
+      2,
+    );
+    restores.push(clock.stop);
+    // Stalled from the start: nothing ticks the clock again.
+    if (!runs) clock.stop();
+    let fired: number | undefined;
+    clock.timer(() => {
+      fired = Date.now() - start;
+    }, clock.now() + PART_DEADLINE_MS);
+    vi.advanceTimersByTime(PART_DEADLINE_MS + LOAD_CLOCK_TICK_MS);
+    expectFiredAfter(fired, 0, PART_DEADLINE_MS);
+  }
 });

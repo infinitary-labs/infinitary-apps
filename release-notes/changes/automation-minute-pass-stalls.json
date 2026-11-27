@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "automation-minute-pass-stalls",
+      "kind": "fix",
+      "area": "other",
+      "title": "Fewer short pauses each minute with Automation rules or the Heartbeat on",
+      "body": "Once a minute the app checks your Automation rules, and with the Heartbeat on it also reads your waiting work. That check read every connection up to twice for each rule, and it repeated slow preparation for each waiting task, so the window could pause briefly every minute. It now reads your connections once for all your rules and reuses that preparation, so the check is much shorter.",
+      "noPicture": "The fix changes how long a background check takes, not how any view looks.",
+      "noDocsSite": "No docs site page describes how long the minute check takes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

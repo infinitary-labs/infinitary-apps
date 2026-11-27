@@ -5,6 +5,7 @@
     "other": "批次 #{number} · {count} 項變更"
   },
   "batchesPanelChecking": "檢查中 {duration}",
+  "batchesPanelCheckingFix": "正在帶上修正 {key} 執行檢查，尚未核准",
   "batchesPanelChecksFull": "檢查：{passed} 項已通過，{failed} 項未通過，{running} 項執行中，讀取於 {time}",
   "batchesPanelChecksPassed": "{total} 項檢查中已通過 {passed} 項",
   "batchesPanelChecksUnread": "尚未讀取檢查",

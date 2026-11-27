@@ -11,15 +11,18 @@ import {
 } from "@shared/personal/manifest";
 import {
   mountKindOf,
+  ON_RAIL_STATES,
   PANEL_MOUNT_WHY_MAX,
   PANEL_MOUNTS_MAX,
   type PanelMount,
   type PanelMountKind,
   type PanelMounts,
+  type RailsAway,
 } from "@shared/personal/mounts";
 import type { RailSide } from "@shared/plugins/manifest";
 import { effectivePlacement, isPanelHidden, type Layout } from "@shared/preferences";
 import { cutText } from "@shared/textCut";
+import { onRailFold, railsFolded } from "../app/shellLayout";
 import { useShellStore } from "../app/store";
 import { type PanelBodyState, panelBodies } from "../personal/panelBodies";
 import type { SidePanelContribution } from "./contributions";
@@ -36,8 +39,9 @@ import { railStore } from "./railStore";
  * the rail"): for every panel it knows, whether it drew it, and if not why,
  * read from the same records the rails draw from - the registered panels,
  * the captain's layout, what each panel's own code said, what refused one,
- * how each of the captain's own bodies fared, and what each rail folded or
- * gathered into its More row for room. Sent to the core whenever
+ * how each of the captain's own bodies fared, what each rail folded or
+ * gathered into its More row for room, and whether the rails themselves are
+ * folded away or Settings is open. Sent to the core whenever
  * it changes, where a crewmate's `place_panel` waits on it and the
  * Firstmate's surfaces list reads it.
  */
@@ -57,6 +61,8 @@ export type MountFacts = {
   room: (side: RailSide) => RailRoom;
   /** The create-your-own-panel slot: drawn, or why not. */
   slot: { shows: true } | { shows: false; why: string };
+  /** Why the rails are out of sight right now, or null while they are on screen. */
+  away?: RailsAway | null;
 };
 
 function cut(why: string): string {
@@ -191,7 +197,18 @@ export function readPanelMounts(facts: MountFacts): PanelMount[] {
         ? { ...slot, state: "drawn", why: null }
         : { ...slot, state: "off", why: facts.slot.why },
   );
-  return mounts;
+  // The panel's state is what its rail holds; whether that rail is on
+  // screen is the window's, so a crewmate told "drawn" also hears that the
+  // captain cannot see it, and why.
+  const away = facts.away;
+  if (!away) return mounts;
+  return mounts.map((mount) => (ON_RAIL_STATES.has(mount.state) ? { ...mount, away } : mount));
+}
+
+/** Settings draws no rails (App.tsx); otherwise they are away while folded. */
+function awayNow(): RailsAway | null {
+  if (useShellStore.getState().view === "settings") return "settings";
+  return railsFolded() ? "folded" : null;
 }
 
 function slotNow(layout: Layout): MountFacts["slot"] {
@@ -254,6 +271,7 @@ export function startPanelMounts(
       isCollapsed: (id) => railStore.isCollapsed(id),
       room: (side) => railFolds.of(side),
       slot: slotNow(layout),
+      away: awayNow(),
     });
     const text = JSON.stringify(panels);
     if (text === last) return;
@@ -284,8 +302,13 @@ export function startPanelMounts(
     panelRail.subscribe(changed),
     createPanelSlot.subscribe(changed),
     useShellStore.subscribe((state, before) => {
-      if (state.firstRun?.thirdCrewmateDoneAt !== before.firstRun?.thirdCrewmateDoneAt) changed();
+      if (
+        state.firstRun?.thirdCrewmateDoneAt !== before.firstRun?.thirdCrewmateDoneAt ||
+        state.view !== before.view
+      )
+        changed();
     }),
+    onRailFold(changed),
   ];
   follow();
   return () => {

@@ -184,7 +184,7 @@ export function decisionUseSwitchedOn(use: DecisionUse, switches: DecisionUseSwi
 }
 
 /**
- * The approval screen the picked Jev or OpenRouter model's approval saw,
+ * The approval screen the picked Jev or provider decision model's approval saw,
  * or null while the person's own models answer: a pick that is not turned
  * on is not the model answering, and the person's own models need no
  * approval of their own.
@@ -192,7 +192,14 @@ export function decisionUseSwitchedOn(use: DecisionUse, switches: DecisionUseSwi
 export function decisionApproval(settings: DecisionsSettings): number | null {
   const { answerer } = settings;
   if (answerer.kind === "adapted") return null;
-  const egress = settings.egress[answerer.kind === "native" ? answerer.id : "openrouter"];
+  const egress =
+    settings.egress[
+      answerer.kind === "native"
+        ? answerer.id
+        : answerer.kind === "provider"
+          ? answerer.provider
+          : "openrouter"
+    ];
   const seen = egress?.consentedVersion ?? -1;
   return egress?.enabled && seen >= DECISION_FIRST_APPROVAL_VERSION ? seen : null;
 }

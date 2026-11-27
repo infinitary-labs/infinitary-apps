@@ -157,6 +157,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | session, transcript | (not used) | 대화 instead |
 | Settings | 설정 | |
 | sign-in / sign in | 로그인 / 로그인하다 | Korean software uses 로그인 for both the noun and the verb |
+| standing reply (your words kept on a task, which pass its holds) | 유효한 답장 | |
 | start | 시작 | |
 | starter | 시작 문구 | |
 | Steer (button) | 지시 보내기 |  |
@@ -177,6 +178,7 @@ Particles after a filled value are avoided by word order, or written in the pair
 | token, OAuth, credential | (not used) | 로그인 or 키 instead; "billable tokens" stays 토큰 where English names them |
 | unsafe data reader | 안전하지 않은 데이터 읽기 작업 | A crewmate that reads words anyone can write. |
 | Usage | 사용량 | |
+| user (another user account on this computer) | 사용자 | "as {user}" is "{user}(으)로", as in "다른 사용자로 실행" |
 | version | 버전 | Replaces SHA and hash |
 | Waiting on you (board lane) | 선장님을 기다림 | |
 | where the project lives | 프로젝트가 있는 곳 | "the project's host" is 프로젝트 호스트 |

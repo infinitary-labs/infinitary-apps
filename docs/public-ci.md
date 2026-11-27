@@ -37,7 +37,8 @@ An outside contributor's pull request runs only on GitHub's hosted machines, wha
 
 Nothing from an outside change runs on the project's own machines, before or after the captain's merge click.
 An outside change never joins the swept batch: once approved it merges as its own pull request (`docs/forge.md`, "Batches of your own").
-So the fresh Windows 11 check, the phone check, the signed installer checks, signing and TestFlight first meet it after it reaches `main`: main's own check, and for the fresh Windows 11 install the next alpha's release check (`docs/alpha.md`).
+So the fresh Windows 11 check, the signed installer checks and signing first meet it after it reaches `main`, in the captain's next batch and that batch's alpha (`docs/alpha.md`), and the phone check and TestFlight at the next phone release (`docs/ios.md`).
+Its merge starts no main check and no alpha of its own: main's check leaves it to the next batch, which, combined on top of `main`, checks it with the batch's own changes, and that batch's alpha ships it (`docs/testing.md`, "Main's desktop release check").
 
 ### How an outside pull request moves
 
@@ -54,12 +55,15 @@ So the fresh Windows 11 check, the phone check, the signed installer checks, sig
 4. **GitHub's machines run them.**
    The checks in the list above run on the pull request's own version, merged with the current `main`.
    If any check fails, the failed-check note sends the pull request back to its author ("The failed-check note"), and the author's next push brings it back to the round.
+   When every failed check also fails on `main`, the note tells the author so and the pull request waits on `main` instead: the first round after `main` passes offers the captain a rerun of its failed jobs ("Once main passes" in `docs/outside-intake.md`).
 5. **The crew reviews it once every check passes.**
-   The next round files its review, and the first mate starts it at once under the intake rules' standing yes ("The review" in `docs/outside-intake.md`).
+   The next round files its review, and the first mate starts it under the intake rules' standing yes as a fresh review task naming the pull request's number, never the filed follow-up itself, unless a review of that pull request has already started and not closed ("The review" in `docs/outside-intake.md`).
    A crewmate reads its code and GitHub's runs, never runs the change, and shows the merge card with `asks_first`.
+   When GitHub cannot merge it as it stands and its author allows edits by maintainers, the crew first brings it up to date on the author's own branch with an update that leaves the reviewed behavior as it was, reviews only that update, and lets the checks run again on GitHub's machines ("Carrying it to the merge" in `docs/outside-intake.md`).
 6. **The captain merges it.**
    Only the captain's click merges the contributor's pull request; no standing rule that lets a change merge on its own covers an outside one.
-   A later push needs a new review and a new click.
+   An author's later push needs a new review and a new click; the crew's own update after the click keeps it, once the crew declares that the update changed nothing reviewed.
+   The merge cuts no alpha of its own: the captain's next batch checks the change on top of `main`, and that batch's alpha ships it.
 
 The crew's safety rule: a crewmate reviewing an outside pull request runs nothing from it on the project's own machines or the captain's computers before the click; it reads the change and GitHub's runs, and starts nothing on the project's own runners for it.
 The fork guard on the project's own runners refuses a job whose pull request comes from another copy of the project in any case.
@@ -83,14 +87,18 @@ Keep fork workflow write tokens and secrets restricted at the host: an outside p
 It starts when `ci`, `contributors` or `docs-site` finishes a run for a pull request from another copy of the project; the project's own branches start nothing here.
 
 - It reads every job of that version's newest run of each of the three workflows and keeps the failed and timed-out ones; a run GitHub marked failed without starting a job, such as an unapproved run of a closed pull request, names nothing.
-- It leaves out a job whose check also failed in main's newest finished run of `main.yml`, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
+- It leaves out a job whose check also failed in main's newest finished run of `main.yml` that checked something, matching the check by the innermost level of the job's name without its trigger (`scripts/ci-job-names.mjs`), so the contributor's `Integration tests (Linux; group 1/2)` and main's are one check.
+  A cancelled run with no failed job, such as a paused run or one that left an outside merge to the next batch, checked nothing and is passed over; a run cancelled after a job failed, so a newer run could start, still counts.
   Only the jobs `contributors` runs through `verify.yml` and `linux-startup.yml` have a counterpart on main; main runs none of the jobs `ci` and `docs-site` run on a pull request, so those are never left out.
   Whenever main's newest run has any failed job, the comment adds a line saying main is failing too, so a check it names may not be the contributor's to fix.
-- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log and then, without links, any failed job it left out because main fails it too, and edits that comment when a later workflow of the same version finishes; a version whose every failed check also fails on main gets none.
-- The version's first comment labels the pull request `waiting on author`, and its hidden mark records whether the note put the label on; the author's next push takes the label off once both required checks pass ("Intake").
-- A passing run of the same version, such as a maintainer's rerun, reads the version again; once nothing the comment names is left for the pull request to fix, it edits the comment to say so, and when the note put the label on and both required checks pass, it takes the label off and adds `needs triage`, as the author's push does.
+- It writes one comment per version, saying it was posted automatically and naming each failed job with a link to its log and then, without links, any failed job it left out because main fails it too, and edits that comment when a later workflow of the same version finishes.
+- A version whose every failed check also fails on main gets a comment naming those checks without links, saying they need nothing from the author and that a maintainer can run them again once `main` passes, and no label; the intake round offers that rerun ("Once main passes" in `docs/outside-intake.md`).
+- The version's first comment that names a check labels the pull request `waiting on author`; the author's next push takes the label off once both required checks pass ("Intake").
+- The comment's hidden first line, `<!-- failed-checks sha=<version> labeled=yes|no waits=author|main|none -->`, records whether the note put the label on and whom the version waits on: its author while the comment names a check, `main` while every failed check also fails on main, and nobody once none fails.
+- A run of the same version, such as a maintainer's rerun, reads the version again; once nothing the comment names is left for the pull request to fix, it edits the comment to say so, and when the note put the label on and both required checks pass, it takes the label off and adds `needs triage`, as the author's push does.
   The note's label comes off this way even after a maintainer's reply asking for changes; only a label already on before the note's first comment stays.
-  A later failure at that version names the checks again and puts the label back.
+  A later failure at that version names the checks again and puts the label back, as it puts it on after a comment that named none.
+- A rerun checks the same merge with `main` as the run's first attempt, since GitHub reruns a run at its first commit: it settles a failure main shared by chance, such as a flaky test or a machine fault, but a check that main's own code fix made pass fails again, and the note names it, so the author's next push checks the version against the fixed `main`.
 - A run of an older version, once a newer push replaced it, or of a closed pull request writes nothing.
 
 Started by hand with a pull request number, it is a dry run on any pull request of the project: it writes what it would say to the job summary and nothing on the pull request.
@@ -129,7 +137,7 @@ GitHub sorts each new outside issue and pull request with no model, and a mainta
 - **Waiting on the author.**
   After each required check writes its status, it labels an outside pull request `waiting on author` while either required check fails; once both pass on the author's own event (a push, an edit, a reopening or an acceptance), the label comes off and `needs triage` goes on (`scripts/intake-labels.mjs`).
   A maintainer's event never takes the label off here, so a reply asking for changes holds although both checks pass.
-  A failed run of `ci`, `contributors` or `docs-site` also adds the label through the failed-check note, and a passing rerun of that version takes the note's label off again, even after such a reply ("The failed-check note").
+  A failed run of `ci`, `contributors` or `docs-site` also adds the label through the failed-check note, unless every failed check also fails on `main`, and a passing rerun of that version takes the note's label off again, even after such a reply ("The failed-check note").
 - **The triage mark.**
   `triage-mark.yml` reads each new comment (`scripts/triage-mark.mjs`).
   A comment from an account that can write to the project, judged by GitHub's collaborator permission API and never by the comment's author relation, may end with `<!-- infinitary-triage v1 disposition=NAME -->`.
@@ -165,7 +173,7 @@ An outside pull request merges only once its author accepted the Contributor Lic
 
 - a pull request from one of the project's own branches, a task's or a batch's, passes at once;
 - an outside one passes when its author's numeric GitHub id accepted the version named on `CLA.md`'s "Version" line;
-- otherwise the author's ticked template box or reply with the agreement's sentence writes one entry to the record and passes, while anyone else's reply changes nothing;
+- otherwise the author's reply with the agreement's sentence writes one entry to the record and passes, while anyone else's reply changes nothing;
 - until then it fails and leaves one comment saying how to accept.
 
 The record is a locked issue of the project titled "Contributor License Agreement record", opened by a maintainer; each entry is a comment the Actions token writes there, naming the login, numeric id, pull request, the box or reply, the version and the time, and the check reads back only those comments.
@@ -186,6 +194,7 @@ Infinitary then writes a record at the end of the pull request's story: no-mista
 
 - a pull request from one of the project's own branches, a task's or a batch's, passes at once;
 - an outside one passes when its description carries the signature line and its first record parses, has `producer` `infinitary` with a `live_validation` verdict and counts, names the pull request's newest version, and marks review, test and document completed;
+- it also passes a record naming an earlier version when the maintainer's crew brought that version up to date to the newest one: comments from accounts that can write, judged by GitHub's collaborator permission, carry crew-update marks leading from the record's version to the newest (`<!-- infinitary-crew-update v1 from=<version> to=<version> -->`, "Carrying it to the merge" in `docs/outside-intake.md`); commit authorship is never read, since a contributor can write any name on a commit;
 - otherwise it fails and keeps one comment, edited in place, saying why and how to raise the pull request with Infinitary; once a later version passes, the comment says so.
 
 The status names the live validation's verdict and counts on a pass and the reason on a failure.

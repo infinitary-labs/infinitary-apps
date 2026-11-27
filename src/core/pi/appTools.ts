@@ -8,6 +8,7 @@ import {
   type ActionName,
   actionActors,
   actionRefusal,
+  type DirectionCitation,
   type HandoverOffer,
   isMultiMachineLine,
   isProjectChange,
@@ -15,6 +16,7 @@ import {
 } from "@shared/actions";
 import type { CoreInvokeChannel } from "@shared/ipc";
 import type { KeymapSnapshot } from "@shared/keymap";
+import type { KnowledgeDirectionHeard } from "@shared/knowledge";
 import { knownPanels } from "@shared/panelArrangement";
 import type { Layout } from "@shared/preferences";
 import { runbookGatesOf } from "@shared/surfaces";
@@ -38,6 +40,14 @@ export type AppToolsDelegate = {
   propose?: (action: ActionName, value: unknown) => Promise<string>;
   changeProject?: (action: ActionName, value: unknown, actor: ActionActor) => Promise<string>;
   actor: () => Extract<ActionActor, { kind: "firstmate" }>;
+  /**
+   * Checks the captain's words a `direction` change cites (`from`, and
+   * `task` for a task's Crewmate tab or standing reply) and answers where
+   * they were heard, nothing when it cites none, or the refusal.
+   */
+  heard?: (
+    change: DirectionCitation & { op: string; id?: string },
+  ) => { ok: true; heard?: KnowledgeDirectionHeard } | { ok: false; text: string };
   /** The home's system, for an offer whose words name its settings; a Mac's unless named. */
   platform?: string;
   /** The window's installed keys, which `keyboard.keys` reads; null or absent with no window open, which reads the saved keys. */
@@ -45,6 +55,18 @@ export type AppToolsDelegate = {
   /** The runbooks, which `runbooks.crew` reads; absent reads that none are connected. */
   runbooks?: ReadHost["runbooks"];
 };
+
+/** Where the captain's words a direction change cites were heard, as the delegate checks them. */
+function heardOf(
+  delegate: AppToolsDelegate,
+  value: unknown,
+): { ok: true; heard?: KnowledgeDirectionHeard } | { ok: false; text: string } {
+  const change = (value ?? {}) as DirectionCitation & { op: string; id?: string };
+  if (change.from === undefined && change.task === undefined) return { ok: true };
+  return delegate.heard
+    ? delegate.heard(change)
+    : { ok: false, text: "Nothing was saved: this seat cannot check the captain's words." };
+}
 
 /**
  * The card a hands line offers: the line's own when it has one, built from
@@ -281,6 +303,9 @@ export function createAppTools(delegate: AppToolsDelegate) {
             ACTIONS[action],
             params.computer as string | undefined,
           );
+          const cited =
+            action === "direction" ? heardOf(delegate, params.value) : { ok: true as const };
+          if (!cited.ok) return { text: cited.text };
           const actor = {
             ...delegate.actor(),
             action,
@@ -288,6 +313,7 @@ export function createAppTools(delegate: AppToolsDelegate) {
             projectWords: params.on_words === true,
             ...(action === "panel" && typeof named === "string" ? { target: named } : {}),
             ...(window ? { window } : {}),
+            ...(cited.heard ? { heard: cited.heard } : {}),
           };
           // A window's own request, and the reads around it, go to that window.
           const asked: CoreDispatch = ((channel: CoreInvokeChannel, args: unknown) =>

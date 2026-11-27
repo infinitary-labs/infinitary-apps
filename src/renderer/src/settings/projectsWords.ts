@@ -3,7 +3,7 @@ import { formatDate, formatList } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import { type NoChecksRecord, type RepoView, readsPullRequestChecks } from "@shared/repos";
-import { type DeviceSignIns, devicePlace } from "@shared/signIns";
+import { type DeviceSignIns, devicePlace, wordedPlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS, RIGOR_WORDS } from "@shared/vocabulary";
 
 /**
@@ -187,6 +187,8 @@ export const BATCH_HOLD_WORDS = {
         return null;
     }
   },
+  /** The declared fix its checks run with before approval (`OpenBatch.trial`), by key or title. */
+  checkingFix: (key: string) => m.settingsProjectsBatchCheckingFix({ key }),
   latestReport: (report: string) => m.settingsProjectsBatchLatestReport({ report }),
   openTask: (key: string) => m.settingsProjectsBatchOpenTask({ key }),
   get answerYourself() {
@@ -289,8 +291,10 @@ export function runsOnWhere(
 ): string | null {
   if (!repo.runsOn) return null;
   if (repo.runsOn === AUTOMATIC_COMPUTER) return m.settingsRunsOnAutomatically();
-  return devicePlace(
-    computers.map((computer) => ({ ...computer, id: computer.deviceId })),
-    repo.runsOn,
+  return wordedPlace(
+    devicePlace(
+      computers.map((computer) => ({ ...computer, id: computer.deviceId })),
+      repo.runsOn,
+    ),
   ).where;
 }

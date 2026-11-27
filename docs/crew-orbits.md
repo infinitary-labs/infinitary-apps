@@ -270,6 +270,10 @@ While the window is focused on one project, or a pointer or the keyboard rests o
 A crewmate keeps its slot, plane, speed, colour and solid: nothing hides and nothing moves for the focus.
 The light eases over `--dur-med` each way and is a cut under reduced motion, where the stage repaints once for the change.
 A crewmate whose project the board does not name stays lit.
+While a crewmate's summary is open, from a pointer rest or its focused name, the stage lights that crewmate's project on every computer the same way, in place of the window's own light (INF-6951, `restedLight`); a program mark's summary lights its program's project.
+The light follows the summary, not the pointer, so it changes after the summary's beat and a sweep across the crew does not flicker; leaving, Esc or a press puts back the held focus, a pill's rest or no light.
+A crewmate whose project the board does not name leaves the window's light as it is, and a Tasks row or an Activity line lighting a crewmate (its brackets) lights no project.
+The phone's crew scene draws the same light from the same value (`docs/ios.md`).
 The light is the last thing the orbit's frame passes through before it is painted (`lightFrame`, `src/renderer/src/character/crew/focusLight.ts`), so every painter and label reads the same alpha.
 
 ## Verification

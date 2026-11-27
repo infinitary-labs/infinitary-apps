@@ -23,6 +23,7 @@ const NAMED = {
   INFINITARY_GROK_KEY_URL: "http://127.0.0.1:9/grok-key",
   INFINITARY_KIMI_USAGE_URL: "http://127.0.0.1:9/kimi",
   INFINITARY_COPILOT_USAGE_URL: "http://127.0.0.1:9/copilot",
+  INFINITARY_OPENCODE_GO_USAGE_URL: "http://127.0.0.1:9/opencode-go",
   INFINITARY_STARTERS_URL: "http://127.0.0.1:9/starters.json",
   INFINITARY_CONNECTION_LOOPBACK_PORT: "40123",
   INFINITARY_STAND_IN_ADDRESSES: " 192.168.1.20 , ,fd00::20",
@@ -36,6 +37,7 @@ const NAMED = {
   INFINITARY_INBOX_LINK_DIR: "/stand-ins/bin",
   INFINITARY_JEV_URL: "http://127.0.0.1:9/jev",
   INFINITARY_OPENROUTER_DECISIONS_BASE_URL: "http://127.0.0.1:9/openrouter",
+  INFINITARY_OPENCODE_GO_DECISIONS_BASE_URL: "http://127.0.0.1:9/opencode-go-decisions",
   INFINITARY_RELEASE_NOTES_DIR: "/stand-ins/notes",
 };
 
@@ -58,6 +60,7 @@ describe("readStandIns", () => {
         grokKeyUrl: "http://127.0.0.1:9/grok-key",
         kimiUsageUrl: "http://127.0.0.1:9/kimi",
         copilotUsageUrl: "http://127.0.0.1:9/copilot",
+        openCodeGoUsageUrl: "http://127.0.0.1:9/opencode-go",
       },
       startersUrl: "http://127.0.0.1:9/starters.json",
       loopbackPort: 40123,
@@ -72,6 +75,7 @@ describe("readStandIns", () => {
       inboxLinkDir: "/stand-ins/bin",
       jevUrl: "http://127.0.0.1:9/jev",
       openRouterDecisionsBaseUrl: "http://127.0.0.1:9/openrouter",
+      openCodeGoDecisionsBaseUrl: "http://127.0.0.1:9/opencode-go-decisions",
       releaseNotesDir: "/stand-ins/notes",
     });
   });

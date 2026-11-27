@@ -167,6 +167,8 @@ export type TakeBackHost = {
   steer(input: ServedInput): void;
   /** The message leaves the turn's unread list. */
   forget(askId: string): void;
+  /** The answer check lets the message go: its retry still waiting and its notice come down. */
+  answerEnded(askId: string): void;
   broadcastEvent(event: FmEvent): void;
   /** Serves a queued wake now if the seat is idle. */
   drain(): void;
@@ -230,6 +232,7 @@ export class TakeBacks {
 
   private after(askId: string, replacement?: string): "withdrawn" | "stopping" | "undoing" {
     const { inbox, tasks } = this.host;
+    this.host.answerEnded(askId);
     const withdrawn = withdrawWaiting(inbox, askId);
     const handing = this.handingOff.get(askId);
     if (inFlight(inbox, askId) || this.host.holds(askId) || handing === true) {

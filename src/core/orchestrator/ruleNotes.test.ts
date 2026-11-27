@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { RULE_NOTES_MAX_CHARS } from "@shared/automation";
@@ -152,6 +153,32 @@ describe("a rule's notes", () => {
     const path = join(f.home, RULE_NOTES_FILE);
     await writeFile(path, LEARNED);
     await expect(f.report("plain", [path])).rejects.toThrow(/not started by an automation's run/);
+  });
+
+  // INF-6843: an unsafe data reader can neither read its hand-over folder nor
+  // write a file (docs/agents-reach.md), so its brief asks for no notes file.
+  it("briefs no notes, and hands no file, to an unsafe data reader an automation's run started", async () => {
+    const f = setup();
+    const intake = f.scheduler.create(
+      { kind: "daily", hour: 9, minute: 0, timeZone: "America/Los_Angeles" },
+      'Outside intake round. Otherwise start one answer task on Infinitary titled "Outside intake round", as an unsafe data reader.',
+      true,
+      "Outside intake, morning",
+    );
+    const round = (id: string) => {
+      seedTask(f.tasks, {
+        id,
+        title: "Outside intake round",
+        status: "running",
+        shape: { kind: "research", deliverable: "answer", unsafe_data_reader: true },
+      });
+      f.tasks.capture.saveOrigin(id, { kind: "automation", ruleId: intake.id });
+      return id;
+    };
+    expect(await f.notes.briefSection(round("round-1"))).toBeUndefined();
+    f.scheduler.saveNotes(intake.id, LEARNED, { by: "captain" });
+    expect(await f.notes.briefSection(round("round-2"))).toBeUndefined();
+    expect(existsSync(join(f.home, "round-2"))).toBe(false);
   });
 
   it("briefs no notes for a one-time rule's run, which never runs again", async () => {

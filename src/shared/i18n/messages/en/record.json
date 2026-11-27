@@ -78,6 +78,62 @@
   },
   "recordMoreValidation": "live validation",
   "recordOpenKeptEvidence": "Open kept evidence",
+  "recordPartsClosedFold": {
+    "plural": "count",
+    "one": "{count} closed part",
+    "other": "{count} closed parts"
+  },
+  "recordPartsCountBacklog": {
+    "plural": "count",
+    "one": "{count} in your backlog",
+    "other": "{count} in your backlog"
+  },
+  "recordPartsCountIdle": {
+    "plural": "count",
+    "one": "{count} idle",
+    "other": "{count} idle"
+  },
+  "recordPartsCountInterrupted": {
+    "plural": "count",
+    "one": "{count} interrupted",
+    "other": "{count} interrupted"
+  },
+  "recordPartsCountQueued": {
+    "plural": "count",
+    "one": "{count} queued",
+    "other": "{count} queued"
+  },
+  "recordPartsCountStarting": {
+    "plural": "count",
+    "one": "{count} starting",
+    "other": "{count} starting"
+  },
+  "recordPartsCountWaiting": {
+    "plural": "count",
+    "one": "{count} waiting on you",
+    "other": "{count} waiting on you"
+  },
+  "recordPartsCountWorking": {
+    "plural": "count",
+    "one": "{count} working",
+    "other": "{count} working"
+  },
+  "recordPartsLast": "Waiting for its last part",
+  "recordPartsLastBacklog": "Its last part waits for your Start",
+  "recordPartsLastBacklogGuidance": "{key} is in your backlog. This task closes by itself once its parts close.",
+  "recordPartsLastIdle": "{key} is idle. This task closes by itself once its parts close.",
+  "recordPartsLastInterrupted": "{key} was interrupted. This task closes by itself once its parts close.",
+  "recordPartsLastQueued": "{key} is queued. This task closes by itself once its parts close.",
+  "recordPartsLastStarting": "{key} is starting. This task closes by itself once its parts close.",
+  "recordPartsLastWaiting": "Its last part is waiting on you",
+  "recordPartsLastWaitingGuidance": "{key} has a card for you. This task closes by itself once its parts close.",
+  "recordPartsLastWorking": "{key} is working. This task closes by itself once its parts close.",
+  "recordPartsOpen": {
+    "plural": "total",
+    "one": "Waiting for {open} of its {total} part",
+    "other": "Waiting for {open} of its {total} parts"
+  },
+  "recordPartsOpenGuidance": "{counts}. This task closes by itself once its parts close.",
   "recordPersonalNone": "None, on {computer}",
   "recordPersonalVersion": "Version {version} from {when}, on {computer}",
   "recordPolicyParentTask": "Parent task",

@@ -1,0 +1,107 @@
+{
+  "projects": {
+    "web-home": "website",
+    "shop-home": "shop",
+    "web-studio": "website",
+    "shop-studio": "shop"
+  },
+  "durationMs": 360,
+  "steps": [
+    {
+      "held": null,
+      "rested": null,
+      "elapsedMs": 0,
+      "light": {
+        "web-home": 1,
+        "shop-home": 1,
+        "web-studio": 1,
+        "shop-studio": 1,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": null,
+      "rested": "web-home",
+      "elapsedMs": 120,
+      "light": {
+        "web-home": 1,
+        "shop-home": 0.75,
+        "web-studio": 1,
+        "shop-studio": 0.75,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": null,
+      "rested": "web-home",
+      "elapsedMs": 300,
+      "light": {
+        "web-home": 1,
+        "shop-home": 0.25,
+        "web-studio": 1,
+        "shop-studio": 0.25,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": null,
+      "rested": "shop-studio",
+      "elapsedMs": 180,
+      "light": {
+        "web-home": 0.625,
+        "shop-home": 0.625,
+        "web-studio": 0.625,
+        "shop-studio": 0.625,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": null,
+      "rested": "unnamed-home",
+      "elapsedMs": 400,
+      "light": {
+        "web-home": 1,
+        "shop-home": 1,
+        "web-studio": 1,
+        "shop-studio": 1,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": "website",
+      "rested": "shop-home",
+      "elapsedMs": 400,
+      "light": {
+        "web-home": 0.25,
+        "shop-home": 1,
+        "web-studio": 0.25,
+        "shop-studio": 1,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": "website",
+      "rested": null,
+      "elapsedMs": 90,
+      "light": {
+        "web-home": 0.4375,
+        "shop-home": 0.8125,
+        "web-studio": 0.4375,
+        "shop-studio": 0.8125,
+        "unnamed-home": 1
+      }
+    },
+    {
+      "held": null,
+      "rested": null,
+      "elapsedMs": 400,
+      "light": {
+        "web-home": 1,
+        "shop-home": 1,
+        "web-studio": 1,
+        "shop-studio": 1,
+        "unnamed-home": 1
+      }
+    }
+  ]
+}

@@ -255,6 +255,25 @@ export type DeliveryFacts =
     } & SentBackFacts)
   | {
       /**
+       * A held batch's early run with its declared fix failed before the fix
+       * was approved (docs/forge.md, "A held batch"): the fix's own crewmate,
+       * and the batch's repair where that is another task, hear it once.
+       */
+      kind: "batch-trial-failed";
+      /** The fix's confirmed version. */
+      head: string;
+      /** The batch's version that held, and the run's commit: that version plus the fix. */
+      held: string;
+      trial: string;
+      /** The batch's pull request as its host labels it, and its page. */
+      change?: string;
+      url?: string;
+      checks: string[];
+      /** The fix's task, by key, when the reader is the batch's repair and not the fix's crewmate. */
+      fix?: string;
+    }
+  | {
+      /**
        * The task's change clashes with the project's open batch, left out of
        * it or waiting in line, and its own crewmate rebuilds it on that
        * batch's version now rather than after the batch merges (docs/forge.md,
@@ -383,6 +402,23 @@ function renderBatchSentBack(facts: Extract<WakeFacts, { kind: "batch-sent-back"
   const reason = facts.reason.trim();
   const ended = /[.!?]["')]?$/.test(reason) ? reason : `${reason}.`;
   return `Your change at ${facts.head} ${BATCH_SENT_BACK_WORDS.opening}${facts.change ? `, ${facts.change},` : ""} with this reason: ${ended}${before}${failed}${never} The other changes of that batch go on without it.${reproof}${next}`;
+}
+
+/**
+ * A held batch's early run with its declared fix failed: the fix's crewmate repairs it in a
+ * new version on the same held version, and the batch stays held meanwhile.
+ */
+function renderBatchTrialFailed(facts: Extract<WakeFacts, { kind: "batch-trial-failed" }>): string {
+  const batch = facts.change ? ` ${facts.change}${facts.url ? ` (${facts.url})` : ""}` : "";
+  const failed = facts.checks.length ? `: ${facts.checks.join(", ")}` : "";
+  // i18n-exempt: served to a crewmate, never shown to a person (docs/i18n.md, "What stays English")
+  const whose = facts.fix ? `${facts.fix}'s declared fix` : "Your declared fix";
+  // i18n-exempt: served to a crewmate, never shown to a person (docs/i18n.md, "What stays English")
+  const next = facts.fix
+    ? `${facts.fix}'s crewmate repairs the fix in a new version on ${facts.held}; account for these failures as the batch-repair skill says if they change your answer to the hold.`
+    : `Read those checks on that pull request at ${facts.trial}, repair the fix on your branch, still built on ${facts.held}, push and confirm its story with open_change again: the batch runs its checks with the new version.`;
+  // i18n-exempt: served to a crewmate, never shown to a person (docs/i18n.md, "What stays English")
+  return `${whose} at ${facts.head} ran in its held batch${batch} before approval, and the batch's checks at ${facts.trial}, its held version ${facts.held} plus the fix, failed${failed}. The batch stays held at ${facts.held}, and nothing merged. ${next} An approval of ${facts.head} leaves the batch held.`;
 }
 
 /**
@@ -948,6 +984,7 @@ export const DELIVERY_WORDS: KindWords<DeliveryFacts> = {
       .join("\n\n"),
   "batch-sent-back": (facts) => renderBatchSentBack(facts),
   "batch-rebuild": (facts) => renderBatchRebuild(facts),
+  "batch-trial-failed": (facts) => renderBatchTrialFailed(facts),
   "merge-card-behind": (facts) => renderMergeCardBehind(facts),
   "run-watch": (facts) => renderRunWatch(facts),
   "checks-settled": (facts) =>

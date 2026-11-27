@@ -63,10 +63,13 @@ On the computer where your first mate lives, they are under **Signed-in sites** 
 - **Default card size** chooses how cards open: **Usual**, **Wide**, **Full** or **Maximized**.
   You can still resize each card.
 - **Keep cards maximized** keeps every card maximized after you maximize one, until you restore one.
-- **Theme** is **Dark** or **Light**.
+- **Crew model names** shows model names while your crewmates use only one orbit.
 - **Window wash**, on a Mac, sets how much of the theme color covers the blurred background.
   0% is the default.
-- **Crew model names** shows model names while your crewmates use only one orbit.
+- **Theme** is **Dark**, **Light**, or one of thirteen themes under their makers' names, such as **Dracula**, **Catppuccin Mocha** or **Rosé Pine Dawn**.
+  A pick recolors the window, its cards and its panels at once, and the arrow keys move between the choices.
+  To make a theme of your own, describe it to your first mate, such as "an old green terminal": it saves the theme under **Yours** and puts it on at once, and Infinitary keeps every color easy to read.
+  **Describe your own** starts that message, and **Remove** takes away the theme of yours you have on.
 
 ### Fonts
 

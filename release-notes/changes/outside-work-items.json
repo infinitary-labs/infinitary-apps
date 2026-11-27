@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "outside-work-items",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Issues and tickets hear how the work ended",
+      "body": "When you ask for work on an issue, ticket or request kept outside Infinitary, such as one where your project lives or in a tracker you connected, your first mate files a task of its own for that item. Once the work ships in a release, or merges where your project publishes none, that task replies on the item and closes it, and each reply or close waits for your click unless you allowed it. An item anyone can write to is read with the same care as other words from strangers. It is a new built-in runbook, Outside work items, on by default.",
+      "noPicture": "The change adds one row to the built-in runbooks list and changes what your first mate files; the item's reply appears where the item lives, not in a view of the app.",
+      "docsSite": ["runbooks"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

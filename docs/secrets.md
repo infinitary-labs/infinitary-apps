@@ -40,6 +40,7 @@ On an older one, `inject`, `status` and `cancel` answer `unavailable` with a fix
 `inject --env '{"SERVICE_TOKEN":"s1"}' --reason 'Check staging' --id staging-check -- /bin/sh ./scripts/check-staging.sh` submits references and an explicit argument vector.
 The example neither approves that script nor reads a secret.
 The channel adds the calling shell's working folder as the request's working directory, which the recipient binds like any other fact and which never grants authority.
+A request may name a slash-rooted folder or a fully qualified Windows drive path; the recipient checks the folder on the computer where the program would run.
 `status <request>` reads a receipt and never executes again; `cancel <request>` withdraws unused authority.
 `check --env '<references>' -- <program> [args...]` is the crew's pre-check (see "The crew's pre-check").
 Help and version use the ordinary runtime; unknown flags and unsupported commands refuse.
@@ -624,7 +625,7 @@ Public certificates, host pins, fingerprints, token counts and non-secret metada
 | Pi accounts | `src/core/pi/{accountVault,piAccountBackend,piAuth,modelRuntime}.ts` | Inject a Secrets-backed CredentialStore for account and base auth stores; retain serialized refresh and account lifecycle. |
 | Usage, Copilot and models | `src/core/quota/{auth,fetchQuota,http}.ts`; `src/core/pi/copilotMeter.ts`; model/account readers | Use the same account adapter; remove direct-file routes without confusing unavailable with signed out or adding renewal. |
 | Custom APIs | `src/core/pi/{customApiAccounts,customApiTransport,customApiPi}.ts` | Keys and secret headers in custody; credential-free Pi configuration and existing destination policy; Settings-approved Custom connection shell token commands retain their renewal and output isolation, outside the protected-recipient boundary. |
-| Decision models | `src/core/decisions/jev/jevKeyStore.ts`; `openRouterDecisionModel.ts`; `src/core/pi/decisionModels.ts` | Scoped service access instead of per-model key files; preserve model routing. |
+| Decision models | `src/core/decisions/jev/jevKeyStore.ts`; `providerDecisionModel.ts`; `src/core/pi/decisionModels.ts` | Scoped service access instead of per-model key files; preserve model routing. |
 | Claude | `src/core/claude/{claudeAuth,claudeQuota,claudeStoreLease,session}.ts`; `src/main/host/{darwinKeychain,claudeKeychainTool}.ts` | Delegated vendor custody through one access adapter; installed client and renewal remain vendor-owned, with no copied permanent token store. |
 | Forge and Git | `src/core/forge/signIns.ts`; `providers/`; `src/core/workspace/forgeAuth.ts`; `resources/git-askpass` | One per-host credential route for APIs, attachments and exact Git use; retire askpass's direct file read. |
 | Remembered websites | `src/core/browser/{webSignIns,taskBrowsers,savedSignInGrants}.ts`; `src/core/placed/placedBrowsers.ts`; `src/main/host/taskBrowser.ts` | Each computer's kept browser profile, its explicit grants and per-site rules, with no sign-in copied to a file or between computers. |

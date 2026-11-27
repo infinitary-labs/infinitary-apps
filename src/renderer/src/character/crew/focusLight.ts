@@ -2,8 +2,9 @@ import type { OrbitFrame } from "./orbit";
 
 /**
  * The project focus on the stage (docs/project-focus.md, docs/crew-orbits.md
- * "Focus"): while the window is focused on a project, or a pointer or the
- * keyboard rests on a project's pill, crewmates of every other project drop
+ * "Focus"): while the window is focused on a project, a pointer or the
+ * keyboard rests on a project's pill, or a crewmate's summary is open,
+ * crewmates of every other project drop
  * to `OUT_OF_FOCUS_LIGHT` of their light, their model names with them. They
  * keep their slot, speed, colour and solid; nothing is hidden and nothing
  * moves for it. The change eases over the surface move (`--dur-med`) and
@@ -21,6 +22,17 @@ export type FocusLightInput = {
 
 /** Each crewmate's light as it eases, by task id. */
 export type FocusLightState = Map<string, number>;
+
+/**
+ * The light while the summary of `rested` is open: its project on every
+ * computer, in place of the window's own light. A crewmate (or program) whose
+ * project the board does not name changes nothing, nor does no summary.
+ */
+export function restedLight(input: FocusLightInput, rested: string | null): FocusLightInput {
+  if (rested === null) return input;
+  const project = input.projectOf(rested);
+  return project === undefined || project === input.project ? input : { ...input, project };
+}
 
 /** The light a crewmate is headed for: full in the lit project, or with no project known. */
 export function lightTarget(input: FocusLightInput, taskId: string): number {

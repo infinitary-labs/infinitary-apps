@@ -59,6 +59,11 @@ export function BatchHoldPanel({
       : null,
   });
   const key = row?.key ?? null;
+  const trial = batch.trial && !batch.trial.failed ? batch.trial : undefined;
+  const fixRow = trial ? board.find((task) => task.id === trial.task) : undefined;
+  const checkingFix = trial
+    ? BATCH_HOLD_WORDS.checkingFix(fixRow?.key ?? trial.members.at(-1)?.title ?? "")
+    : null;
   const who = BATCH_HOLD_WORDS.who(state, key);
   const report =
     row?.outcomeSummary && crewHolds(state) && state !== "passed" ? row.outcomeSummary : null;
@@ -197,6 +202,7 @@ export function BatchHoldPanel({
             {who}
           </span>
         )}
+        {checkingFix && <span data-batch-hold-trial>{checkingFix}</span>}
         {report && <span data-batch-hold-report>{BATCH_HOLD_WORDS.latestReport(report)}</span>}
         <span data-batch-hold-summary>{summary}</span>
       </div>

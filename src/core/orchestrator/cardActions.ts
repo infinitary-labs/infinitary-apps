@@ -26,6 +26,7 @@ import { isFeedbackRequest } from "@shared/feedback";
 import { choiceWords } from "@shared/holds";
 import * as m from "@shared/i18n/messages.generated";
 import { notAllowedAsks } from "@shared/integrations";
+import type { InvokeRequest } from "@shared/ipc";
 import { VALIDATION_GAPS_FIELD } from "@shared/liveValidation";
 import { heldMerges } from "@shared/mergeHeld";
 import { SECRET_BRING_CARD_WORDS } from "@shared/secretBring";
@@ -59,6 +60,7 @@ import type { CrewCore } from "./crewCore";
 import { SUPERVISOR_STEER } from "./crewRuntime";
 import { standingAuthorization } from "./mergeAuthorization";
 import { MergeCardActions } from "./mergeCardActions";
+import type { ProjectFilter } from "./projectFilter";
 import { reviewedTaskOf } from "./reviewCard";
 import { reviewHistory } from "./reviewHistory";
 import { holdsMerge, type MergeBehind } from "./settleCardFacts";
@@ -133,6 +135,28 @@ export class CardActions {
     this.writeAsks = new CardWriteAsks(core);
   }
 
+  /** A reply as a window or the phone sends it (`inf:cards:reply`), with the filter it came with. */
+  replyFromView(
+    cardId: string,
+    payload: InvokeRequest<"inf:cards:reply">[1],
+    submission: unknown,
+    projectFilter: ProjectFilter | null,
+  ): CardThread {
+    const reply: Exclude<typeof payload, string> =
+      typeof payload === "string" ? { text: payload } : payload;
+    return this.replyToCard(
+      cardId,
+      reply.text ?? "",
+      reply.images,
+      submission,
+      reply.answers,
+      reply.files,
+      reply.notes,
+      undefined,
+      projectFilter,
+    );
+  }
+
   /**
    * The captain's reply, typed under a card. A crewmate card's reply is a
    * captain steer to that crewmate - the same control-plane path a card
@@ -159,6 +183,8 @@ export class CardActions {
      * closed its task.
      */
     pressed?: { card: Card; closesTask: boolean },
+    /** The project filter the captain's window or phone sent with it; absent keeps the last one. */
+    projectFilter?: ProjectFilter | null,
   ): CardThread {
     const id = cardId.trim();
     // An ended card keeps its reply field (INF-3071): the words reach its
@@ -249,6 +275,7 @@ export class CardActions {
           pasted,
           receipt,
           asked.id,
+          projectFilter,
         );
       return this.core.cards.thread(id);
     }

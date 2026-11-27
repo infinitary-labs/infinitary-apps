@@ -1,5 +1,5 @@
 ---
-source: 28dbb83c4a64e09c
+source: 6359195aeec7c814
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -52,12 +52,13 @@ Clicar dentro do cartão nunca envia nada por conta própria.
 
 ## O campo de resposta e a conversa {#the-reply-field-and-the-thread}
 
-Todo cartão do seu imediato ou de um tripulante tem, embaixo do corpo, um campo que diz “algo a acrescentar?”.
+Todo cartão tem, embaixo do corpo, um campo que diz “algo a acrescentar?”, exceto o de boas-vindas e os que aparecem enquanto seu imediato está parado.
 
 - Digite nele e pressione **Chat** para enviar uma resposta sem escolher.
 - Digite nele e pressione uma escolha para enviar suas palavras junto com essa escolha.
 
 Uma resposta vai para quem escreveu o cartão.
+Em um cartão que o próprio Infinitary mostra, a resposta vai para o tripulante que o pediu, ou então para o seu imediato.
 A primeira resposta abre uma conversa ao lado do cartão, e o autor responde ali.
 Quando o autor muda o cartão em resposta, o cartão é revisado no mesmo lugar, e a conversa avisa.
 Para recolher a conversa de volta para dentro do cartão, pressione ⌘\ (Ctrl+\ no Linux e no Windows).

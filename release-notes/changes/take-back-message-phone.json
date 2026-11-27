@@ -1,0 +1,21 @@
+{
+  "entries": [
+    {
+      "id": "take-back-message-phone",
+      "kind": "feature",
+      "title": "Take back your last message from your iPhone or iPad",
+      "body": "For one minute after you send a message from your iPhone or iPad, a revert icon sits beside it. Press it to take the message back, or touch and hold the message and choose Edit your last message to put its words back in the box and send your edit in its place. The conversation shows reverted messages struck through and edited ones with their earlier words, as on your computer.",
+      "area": "message-box",
+      "picture": {
+        "dark": "take-back-message-phone-dark.webp",
+        "light": "take-back-message-phone-light.webp",
+        "alt": "A revert icon beside the newest message above the message box on an iPhone"
+      },
+      "provenance": {
+        "origin": "change"
+      },
+      "docsSite": ["the-first-mate"]
+    }
+  ],
+  "exclusions": []
+}

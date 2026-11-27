@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "no-notes-for-unsafe-readers",
+      "reason": "Changes only what an automation-started unsafe data reader's brief says: it no longer asks for an automation notes file the reader has no way to write. Nothing a person sees changes."
+    }
+  ]
+}

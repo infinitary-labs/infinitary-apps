@@ -1,5 +1,5 @@
 ---
-source: 1ce217aea874fab1
+source: e71da6c9134d6753
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -60,7 +60,8 @@ Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht n
 
 1. Drück **Google**, dann öffnet sich **Deine eigene Google-Verbindung einrichten**.
 2. Drück **Googles Seite öffnen** und melde dich dort mit dem Google-Konto an, das du verbinden willst.
-   Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drück Continue.
+   Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen.
+   Akzeptiere dann Googles Richtlinie und drück Continue.
 3. Lade die Client-Datei, die Google zeigt, mit Download JSON herunter.
 4. Leg diese Datei auf **Client-Datei hier ablegen** ab, wähl sie mit **Datei auswählen** aus oder füg ihren Inhalt in **Client-Datei** ein.
 5. Drück **Aufbewahren und anmelden**.
@@ -76,8 +77,8 @@ Bei jeder Anmeldung bei Google erscheint zuerst der Hinweis.
 
 Die Google-Zeile sagt es, wenn die Verbindung dich braucht:
 
-- **Eigene Verbindung einrichten**: Diese Anmeldung läuft noch über einen Client, den Infinitary mit allen teilt und der eingestellt wird.
-  Bis dahin funktioniert sie weiter; drück **Einrichten**, um verbunden zu bleiben.
+- **Erneut anmelden**: Eine frühere Verbindung über den Client, den Infinitary mit allen geteilt hat, funktioniert nicht mehr, weil dieser Client weg ist.
+  Drück **Erneut anmelden**, dann öffnet sich **Deine eigene Google-Verbindung einrichten**, damit du deinen eigenen Client erstellst und dich neu verbindest.
 - **Endet**, mit einem Datum: Dein Client ist nicht im persönlichen Modus, daher beendet Google seine Anmeldung an diesem Tag.
   Drück **Erneut einrichten** und erstelle einen Client im persönlichen Modus.
 - **Dein Google-Client funktioniert nicht mehr**: Google akzeptiert deinen Client nicht mehr, vielleicht weil er in Google Cloud gelöscht wurde.

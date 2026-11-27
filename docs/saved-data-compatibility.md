@@ -190,6 +190,9 @@ It prevents application-owned protected work, sign-ins, launch counters and data
 Knowledge (`docs/knowledge.md`) runs in every build and owns `knowledge/knowledge.db` with its own schema history.
 Its first read inspects a private snapshot; a newer or unreadable collection stays unchanged, and no new agent work runs without its standing directions.
 Knowledge schema 4 adds current directions and their future edit history, not a notes archive.
+Knowledge schema 5 adds `direction_heard`, one mark for each direction revision saved since: where the captain's words for it were heard, or null when they were not.
+A revision with no mark was saved before marks were kept, and reads as not heard until the captain confirms it once (`docs/knowledge.md`, "Heard from the captain").
+An earlier build refuses a schema 5 collection as it refuses any newer one, so its new agent work pauses until a build that knows the schema opens it.
 Main database schema 81 refuses earlier notes-writing builds.
 Before agents start, the service carries active preferences with their identifiers, wording, scope, origin and dates, then removes the old tables.
 A quit after the destination commit but before source removal retries only identical rows; a conflict stops startup.
@@ -531,6 +534,15 @@ An older build reads `appearance` strictly, so the choice never goes in it; that
 A look written without fonts removes the row, which means Infinitary's own fonts.
 A saved font this computer lacks stays saved, and the window draws Infinitary's own font in its place (`docs/fonts.md`).
 
+## The color theme
+
+The color theme the captain chose in Settings → Appearance lives in a settings row of its own, `color-theme`, beside the `appearance` row, with the base it was chosen on (`SettingsStore.getAppearance` and `setAppearance`, `docs/themes.md`).
+An older build reads `appearance` strictly, so the theme never goes in it; that build ignores the new row and draws plain Dark or Light, the base `appearance` still names.
+When an older build switches Dark or Light, the saved base no longer matches, and this build shows the base without the theme.
+A look written without a color theme removes the row, which means plain Dark or Light.
+A saved theme this build lacks stays saved, and the window draws its base.
+A window that controls another computer keeps its color theme the same way, in `color-theme.json` beside its `appearance.json` (`JoinedHome.setLook`, `docs/view.md`).
+
 ## A task's pin
 
 Migration 122 adds the `pinned_at` column to `tasks`, empty on every row, and a partial index over the pinned rows, so the board reads the few pinned tasks without walking the record (INF-3127).
@@ -613,3 +625,10 @@ Dropping both tables and removing the migration's history row undoes it; a task'
 
 Automatic tagging adds no table and no migration: it keeps where its reads of new tasks start in the `tag-auto-since` settings row and the check under way in the `tag-check` row, and writes ordinary `task_tags` rows, a carried judgment with revision 0, which an older side reads as a description no tag has (`docs/task-tags.md`, "Automatic tagging").
 Its two query indexes, `tasks_created_at` and `task_tags_unjudged`, are created at the start like the other optional query indexes, and an older build ignores them and both rows.
+
+## A decision model from any provider
+
+The `decisions` settings row saves a provider's decision model as `{ kind: "provider", provider, model }` (`docs/decision-models.md`, "Decision models from a provider"), and its egress approvals stay keyed by provider id.
+A row saved as `{ kind: "openrouter", model }` reads as the provider `openrouter` with that model, and the next save writes the new shape; nothing asks the person for a step.
+An older build reads a provider pick as a row it cannot parse and answers with its default, the adapted model, leaving the row as it is until it saves the Decisions row itself.
+A view from before the change reads a Go pick as Auto and an OpenRouter pick in its old shape; a newer view on an older home writes the old shape.

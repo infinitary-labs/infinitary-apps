@@ -67,7 +67,8 @@ public enum PhoneRecord {
         let work = task.kind == "work"
         let end: End? = !work ? (task.kind == "decision" && task.waitingCardId != nil ? .dismissQuestion : nil)
             : unstartedWork(task) ? .dropTask : task.status == "active" ? .stopTask : nil
-        let mark = PhoneTaskFacts.status(task).mark
+        // The bar acts on this task, never on its parts, so it reads the parent's own status (`recordBarOf`).
+        let mark = PhoneTaskFacts.status(task, followParts: false).mark
         let parent = task.status == "open" && parts > 0
         // Start picks started work up from the backlog whatever it waits on: its crewmate goes on waiting.
         let backlog = task.status == "active" && task.backlogSince != nil
@@ -96,21 +97,30 @@ public enum PhoneRecord {
     static var checkingWords: String { PhoneMessages.phoneRecordStartChecking() }
     static var slowStartWords: String { PhoneMessages.phoneRecordStartSlow() }
 
-    /// The pill's word and the reason beside it: the shared status with the task's waits, then a start in flight or
-    /// a failed start said plainly. The reason's tone is `reasonTone`'s.
+    /// The pill's word and the reason beside it: the shared status with the task's waits, then a start in flight said
+    /// plainly. A failed start leaves the reason empty, since the bar says why (`startNotice`), as the Mac's
+    /// `recordStartOf` does. The reason's tone is `reasonTone`'s.
     public static func status(_ task: PhoneTask, now: Double, zone: TimeZone = .current) -> PhoneTaskFacts.Status {
         let read = waitStatus(task, PhoneTaskFacts.status(task, now: now), now: now, zone: zone)
         let since = task.startAttempt?.since ?? (task.activity == "starting" ? task.startedAt : nil)
         let preparing = task.startAttempt?.phase == "preparing" || task.activity == "starting"
         let reason = task.startAttempt?.phase == "checking" ? checkingWords
             : since.map { now - $0 >= 15_000 } == true && preparing ? slowStartWords
-            : task.startNotice.map { PhoneMessages.phoneRecordStartFailed(reason: $0.reason) } ?? read.reason
+            : task.startNotice != nil ? ""
+            // The attention box says what a parent's parts wait on, so the reason stays empty beside it.
+            : partsAttention(task) != nil ? "" : read.reason
         return read.with(reason: reason)
     }
 
-    /// `warning` for a failed start, `plain` for a start in flight, `quiet` for every other reason.
+    /// Why a start could not begin, which the bar says above its buttons, as the Mac's says it between Drop task and
+    /// Try again; nil when no start failed.
+    public static func startNotice(_ task: PhoneTask) -> String? {
+        task.startNotice.map { PhoneMessages.phoneRecordStartFailed(reason: $0.reason) }
+    }
+
+    /// `plain` for a start in flight, `quiet` for every other reason.
     public static func reasonTone(_ reason: String) -> String {
-        reason.hasPrefix(PhoneMessages.phoneRecordCouldNotStart()) ? "warning" : reason == checkingWords || reason == slowStartWords ? "plain" : "quiet"
+        reason == checkingWords || reason == slowStartWords ? "plain" : "quiet"
     }
 
     /// `taskWaitStatus`: the waits the attention sentence does not own join the reason, unless a typed warning stands.
@@ -144,14 +154,17 @@ public enum PhoneRecord {
         return box ? waits : []
     }
 
-    /// `taskWaitText`: the wait's name, its next event at the local clock, and when the wait was recorded.
+    /// `taskWaitText`: the wait's name, its next event at the local clock, and when the wait was recorded. A wait with
+    /// no next event says nothing of time, and a task wait's bare key reads Waiting on it.
     public static func waitText(_ wait: PhoneTask.Wait, now: Double, zone: TimeZone = .current) -> String {
-        let event = wait.next.map { next in
-            let time = clock(next.at, now: now, zone: zone)
-            return next.at <= now ? waitDue(next.kind, time: time) : waitNext(next.kind, time: time)
-        } ?? PhoneMessages.phoneRecordWaitTimeUnknown()
-        return wait.since.map { PhoneMessages.phoneRecordWaitLineRecorded(event: event, label: wait.label, time: clock($0, now: now, zone: zone)) }
-            ?? PhoneMessages.phoneRecordWaitLine(event: event, label: wait.label)
+        let label = wait.kind == "dependency" ? PhoneMessages.taskWaitOn(on: wait.label) : wait.label
+        guard let next = wait.next else {
+            return wait.since.map { PhoneMessages.phoneRecordWaitLabelRecorded(label: label, time: clock($0, now: now, zone: zone)) } ?? label
+        }
+        let time = clock(next.at, now: now, zone: zone)
+        let event = next.at <= now ? waitDue(next.kind, time: time) : waitNext(next.kind, time: time)
+        return wait.since.map { PhoneMessages.phoneRecordWaitLineRecorded(event: event, label: label, time: clock($0, now: now, zone: zone)) }
+            ?? PhoneMessages.phoneRecordWaitLine(event: event, label: label)
     }
 
     static func waitNext(_ kind: String, time: String) -> String {
@@ -228,6 +241,8 @@ public enum PhoneRecord {
             guidance = task.problem ?? PhoneMessages.phoneRecordAttentionInterruptedGuidance()
             urgent = true
             danger = true
+        } else if let parent = partsAttention(task) {
+            (title, guidance) = parent
         } else if let wait = task.queueWait {
             title = wait.line
             guidance = task.hold?.text ?? ""
@@ -262,6 +277,46 @@ public enum PhoneRecord {
             }
         }
         return title.isEmpty ? nil : Attention(title: title, guidance: guidance, urgent: urgent, danger: danger)
+    }
+
+    /// `partsAttentionOf`: what an unstarted parent waits on, from what its open parts are doing, most pressing first;
+    /// nil on any other task, on a parent a blocker holds, and from an older Mac that sends no parts.
+    static func partsAttention(_ task: PhoneTask) -> (String, String)? {
+        // Only a parent that never runs itself: a program runs while open, and a when-ready parent starts later.
+        guard task.status == "open", task.startPolicy == "on-request", task.program != true,
+              task.blockedBy.isEmpty, task.flags?.blocked != true else { return nil }
+        let parts = task.parts ?? []
+        let open = parts.filter { $0.status == "open" || $0.status == "active" }
+        if open.isEmpty { return nil }
+        let marks = open.map { PhoneTaskFacts.status($0).mark }
+        if open.count == 1, let part = open.first, let mark = marks.first {
+            let key = part.key.isEmpty ? part.id : part.key
+            switch mark {
+            case "backlog": return (PhoneMessages.recordPartsLastBacklog(), PhoneMessages.recordPartsLastBacklogGuidance(key: key))
+            case "waiting": return (PhoneMessages.recordPartsLastWaiting(), PhoneMessages.recordPartsLastWaitingGuidance(key: key))
+            case "interrupted": return (PhoneMessages.recordPartsLast(), PhoneMessages.recordPartsLastInterrupted(key: key))
+            case "working": return (PhoneMessages.recordPartsLast(), PhoneMessages.recordPartsLastWorking(key: key))
+            case "starting": return (PhoneMessages.recordPartsLast(), PhoneMessages.recordPartsLastStarting(key: key))
+            case "idle": return (PhoneMessages.recordPartsLast(), PhoneMessages.recordPartsLastIdle(key: key))
+            case "queued": return (PhoneMessages.recordPartsLast(), PhoneMessages.recordPartsLastQueued(key: key))
+            default: return nil
+            }
+        }
+        let said: [(String, (Int) -> String)] = [
+            ("waiting", { PhoneMessages.recordPartsCountWaiting(count: $0) }),
+            ("interrupted", { PhoneMessages.recordPartsCountInterrupted(count: $0) }),
+            ("working", { PhoneMessages.recordPartsCountWorking(count: $0) }),
+            ("starting", { PhoneMessages.recordPartsCountStarting(count: $0) }),
+            ("idle", { PhoneMessages.recordPartsCountIdle(count: $0) }),
+            ("queued", { PhoneMessages.recordPartsCountQueued(count: $0) }),
+            ("backlog", { PhoneMessages.recordPartsCountBacklog(count: $0) }),
+        ]
+        let counts = said.compactMap { mark, words in
+            let count = marks.filter { $0 == mark }.count
+            return count > 0 ? words(count) : nil
+        }
+        return (PhoneMessages.recordPartsOpen(open: open.count.formatted(.number.locale(PhoneFormats.locale)), total: parts.count),
+                PhoneMessages.recordPartsOpenGuidance(counts: PhoneFormats.list(counts)))
     }
 
     static var closeWords: [String: String] {

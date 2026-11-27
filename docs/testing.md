@@ -327,7 +327,7 @@ A full run never stops at its first failure: it reports every failure, later tes
 
 ## Journey waits and check limits
 
-A journey's waits run on the load clock and end by their wall cap, 20 times their budget and at most 10 minutes; a graded run keeps the wall clock (`docs/e2e-contracts.md`, "Waits run on the load clock").
+A journey's waits run on the load clock and end by their wall cap, 20 times their budget and at most 10 minutes or their own budget where that is longer; a graded run keeps the wall clock (`docs/e2e-contracts.md`, "Waits run on the load clock").
 A unit test's limits and waits run on the same clock and cap, and each `ci.yml` test step ends at 30 minutes (`docs/test-cohorts.md`, "Budgets").
 Above every wait sit the whole check's limits (INF-1083, the captain's check limits).
 A pull request's journeys and journeys on request end their run at 75 minutes (Playwright's `globalTimeout`, which `playwright.config.ts` reads from the workflow's `INFINITARY_E2E_RUN_MINUTES`) and their command at 90 (the step's `timeout-minutes`), on the Mac mini and on the Linux overflow alike.
@@ -743,6 +743,12 @@ A failed cut ends the wait too, so it never holds main's fixes; an alpha run tha
 Its scripts ask GitHub again after a server error, the answer GitHub gives a request that takes it more than ten seconds, so one slow answer does not fail main's check.
 While it waits, merges keep queueing in the one waiting run; when main moved meanwhile, the run cancels itself, so the waiting run checks every merge at once.
 While the captain has paused the rolling pipeline, a run a push started cancels itself in that first job, and the next merge after Resume starts the run that covers the pause (`docs/alpha.md`, "Pausing the rolling pipeline").
+A push that merged an outside contributor's pull request is left to the next batch (INF-6982, the captain: "make outside PRs not trigger this at all, and simply ride my next alpha cut from my batches").
+The `sort` job reads it as outside when the merged pull request's head is in another copy of the project, or in one since deleted, and main's newest push run at the commit before it ended `success` or `failure`, or was itself left to the next batch (`scripts/batch.mjs`).
+The run then shows the job `Main push · Left to the next batch (pull request N)`, which writes a summary and cancels the run the way a paused one does, so no check, Linux startup or alpha starts.
+It ends cancelled rather than passed: main's green mark stays on a version a main check ran, and the next run's alpha wait looks for no alpha this run would have started.
+The next batch, combined on top of `main`, checks the outside change with its own, and that batch's alpha ships it; a failure the two cause only together holds that batch, whose repair fixes forward.
+When the commit before it was never accounted for, such as a batch whose waiting run a newer push replaced, or a docs-only push that started no run, the push gets the full check and its alpha, as before.
 The newest passing run of `main.yml` is main's green mark: its commit is the newest version main's full check passed, and no other record names it.
 An untagged journey that fails fails the alpha cut from that run, which publishes nothing, while main's mark still moves (`docs/alpha.md`, "Failed alpha checks").
 A failed run fails on the version it checked, which can be older than `main`'s head, so a repair reads that run and the range of commits since the newest passing one.
@@ -758,7 +764,7 @@ The full check runs no run-alone pass either; the proof of edited journeys runs 
 Its Linux jobs run on GitHub's hosted Ubuntu, whatever `LINUX_RUNNER` says, so the run never waits in the PC's line ("A release's hosted machines").
 There one two-processor machine ran every vitest project past its step's 60-minute limit, so the Linux checks run on nine machines at once (INF-2646, the captain's approved split): `linux-checks` runs the typecheck, the lints and the build, and `linux-tests` runs the tests in eight groups, `pure`, `unit` and `unit-isolated` in three, `integration` in two, `probe` in two and `browser` in one, each group a set of vitest's own `--shard`.
 Each group keeps the 60-minute limit and reports whatever another did, and the alpha's proof requires every group's complete set (`scripts/main-alpha-proof.mjs`).
-`tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls and the phone release's call of every part.
+`tests/release-workflows-main-check.test.ts` holds the trigger, the skipped paths against real merges, the queue, the calls, the outside merge's stop and the phone release's call of every part.
 Beside the wait, its `sort` job reads each push against the swept batch ("The swept batch"): a push whose files are exactly a passed batch's skips the full check once the wait ends, and only files no batch built get the full check (the captain's pick on INF-3052, "A: keep a fallback full check on main for versions no batch built").
 
 ## The swept batch
@@ -769,6 +775,7 @@ The captain's merge click on its merge card puts the approved version in line.
 The app at the captain's home combines the line into one branch, `infinitary-batch/<id>`, one commit per change, and opens it as one pull request with the captain's sign-in ("A batch pull request").
 Once every check of that pull request passed, the app merges it with the same sign-in: by squash when it holds one change and by a rebase merge when it holds several, so `main` gains one commit per change.
 That merge is a push to `main` like any other, so it starts `main.yml`, and `prompt-budget.yml` and `republish-casks.yml` where their paths select it.
+An outside contributor's pull request merged since the previous batch is on `main` already, so the batch's version holds it and the batch's checks and alpha carry it ("Main's desktop release check").
 The line and its batch are the home's own record, so a batch waits while the app there is closed.
 How the app forms, combines, holds and merges a batch is `docs/forge.md`'s.
 
@@ -839,6 +846,24 @@ The batch's run holds what the repair reads: its failed jobs, the test files the
 A file the repair's computer cannot run, such as a journey where journeys run only through CI, is judged from its log and the changes' diffs, or run through `journeys.yml` with `files` on a branch the repair pushes at the batch's version.
 The batch's version is its branch's, `infinitary-batch/<id>`, which any clone fetches: one commit per change on the `main` version its last job names.
 A fix built on that version runs its branch's own check, which finds that version, skips every other step and passes in about a minute ("A pushed branch"), and the fix requests no journeys of its own: once it joins, the batch's rebuild runs every check and every journey on it with every change beside it, its release notes included ("The swept batch").
+A batch whose only failed checks are jobs GitHub never placed on a runner reruns them itself once its run ends, before the run's third attempt and while its pull request is open at that version ("A job GitHub never placed"), so its repair finds those checks running again.
+
+## A job GitHub never placed
+
+GitHub's own Macs run a batch's native tests and parallel journeys (the `native` kind, "Each Mac job's kind and size"), and when GitHub finds no Mac for one of them it cancels the job itself after a wait of up to about twenty minutes.
+Such a job ends with no runner and no step, and its check carries GitHub's own annotation, `The job was not acquired by Runner of type hosted even after multiple attempts`.
+No test ran in it, so no confirm has a test file to run again, yet the app reads its cancelled check as failed and holds the batch at once, waking its repair as for any failed check (`docs/forge.md`, "A held batch").
+`unplaced-jobs.yml` starts when a batch pull request's run of `batch-pull-request.yml` ends without passing, and reads the attempt that ended (`scripts/unplaced-jobs.mjs`).
+When every job of that attempt that neither passed nor skipped is one GitHub never placed, it asks GitHub to rerun the run's failed jobs: those jobs on the same queue, and the jobs after them that skipped, such as the confirms and the last job, while every job that passed keeps its result.
+The rerun is a new attempt of the same run, so the app reads the checks running again and ends the hold by its own reading, as after a repair's rerun, and the batch merges once the new attempt passes.
+Any other ended job reruns nothing, since a rerun does not answer it: a failed test, or a check cancelled by a newer version of the batch or by the batch's own stop; the repair reads that run as before, the job GitHub never placed included.
+It asks at most twice for one run, so the run's third attempt is its last, only while the batch's pull request is open at the run's version, and never once the run has run again, so a repair's own rerun is never doubled; a rerun GitHub refuses because the run started again first counts as that rerun.
+The runner policy is unchanged: the rerun asks for the same kind on the same queue, and the desktop journeys keep the project's Macs.
+Main's check, an alpha cut and an outside pull request never start it, since a main check is never retried and an outside run waits for a maintainer's approval.
+GitHub runs a `workflow_run` workflow from the default branch, so it checks out only `scripts/unplaced-jobs.mjs` and `scripts/batch-pull.mjs` from there, never the batch's code, reads jobs and annotations from GitHub as data, holds only Actions writes and check and pull request reads, uses no secret beyond its own token, and runs on GitHub's hosted Ubuntu.
+Its job summary names each job GitHub never placed and why it reran or did not.
+Started by hand with a batch run's id, and an attempt when wanted, it is a dry run: its summary says what it would do, and it reruns nothing.
+`tests/unplaced-jobs.test.ts` runs the workflow's own step on recorded batch runs: one whose only failure was a job GitHub never placed, one with such a job beside a failed journey group, and one whose release notes check failed while a newer version of the batch cancelled the jobs still running or waiting.
 
 ## A batch pull request
 
@@ -896,7 +921,7 @@ A change to the generated phone contract that touches only its `public static le
 The setup inputs are `phone.yml`, the launcher `scripts/test-phone.ts` and every module it loads short of the app's own code and the test home `tests/helpers/phoneHome.ts`: among them `tests/helpers/phoneKeyboard.ts`, the Photos wait `tests/helpers/phonePhotos.ts`, the failure timers and load clock `tests/helpers/budgets.ts`, the scratch folders `tests/helpers/scratchDirs.ts`, the activity writer `scripts/phone-activity.ts`, the leftover sweep `scripts/phone-leftovers.ts`, the check runner `scripts/phone-checks.ts`, the command deadlines `scripts/phone-deadlines.ts`, the shared build `scripts/phone-build.ts`, the simulator selector `scripts/phone-simulator.ts`, the Duo's hinge helper `scripts/phone-hinge.ts` and the test plan helper `scripts/phone-test-plan.ts`.
 The test home is an input itself, and so are the helpers chosen for it one by one, such as the Google stand-in `tests/helpers/phoneGoogle.ts` and the journey stand-in `tests/e2e/mockProvider.ts`.
 `tests/phone-ci.test.ts` walks the launcher's imports, stopping at the app's code under `src/` and at the test home, and fails when a module it reaches is not an input (INF-1242).
-What the launcher reads is an input too: the simulator pin `scripts/phone-pin.json`, the part times `scripts/phone-part-times.json`, each part's recorded work `scripts/phone-work.json`, the hinge helper's source `scripts/phone-hinge.m` and the library photo a part chooses.
+What the launcher reads is an input too: the simulator pin `scripts/phone-pin.json`, the part times `scripts/phone-part-times.json`, each part's recorded work `scripts/phone-work.json`, the hinge helper's source `scripts/phone-hinge.m`, the Face ID helper's source `scripts/phone-face-id.m` and the library photo a part chooses.
 The runner's diagnostic inputs also select it: `scripts/phone-guest-observer.ts` and `tests/helpers/phoneWebStacks.ts`, `phoneGuestLaunches.ts`, `phoneLauncherLog.ts`, `phoneLookupWait.ts` and `phoneProxyLaunches.ts`.
 Setup the device gates never run does not select it: the chooser itself, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh`.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
@@ -1781,6 +1806,7 @@ A dry run asks for the ordinary kinds, so a rehearsal never takes a release's pl
 The batch checks' sweep, the alpha's full check, hands `release_split` the same way.
 The `native` kind is the one kind whose queue is GitHub's, `macos-15`, free in a public project: its five jobs take GitHub's five Macs for about half an hour each and leave the project's Macs to the desktop journeys (INF-6330's plan, option D).
 Those lanes read it before `verify.yml`'s `mac_runner` input, so a batch and a release send them there too, while the desktop lanes keep the input's queue; a request's own `native_runner` input comes first, to measure another runner, such as `macos-15-intel`, before a switch.
+A batch's job there that GitHub cancels because no Mac took it runs again on the same queue once the batch's run ends, when no other job of that run failed, before the run's third attempt and while its pull request is open at that version ("A job GitHub never placed").
 Removing `native` from `MAC_QUEUES` sends them back to `split` in one parallel journeys job.
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.

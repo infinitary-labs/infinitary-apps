@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "heartbeat-lists-every-wait",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "The Heartbeat also brings up held work and work waiting on another task",
+      "body": "With the Heartbeat runbook on, your first mate now also looks again at work it held for more than a day and at work waiting on a task nobody has started, including one you stopped, so a wait that has ended is moved on and a wait only you can end can come back to you once. When work waits only on another task, your first mate now marks it as waiting for that task rather than holding it until a date, so that task's close moves it on at once.",
+      "noPicture": "Nothing on screen changes: the change is in which waiting work the first mate reads again and how it records a wait.",
+      "noDocsSite": "The Runbooks page already says the Heartbeat brings up waiting work with nothing to bring it up; held work and waits on unstarted work are more of that work.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

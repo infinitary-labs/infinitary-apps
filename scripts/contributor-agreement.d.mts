@@ -2,7 +2,7 @@
 export const STATUS: string;
 /** The record issue's exact title. */
 export const RECORD_TITLE: string;
-/** The sentence an author ticks or replies with to accept. */
+/** The sentence an author replies with to accept. */
 export const SENTENCE: string;
 /** The account the workflow's token writes as, the only author of record entries. */
 export const BOT: string;
@@ -10,8 +10,6 @@ export const BOT: string;
 export function agreementVersion(text: string): number;
 /** Whether a reply is the sentence, and nothing else. */
 export function isAcceptance(body: string | null | undefined): boolean;
-/** Whether a description carries the template's box, ticked. */
-export function hasTickedBox(body: string | null | undefined): boolean;
 /** One record entry as the check writes and reads it. */
 export type Entry = { login: string; id: number; pull: number; link: string; version: number; at: string };
 /** The entries the bot wrote to the record, oldest first. */

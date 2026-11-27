@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 75bebd4c6bb16a9e
 title: 首次启动
 description: 你第一次打开 Infinitary 时会看到什么，如何选择大副住在哪里，如何连接订阅，以及如何添加你的第一个项目。
 ---
@@ -40,13 +40,14 @@ description: 你第一次打开 Infinitary 时会看到什么，如何选择大�
 ## 连接订阅 {#connect-a-subscription}
 
 选择“**这台电脑**”，让大副留在这里。
-随后会出现大副可以使用的每个服务商的按钮：Codex、Grok、Claude、Kimi Code、Copilot、OpenRouter、Amazon Bedrock 和自定义 API。
+随后会出现大副可以使用的每个服务商的按钮：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、OpenRouter、Amazon Bedrock 和自定义 API。
 
 1. 点击你的服务商的按钮。
 2. 按该服务商的要求登录。
    有些会在你的浏览器中打开登录页面。
    Copilot 和 Kimi Code 会显示一个代码：点击“**复制代码**”，然后在服务商的网站上输入它。
    OpenRouter 需要你粘贴一个 API 密钥。
+   OpenCode Go 需要你粘贴来自 OpenCode Console 的密钥。
    使用 Amazon Bedrock 时，选择一个区域，并使用这台电脑上的 AWS 配置文件，或粘贴一个 Bedrock API 密钥。
    两种方式都支持的服务商会询问你是“**用浏览器登录**”，还是粘贴“**API 密钥**”。
 3. 等待窗口显示正在连接。
@@ -166,8 +167,8 @@ Windows PC 和 Arm Linux 电脑只显示“**粘贴它的链接**”和“**通�
 
 当大副第一次把请求交给一位船员时，会出现一张标题为“**一位船员已接手**”的卡片。
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="“一位船员已接手”卡片：大副派出一位船员；“现在”面板写着船员在工作，不必盯着看；“之后”面板写着卡片会带着一个答案或一个选择回到这里；还有“知道了”。" width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="“一位船员已接手”卡片：大副派出一位船员；“现在”面板写着船员在工作，不必盯着看；“之后”面板写着卡片会带着一个答案或一个选择回到这里；还有“知道了”。" width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="“一位船员已接手”卡片：大副派出一位船员；“现在”面板写着船员在工作，不必盯着看；“之后”面板写着卡片会带着一个答案或一个选择回到这里；还有“知道了”。" width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="“一位船员已接手”卡片：大副派出一位船员；“现在”面板写着船员在工作，不必盯着看；“之后”面板写着卡片会带着一个答案或一个选择回到这里；还有“知道了”。" width="1163" height="654" />
 
 它说明船员在后台工作，可能需要一些时间，你不必盯着看。
 当船员有了答案，或需要你做选择时，它会以卡片的形式回来。

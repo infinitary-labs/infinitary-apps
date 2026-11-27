@@ -193,7 +193,7 @@ extension PhoneJourney {
         XCTAssertTrue(app.buttons["next-card"].isEnabled)
         computerDetails()
         try await pressPhoneKey("]", modifiers: [.command, .shift], in: app)
-        tapOnPhone(app.buttons["close-computer-details"])
+        closeComputerDetails()
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10), "A sheet keeps its pager shortcut from the stage behind it")
         try await pressPhoneKey("]", modifiers: [.command, .shift], in: app)
         XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))

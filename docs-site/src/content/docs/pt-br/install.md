@@ -1,5 +1,5 @@
 ---
-source: 2633a75241365106
+source: a8386567e2fc7990
 title: Instalar
 description: Baixe a versão estável do Infinitary para Mac, Linux ou Windows, ou peça um convite privado do TestFlight para iPhone e iPad.
 ---
@@ -46,7 +46,7 @@ Veja [iPhone e iPad](/pt-br/iphone-and-ipad/) para saber como conectar-se ao seu
 - **Um computador.**
   Um Mac com macOS 12 ou posterior, um computador Linux com processador x64, ou um PC com Windows 11 e processador x64 (experimental).
 - **Uma assinatura de IA.**
-  Seu imediato precisa de pelo menos uma assinatura que consiga responder: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter com uma chave de API, ou Amazon Bedrock com seu login da AWS.
+  Seu imediato precisa de pelo menos uma assinatura que consiga responder: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter com uma chave de API, ou Amazon Bedrock com seu login da AWS.
 - **Claude Code, para o Claude.**
   Se você usa uma assinatura do Claude, instale primeiro o Claude Code nesse computador.
   O Infinitary usa o Claude Code que você instalou.

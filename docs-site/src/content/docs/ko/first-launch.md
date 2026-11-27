@@ -1,5 +1,5 @@
 ---
-source: c16d193883332656
+source: 75bebd4c6bb16a9e
 title: 처음 실행하기
 description: Infinitary를 처음 열면 무엇이 보이는지, 일등항해사가 살 곳을 고르는 방법, 구독을 연결하는 방법, 그리고 첫 프로젝트를 추가하는 방법이에요.
 ---
@@ -40,13 +40,14 @@ Infinitary를 처음 열면 창 가운데에서 일등항해사가 인사해요.
 ## 구독 연결하기 {#connect-a-subscription}
 
 일등항해사를 여기에 두려면 **이 컴퓨터**를 고르세요.
-일등항해사가 쓸 수 있는 제공자마다 버튼이 나타나요: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter, Amazon Bedrock, 사용자 지정 API예요.
+일등항해사가 쓸 수 있는 제공자마다 버튼이 나타나요: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter, Amazon Bedrock, 사용자 지정 API예요.
 
 1. 제공자의 버튼을 고르세요.
 2. 그 제공자가 요청하는 방식으로 로그인하세요.
    어떤 제공자는 브라우저에서 로그인 페이지를 열어요.
    Copilot과 Kimi Code는 코드를 보여 줘요: **코드 복사**를 누르고 제공자의 사이트에 입력하세요.
    OpenRouter는 붙여 넣는 API 키를 받아요.
+   OpenCode Go는 OpenCode Console에서 복사해 붙여 넣는 키를 받아요.
    Amazon Bedrock은 지역을 고르고, 이 컴퓨터의 AWS 프로필을 쓰거나 Bedrock API 키를 붙여 넣어요.
    두 가지를 모두 제공하는 제공자는 **브라우저로 로그인**할지 **API 키**를 붙여 넣을지 물어봐요.
 3. 창에 연결 중이라고 표시되는 동안 기다리세요.
@@ -166,8 +167,8 @@ Windows PC와 Arm Linux 컴퓨터에는 **링크 붙여넣기**와 **주소로 �
 
 일등항해사가 처음으로 요청을 선원에게 넘기면 **선원이 맡았어요**라는 카드가 나타나요.
 
-<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1070" height="602" />
-<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1070" height="602" />
+<img class="picture-dark" src="/pictures/first-launch-crewmate-dark.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1163" height="654" />
+<img class="picture-light" src="/pictures/first-launch-crewmate-light.webp" alt="선원이 맡았어요 카드: 선원을 내보내는 일등항해사, 선원이 일하는 중이고 지켜볼 필요 없다는 지금 패널, 답변이나 선택지를 담은 카드가 여기로 돌아온다는 나중에 패널, 그리고 확인." width="1163" height="654" />
 
 카드는 선원이 뒤에서 일해서 시간이 좀 걸릴 수 있고, 지켜볼 필요가 없다고 알려 줘요.
 선원에게 답이 나오거나 선장님이 골라야 할 것이 생기면 카드로 돌아와요.

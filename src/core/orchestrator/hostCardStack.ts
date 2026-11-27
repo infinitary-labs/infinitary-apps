@@ -8,12 +8,14 @@ import {
   FIRSTMATE_FAILURE_CARD_ID,
   FIRSTMATE_MOVE_BACK_CARD_ID,
   FIRSTMATE_PAUSE_CARD_IDS,
+  FIRSTMATE_PICTURES_CARD_ID,
   FIRSTMATE_QUIET_CARD_ID,
   type FirstmatePauseCard,
   firstmateFailureCard,
   firstmateMoveBackCard,
   firstmatePauseCard,
   firstmatePauseCardId,
+  firstmatePicturesCard,
   firstmateQuietCard,
   forgeSignInCard,
   hostCard,
@@ -97,6 +99,7 @@ export class HostCardStack {
       taskId?: string;
       move?: { arg: string; modelName: string };
       access?: ClaudeAccessSource;
+      noReply?: true;
     },
   ): void {
     if (this.cards.has(id)) return;
@@ -162,20 +165,13 @@ export class HostCardStack {
    * priority; the caller's actions carry host effects only the captain's
    * click can run. A note (no choice to make) sits below every decision,
    * so a question it accompanies - signing in again - stays in front.
-   * The first mate answers a reply under it unless the caller names
-   * another answerer or none (docs/card-threads.md, "A host card's reply
-   * row"); the agent-down set and the welcome never come through here.
    */
   raiseHostCard(
     card: Omit<Card, "author" | "priority" | "status" | "createdAt">,
     options: { note?: boolean } = {},
   ): void {
     const previous = this.cards.get(card.id);
-    const answered =
-      card.answeredBy === undefined && card.replies !== false
-        ? { ...card, answeredBy: "firstmate" as const }
-        : card;
-    this.put({ ...hostCard(answered, options), createdAt: previous?.createdAt ?? this.host.now() });
+    this.put({ ...hostCard(card, options), createdAt: previous?.createdAt ?? this.host.now() });
   }
 
   /** Takes a host card down without an answer: the question it asked is gone. */
@@ -209,6 +205,18 @@ export class HostCardStack {
     const existing = this.cards.get(FIRSTMATE_FAILURE_CARD_ID);
     this.put(
       { ...firstmateFailureCard(body), createdAt: existing?.createdAt ?? this.host.now() },
+      { revise: existing !== undefined },
+    );
+  }
+
+  /**
+   * The pictures card (`firstmatePicturesCard`): one card under a stable
+   * id, revised in place when another message with pictures waits.
+   */
+  addFirstmatePicturesCard(input: Parameters<typeof firstmatePicturesCard>[0]): void {
+    const existing = this.cards.get(FIRSTMATE_PICTURES_CARD_ID);
+    this.put(
+      { ...firstmatePicturesCard(input), createdAt: existing?.createdAt ?? this.host.now() },
       { revise: existing !== undefined },
     );
   }

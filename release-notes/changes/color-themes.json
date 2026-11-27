@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "color-themes",
+      "kind": "feature",
+      "title": "Color themes for the window",
+      "body": "Settings, Appearance, Theme now offers thirteen color themes beside Dark and Light, under their makers' names: Rosé Pine, Rosé Pine Moon, Rosé Pine Dawn, Catppuccin Latte, Frappé, Macchiato and Mocha, One Dark, One Light, Dracula, Night Owl, Night Owl Light and Tokyo Night. A pick recolors the whole window at once, open cards and panels and Firstmate included, and every theme keeps words easy to read. You can also ask Firstmate to switch to one.",
+      "area": "settings",
+      "picture": {
+        "dark": "color-themes-dark.webp",
+        "light": "color-themes-light.webp",
+        "alt": "The Theme row in Settings as a group of tiles, each a small window in its theme's colors, with Dracula picked in a dark window and Catppuccin Latte in a light one"
+      },
+      "docsSite": ["settings"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

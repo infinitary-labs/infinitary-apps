@@ -9,11 +9,12 @@ import {
   automationSpecSchema,
   scheduleDetailsWords,
 } from "./automation";
+import { automationValue } from "./automationActionValue";
 import { type BatchAnswer, batchAnswerSchema } from "./batches";
 import { shortCommit } from "./buildIdentity";
 import { type AppCostLimitView, costLimitSchema, formatUsd } from "./costLimit";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
-import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
+import { type DecisionsView, decisionAnswererSchema, decisionModelDone } from "./decisions";
 import type { DeviceMake } from "./deviceArrival";
 import { addressFormOffer, addressOffer, deviceInviteLine } from "./deviceInvite";
 import { anotherUserHere, COMPUTER, HERE } from "./deviceNames";
@@ -35,7 +36,7 @@ import { signInHost } from "./forgeKinds";
 import type { ForgesView } from "./forges";
 import { handoverLines } from "./handoverActions";
 import * as m from "./i18n/messages.generated.ts";
-import { englishOf, type Said, said } from "./i18n/said";
+import { englishOf, type Said, type SaidPart, said } from "./i18n/said";
 import { integrationLines, integrationsBrief } from "./integrationActions";
 import {
   INTEGRATIONS_SIGN_IN_HOST,
@@ -45,11 +46,15 @@ import {
 } from "./integrations";
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
 import type { KeptJobsView } from "./keptJobs";
-import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
+import {
+  type KnowledgeDirectionHeard,
+  type KnowledgeDirections,
+  knowledgeDirectionChangeSchema,
+} from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import { panelLines } from "./panelActions";
 import { AUTOMATIC_COMPUTER } from "./placement";
-import { type Appearance, type Layout, themeSchema } from "./preferences";
+import type { Appearance, Layout } from "./preferences";
 import { normalizePrivateSite, type PrivateSitesView } from "./privateSites";
 import { projectSetupProposalSchema } from "./projectSetup";
 import { catalogEntry } from "./providers";
@@ -67,19 +72,14 @@ import {
 } from "./repos";
 import { savedResetLines } from "./savedResetActions";
 import { settingsActs } from "./settingsActs";
-import {
-  costLimitValue,
-  enabledValue,
-  fontsValue,
-  panelsSwitchValue,
-  themeValue,
-} from "./settingValues";
+import { costLimitValue, enabledValue, fontsValue, panelsSwitchValue } from "./settingValues";
 import type { SharingView } from "./sharing";
 import { showLines } from "./showActions";
 import { type DeviceSignIns, signInPlace } from "./signIns";
 import { summaryPointLines } from "./summaryPointActions";
 import { tagLines } from "./tagActions";
 import type { ProjectView } from "./tasks";
+import { themeLines } from "./themeActions";
 import { signInsUnansweredInEnglish, workSetupWordsInEnglish } from "./workSetupWords";
 
 /**
@@ -277,28 +277,6 @@ function automationRule(current: unknown, id: unknown): AutomationRule {
   if (!rule) throw new Error(`No automation ${id}. Its id is in this action's current value.`);
   return rule;
 }
-/** Every rule as an edit reads it, or, `brief`, by id, label and state alone. */
-function automationValue(current: unknown, brief = false): Record<string, unknown> {
-  const list = current as AutomationList;
-  return {
-    rules: list.rules.map((rule) =>
-      brief
-        ? { id: rule.id, label: rule.name ?? cutText(rule.prompt, 80), state: rule.state }
-        : {
-            id: rule.id,
-            name: rule.name,
-            state: rule.state,
-            spec: rule.spec,
-            prompt: rule.prompt,
-            projectId: rule.projectId,
-            nextFire: rule.nextFire,
-            captainRequested: rule.captainRequested,
-            ...(rule.stopped ? { stopped: rule.stopped } : {}),
-          },
-    ),
-    ...(list.state === "unavailable" ? { unavailable: list.reason } : {}),
-  };
-}
 const automationIdSchema = z.string().trim().min(1).max(64);
 function presence(field: "startAtLogin" | "showInDock", label: string): ActionLine {
   return {
@@ -358,13 +336,24 @@ function guidance(
     done: () => auditText,
   };
 }
-/** A direction change as app_change takes it: its evidence is the reason kept. */
+/**
+ * A direction change as app_change takes it: its evidence is the reason
+ * kept, and `from` cites where the captain's own words for it were heard
+ * (`task` names the task for `crewmate-tab` or `standing`). The host checks
+ * the citation and records the heard mark; the request carries neither.
+ */
 const [addDirection, reviseDirection, retireDirection] = knowledgeDirectionChangeSchema.options;
+const directionCitation = {
+  from: z.string().trim().min(1).max(200).optional(),
+  task: z.string().trim().min(1).max(64).optional(),
+};
 const directionValueSchema = z.discriminatedUnion("op", [
-  addDirection.omit({ reason: true }),
-  reviseDirection.omit({ reason: true }),
-  retireDirection.omit({ reason: true }),
+  addDirection.omit({ reason: true, heard: true }).extend(directionCitation),
+  reviseDirection.omit({ reason: true, heard: true }).extend(directionCitation),
+  retireDirection.omit({ reason: true, heard: true }).extend(directionCitation),
 ]);
+/** Where a direction change cites the captain's words, as its value names them. */
+export type DirectionCitation = { from?: string; task?: string };
 const DIRECTION_DONE = { add: "saved", revise: "revised", retire: "retired" } as const;
 /**
  * The line a project's Runs on change leaves (`project-runs-on`), as a saved
@@ -373,7 +362,7 @@ const DIRECTION_DONE = { add: "saved", revise: "revised", retire: "retired" } as
 export function runsOnDoneSaid(v: Record<string, unknown>): Said {
   return runsOnSaid(
     (v.repo as RepoView).name,
-    (v.where as string | null | undefined) ?? null,
+    (v.where as string | SaidPart | null | undefined) ?? null,
     v.fromHere !== false,
     (v.repo as RepoView).runsOn === AUTOMATIC_COMPUTER,
   );
@@ -926,18 +915,6 @@ const actionLines = {
     "devices",
     `changed where devices find ${HERE.this}`,
   ),
-  theme: {
-    fields: ["theme"],
-    area: "appearance",
-    tier: "asked",
-    change: "inf:settings:appearance:set",
-    current: "inf:settings:appearance:get",
-    value: z.strictObject({ theme: themeSchema }),
-    line: "Switch between dark and light when asked, preserving size, window wash and crew model names.",
-    toRequest: (v, c) => [{ ...(c as Appearance), theme: v.theme }],
-    readValue: themeValue,
-    done: (v) => `switched to the ${v.theme} theme`,
-  },
   font: {
     fields: ["fonts"],
     area: "appearance",
@@ -1073,8 +1050,11 @@ const actionLines = {
     change: "inf:knowledge:direction:set",
     current: "inf:knowledge:directions",
     value: directionValueSchema,
-    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain: no crewmate reads it; or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
-    toRequest: (v, _current, _expandHome, evidence) => [{ ...v, reason: evidence }],
+    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain: no crewmate reads it; or a project id); revise takes id and text; retire takes id; expectedRevision is optional. from cites where the captain's own words for this change were heard: turn for words they typed this turn, a card's id for their reply or click there, or crewmate-tab or standing with task naming the task; the host checks them and marks the revision heard there, and refuses a citation it cannot find, saving nothing. Leave from out to save on your judgment alone: the revision is not heard, even when an earlier one was, guides work as an instruction, and is no yes.",
+    toRequest: (v, _current, _expandHome, evidence) => {
+      const { from: _from, task: _task, ...change } = v as Record<string, unknown>;
+      return [{ ...change, reason: evidence }];
+    },
     readValue: (current) => {
       const read = current as KnowledgeDirections;
       return read.state === "ready"
@@ -1084,6 +1064,7 @@ const actionLines = {
               scope: row.scope,
               project: row.scopeName,
               revision: row.revision,
+              heard: row.heard ?? false,
               text: row.text,
             })),
             total: read.total,
@@ -1353,10 +1334,7 @@ const actionLines = {
     line: "Choose the decision model. Existing outbound consent is preserved; keys and consent stay in Settings.",
     toRequest: (v, c) => [{ ...(c as DecisionsView).settings, answerer: v.answerer }],
     readValue: (c) => ({ answerer: (c as DecisionsView).settings.answerer }),
-    done: (v) => {
-      const answerer = v.answerer as DecisionAnswerer;
-      return `decision model ${answerer.kind === "native" ? answerer.id : answerer.kind === "openrouter" ? `OpenRouter · ${answerer.model}` : answerer.offering === "auto" ? "Auto" : answerer.offering}`;
-    },
+    done: (v) => decisionModelDone(v.answerer),
   },
   "refresh-usage": {
     area: "intelligence",
@@ -1569,6 +1547,7 @@ const actionLines = {
     done: (v) => `global instructions and skills ${v.enabled ? "on" : "off"}`,
   },
   ...appearanceLines,
+  ...themeLines,
   "panel-collapse": {
     fields: ["collapsedPanels"],
     area: "panels",
@@ -1606,7 +1585,7 @@ const actionLines = {
       enable: z.boolean().optional(),
       reconnect: z.literal(true).optional(),
     }),
-    line: `Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on. reconnect true has an event rule that waits (stopped) listen to what its integration's id is connected to now. ${scheduleDetailsWords()}`,
+    line: `Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on. reconnect true has an event rule that waits (stopped) listen to what its integration's id is connected to now. ${scheduleDetailsWords()} Its current value is the app's record of each rule: lastFired is when it last ran (null if never), and failing says since when an event rule's every look has failed; app_state read automation.history with its id lists its recent runs.`,
     toRequest: (v, current) => {
       const rule = automationRule(current, v.id);
       const projectId =
@@ -1754,6 +1733,12 @@ export type ActionActor =
        */
       /** A window's own setting: that computer's window, and its value as the first mate read it. */
       window?: { deviceId: string; name: string; read?: unknown; sets?: string[] };
+      /**
+       * Where the captain's words a `direction` change cites were heard, as
+       * the host checked them (`heardDirection`); absent on the first mate's
+       * own judgment.
+       */
+      heard?: KnowledgeDirectionHeard;
     };
 /** Settings and Firstmate share this project-change path. */
 export function isProjectChange(action: ActionName): boolean {

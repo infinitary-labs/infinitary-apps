@@ -1,5 +1,5 @@
 ---
-source: e0f16d58d735b925
+source: c51b6ca36743cf77
 title: Projets
 description: Comment ajouter un projet à Infinitary, y réunir plusieurs dépôts, lui donner des étiquettes, concentrer la fenêtre sur un seul projet, choisir comment ses changements sont fusionnés et le retirer.
 ---
@@ -134,7 +134,12 @@ Tant qu’un projet a le focus :
 - Les cartes sur d’autres projets attendent que le focus change.
   Rien n’est fermé, et chaque projet envoie toujours des notifications.
 - Une courte ligne à côté de la pastille indique combien de tâches vous attendent ailleurs, comme « 2 en attente ailleurs ».
-- Votre second place le nouveau travail que vous demandez dans ce projet, sauf si vous en nommez un autre.
+- Votre second connaît le focus à chaque message que vous envoyez.
+  Sauf si vous nommez un autre projet, il place le nouveau travail dans ce projet, et ses réponses et ses actions sur de nombreuses tâches ne couvrent que ce projet et disent ce qu'elles ont laissé de côté.
+
+Pour voir où tourne le travail d’un projet sans vous concentrer dessus, pointez un équipier au centre de la fenêtre, ou touchez-le sur votre téléphone.
+Tant que son résumé est ouvert, chaque équipier d’un autre projet garde un quart de sa lumière, sur chaque ordinateur, et personne ne bouge.
+Fermez le résumé et la lumière revient.
 
 Appuyez sur le **×** à côté de la pastille (**Afficher tous les projets**), ou choisissez **Tous les projets** dans la rangée, pour tout revoir.
 Infinitary se souvient de votre focus quand vous le redémarrez.
@@ -172,6 +177,7 @@ Modifiez la ligne et appuyez sur **Enregistrer**, ou désactivez l’interrupteu
 
 Retirer un projet l’enlève de la liste.
 Son dossier et ses tâches terminées restent.
+Si vous l’ajoutez de nouveau, Infinitary utilise le dossier qu’il a laissé dans votre dossier de projets au lieu de cloner une deuxième copie, et le projet repart avec les réglages par défaut.
 Si le projet a encore des tâches, Infinitary les nomme, et vous les terminez ou les écartez d’abord.
 
 Dans un projet à plusieurs dépôts, **Retirer** enlève le dépôt dont l’onglet est choisi, et le projet garde les autres.

@@ -18,6 +18,7 @@ import {
 import { cardWordsMark, englishOf, type Said, said, saidMark } from "@shared/i18n/said";
 import { INTEGRATIONS_WORDS } from "@shared/integrations";
 import { SAVED_RESETS_PAGE } from "@shared/quota";
+import type { SignInPlace } from "@shared/signIns";
 import type { SeatPauseClass } from "./seat";
 
 /**
@@ -47,6 +48,8 @@ export const FIRSTMATE_QUIET_CARD_ID = "card-fm-quiet";
 /** The Firstmate failure card (the agent-down set): Retry, until a turn ends clean. */
 export const FIRSTMATE_FAILURE_CARD_ID = "card-fm-turn-failure";
 export const FIRSTMATE_FAILURE_TITLE = "Your first mate hit a problem";
+/** A message with pictures waits because the first mate's model reads words only. */
+export const FIRSTMATE_PICTURES_CARD_ID = "card-fm-pictures-unread";
 
 export type FirstmatePauseCard = {
   pause: SeatPauseClass;
@@ -169,7 +172,7 @@ export function autoResetsAction(accountKey: string): CardAction {
 export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
 
 export const FIRSTMATE_NO_PROVIDER_SIGN_IN_WORDS =
-  "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude, Kimi Code or Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
+  "Your first mate needs a signed-in subscription to answer - Codex, Grok, Claude, Kimi Code, Copilot or OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.";
 
 /** A move's button: a paused seat's names a provider, a crewmate's sign-in card the model. */
 export function moveLabel(to: string): string {
@@ -213,6 +216,21 @@ export function hostCard(
 }
 
 /**
+ * A host card as it goes up and as it is restored (`CardService.put`, its
+ * restart): one that names no answerer and does not turn replies off is
+ * answered by the first mate, which can pass words on to a crewmate, so a
+ * builder that forgets to name one still draws the reply field, and a card
+ * saved before its builder named one takes a reply after an update
+ * (docs/card-threads.md, "Who answers a card"). Every other card is
+ * returned as it is.
+ */
+export function withHostAnswerer(card: Card): Card {
+  return card.author === "host" && card.answeredBy === undefined && card.replies !== false
+    ? { ...card, answeredBy: "firstmate" }
+    : card;
+}
+
+/**
  * Which pause card a pause asks on: with a place to move (rung 2) it asks
  * to move under `card-fm-flagship-move`; without one (rung 3) it says the
  * seat waits, under `card-fm-refused` for a refusal and
@@ -247,6 +265,8 @@ export function firstmatePauseCard(id: string, input: FirstmatePauseCard): HostC
     meta: FIRSTMATE_CARD_META,
     body: input.body,
     actions: firstmatePauseActions(input),
+    // The paused first mate cannot answer a reply (`Card.replies`).
+    replies: false,
   });
 }
 
@@ -404,10 +424,11 @@ export function creditsOfferCard(input: {
   offerAutoResets?: boolean;
   /**
    * The computer that runs work the account is on, by id and as words say
-   * where ("on Mac mini"): its switch is saved there, so the button sends
-   * the account's key there (`accountKey`, src/core/placed/placedAccounts.ts).
+   * where ("on Mac mini"), in English and as the fact its body's line fills
+   * (`SignInPlace`): its switch is saved there, so the button sends the
+   * account's key there (`accountKey`, src/core/placed/placedAccounts.ts).
    */
-  computer?: { deviceId: string; where: string };
+  computer?: { deviceId: string } & Pick<SignInPlace, "where" | "said">;
 }): Omit<Card, "author" | "priority" | "status" | "createdAt"> {
   const { computer } = input;
   const until = input.resetsAt ? ` until ${input.resetsAt}` : "";
@@ -422,7 +443,7 @@ export function creditsOfferCard(input: {
   const key = computer ? `${input.accountId}@${computer.deviceId}` : input.accountId;
   const { credits } = input;
   const waits = computer
-    ? saidMark(said("cardSavedResetCrewWaitsThere", { where: computer.where }))
+    ? saidMark(said("cardSavedResetCrewWaitsThere", { where: computer.said.where }))
     : saidMark(said("cardSavedResetCrewWaits"));
   return {
     id: creditsOfferCardId(input.accountId, computer?.deviceId),
@@ -487,12 +508,15 @@ export function authDecisionCard(
     move?: { arg: string; modelName: string };
     /** Claude access set up for Claude Code was refused: renewed there, not signed in here. */
     access?: ClaudeAccessSource;
+    /** The first mate's own sign-in: it cannot answer a reply until it is back (`Card.replies`). */
+    noReply?: true;
   },
 ): HostCard {
   const restoreAccountId = options?.restoreAccountId;
   return hostCard({
     id,
     ...(options?.taskId ? { taskId: options.taskId } : {}),
+    ...(options?.noReply ? { replies: false as const } : {}),
     title: restoreAccountId
       ? body
       : options?.access
@@ -639,6 +663,7 @@ export function firstmateFailureCard(body: string): HostCard {
     title: FIRSTMATE_FAILURE_TITLE,
     meta: FIRSTMATE_CARD_META,
     body,
+    replies: false,
     actions: [
       {
         id: "retry-firstmate",
@@ -646,6 +671,65 @@ export function firstmateFailureCard(body: string): HostCard {
         variant: "primary",
         default: true,
         effect: { kind: "host", op: "retry-firstmate" },
+      },
+    ],
+  });
+}
+
+/**
+ * The card for a message with pictures the first mate's model reads words
+ * only for (docs/inbox.md, "Pictures ride the row by reference"): the
+ * message waits on the lane with its pictures, and the card offers the move
+ * to `reader`, a model that reads them and can answer the first mate, or
+ * Settings when there is none. A move is a model change, so it always asks.
+ */
+export function firstmatePicturesCard(input: {
+  /** The first mate's model, by the name a person reads. */
+  model: string;
+  reader?: { provider: string; id: string; name: string };
+}): HostCard {
+  const { reader } = input;
+  const title = said("cardPicturesUnreadTitle");
+  const move = reader ? said("cardPicturesUnreadMove", { model: reader.name }) : undefined;
+  const settings = said("cardPicturesUnreadSettings");
+  const way = reader
+    ? said("cardPicturesUnreadReader", { model: reader.name })
+    : said("cardPicturesUnreadNoReader");
+  return hostCard({
+    id: FIRSTMATE_PICTURES_CARD_ID,
+    title: englishOf(title),
+    meta: FIRSTMATE_CARD_META,
+    body: [
+      `<p>${saidMark(said("cardPicturesUnreadWaits", { model: input.model }))}</p>`,
+      `<p>${saidMark(way)}</p>`,
+      cardWordsMark([title, ...(move ? [move] : []), settings]),
+    ].join(""),
+    // The first mate still reads words, so it answers a reply here.
+    answeredBy: "firstmate",
+    actions: [
+      ...(reader && move
+        ? [
+            {
+              id: "move-flagship",
+              label: englishOf(move),
+              variant: "primary" as const,
+              default: true,
+              // The model rides the provider so the move lands on this
+              // reader, not the provider's own automatic pick.
+              effect: {
+                kind: "host" as const,
+                op: "move-flagship" as const,
+                arg: `${reader.provider}/${reader.id}`,
+              },
+            },
+          ]
+        : []),
+      {
+        id: "open-settings",
+        label: englishOf(settings),
+        variant: reader ? "secondary" : "primary",
+        ...(reader ? {} : { default: true }),
+        effect: { kind: "open", target: "settings" },
       },
     ],
   });

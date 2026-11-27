@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-face-id-started",
+      "reason": "The phone check starts the simulator's Face ID interface before each part, so a Face ID request in a journey no longer fails while that process is still starting; it changes only how the project is checked."
+    }
+  ]
+}

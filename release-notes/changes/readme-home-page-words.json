@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "readme-home-page-words",
+      "reason": "Brings the readme's copies of the home page's hero line, first and third chapter lines, model account card and personal line to the home page's current words; the app itself does not change."
+    }
+  ]
+}

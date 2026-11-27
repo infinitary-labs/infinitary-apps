@@ -321,20 +321,48 @@ function positiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
+// OpenCode's list states sizes in a nested `limit` object instead. Its
+// `context` is the window and `input` the prompt's own cap, which stands in for
+// the window only when no window is stated, as a flat input limit does above.
+const NESTED_CONTEXT = ["context", "input"] as const;
+const NESTED_OUTPUT = ["output"] as const;
+
 function listedLimit(entry: Record<string, unknown>, fields: readonly string[]) {
   for (const source of [entry, entry.top_provider, entry.metadata]) {
     if (!source || typeof source !== "object") continue;
     const record = source as Record<string, unknown>;
     for (const field of fields) {
       const value: unknown = record[field];
-      if (typeof value === "number" && Number.isSafeInteger(value) && value > 0) return value;
+      if (positiveInteger(value)) return value;
     }
     if (fields === LISTED_OUTPUT && positiveInteger(record.max_input_tokens)) {
       const value: unknown = record.max_tokens;
       if (positiveInteger(value)) return value;
     }
   }
+  const nested = entry.limit;
+  if (!nested || typeof nested !== "object") return undefined;
+  for (const field of fields === LISTED_OUTPUT ? NESTED_OUTPUT : NESTED_CONTEXT) {
+    const value: unknown = (nested as Record<string, unknown>)[field];
+    if (positiveInteger(value)) return value;
+  }
   return undefined;
+}
+
+/**
+ * A model the server itself says takes no chat turn: typed as a decision or
+ * embedding model, or stating it does not call tools (OpenCode's list). Every
+ * first mate and crew turn calls tools, so such a model could never pass the
+ * check; any other shape, or none, leaves the entry pickable.
+ */
+function listedNotChat(entry: Record<string, unknown>): boolean {
+  if (entry.type === "decision" || entry.type === "embedding") return true;
+  const capabilities = entry.capabilities;
+  if (!capabilities || typeof capabilities !== "object") return false;
+  const tools = (capabilities as Record<string, unknown>).tools;
+  return Boolean(
+    tools && typeof tools === "object" && (tools as Record<string, unknown>).supported === false,
+  );
 }
 
 /**
@@ -373,11 +401,12 @@ export async function listCustomApiModels(
         id,
         ...(context !== undefined ? { context } : {}),
         ...(output !== undefined ? { output } : {}),
+        ...(listedNotChat(entry as Record<string, unknown>) ? { notChat: true as const } : {}),
       });
     }
     // Deliberately discard endpoints, executable settings, headers, prices and
-    // capabilities. Only IDs and stated limits are kept, and a listing cannot
-    // check or activate a model.
+    // other capabilities. Only IDs, stated limits and the not-a-chat-model mark
+    // are kept, and a listing cannot check or activate a model.
     transport.assertSafeOutput([...models.keys()]);
     return [...models.values()];
   } catch (error) {

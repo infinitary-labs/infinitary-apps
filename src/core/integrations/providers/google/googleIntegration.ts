@@ -37,10 +37,10 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * and Calendar need (the captain's q8 on INF-775), as the person's own
  * Google client, kept from the file Google gives for it (INF-5549's plan,
  * pieces 2 and 3). A new sign-in takes only an own client, unless the run
- * names a client of its own for development or tests (`googleSetup`'s
- * `signsIn`); a sign-in made earlier with Infinitary's registered client
- * still renews with it, and its row says to set up an own client
- * (`retiring`). The own client's secret is a
+ * names a client of its own for development or tests (`googleSetup`); a
+ * sign-in made with Infinitary's retired client has no client to renew it,
+ * so it reads as needing a sign-in, which asks for an own client first.
+ * The own client's secret is a
  * second hidden Secrets entry the same broker adds to the code exchange and
  * every renewal, so it never reaches this code either. Its lasting key
  * lives in Secrets, as a hidden entry used only through the renewal broker
@@ -94,17 +94,12 @@ export type GoogleIntegrationOptions = {
   /** Secrets, where the lasting key is kept (`IntegrationKeys`). */
   keys: IntegrationKeys;
   /**
-   * The run's own client: it renews a sign-in made with it while the person
-   * keeps no client of their own.
+   * The run's own client, named only by a development run: it takes a new
+   * sign-in while the person keeps no client of their own, and renews one
+   * made with it. Absent, a sign-in made with Infinitary's retired client
+   * cannot renew.
    */
-  client: GoogleClient;
-  /**
-   * Whether the run's own client also takes new sign-ins: only a client a
-   * development run names (`googleSetup`). Otherwise a new sign-in needs the
-   * person's own client, and a sign-in made with the run's reads as retiring.
-   * Absent, it does.
-   */
-  runSignsIn?: boolean;
+  client?: GoogleClient;
   endpoints: GoogleEndpoints;
   /** Opens Google's consent page in the person's browser (`LoopbackSignInOptions.open`). */
   open: LoopbackSignInOptions["open"];
@@ -166,11 +161,12 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const fetchImpl = options.fetch ?? fetch;
   const gmailRoot = `${options.endpoints.gmail.replace(/\/+$/, "")}/gmail/v1/users/me`;
   const calendarRoot = `${options.endpoints.calendar.replace(/\/+$/, "")}/calendar/v3`;
-  const runSignsIn = options.runSignsIn ?? true;
-  const runClient = {
-    client_id: options.client.id,
-    ...(options.client.secret ? { client_secret: options.client.secret } : {}),
-  };
+  const runClient = options.client
+    ? {
+        client_id: options.client.id,
+        ...(options.client.secret ? { client_secret: options.client.secret } : {}),
+      }
+    : undefined;
   let renewing: Promise<void> | undefined;
   let moving: Promise<string> | undefined;
   /** The access key, in memory only: a start renews it once. */
@@ -199,7 +195,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
    * with a client the person no longer keeps, which can never renew it.
    */
   const renewingClient = (record: { client?: string }): RenewingClient | undefined => {
-    if (!record.client) return {};
+    if (!record.client) return runClient ? {} : undefined;
     const own = clients.read();
     return own?.id === record.client ? { own } : undefined;
   };
@@ -275,7 +271,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
             method: "POST",
             headers: { accept: "application/json" },
             form: {
-              ...(own ? { client_id: own.id } : runClient),
+              ...(own ? { client_id: own.id } : (runClient ?? {})),
               grant_type: "refresh_token",
             },
             credentials: {
@@ -633,7 +629,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         {
           id: GOOGLE_ID,
           account: record.account,
-          health: record.health,
+          // A sign-in made with Infinitary's retired client has nothing to renew it.
+          health: !record.client && !runClient ? "needs_reauth" : record.health,
           actions: [...GMAIL_ACTIONS, ...CALENDAR_ACTIONS],
           events: [GMAIL_MESSAGE_EVENT, CALENDAR_CHANGED_EVENT],
         },
@@ -645,9 +642,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       return {
         kept: own !== undefined,
         ...(own?.refused ? { refused: own.refused.error } : {}),
-        ...(record && !record.client && !runSignsIn ? { retiring: true as const } : {}),
         ...(record?.endsAt !== undefined ? { endsAt: record.endsAt } : {}),
-        ...(runSignsIn ? { runClient: true as const } : {}),
+        ...(options.client ? { runClient: true as const } : {}),
       };
     },
     keepClientFile: async (text) => {
@@ -657,10 +653,10 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     keepClient: (client) => keep(client),
     signIn: async (signal) => {
       const own = clients.read();
-      // The run's own client renews the sign-ins made with it but takes no new one.
-      if (!own && !runSignsIn) throw new Error(m.integrationsGoogleSetUpFirst());
+      const signAs = own ? { id: own.id } : options.client;
+      if (!signAs) throw new Error(m.integrationsGoogleSetUpFirst());
       const issued = await signInOnLoopback({
-        client: own ? { id: own.id } : options.client,
+        client: signAs,
         endpoints: options.endpoints,
         scopes: GOOGLE_SCOPES,
         open: options.open,

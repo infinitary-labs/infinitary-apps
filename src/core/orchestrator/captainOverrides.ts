@@ -1,3 +1,4 @@
+import type { DirectionCitation } from "@shared/actions";
 import type { CaptainAllowance } from "@shared/captainAllowances";
 import { anythingElseOf, type Card, mergeEffectOf } from "@shared/cards";
 import {
@@ -11,6 +12,7 @@ import {
   STANDING_WORDS_FROM,
   standingOverride,
 } from "@shared/holds";
+import type { KnowledgeDirectionHeard } from "@shared/knowledge";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { alreadyAllowed, inheritedOverride, sameWorkLineage } from "../tasks/alreadyAllowed";
 import { TaskService } from "../tasks/taskService";
@@ -35,7 +37,7 @@ export function captainWordsIn(
   cite: (from: string) => ReturnType<CaptainOverrides["citedCaptainWords"]>,
 ): ReturnType<CaptainOverrides["citedCaptainWords"]> {
   if (from && from !== "turn") {
-    if (!turn.canCreate && turn.asked.length === 0)
+    if (!citesKeptWords(turn))
       return {
         ok: false,
         text: `${OVERRIDE_REFUSED} A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.`,
@@ -49,6 +51,78 @@ export function captainWordsIn(
         ok: false,
         text: `${OVERRIDE_REFUSED} Only the captain's own words declare one: this turn's, or their reply or click on a card of the task or line in its Crewmate tab, cited with from.`,
       };
+}
+
+/** How a direction change refused on its cited words begins. */
+// i18n-exempt: a refusal served to the first mate, never shown to a person
+export const DIRECTION_REFUSED = "Direction refused: nothing was saved.";
+// i18n-exempt: a refusal served to the first mate, never shown to a person
+const DIRECTION_CITES = `Cite turn for words the captain typed this turn, a card's id for the captain's reply or click there, or ${CREWMATE_TAB_VIA} or ${STANDING_WORDS_FROM} with task naming the task; or leave from out to save it on your own judgment, not heard.`;
+
+/** Why a direction change's citation is refused, after `DIRECTION_REFUSED`. */
+// i18n-exempt: refusals served to the first mate, never shown to a person
+const DIRECTION_WHY = {
+  taskAlone: `task names a task only beside from. ${DIRECTION_CITES}`,
+  noTurnWords: `This turn carries no words of the captain's. ${DIRECTION_CITES}`,
+  choiceOnly:
+    "This turn carries the captain's choice on a card, not words they typed: cite that card's id as from, so its check reads what they picked.",
+  scheduled:
+    "A scheduled wake carries no words of the captain's, so it cites none; leave from out to save it on your own judgment, not heard.",
+  mergeClick:
+    "The captain's click on a merge is consent to that merge, never words about a direction.",
+  taskNeeded: (cited: string) => `${cited} names a task's words: give task as its key.`,
+  noTask: (ref: string) => `There is no task "${ref}".`,
+  noTabWords: (handle: string) =>
+    `The record holds no words the captain typed in ${handle}'s Crewmate tab.`,
+  noStanding: (handle: string) => `No standing reply of the captain's stands on ${handle}.`,
+  noCard: (cited: string) =>
+    `There is no card "${cited}"; pass from as the id of the card the captain replied under or clicked.`,
+  silentCard: (title: string) =>
+    `The record holds no words of the captain's on card "${title}": no reply in its thread and no click on its buttons.`,
+  unticked: (title: string, named: string[], id: string | undefined) =>
+    named.length > 0
+      ? `The captain's click on card "${title}" named ${named.join(", ")}${id ? `, not d:${id}` : ""}; it heard only those.`
+      : `The captain's click on card "${title}" ticked no direction, so it heard none.`,
+};
+
+/** A card control whose value is a direction's `d:` id: an offer to tick it. */
+const OFFERED_DIRECTION = /\bvalue\s*=\s*["']d:[a-z0-9][a-z0-9-]{0,63}["']/i;
+
+function directionRefused(why: string): { ok: false; text: string } {
+  return { ok: false, text: `${DIRECTION_REFUSED} ${why}` };
+}
+
+/**
+ * Where the captain's own words a direction change cites were heard
+ * (docs/knowledge.md, "Heard from the captain"), by the rule an override's
+ * citation keeps (`captainWordsIn`): words the captain typed this turn, or
+ * words the record keeps, which a scheduled wake with none of its own cites
+ * none of. A turn that carries only a card choice cites that card, never
+ * `turn`: its words are the button's label, and the card's check is what
+ * hears only the directions a click ticked. With no citation the change is
+ * the first mate's own judgment and saves unheard; a citation the record
+ * does not hold is refused, so nothing is saved under a mark it lacks.
+ */
+export function heardDirection(
+  turn: { canCreate: boolean; asked: readonly string[]; typed: boolean },
+  change: DirectionCitation & { id?: string },
+  overrides: Pick<CaptainOverrides, "directionWords">,
+): { ok: true; heard?: KnowledgeDirectionHeard } | { ok: false; text: string } {
+  const from = change.from?.trim();
+  if (!from) return change.task ? directionRefused(DIRECTION_WHY.taskAlone) : { ok: true };
+  if (from === "turn") {
+    if (turn.typed && turn.asked.join("\n").trim()) return { ok: true, heard: { from: "turn" } };
+    return directionRefused(
+      turn.asked.length > 0 ? DIRECTION_WHY.choiceOnly : DIRECTION_WHY.noTurnWords,
+    );
+  }
+  if (!citesKeptWords(turn)) return directionRefused(DIRECTION_WHY.scheduled);
+  return overrides.directionWords(from, change.task, change.id);
+}
+
+/** A scheduled wake with no words of the captain's own cites none the record keeps. */
+function citesKeptWords(turn: { canCreate: boolean; asked: readonly string[] }): boolean {
+  return turn.canCreate || turn.asked.length > 0;
 }
 
 /** What the captain's overrides reach of the supervisor beyond its options. */
@@ -343,6 +417,55 @@ export class CaptainOverrides {
           text: `Override refused: nothing was recorded. The record holds no words of the captain's on card "${found.card}": no reply in its thread and no click on its buttons.`,
         };
     }
+  }
+
+  /**
+   * Where the captain's words a direction change cites are kept
+   * (`heardDirection`): the captain's newest words on any card, the newest
+   * line typed in a task's Crewmate tab, or a task's standing reply. A click
+   * on a merge is consent to that merge, never words about a direction. A
+   * click on a card that offers directions as controls valued by `d:` id,
+   * or whose answers name them so, heard only the ones its answers name, so
+   * a direction left unticked is refused, and every one when none is ticked
+   * (INF-6987: each one the captain ticks is confirmed). The host reads
+   * none of the words.
+   */
+  directionWords(
+    cited: string,
+    taskRef: string | undefined,
+    id: string | undefined,
+  ): { ok: true; heard: KnowledgeDirectionHeard } | { ok: false; text: string } {
+    if (cited === CREWMATE_TAB_VIA || cited === STANDING_WORDS_FROM) {
+      if (!taskRef) return directionRefused(DIRECTION_WHY.taskNeeded(cited));
+      const record = this.options.tasks.resolve(taskRef);
+      if (!record) return directionRefused(DIRECTION_WHY.noTask(taskRef));
+      const handle = record.key || record.id;
+      if (cited === CREWMATE_TAB_VIA)
+        return this.typedWords(record.id, CREWMATE_TAB_VIA).ok
+          ? { ok: true, heard: { from: "crewmate-tab", task: handle } }
+          : directionRefused(DIRECTION_WHY.noTabWords(handle));
+      const standing = standingOverride(record.delivery, record.delivery?.headSha);
+      if (!standing) return directionRefused(DIRECTION_WHY.noStanding(handle));
+      if (standing.mergeClick) return directionRefused(DIRECTION_WHY.mergeClick);
+      return { ok: true, heard: { from: "standing", task: handle } };
+    }
+    const card = this.host.cards.get(cited) ?? this.host.cards.stored(cited);
+    if (!card) return directionRefused(DIRECTION_WHY.noCard(cited));
+    const words = this.captainWordsOnCard(card);
+    if (!words) return directionRefused(DIRECTION_WHY.silentCard(card.title));
+    if (words.mergeClick) return directionRefused(DIRECTION_WHY.mergeClick);
+    if (words.line === undefined) {
+      const named = (this.host.cards.past(card.id)?.answers ?? [])
+        .filter((answer) => !answer.skipped)
+        .flatMap((answer) => answer.values)
+        .filter((value) => value.startsWith("d:"));
+      const bare = id?.replace(/^d:/, "");
+      const asked = named.length > 0 || OFFERED_DIRECTION.test(card.body ?? "");
+      if (asked && !(bare && named.includes(`d:${bare}`)))
+        return directionRefused(DIRECTION_WHY.unticked(card.title, named, bare));
+    }
+    // The mark keeps at most 400 characters of the title, as its schema reads it back.
+    return { ok: true, heard: { from: "card", card: card.id, title: card.title.slice(0, 400) } };
   }
 
   /**

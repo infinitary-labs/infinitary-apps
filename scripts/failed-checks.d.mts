@@ -23,9 +23,10 @@ export function failedComment(note: {
   /** Whether this note put the label on, kept in the comment's mark; true when omitted. */
   labeled?: boolean;
 }): string;
-/** The note once nothing it named still fails at that version. */
+/** The note once nothing at that version is left for the pull request to fix: every failed check passes, or also fails on main. */
 export function clearedComment(note: {
   sha: string;
+  /** Failed checks that also fail on main; any leaves the pull request waiting on main. */
   onMain?: readonly { name: string }[];
   labeled?: boolean;
 }): string;

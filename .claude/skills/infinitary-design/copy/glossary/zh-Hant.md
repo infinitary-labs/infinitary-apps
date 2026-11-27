@@ -160,6 +160,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | sign in again | 重新登入 | Standard. |
 | sign-in / sign in | 登入 | Taiwan's word; 登錄 is mainland. |
 | standing direction | 長期指引 | A direction meant to last; 指引 alone where the context is clear. |
+| standing reply (your words kept on a task, which pass its holds) | 有效回覆 | |
 | start | 開始 | Standard. |
 | starter | 開場句 | A sentence the person finishes. |
 | Steer (button) | 引導 | 指引 is a standing direction. |
@@ -186,6 +187,7 @@ Words the person meets on GitHub follow what Taiwan's developers and Microsoft's
 | unsafe data reader | 不安全資料讀取者 | A crewmate that reads words anyone can write. |
 | Usage | 用量 | Standard. |
 | usage record (on the Usage page) | 紀錄 | Counter 筆, as in 12 筆紀錄. |
+| user (another user account on this computer) | 使用者 | "as {user}" is 以 {user} 身分, as in 以另一位使用者身分執行. |
 | where the project lives | 專案所在處 | Used for the host in general; a named host follows 在, as in 在 GitHub 合併. |
 | working copy | 工作副本 | Not 工作樹 (worktree). |
 | workspace (the personal workspace) | 工作區 | Taiwan's software word; 工作空間 is avoided. |

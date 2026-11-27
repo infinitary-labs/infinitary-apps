@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "every-card-takes-reply",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Every app card takes a typed reply",
+      "body": "Some cards the app puts up itself, such as Allow writes on GitHub? for a crewmate that reads outside issues and Sign in to GitHub again, had no reply field, so you could only press a button. Now every card has the field except the welcome and the cards shown while your first mate is down. A reply on an approval card reaches the crewmate that asked; on any other app card, your first mate answers it.",
+      "picture": {
+        "dark": "every-card-takes-reply-dark.webp",
+        "light": "every-card-takes-reply-light.webp",
+        "alt": "The Allow writes on GitHub? card with its reply field above Not now and Only this time"
+      },
+      "docsSite": ["cards-and-decisions", "first-launch"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

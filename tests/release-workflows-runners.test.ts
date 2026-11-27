@@ -487,6 +487,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The swept batch and main's sort of each push (INF-2430's plan, piece 3).
     "main.yml:sort",
     "main.yml:covered",
+    // Main's stop on a push that merged an outside pull request (INF-6982).
+    "main.yml:outside",
     // Main's last job, which dispatches its alpha cut (INF-3738).
     "main.yml:alpha",
     // A batch pull request's run of the swept batch (INF-3759's plan, piece
@@ -542,6 +544,9 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
     // The failed-check note, which holds a write token for an outside pull
     // request (docs/public-ci.md, "Outside contributors").
     "failed-checks.yml:note",
+    // The rerun of a batch's jobs GitHub never placed, which holds an Actions
+    // write token (docs/testing.md, "A job GitHub never placed").
+    "unplaced-jobs.yml:rerun",
   ];
   // DOP-251's plan: each kind is one stage of moving Linux jobs to the Mac
   // mini's Linux guests (docs/testing.md, "Each Linux job's kind").

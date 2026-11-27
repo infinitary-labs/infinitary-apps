@@ -20,9 +20,27 @@ afterEach(async () => {
   for (const run of cleanup.splice(0).reverse()) await run();
 });
 
-/** A released build's Google: a new sign-in needs the person's own client. */
+/** A released build's Google, which names no client: a new sign-in needs the person's own. */
 const released = (older?: Parameters<typeof googleWorld>[3]) =>
   googleWorld(cleanup, undefined, false, older, undefined, false);
+
+/** A sign-in an earlier version made with no client recorded: with Infinitary's own, or a development run's. */
+const signedInEarlier: Parameters<typeof googleWorld>[3] = async (dir, google, keys) => {
+  const { refresh } = google.grantEarlier([...GOOGLE_SCOPES]);
+  const key = await keys.keys.keepHidden({
+    label: "Google sign-in",
+    value: Buffer.from(refresh, "utf8"),
+  });
+  if (!key) throw new Error("Secrets keeps the sign-in");
+  new GoogleSignInStore(dir).write({
+    account: STAND_IN_ACCOUNT,
+    scopes: [...GOOGLE_SCOPES],
+    expiresAt: Date.UTC(2026, 9, 22, 15),
+    health: "ok",
+    signedInAt: Date.UTC(2026, 9, 1),
+    key,
+  });
+};
 
 /** The file Google Cloud gives for a Desktop app client, as it downloads it. */
 const desktopFile = (id = OWN_CLIENT_ID, secret = OWN_CLIENT_SECRET) =>
@@ -42,9 +60,8 @@ const desktopFile = (id = OWN_CLIENT_ID, secret = OWN_CLIENT_SECRET) =>
  * INF-5549's plan, piece 3: the Google row's setup "asks Secrets to keep the
  * client file through a drop target; the owner reads Google's nested
  * `installed` fields, keeps the secret hidden, and writes the client record";
- * the seven row states, the 7-day check, and the switch-over: "new sign-ins
- * use only an own client. A sign-in made with Infinitary's client keeps
- * renewing until piece 5 and shows Set up your own Google connection".
+ * the row states, the 7-day check, and the switch-over: "new sign-ins use
+ * only an own client".
  */
 describe("setting up the person's own Google client", () => {
   it("reads a Desktop app client file, and refuses a Web one, a file not Google's and one missing its secret", () => {
@@ -129,25 +146,15 @@ describe("setting up the person's own Google client", () => {
     expect(integrations.view().integrations).toEqual([]);
   });
 
-  it("keeps renewing a sign-in made with Infinitary's client, and says to set up an own one", async () => {
-    const { google, clock, integrations } = await released(async (dir, google, keys) => {
-      const { refresh } = google.grantEarlier([...GOOGLE_SCOPES]);
-      const key = await keys.keys.keepHidden({
-        label: "Google sign-in",
-        value: Buffer.from(refresh, "utf8"),
-      });
-      if (!key) throw new Error("Secrets keeps the sign-in");
-      new GoogleSignInStore(dir).write({
-        account: STAND_IN_ACCOUNT,
-        scopes: [...GOOGLE_SCOPES],
-        expiresAt: Date.UTC(2026, 9, 22, 15),
-        health: "ok",
-        signedInAt: Date.UTC(2026, 9, 1),
-        key,
-      });
-    });
+  it("renews a sign-in made with a development run's own client, and moves it to the person's own client at the next sign-in", async () => {
+    const { google, clock, integrations } = await googleWorld(
+      cleanup,
+      undefined,
+      false,
+      signedInEarlier,
+    );
     allowIntegrationReads(integrations);
-    expect(integrations.view().integrations[0]?.client).toEqual({ kept: false, retiring: true });
+    expect(integrations.view().integrations[0]?.client).toEqual({ kept: false, runClient: true });
 
     clock.now += 60_000;
     const answer = await integrations
@@ -166,14 +173,44 @@ describe("setting up the person's own Google client", () => {
       client_secret: STAND_IN_CLIENT_SECRET,
     });
 
-    // With an own client kept, the row still says so until the person signs in as it.
+    // A kept own client takes the next sign-in, though the run names one of its own.
     await integrations.keepClient("google", desktopFile());
-    expect(integrations.view().integrations[0]?.client).toEqual({ kept: true, retiring: true });
+    expect(integrations.view().integrations[0]?.client).toEqual({ kept: true, runClient: true });
     await integrations.signIn("google", NOTICE_ACCEPTED);
+    expect(google.tokens.at(-1)).toMatchObject({
+      grant_type: "authorization_code",
+      client_id: OWN_CLIENT_ID,
+      client_secret: OWN_CLIENT_SECRET,
+    });
     expect(integrations.view().integrations[0]?.client).toEqual({
       kept: true,
       endsAt: clock.now + 604_799_000,
+      runClient: true,
     });
+  });
+
+  it("reads a sign-in made with Infinitary's retired client as needing a sign-in, and never sends it to Google", async () => {
+    // INF-6344: Infinitary's own client is gone, so nothing can renew such a sign-in.
+    const { google, clock, integrations } = await released(signedInEarlier);
+    allowIntegrationReads(integrations);
+    expect(integrations.view().integrations[0]?.health).toBe("needs_reauth");
+    expect(integrations.view().integrations[0]?.client).toEqual({ kept: false });
+
+    clock.now += 60_000;
+    const answer = await integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "search_mail",
+        { max: 1 },
+        undefined,
+        "To perform the task’s requested action.",
+      );
+    expect(answer.refused).toBeDefined();
+    expect(google.tokens).toEqual([]);
+    await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
+      "Set up your own Google client first",
+    );
   });
 
   it("turns a sign-in to Sign in again when another client is kept in its place, and keeps it for a new secret", async () => {

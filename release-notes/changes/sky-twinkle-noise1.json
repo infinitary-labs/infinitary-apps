@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "sky-twinkle-noise1",
+      "reason": "Refactor: the constellation and galaxy fidgets call the face's shared noise function instead of a copy of it, drawing exactly as before."
+    }
+  ]
+}

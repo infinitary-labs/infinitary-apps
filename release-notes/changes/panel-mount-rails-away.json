@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-mount-rails-away",
+      "reason": "The window's answer about its panels now says when the rails are folded away for a card or the main message, or when Settings is open, and a crewmate's place and photo answers repeat it; only what a crewmate is told changes, and a panel folded away for a card was already photographed."
+    }
+  ]
+}

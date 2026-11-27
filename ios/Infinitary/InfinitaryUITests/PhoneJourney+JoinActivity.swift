@@ -48,10 +48,14 @@ extension PhoneJourney {
             app.debugDescription)
         XCTAssertEqual(app.staticTexts["connection-refusal"].label, "Changes are off until Test Mac mini is back.")
         try await appearances("out-of-reach", showing: app.staticTexts["connection-refusal"])
-        computerDetails()
-        XCTAssertTrue(app.buttons["forget-mac"].exists)
+        // INF-2820 piece 1: out of reach, a press on the reach line opens Settings at Your computer, offering Forget.
+        let reachLine = app.otherElements["reach-line"]
+        XCTAssertTrue(reachLine.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(reachLine)
+        XCTAssertTrue(app.buttons["forget-mac"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["add-computer"].exists)
         picture("computer-details-out-of-reach")
-        tapOnPhone(app.buttons["close-computer-details"])
+        closeComputerDetails()
         // Record the recovery itself, not the separate appearance and details checks above.
         _ = try await home("capture-start")
         let change = try await home("change")

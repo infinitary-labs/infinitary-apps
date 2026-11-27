@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-endings-from-waits",
+      "reason": "The first mate now hears the issue address of a Build row the captain filed, and this project's own intake page moves an issue's ending to its waiting task; nothing a person sees changes until a waiting task drafts its reply, which the Outside work items note already covers."
+    }
+  ]
+}

@@ -111,12 +111,24 @@ import XCTest
         picture(name, screenshot: try appearancePicture(name, dark: dark))
     }
 
-    func computerDetails() {
-        let details = app.buttons["computer-details"]
-        XCTAssertTrue(details.waitForPresence(timeout: 10))
-        XCTAssertEqual(details.label, "Your computer")
-        tapOnPhone(details)
-        XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
+    /// INF-2820 piece 1: the computer's page is Settings' first row, Your computer, which names the computer shown and
+    /// its reach; piece 2 takes the top bar's computer button away, so a step reaches the page through Settings.
+    func computerDetails(repeatDiscarded: Bool = true) {
+        let settings = app.buttons["phone-settings"]
+        XCTAssertTrue(settings.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(settings, repeatDiscarded: repeatDiscarded)
+        let row = app.buttons["phone-settings-computer"]
+        XCTAssertTrue(row.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(row.label.hasPrefix("Your computer"), row.label)
+        tapOnPhone(row, repeatDiscarded: repeatDiscarded)
+        XCTAssertTrue(app.buttons["add-computer"].waitForPresence(timeout: 10), app.debugDescription)
+    }
+
+    /// Closes Settings from Your computer, or from any of its pages.
+    func closeComputerDetails(repeatDiscarded: Bool = true) {
+        let close = app.buttons["close-phone-settings"]
+        tapOnPhone(close, repeatDiscarded: repeatDiscarded)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10), app.debugDescription)
     }
 
     func tab(_ name: String, repeatDiscarded: Bool = true) {
@@ -459,7 +471,10 @@ import XCTest
                 continue
             }
             tries += 1
-            if element.isHittable && !stale { return }
+            // A stale element is scrolled, never asked whether it is hittable: XCTest takes its hit point from the same
+            // stale frames, and when they put the element outside an ancestor's frame, as the body's choice once read below
+            // its page's container, XCTest records "Activation point invalid" as a test failure instead of answering false.
+            if !stale && element.isHittable { return }
             // Use the card's actual viewport: a whole-screen swipe hits the keyboard while replying.
             let down = stale || (element.exists && !view.isNull && element.frame.maxY < view.minY)
             if view.isNull { if down { scroll.swipeDown() } else { scroll.swipeUp() }; continue }
@@ -474,9 +489,9 @@ import XCTest
             from.press(forDuration: 0.05, thenDragTo: from.withOffset(CGVector(dx: 0, dy: travel)),
                        withVelocity: XCUIGestureVelocity(rawValue: 1000), thenHoldForDuration: 0)
         }
-        XCTAssertTrue(element.isHittable, app.debugDescription)
         XCTAssertFalse(readsStale(element, in: body),
                        "\(element) reads at \(element.frame), where the card body at \(body.frame) no longer draws it")
+        XCTAssertTrue(element.isHittable, app.debugDescription)
     }
 
     /// INF-1651, INF-6677: iOS 27.0 reads every element of the card body's page through one screen transform that it does

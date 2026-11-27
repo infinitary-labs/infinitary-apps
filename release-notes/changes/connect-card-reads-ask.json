@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "connect-card-reads-ask",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "The Connect card says reads ask you too",
+      "body": "When your first mate offers to connect GitHub, GitLab, Bitbucket or Google, its card now says that each action, reads included, asks you on a card until you choose Always allow. Before, it said reads ran without asking. The card also shows in the language you chose for Infinitary.",
+      "picture": {
+        "dark": "connect-card-reads-ask-dark.webp",
+        "light": "connect-card-reads-ask-light.webp",
+        "alt": "The first mate's Connect GitLab card, saying each action, reads included, asks you on a card until you choose Always allow, with Not now and Open Integrations"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

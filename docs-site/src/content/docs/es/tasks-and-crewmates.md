@@ -1,5 +1,5 @@
 ---
-source: 47dc716341146fd8
+source: 0f80b78b2636fcc9
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -53,7 +53,7 @@ Por ejemplo, una tarea Pendiente en esa computadora muestra <svg class="task-mar
 
 Una tarea dividida en partes enumera sus partes debajo.
 Cuando una de sus partes empieza, la tarea aparece en Trabajando, con sus partes abiertas debajo.
-La tarea conserva ahí su propia marca, así que una tarea cuyas partes hacen el trabajo puede mostrar la marca de Pendientes o de En cola dentro de Trabajando.
+Una tarea en cola conserva ahí la marca de En cola, mientras que una tarea de Pendientes cuyas partes hacen el trabajo toma la marca de su parte abierta más urgente, como Esperándote mientras la tarjeta de una parte espera.
 
 Para leer en palabras el estado de una tarea y su motivo, deja el puntero sobre su fila, o ve a la fila con el teclado.
 
@@ -93,6 +93,16 @@ Debajo de su título hay una fila de pestañas:
   Consulta [El navegador de la tripulación](/es/the-crews-browser/).
 
 Una pestaña solo aparece cuando la tarea tiene algo que mostrar en ella.
+
+## Una tarea dividida en partes {#a-task-split-into-parts}
+
+En la pestaña **Info** de una tarea dividida en partes, la fila **Partes** cuenta las partes cerradas y lista cada parte con su estado, en el orden en que se registraron.
+Presiona el recuento para plegar la lista, y presiónalo otra vez para abrirla.
+Con más de ocho partes, las cerradas se pliegan tras una línea que puedes abrir.
+Para abrir la tarjeta de una parte, haz clic en ella, o llega a ella con el teclado y presiona Enter; iníciala o respóndela allí.
+
+Una tarea de tus pendientes cuyas partes hacen el trabajo nunca te pide su propio **Iniciar**.
+En su lugar, lo alto de su pestaña **Info** dice qué esperan sus partes, como «Su última parte espera que presiones Iniciar», y la tarea se cierra sola cuando se cierran sus partes.
 
 ## Etiquetas {#tags}
 

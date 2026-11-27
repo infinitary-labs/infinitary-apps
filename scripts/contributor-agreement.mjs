@@ -7,9 +7,8 @@
  *   the merge batches', passes and is never asked;
  * - an outside pull request passes when its author's numeric GitHub id has
  *   accepted the agreement's current version, read from the record;
- * - otherwise the author accepts by ticking the template's box in the
- *   description or by replying with the sentence; the check writes one entry
- *   to the record and passes;
+ * - otherwise the author accepts by replying with the sentence; the check
+ *   writes one entry to the record and passes;
  * - otherwise it fails and posts one comment saying how to accept.
  *
  * The record is a locked issue of this project titled RECORD_TITLE, opened
@@ -57,16 +56,6 @@ function plain(words) {
 /** Whether a reply is the sentence, and nothing else. */
 export const isAcceptance = (body) => plain(body) === SENTENCE.toLowerCase();
 
-/** Whether a description carries the template's box, ticked. */
-export function hasTickedBox(body) {
-  return String(body ?? "")
-    .split(/\r?\n/)
-    .some((line) => {
-      const box = /^\s*[-*]\s+\[[xX]\]\s+(.*)$/.exec(line);
-      return box ? plain(box[1]) === SENTENCE.toLowerCase() : false;
-    });
-}
-
 /** The entries the bot wrote to the record, oldest first. */
 export function readEntries(comments) {
   return comments.flatMap((comment) => {
@@ -101,8 +90,7 @@ export function askComment(agreementUrl) {
     ASK_MARK,
     `Thank you for your pull request. Before it can be merged, please accept the [Contributor License Agreement](${agreementUrl}), once for this and every later contribution:`,
     "",
-    "- tick the box at the end of your pull request's description, or",
-    "- reply to this pull request with exactly this sentence:",
+    "Reply to this pull request with exactly this sentence:",
     "",
     `> I agree that my submission is governed by the [Contributor License Agreement](${agreementUrl})`,
     "",
@@ -168,13 +156,10 @@ export async function check({ github, context, core, agreement, now = () => new 
     return "accepted before";
   }
 
-  // The author's own reply, or the author's own description with the box ticked.
-  const link = comment
-    ? comment.user?.id === author.id && isAcceptance(comment.body)
+  // Only the author's own reply accepts.
+  const link =
+    comment && comment.user?.id === author.id && isAcceptance(comment.body)
       ? comment.html_url
-      : null
-    : context.payload.sender?.id === author.id && hasTickedBox(pull.body)
-      ? pull.html_url
       : null;
   if (link) {
     const entry = {
@@ -214,7 +199,7 @@ export async function check({ github, context, core, agreement, now = () => new 
     });
   await status(
     "failure",
-    "Not accepted yet: tick the box in the description, or reply with the sentence.",
+    "Not accepted yet: reply to the pull request with the sentence.",
   );
   return "asked";
 }

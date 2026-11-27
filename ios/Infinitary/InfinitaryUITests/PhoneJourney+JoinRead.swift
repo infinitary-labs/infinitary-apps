@@ -44,19 +44,28 @@ extension PhoneJourney {
         verifyPhoneComposerBounds(app: app)
         picture("cards")
         try await appearances("cards", showing: app.staticTexts["Your phone is reading your Mac"])
-        // INF-1062: the computer's name leaves the bar for its sheet, and Leave stays behind that sheet (INF-209).
+        // INF-1062: the computer's name leaves the bar for its page, and Leave stays behind that page (INF-209).
         XCTAssertFalse(app.staticTexts["home-name"].exists, "The bar no longer carries the computer's name")
         XCTAssertFalse(app.buttons["leave"].exists)
-        // INF-355: details must also work as the first hardware chord after relaunch.
+        // INF-355: details must also work as the first hardware chord after relaunch. INF-2820 piece 1: Command-I opens
+        // Settings at Your computer.
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 20)
         try await pressPhoneKey("i", modifiers: .command, in: app)
-        XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["home-name"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertEqual(app.staticTexts["home-name"].label, "Test Mac mini")
-        XCTAssertTrue(app.staticTexts["Live"].exists, "The computer's sheet says its reach")
-        XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "The sheet names the route reached, not the saved preference")
+        XCTAssertTrue(app.staticTexts["Live"].exists, "Your computer says its reach")
+        XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "Your computer names the route reached, not the saved preference")
         XCTAssertTrue(app.buttons["leave"].exists)
-        tapOnPhone(app.buttons["close-computer-details"])
+        XCTAssertTrue(app.buttons["add-computer"].exists)
+        // Back from Your computer lands on Settings' list, where it is the first row and names the computer and its reach.
+        try await settingsBack()
+        let computerRow = app.buttons["phone-settings-computer"]
+        XCTAssertTrue(computerRow.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["Test Mac mini · Live"].exists, "The row names the computer shown and its reach: \(app.debugDescription)")
+        XCTAssertLessThan(computerRow.frame.maxY, app.buttons["phone-settings-general"].frame.minY, "Your computer is the list's first row")
+        try await appearances("phone-settings-list", showing: computerRow)
+        closeComputerDetails()
         // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
         try await pressPhoneKey(",", modifiers: .command, in: app)
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForPresence(timeout: 10), app.debugDescription)
@@ -76,10 +85,15 @@ extension PhoneJourney {
         for row in computerSections { XCTAssertTrue(row.waitForPresence(timeout: 20), app.debugDescription) }
         XCTAssertFalse(app.staticTexts["app-version"].exists, "Version content lives on General, not the list")
         XCTAssertFalse(app.segmentedControls["phone-theme"].exists)
-        XCTAssertFalse(app.buttons["leave"].exists)
-        // The list starts on General. As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
-        // Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
+        XCTAssertFalse(app.buttons["leave"].exists, "Leave stays on Your computer's page, not the list")
+        // The list starts on its first row, Your computer. As PhoneKeys owns, Xcode emits the physical Return for LF,
+        // not CR. Unmodified keys have no BackBoard registration; send each physical key once and prove its result.
+        waitForSteadyTarget(app.buttons["phone-settings-computer"])
+        app.typeKey("\n", modifierFlags: [])
+        XCTAssertTrue(app.buttons["add-computer"].waitForPresence(timeout: 10), app.debugDescription)
+        try await settingsBack()
         waitForSteadyTarget(general)
+        app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(app.staticTexts["app-version"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
@@ -114,6 +128,11 @@ extension PhoneJourney {
         // INF-1328: the segmented control draws its tabs edge to edge, in order and never overlapping.
         XCTAssertLessThanOrEqual(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThanOrEqual(strip[1].frame.maxX, strip[2].frame.minX)
         XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
+        // INF-2820 piece 1: until piece 2 puts Filter in its place, the computer button opens Settings at Your computer.
+        tapOnPhone(app.buttons["computer-details"])
+        XCTAssertTrue(app.staticTexts["home-name"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.buttons["phone-settings-back"].exists, "The button opens Your computer inside Settings")
+        closeComputerDetails()
         XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
         // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
         let heading = app.staticTexts["Your phone is reading your Mac"]
@@ -137,7 +156,7 @@ extension PhoneJourney {
         computerDetails()
         XCTAssertTrue(waitForPhonePress(app.buttons["leave"]))
         picture("computer-details-largest-standard-type")
-        tapOnPhone(app.buttons["close-computer-details"])
+        closeComputerDetails()
         _ = try await home("display-light", budget: displayBudget)
         _ = waitForRedraw(heading, from: largest)
         if phoneTurnedLayout(app) == .wide {

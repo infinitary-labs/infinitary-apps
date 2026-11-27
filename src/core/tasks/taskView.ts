@@ -318,6 +318,7 @@ export function viewOf(
       facts: facts.waits,
       decision:
         waitingCardId !== null || gateCard !== null || graph.durableDecisions.has(record.id),
+      parts: (graph.children.get(record.id)?.total ?? 0) > 0,
     }),
     closedReason: record.closedReason,
     ...(replaced(record) ? { replacedBy: graph.replacedBy.get(record.id) } : {}),

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "readme-chapter-two-record-words",
+      "reason": "Brings the readme's copies of the second chapter line and the record card to the home page's approved words; the app itself does not change."
+    }
+  ]
+}

@@ -4,7 +4,6 @@ import {
   agreementVersion,
   BOT,
   check,
-  hasTickedBox,
   RECORD_TITLE,
   SENTENCE,
   STATUS,
@@ -13,8 +12,7 @@ import { loadYamlFile } from "./helpers/releaseWorkflows";
 
 // INF-5262 builds INF-5254's approved plan (the captain's pick: "Our own
 // check: the record stays in your project"): an outside contributor accepts
-// CLA.md once per version, by ticking the template's box or replying with
-// its sentence, and the check keeps the record in a locked issue
+// CLA.md once per version, by replying with its sentence, and the check keeps the record in a locked issue
 // (docs/public-ci.md, "Outside contributors").
 
 const agreement = readFileSync(new URL("../CLA.md", import.meta.url), "utf8");
@@ -172,33 +170,12 @@ function replied(pull: ReturnType<typeof pullRequest>, comment: Comment) {
   };
 }
 
-const ticked = template.replace("- [ ]", "- [x]");
+async function accepts(api: ReturnType<typeof gitHub>, pull: ReturnType<typeof pullRequest>) {
+  const reply = api.add(pull.number, contributor, SENTENCE);
+  return check({ ...api, core, agreement, now, context: replied(pull, reply) });
+}
 
 describe("the contributor agreement check", () => {
-  it("records the author's ticked box and passes, without asking", async () => {
-    const pull = pullRequest({ body: ticked });
-    const api = gitHub({ pulls: [pull] });
-    expect(await check({ ...api, core, agreement, now, context: opened(pull) })).toBe(
-      "accepted now",
-    );
-    expect(api.entries()).toHaveLength(1);
-    const entry = api.entries()[0];
-    expect(entry?.user).toBe(bot);
-    for (const field of [
-      contributor.login,
-      `${contributor.id}`,
-      "#40",
-      pull.html_url,
-      `version ${version}`,
-      now().toISOString(),
-    ])
-      expect(entry?.body).toContain(field);
-    expect(api.commentsOn(pull.number)).toEqual([]);
-    expect(api.statuses).toEqual([
-      expect.objectContaining({ sha: pull.head.sha, state: "success", context: STATUS }),
-    ]);
-  });
-
   it("asks once and fails while the author has not accepted", async () => {
     const pull = pullRequest();
     const api = gitHub({ pulls: [pull] });
@@ -253,20 +230,11 @@ describe("the contributor agreement check", () => {
     expect(api.statuses).toEqual([]);
   });
 
-  it("does not take a maintainer's tick in the author's description", async () => {
-    const pull = pullRequest({ body: ticked });
-    const api = gitHub({ pulls: [pull] });
-    expect(
-      await check({ ...api, core, agreement, now, context: opened(pull, maintainer, "edited") }),
-    ).toBe("asked");
-    expect(api.entries()).toEqual([]);
-  });
-
   it("passes a recorded author's later pull request without asking again", async () => {
-    const first = pullRequest({ body: ticked });
+    const first = pullRequest();
     const later = pullRequest({ number: 41 });
     const api = gitHub({ pulls: [first, later] });
-    await check({ ...api, core, agreement, now, context: opened(first) });
+    await accepts(api, first);
     expect(await check({ ...api, core, agreement, now, context: opened(later) })).toBe(
       "accepted before",
     );
@@ -276,10 +244,10 @@ describe("the contributor agreement check", () => {
   });
 
   it("asks a recorded author again when the agreement's version changes", async () => {
-    const first = pullRequest({ body: ticked });
+    const first = pullRequest();
     const later = pullRequest({ number: 41 });
     const api = gitHub({ pulls: [first, later] });
-    await check({ ...api, core, agreement, now, context: opened(first) });
+    await accepts(api, first);
     const next = agreement.replace(`Version ${version}`, `Version ${version + 1}`);
     expect(await check({ ...api, core, agreement: next, now, context: opened(later) })).toBe(
       "asked",
@@ -306,7 +274,7 @@ describe("the contributor agreement check", () => {
   });
 
   it("says so, and fails, when the record issue is missing", async () => {
-    const pull = pullRequest({ body: ticked });
+    const pull = pullRequest();
     const api = gitHub({ record: false, pulls: [pull] });
     const seen = { failed: [] as string[], setFailed: core.setFailed };
     expect(await check({ ...api, core: seen, agreement, now, context: opened(pull) })).toBe(
@@ -318,7 +286,7 @@ describe("the contributor agreement check", () => {
   });
 
   it("never takes a locked issue with the record's title that someone who cannot write opened", async () => {
-    const pull = pullRequest({ body: ticked });
+    const pull = pullRequest();
     const impostor = {
       ...recordIssue,
       number: 5,
@@ -326,9 +294,7 @@ describe("the contributor agreement check", () => {
       author_association: "NONE",
     };
     const api = gitHub({ others: [impostor], pulls: [pull] });
-    expect(await check({ ...api, core, agreement, now, context: opened(pull) })).toBe(
-      "accepted now",
-    );
+    expect(await accepts(api, pull)).toBe("accepted now");
     expect(api.entries()).toHaveLength(1);
     expect(api.commentsOn(impostor.number)).toEqual([]);
   });
@@ -339,14 +305,6 @@ describe("the contributor agreement check", () => {
     context.payload.issue = { number: 3 } as typeof context.payload.issue;
     expect(await check({ ...api, core, agreement, now, context })).toBe("not a pull request");
     expect(api.statuses).toEqual([]);
-  });
-
-  it("finds the template's box only once it is ticked", () => {
-    expect(hasTickedBox(template)).toBe(false);
-    expect(hasTickedBox(ticked)).toBe(true);
-    expect(template).toContain(
-      `[${SENTENCE.split(" ").slice(-3).join(" ")}](https://github.com/infinitary-labs/infinitary-apps/blob/main/CLA.md)`,
-    );
   });
 });
 

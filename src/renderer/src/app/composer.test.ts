@@ -2,10 +2,17 @@ import { CONVERSE_TEXT_MAX_CHARS, TURN_IMAGES_MAX } from "@shared/cards";
 import type { LastTurn } from "@shared/lastTurn";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { MAIN_FILES_KEY, useIntakeStore } from "../attachments/intake";
+import { railStore } from "../plugins/railStore";
 import { voiceController } from "../voice/voiceController";
 import { mainInputHeld } from "./composer";
+import { projectFocus } from "./projectFocus";
+import { project, showBoard } from "./projectFocusTestKit";
 import { useShellStore } from "./store";
 import { card, picture, resetShell } from "./storeTestKit";
+
+vi.mock("../plugins/reads/appExecutor", () =>
+  import("./projectFocusTestKit").then((kit) => kit.appExecutorStandIn()),
+);
 
 describe("submit visible card id", () => {
   afterEach(() => {
@@ -43,6 +50,54 @@ describe("submit visible card id", () => {
       visibleCardId: "card-fm-1",
       taskId: undefined,
     });
+  });
+});
+
+// INF-6860, the captain's "are you aware of the project filter i set at the top of the
+// desktop app?": every main-box message says the window's filter, All projects included.
+describe("the project filter on a message", () => {
+  const SITE = project("project-site", "SITE", "Website");
+  const APP = project("project-app", "APP", "Mobile app");
+  // The window starts reading the focus as it opens (store.ts); a test starts it here.
+  beforeEach(() => projectFocus.subscribe(() => {}));
+  afterEach(() => {
+    railStore.reset();
+    showBoard([]);
+    vi.unstubAllGlobals();
+    resetShell();
+  });
+
+  function send(words: string) {
+    const sent = vi.fn(async (_turn: unknown) => ({ ok: true as const }));
+    vi.stubGlobal("window", {
+      infinitary: { conversation: { send: sent }, settings: { setLayout: async () => ({}) } },
+    });
+    useShellStore.setState({ cards: [], records: [], inputText: words, attachments: [] });
+    useShellStore.getState().submit();
+    return sent;
+  }
+
+  it("names the project picked on the pill", () => {
+    showBoard([SITE, APP]);
+    railStore.focusProject("project-site");
+    expect(send("fix the login bug")).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "fix the login bug", focusedProjectId: "project-site" }),
+    );
+  });
+
+  it("says All projects while the pill shows with nothing picked", () => {
+    showBoard([SITE, APP]);
+    const sent = send("what's waiting on me?");
+    expect(sent).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "what's waiting on me?", allProjects: true }),
+    );
+    expect(sent.mock.calls[0]?.[0]).not.toHaveProperty("focusedProjectId");
+  });
+
+  it("says no filter while one project leaves nothing to pick", () => {
+    showBoard([SITE]);
+    railStore.focusProject("project-site");
+    expect(send("fix the login bug")).toHaveBeenCalledWith("fix the login bug");
   });
 });
 

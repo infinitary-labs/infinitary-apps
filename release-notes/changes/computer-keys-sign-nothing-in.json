@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "computer-keys-sign-nothing-in",
+      "kind": "fix",
+      "area": "subscriptions",
+      "title": "A key set on your computer no longer signs a Grok, OpenRouter, Kimi Code or Copilot account in",
+      "body": "When your computer has XAI_API_KEY, OPENROUTER_API_KEY, KIMI_API_KEY or COPILOT_GITHUB_TOKEN set for another tool, an account of that provider with no sign-in of its own now reads signed out, with its Sign in button. Before, it read signed in on that key, and every account offered that provider's models, which then ran on the key.",
+      "noPicture": "A signed-out row looks as it always has; what changed is that a key set on the computer no longer hides it.",
+      "noDocsSite": "The docs site already says an account comes from signing in under Add account and never described a key set on the computer.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

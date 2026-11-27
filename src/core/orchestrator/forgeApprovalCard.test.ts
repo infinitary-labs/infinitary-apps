@@ -114,3 +114,13 @@ describe("the reader's approval card with a Build row", () => {
     expect(buildRowChoiceOf(undefined, BUILD.id)).toBe("later");
   });
 });
+
+// Intent: INF-6994's approved plan, piece 1: the reader's approval card takes a
+// reply that the reader that asked answers, as every asker answers its own
+// card ("Allow writes on GitHub?" drew no reply field).
+describe("the reader's approval card's answerer", () => {
+  it("names the reader that asked as the one who answers a reply", () => {
+    const card = readerApprovalCard([WRITE], { id: "reader", title: "Outside intake" });
+    expect(card).toMatchObject({ taskId: "reader", answeredBy: "crewmate" });
+  });
+});

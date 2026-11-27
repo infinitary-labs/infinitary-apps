@@ -6496,6 +6496,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "ambient-music": true,
     // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
     "ambient-own-style": true,
+    "own-theme": [
+      "destructive",
+      "Saving under a saved theme's name replaces its colors for good, and remove deletes one"
+    ],
     "ambient-away": true,
     "card-size": true,
     language: true,
@@ -7046,6 +7050,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `install Claude Code there first`;
   }
+  function accountsConnectKeyWhere(input2) {
+    const provider = input2.provider;
+    const site = input2.site;
+    switch (currentLanguage()) {
+      case "ar":
+        return `انسخ مفتاحك من ${site} بعد اشتراكك في ${provider}.`;
+      case "de":
+        return `Kopiere deinen Schlüssel aus der ${site}, nachdem du ${provider} abonniert hast.`;
+      case "es":
+        return `Copia tu clave desde ${site} después de suscribirte a ${provider}.`;
+      case "fr":
+        return `Copiez votre clé depuis ${site} après vous être abonné à ${provider}.`;
+      case "ja":
+        return `${provider} を購読したあと、${site} からキーをコピーしてください。`;
+      case "ko":
+        return `${provider}을(를) 구독한 뒤 ${site}에서 키를 복사하세요.`;
+      case "pt-BR":
+        return `Copie sua chave no ${site} depois de assinar o ${provider}.`;
+      case "zh-Hans":
+        return `订阅 ${provider} 后，从 ${site} 复制你的密钥。`;
+      case "zh-Hant":
+        return `訂閱 ${provider} 後，從 ${site} 複製你的金鑰。`;
+      case "en-XA":
+        return `[Çöþý ýöûŕ ķéý ƒŕöɱ ţĥé ${site} áƒţéŕ ýöû šûƀšçŕîƀé ţö ${provider}. ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Copy your key from the ‬${site}‮ after you subscribe to ‬${provider}‮.‬`;
+    }
+    return `Copy your key from the ${site} after you subscribe to ${provider}.`;
+  }
   function accountsConnectNotSignedIn() {
     switch (currentLanguage()) {
       case "ar":
@@ -7379,21 +7412,21 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "ar":
         return `إضافة API مخصصة ${on}`;
       case "de":
-        return `Eigene API hinzufügen ${on}`;
+        return `Eigene API ${on} hinzufügen`;
       case "es":
         return `Agregar una API personalizada ${on}`;
       case "fr":
         return `Ajouter une API personnalisée ${on}`;
       case "ja":
-        return `カスタム API を追加（${on}）`;
+        return `カスタム API を${on}追加`;
       case "ko":
-        return `사용자 지정 API 추가 ${on}`;
+        return `${on} 사용자 지정 API 추가`;
       case "pt-BR":
         return `Adicionar uma API personalizada ${on}`;
       case "zh-Hans":
-        return `添加自定义 API（${on}）`;
+        return `${on}添加自定义 API`;
       case "zh-Hant":
-        return `加入自訂 API（${on}）`;
+        return `${on}加入自訂 API`;
       case "en-XA":
         return `[Åðð á çûšţöɱ ÅÞÎ ${on} ~~~~~~]`;
       case "ar-XB":
@@ -9429,7 +9462,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function accountsCustomApiFileHint() {
     switch (currentLanguage()) {
       case "ar":
-        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الكمبيوتر نفسه.`;
+        return `يستطيع Infinitary قراءة الاتصالات المخصصة من ملف بتنسيق models.json الخاص بـ Pi، ولا يغيّره أبدًا. تعتمد كل اتصال هنا بمفتاح هذا الحاسوب نفسه.`;
       case "de":
         return `Infinitary kann eigene Verbindungen aus einer Datei im models.json-Format von Pi lesen und ändert sie nie. Du gibst jede Verbindung hier mit dem eigenen Schlüssel dieses Computers frei.`;
       case "es":
@@ -9510,7 +9543,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function accountsCustomApiFileKey() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الكمبيوتر نفسه عند الاعتماد.`;
+        return `لا يستخدم Infinitary أي مفتاح من الملف. اكتب مفتاح هذا الحاسوب نفسه عند الاعتماد.`;
       case "de":
         return `Infinitary verwendet nie einen Schlüssel aus der Datei. Gib beim Freigeben den eigenen Schlüssel dieses Computers ein.`;
       case "es":
@@ -11419,6 +11452,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮No models yet. Fetch them from the server, or add one by hand.‬`;
     }
     return `No models yet. Fetch them from the server, or add one by hand.`;
+  }
+  function accountsCustomApiNotChat() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس نموذج محادثة`;
+      case "de":
+        return `Kein Chatmodell`;
+      case "es":
+        return `No es un modelo de chat`;
+      case "fr":
+        return `Pas un modèle de chat`;
+      case "ja":
+        return `チャットモデルではありません`;
+      case "ko":
+        return `채팅 모델이 아니에요`;
+      case "pt-BR":
+        return `Não é um modelo de chat`;
+      case "zh-Hans":
+        return `不是聊天模型`;
+      case "zh-Hant":
+        return `不是聊天模型`;
+      case "en-XA":
+        return `[Ñöţ á çĥáţ ɱöðéļ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Not a chat model‬`;
+    }
+    return `Not a chat model`;
   }
   function accountsCustomApiNotOffered(input2) {
     const model = input2.model;
@@ -13613,15 +13673,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Utiliser ${on}`;
       case "ja":
-        return `使う（${on}）`;
+        return `これを${on}使う`;
       case "ko":
-        return `사용 ${on}`;
+        return `${on} 사용`;
       case "pt-BR":
         return `Usar ${on}`;
       case "zh-Hans":
-        return `使用（${on}）`;
+        return `${on}使用`;
       case "zh-Hant":
-        return `使用（${on}）`;
+        return `${on}使用`;
       case "en-XA":
         return `[Ûšé ${on} ~~]`;
       case "ar-XB":
@@ -13636,27 +13696,54 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "ar":
         return `استخدام ${name} ${on}`;
       case "de":
-        return `${name} verwenden ${on}`;
+        return `${name} ${on} verwenden`;
       case "es":
         return `Usar ${name} ${on}`;
       case "fr":
         return `Utiliser ${name} ${on}`;
       case "ja":
-        return `${name} を使う（${on}）`;
+        return `${name} を${on}使う`;
       case "ko":
-        return `${name} 사용 ${on}`;
+        return `${on} ${name} 사용`;
       case "pt-BR":
         return `Usar ${name} ${on}`;
       case "zh-Hans":
-        return `使用 ${name}（${on}）`;
+        return `${on}使用 ${name}`;
       case "zh-Hant":
-        return `使用 ${name}（${on}）`;
+        return `${on}使用 ${name}`;
       case "en-XA":
         return `[Ûšé ${name} ${on} ~~]`;
       case "ar-XB":
         return `‮Use ‬${name}‮ ‬${on}`;
     }
     return `Use ${name} ${on}`;
+  }
+  function accountsQuotaOpenCodeGoNoPlan() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يجد OpenCode Go خطة Go نشطة لهذا المفتاح.`;
+      case "de":
+        return `OpenCode Go hat für diesen Schlüssel kein aktives Go-Abo gefunden.`;
+      case "es":
+        return `OpenCode Go no encontró un plan Go activo para esta clave.`;
+      case "fr":
+        return `OpenCode Go n’a trouvé aucun forfait Go actif pour cette clé.`;
+      case "ja":
+        return `OpenCode Go で、このキーに有効な Go プランが見つかりませんでした。`;
+      case "ko":
+        return `OpenCode Go에서 이 키에 활성 Go 요금제를 찾지 못했어요.`;
+      case "pt-BR":
+        return `O OpenCode Go não encontrou um plano Go ativo para esta chave.`;
+      case "zh-Hans":
+        return `OpenCode Go 没有找到这个密钥的有效 Go 套餐。`;
+      case "zh-Hant":
+        return `OpenCode Go 找不到這個金鑰的有效 Go 方案。`;
+      case "en-XA":
+        return `[ÖþéñÇöðé Ĝö ƒöûñð ñö áçţîṽé Ĝö þļáñ ƒöŕ ţĥîš ķéý. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮OpenCode Go found no active Go plan for this key.‬`;
+    }
+    return `OpenCode Go found no active Go plan for this key.`;
   }
   function accountsSavedResetBusy(input2) {
     const account = input2.account;
@@ -21331,6 +21418,171 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `This card could not be read`;
   }
+  function cardPicturesUnreadMove(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${model}`;
+      case "de":
+        return `Zu ${model} wechseln`;
+      case "es":
+        return `Pasar a ${model}`;
+      case "fr":
+        return `Passer à ${model}`;
+      case "ja":
+        return `${model} に移動`;
+      case "ko":
+        return `${model}(으)로 옮기기`;
+      case "pt-BR":
+        return `Mudar para ${model}`;
+      case "zh-Hans":
+        return `改用 ${model}`;
+      case "zh-Hant":
+        return `改用 ${model}`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${model} ~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${model}`;
+    }
+    return `Move to ${model}`;
+  }
+  function cardPicturesUnreadNoReader() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يقرأ الصور أيٌّ من نماذجك التي تستطيع العمل نائبًا للقبطان. أضف اشتراكًا فيه نموذج كهذا في الإعدادات، ضمن «الذكاء».`;
+      case "de":
+        return `Keines deiner Modelle, die deinem ersten Offizier antworten können, liest Bilder. Füg in den Einstellungen unter Intelligenz ein Abo mit einem solchen Modell hinzu.`;
+      case "es":
+        return `Ninguno de tus modelos que pueden responder como tu primer oficial lee imágenes. Agrega una suscripción con uno en Configuración, en Inteligencia.`;
+      case "fr":
+        return `Aucun de vos modèles capables de répondre comme votre second ne lit les images. Ajoutez un abonnement qui en propose un dans les Réglages, sous Intelligence.`;
+      case "ja":
+        return `一等航海士として答えられるモデルの中に、画像を読めるものがありません。設定の「インテリジェンス」で、画像を読めるモデルのあるサブスクリプションを追加してください。`;
+      case "ko":
+        return `일등항해사로 답할 수 있는 모델 중에 사진을 읽는 모델이 없어요. 설정의 지능에서 그런 모델이 있는 구독을 추가하세요.`;
+      case "pt-BR":
+        return `Nenhum dos seus modelos que podem responder como seu imediato lê imagens. Adicione uma assinatura com um deles em Ajustes, na seção Inteligência.`;
+      case "zh-Hans":
+        return `你能用作大副的模型中，没有能读取图片的。请在“设置”的“智能”下添加一个包含此类模型的订阅。`;
+      case "zh-Hant":
+        return `你能用作大副的模型中，沒有能讀取圖片的。請在「設定」的「智慧等級」中加入含有這類模型的訂閱方案。`;
+      case "en-XA":
+        return `[Ñöñé öƒ ýöûŕ ɱöðéļš ţĥáţ çáñ áñšŵéŕ ýöûŕ ƒîŕšţ ɱáţé ŕéáðš þîçţûŕéš. Åðð á šûƀšçŕîþţîöñ ŵîţĥ öñé îñ Šéţţîñĝš, ûñðéŕ Îñţéļļîĝéñçé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.‬`;
+    }
+    return `None of your models that can answer your first mate reads pictures. Add a subscription with one in Settings, under Intelligence.`;
+  }
+  function cardPicturesUnreadReader(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الانتقال إلى ${model} يضع نائب القبطان على نموذج يقرأ الصور، فيجيب عن رسالتك هناك.`;
+      case "de":
+        return `Zu ${model} wechseln setzt deinen ersten Offizier auf ein Modell, das Bilder liest, und er beantwortet deine Nachricht dort.`;
+      case "es":
+        return `Pasar a ${model} pone a tu primer oficial en un modelo que lee imágenes, y ahí responde a tu mensaje.`;
+      case "fr":
+        return `Passer à ${model} place votre second sur un modèle qui lit les images, et il y répond à votre message.`;
+      case "ja":
+        return `${model} に移動すると、一等航海士は画像を読めるモデルに切り替わり、そこでメッセージに答えます。`;
+      case "ko":
+        return `${model}(으)로 옮기기를 누르면 일등항해사가 사진을 읽는 모델로 바뀌고, 거기서 메시지에 답해요.`;
+      case "pt-BR":
+        return `Mudar para ${model} coloca seu imediato em um modelo que lê imagens, e ele responde à sua mensagem lá.`;
+      case "zh-Hans":
+        return `改用 ${model} 会让你的大副换到一个能读取图片的模型，并在那里回答你的消息。`;
+      case "zh-Hant":
+        return `改用 ${model} 會讓你的大副換到能讀取圖片的模型，並在那裡回覆你的訊息。`;
+      case "en-XA":
+        return `[Ṁöṽé ţö ${model} þûţš ýöûŕ ƒîŕšţ ɱáţé öñ á ɱöðéļ ţĥáţ ŕéáðš þîçţûŕéš, áñð îţ áñšŵéŕš ýöûŕ ɱéššáĝé ţĥéŕé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Move to ‬${model}‮ puts your first mate on a model that reads pictures, and it answers your message there.‬`;
+    }
+    return `Move to ${model} puts your first mate on a model that reads pictures, and it answers your message there.`;
+  }
+  function cardPicturesUnreadSettings() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح الإعدادات`;
+      case "de":
+        return `Einstellungen öffnen`;
+      case "es":
+        return `Abrir Configuración`;
+      case "fr":
+        return `Ouvrir les Réglages`;
+      case "ja":
+        return `設定を開く`;
+      case "ko":
+        return `설정 열기`;
+      case "pt-BR":
+        return `Abrir Ajustes`;
+      case "zh-Hans":
+        return `打开设置`;
+      case "zh-Hant":
+        return `開啟設定`;
+      case "en-XA":
+        return `[Öþéñ šéţţîñĝš ~~~~~]`;
+      case "ar-XB":
+        return `‮Open settings‬`;
+    }
+    return `Open settings`;
+  }
+  function cardPicturesUnreadTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `نموذج نائب القبطان لا يستطيع قراءة الصور`;
+      case "de":
+        return `Das Modell deines ersten Offiziers kann keine Bilder lesen`;
+      case "es":
+        return `El modelo de tu primer oficial no puede leer imágenes`;
+      case "fr":
+        return `Le modèle de votre second ne peut pas lire les images`;
+      case "ja":
+        return `一等航海士のモデルは画像を読めません`;
+      case "ko":
+        return `일등항해사의 모델이 사진을 읽을 수 없어요`;
+      case "pt-BR":
+        return `O modelo do seu imediato não consegue ler imagens`;
+      case "zh-Hans":
+        return `你的大副所用的模型无法读取图片`;
+      case "zh-Hant":
+        return `你的大副所用的模型無法讀取圖片`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé'š ɱöðéļ çáññöţ ŕéáð þîçţûŕéš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate's model cannot read pictures‬`;
+    }
+    return `Your first mate's model cannot read pictures`;
+  }
+  function cardPicturesUnreadWaits(input2) {
+    const model = input2.model;
+    switch (currentLanguage()) {
+      case "ar":
+        return `رسالتك التي فيها صورة محفوظة وتنتظر، لأن نائب القبطان يجيب بالنموذج ${model} الذي يقرأ الكلمات فقط. الرسائل التي بلا صور ما زالت تصله.`;
+      case "de":
+        return `Deine Nachricht mit einem Bild ist gespeichert und wartet, denn dein erster Offizier antwortet mit ${model}, das nur Wörter liest. Nachrichten ohne Bilder erreichen ihn weiterhin.`;
+      case "es":
+        return `Tu mensaje con una imagen está guardado y espera, porque tu primer oficial responde con ${model}, que solo lee palabras. Los mensajes sin imágenes le siguen llegando.`;
+      case "fr":
+        return `Votre message avec une image est enregistré et attend, car votre second répond avec ${model}, qui ne lit que les mots. Les messages sans image lui parviennent toujours.`;
+      case "ja":
+        return `画像付きのメッセージは保存され、待機しています。一等航海士は ${model} で答えていますが、このモデルは文字しか読めません。画像のないメッセージは引き続き届きます。`;
+      case "ko":
+        return `사진이 있는 메시지는 저장되어 기다리고 있어요. 일등항해사가 쓰는 모델 ${model}은(는) 글자만 읽어요. 사진이 없는 메시지는 계속 전달돼요.`;
+      case "pt-BR":
+        return `Sua mensagem com uma imagem está salva e esperando, porque seu imediato responde com ${model}, que só lê palavras. Mensagens sem imagens continuam chegando a ele.`;
+      case "zh-Hans":
+        return `你带图片的消息已保存，正在等待，因为你的大副用 ${model} 回答，而它只能读取文字。不带图片的消息仍会送达大副。`;
+      case "zh-Hant":
+        return `你附有圖片的訊息已儲存，正在等待，因為你的大副用 ${model} 回覆，而它只能讀取文字。沒有圖片的訊息仍會送達大副。`;
+      case "en-XA":
+        return `[Ýöûŕ ɱéššáĝé ŵîţĥ á þîçţûŕé îš šáṽéð áñð ŵáîţš, ƀéçáûšé ýöûŕ ƒîŕšţ ɱáţé áñšŵéŕš öñ ${model}, ŵĥîçĥ ŕéáðš ŵöŕðš öñļý. Ṁéššáĝéš ŵîţĥöûţ þîçţûŕéš šţîļļ ŕéáçĥ îţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your message with a picture is saved and waits, because your first mate answers on ‬${model}‮, which reads words only. Messages without pictures still reach it.‬`;
+    }
+    return `Your message with a picture is saved and waits, because your first mate answers on ${model}, which reads words only. Messages without pictures still reach it.`;
+  }
   function cardQuickAnswer() {
     switch (currentLanguage()) {
       case "ar":
@@ -21907,6 +22159,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${closed}‮ of ‬${total}‮ closed‬`;
     }
     return `${closed} of ${total} closed`;
+  }
+  function cardRecordCouldNotStart(input2) {
+    const reason = input2.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر البدء. ${reason}`;
+      case "de":
+        return `Konnte nicht starten. ${reason}`;
+      case "es":
+        return `No se pudo iniciar. ${reason}`;
+      case "fr":
+        return `Démarrage impossible. ${reason}`;
+      case "ja":
+        return `開始できませんでした。${reason}`;
+      case "ko":
+        return `시작하지 못했어요. ${reason}`;
+      case "pt-BR":
+        return `Não foi possível iniciar. ${reason}`;
+      case "zh-Hans":
+        return `无法开始。${reason}`;
+      case "zh-Hant":
+        return `無法開始。${reason}`;
+      case "en-XA":
+        return `[Çöûļð ñöţ šţáŕţ. ${reason} ~~~~~~]`;
+      case "ar-XB":
+        return `‮Could not start. ‬${reason}`;
+    }
+    return `Could not start. ${reason}`;
   }
   function cardRecordDelivery() {
     switch (currentLanguage()) {
@@ -23181,15 +23461,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Le travail de l’équipage ${where} passe à un modèle moins puissant ou attend que son allocation se réinitialise, sauf si vous utilisez une réinitialisation enregistrée.`;
       case "ja":
-        return `保存済みのリセットを使わない限り、${where}の乗組員の作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。`;
+        return `保存済みのリセットを使わない限り、乗組員が${where}行う作業は弱いモデルに切り替わるか、利用枠がリセットされるまで待ちます。`;
       case "ko":
-        return `저장된 재설정을 사용하지 않으면 ${where} 선원들의 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.`;
+        return `저장된 재설정을 사용하지 않으면 선원들이 ${where} 하는 작업은 더 약한 모델로 바뀌거나 사용량이 재설정될 때까지 기다려요.`;
       case "pt-BR":
         return `O trabalho da tripulação ${where} passa para um modelo mais fraco ou espera até a franquia renovar, a menos que você use uma redefinição salva.`;
       case "zh-Hans":
-        return `除非你使用一次已保存的重置，否则${where}的船员工作会改用较弱的模型，或等到额度重置。`;
+        return `除非你使用一次已保存的重置，否则船员${where}进行的工作会改用较弱的模型，或等到额度重置。`;
       case "zh-Hant":
-        return `除非你使用一次已儲存的重設，否則${where}的船員工作會改用較弱的模型，或等到額度重設。`;
+        return `除非你使用一次已儲存的重設，否則船員${where}進行的工作會改用較弱的模型，或等到額度重設。`;
       case "en-XA":
         return `[Çŕéŵ ŵöŕķ ${where} ðŕöþš ţö á ŵéáķéŕ ɱöðéļ öŕ ŵáîţš ûñţîļ îţš áļļöŵáñçé ŕéšéţš, ûñļéšš ýöû ûšé á šáṽéð ŕéšéţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -36629,7 +36909,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يبني ${device} شيفرة هذا الكمبيوتر.`;
+        return `يبني ${device} شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} baut den Code dieses Computers.`;
       case "es":
@@ -36686,7 +36966,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل هذا الكمبيوتر Infinitary من شيفرته عند الالتزام ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة الملتزَمة ويبنيها ويبدأ منها. تبقى التغييرات غير الملتزَمة على هذا الكمبيوتر.`;
+        return `يشغّل هذا الحاسوب Infinitary من شيفرته عند الإيداع ${commit}، ويشغّل ${device} بناءً آخر. تجعل «مطابقة» ${device} يجلب تلك الشيفرة المودَعة ويبنيها ويبدأ منها. تبقى التغييرات غير المودَعة على هذا الحاسوب.`;
       case "de":
         return `Dieser Computer führt Infinitary aus seinem Code beim Commit ${commit} aus, und ${device} führt einen anderen Build aus. Angleichen lässt ${device} diesen committeten Code holen, bauen und damit starten. Nicht committete Änderungen bleiben auf diesem Computer.`;
       case "es":
@@ -36796,7 +37076,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الكمبيوتر تلقائيًا كلما شغّل هذا الكمبيوتر شيفرة أخرى.`;
+        return `يُطرح عليك هذا السؤال مرة واحدة بشأن ${device}. بعدها يطابق هذا الحاسوب تلقائيًا كلما شغّل هذا الحاسوب شيفرة أخرى.`;
       case "de":
         return `Du wirst für ${device} nur einmal gefragt. Danach gleicht er sich von selbst an, sobald dieser Computer anderen Code ausführt.`;
       case "es":
@@ -36852,7 +37132,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `هل تريد تشغيل شيفرة هذا الكمبيوتر على ${device}؟`;
+        return `هل تريد تشغيل شيفرة هذا الحاسوب على ${device}؟`;
       case "de":
         return `Den Code dieses Computers auf ${device} ausführen?`;
       case "es":
@@ -36880,7 +37160,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} بناء شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} بناء شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte den Code dieses Computers nicht bauen.`;
       case "es":
@@ -36908,7 +37188,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} جلب شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} جلب شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte den Code dieses Computers nicht holen.`;
       case "es":
@@ -36936,7 +37216,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الكمبيوتر، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الكمبيوتر شيفرة أخرى.`;
+        return `لم يتمكن ${device} من تشغيل بنائه لشيفرة هذا الحاسوب، لذا لا يبنيها «مطابقة» هناك مرة أخرى حتى يشغّل هذا الحاسوب شيفرة أخرى.`;
       case "de":
         return `${device} konnte seinen Build des Codes dieses Computers nicht starten. Angleichen baut ihn dort erst wieder, wenn dieser Computer anderen Code ausführt.`;
       case "es":
@@ -36964,7 +37244,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الكمبيوتر.`;
+        return `تعذّر على ${device} تثبيت ما تحتاجه شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} konnte nicht installieren, was der Code dieses Computers braucht.`;
       case "es":
@@ -36992,7 +37272,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `بنى ${device} شيفرة هذا الكمبيوتر لكنه لم يتمكن من التشغيل منها.`;
+        return `بنى ${device} شيفرة هذا الحاسوب لكنه لم يتمكن من التشغيل منها.`;
       case "de":
         return `${device} hat den Code dieses Computers gebaut, konnte aber nicht damit starten.`;
       case "es":
@@ -37020,7 +37300,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الكمبيوتر.`;
+        return `يحتاج ${device} إلى Node وpnpm لبناء شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} braucht Node und pnpm, um den Code dieses Computers zu bauen.`;
       case "es":
@@ -37048,7 +37328,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يجلب ${device} شيفرة هذا الكمبيوتر.`;
+        return `يجلب ${device} شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} holt den Code dieses Computers.`;
       case "es":
@@ -37076,7 +37356,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يثبّت ${device} ما تحتاجه شيفرة هذا الكمبيوتر.`;
+        return `يثبّت ${device} ما تحتاجه شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} installiert, was der Code dieses Computers braucht.`;
       case "es":
@@ -37158,7 +37438,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `لا يبني Infinitary من الشيفرة إلا جهاز Mac، و${device} ليس جهاز Mac.`;
+        return `لا يبني Infinitary من الشيفرة إلا حاسوب Mac، و${device} ليس حاسوب Mac.`;
       case "de":
         return `Nur ein Mac baut Infinitary aus Code, und ${device} ist kein Mac.`;
       case "es":
@@ -37186,7 +37466,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const commit = input2.commit;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل بناءً غير بناء هذا الكمبيوتر، الذي يشغّل شيفرته عند الالتزام ${commit}.`;
+        return `يشغّل بناءً غير بناء هذا الحاسوب، الذي يشغّل شيفرته عند الإيداع ${commit}.`;
       case "de":
         return `Führt einen anderen Build aus als dieser Computer, der seinen Code beim Commit ${commit} ausführt.`;
       case "es":
@@ -37214,7 +37494,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `يشغّل ${device} بناءً غير شيفرة هذا الكمبيوتر.`;
+        return `يشغّل ${device} بناءً غير شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} führt einen anderen Build aus als den Code dieses Computers.`;
       case "es":
@@ -37242,7 +37522,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الكمبيوتر.`;
+        return `إصدار Infinitary على ${device} أقدم من أن يبني شيفرة هذا الحاسوب.`;
       case "de":
         return `${device} hat ein zu altes Infinitary, um den Code dieses Computers zu bauen.`;
       case "es":
@@ -37297,7 +37577,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الكمبيوتر لم يصل إلى هذا الكمبيوتر في الوقت المحدد.`;
+        return `عاد ${device} إلى النسخة التي كان يشغّلها من قبل، لأن بناءه لشيفرة هذا الحاسوب لم يصل إلى هذا الحاسوب في الوقت المحدد.`;
       case "de":
         return `${device} ist zur vorherigen Kopie zurückgekehrt, weil sein Build des Codes dieses Computers diesen Computer nicht rechtzeitig erreicht hat.`;
       case "es":
@@ -38757,6 +39037,94 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `${project}‮: "‬${title}‮" was sent back from its batch: ‬${reason}`;
     }
     return `${project}: "${title}" was sent back from its batch: ${reason}`;
+  }
+  function feedBatchTrial(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تشغّل الدفعة ${label} فحوصاتها مع التصحيح المعلَن قبل الموافقة على التصحيح. حين يُوافق على التصحيح بهذا الإصدار وتنجح هذه الفحوصات، تُدمج الدفعة كما هي.`;
+      case "de":
+        return `${project}: ${label} führt seine Überprüfungen mit der angekündigten Korrektur aus, bevor die Korrektur bestätigt ist. Wird die Korrektur in dieser Version bestätigt und bestehen diese Überprüfungen, wird der Stapel so zusammengeführt, wie er ist.`;
+      case "es":
+        return `${project}: ${label} ejecuta sus comprobaciones con su corrección declarada antes de que se apruebe la corrección. Cuando la corrección se apruebe en esta versión y estas comprobaciones pasen, el lote se fusiona tal como está.`;
+      case "fr":
+        return `${project} : ${label} exécute ses vérifications avec son correctif déclaré, avant l’approbation du correctif. Une fois le correctif approuvé à cette version et ces vérifications réussies, le lot est fusionné tel quel.`;
+      case "ja":
+        return `${project}：${label} は、宣言された修正が承認される前に、その修正を含めてチェックを実行しています。修正がこのバージョンで承認され、これらのチェックが通れば、バッチはそのままマージされます。`;
+      case "ko":
+        return `${project}: ${label}은(는) 선언된 수정이 승인되기 전에 그 수정을 포함해 검사를 실행해요. 수정이 이 버전으로 승인되고 이 검사가 통과하면 묶음은 그대로 병합돼요.`;
+      case "pt-BR":
+        return `${project}: ${label} roda as verificações com a correção declarada antes de a correção ser aprovada. Quando a correção for aprovada nesta versão e estas verificações passarem, o lote é mesclado como está.`;
+      case "zh-Hans":
+        return `${project}：${label} 在声明的修正获批前，就带着这个修正运行检查。修正在这个版本获批且这些检查通过后，这批改动会原样合并。`;
+      case "zh-Hant":
+        return `${project}：${label} 在宣告的修正核准前，就帶著這個修正執行檢查。修正在這個版本核准且這些檢查通過後，這批變更會原樣合併。`;
+      case "en-XA":
+        return `[${project}: ${label} ŕûñš îţš çĥéçķš ŵîţĥ îţš ðéçļáŕéð ƒîẋ ƀéƒöŕé ţĥé ƒîẋ îš áþþŕöṽéð. Öñçé ţĥé ƒîẋ îš áþþŕöṽéð áţ ţĥîš ṽéŕšîöñ áñð ţĥéšé çĥéçķš þášš, ţĥé ƀáţçĥ ɱéŕĝéš áš îţ îš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.‬`;
+    }
+    return `${project}: ${label} runs its checks with its declared fix before the fix is approved. Once the fix is approved at this version and these checks pass, the batch merges as it is.`;
+  }
+  function feedBatchTrialFailed(input2) {
+    const checks = input2.checks;
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تبقى الدفعة ${label} معلّقة لأن هذه الفحوصات فشلت مع التصحيح المعلَن: ${checks}. يصلحه فرد طاقم التصحيح في إصدار جديد.`;
+      case "de":
+        return `${project}: ${label} bleibt angehalten, weil diese Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind: ${checks}. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.`;
+      case "es":
+        return `${project}: ${label} sigue retenido porque fallaron estas comprobaciones con su corrección declarada: ${checks}. El tripulante de la corrección la repara en una nueva versión.`;
+      case "fr":
+        return `${project} : ${label} reste retenu, car ces vérifications ont échoué avec son correctif déclaré : ${checks}. L’équipier du correctif le répare dans une nouvelle version.`;
+      case "ja":
+        return `${project}：宣言された修正を含めて次のチェックが失敗したため、${label} は保留のままです：${checks}。修正の乗組員が新しいバージョンで直します。`;
+      case "ko":
+        return `${project}: 선언된 수정을 포함해 다음 검사가 실패해서 ${label}은(는) 계속 보류돼요: ${checks}. 수정의 선원이 새 버전으로 고쳐요.`;
+      case "pt-BR":
+        return `${project}: ${label} continua retido porque estas verificações falharam com a correção declarada: ${checks}. O tripulante da correção a repara em uma nova versão.`;
+      case "zh-Hans":
+        return `${project}：带着声明的修正，以下检查失败，所以 ${label} 仍暂缓：${checks}。修正的船员会用新版本修好它。`;
+      case "zh-Hant":
+        return `${project}：帶著宣告的修正，以下檢查失敗，所以 ${label} 仍暫緩：${checks}。修正的船員會用新版本修好它。`;
+      case "en-XA":
+        return `[${project}: ${label} šţáýš ĥéļð ƀéçáûšé ${checks} ƒáîļéð ŵîţĥ îţš ðéçļáŕéð ƒîẋ. Ţĥé ƒîẋ'š çŕéŵɱáţé ŕéþáîŕš îţ îñ á ñéŵ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ stays held because ‬${checks}‮ failed with its declared fix. The fix's crewmate repairs it in a new version.‬`;
+    }
+    return `${project}: ${label} stays held because ${checks} failed with its declared fix. The fix's crewmate repairs it in a new version.`;
+  }
+  function feedBatchTrialFailedUnnamed(input2) {
+    const label = input2.label;
+    const project = input2.project;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${project}: تبقى الدفعة ${label} معلّقة لأن فحوصاتها فشلت مع التصحيح المعلَن. يصلحه فرد طاقم التصحيح في إصدار جديد.`;
+      case "de":
+        return `${project}: ${label} bleibt angehalten, weil seine Überprüfungen mit der angekündigten Korrektur fehlgeschlagen sind. Das Crewmitglied der Korrektur repariert sie in einer neuen Version.`;
+      case "es":
+        return `${project}: ${label} sigue retenido porque fallaron sus comprobaciones con su corrección declarada. El tripulante de la corrección la repara en una nueva versión.`;
+      case "fr":
+        return `${project} : ${label} reste retenu, car ses vérifications ont échoué avec son correctif déclaré. L’équipier du correctif le répare dans une nouvelle version.`;
+      case "ja":
+        return `${project}：宣言された修正を含めてチェックが失敗したため、${label} は保留のままです。修正の乗組員が新しいバージョンで直します。`;
+      case "ko":
+        return `${project}: 선언된 수정을 포함해 검사가 실패해서 ${label}은(는) 계속 보류돼요. 수정의 선원이 새 버전으로 고쳐요.`;
+      case "pt-BR":
+        return `${project}: ${label} continua retido porque as verificações falharam com a correção declarada. O tripulante da correção a repara em uma nova versão.`;
+      case "zh-Hans":
+        return `${project}：带着声明的修正，检查失败，所以 ${label} 仍暂缓。修正的船员会用新版本修好它。`;
+      case "zh-Hant":
+        return `${project}：帶著宣告的修正，檢查失敗，所以 ${label} 仍暫緩。修正的船員會用新版本修好它。`;
+      case "en-XA":
+        return `[${project}: ${label} šţáýš ĥéļð ƀéçáûšé îţš çĥéçķš ƒáîļéð ŵîţĥ îţš ðéçļáŕéð ƒîẋ. Ţĥé ƒîẋ'š çŕéŵɱáţé ŕéþáîŕš îţ îñ á ñéŵ ṽéŕšîöñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${project}‮: ‬${label}‮ stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.‬`;
+    }
+    return `${project}: ${label} stays held because its checks failed with its declared fix. The fix's crewmate repairs it in a new version.`;
   }
   function feedBranchPushed() {
     switch (currentLanguage()) {
@@ -40941,15 +41309,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `${name} s’exécute désormais ${where}. Sa prochaine tâche y démarre ; celle en cours ${here} se termine ${here}.`;
       case "ja":
-        return `${name} は今後 ${where} で実行されます。次のタスクはそちらで開始し、現在${here}実行中のタスクは${here}完了します。`;
+        return `${name} は今後${where}実行されます。次のタスクはそちらで開始し、現在${here}実行中のタスクは${here}完了します。`;
       case "ko":
         return `${name}은(는) 이제 ${where} 실행돼요. 다음 작업은 그곳에서 시작하고, ${here} 실행 중인 작업은 ${here} 끝나요.`;
       case "pt-BR":
         return `${name} agora roda ${where}. A próxima tarefa começa lá; a que está rodando ${here} termina ${here}.`;
       case "zh-Hans":
-        return `${name} 现在运行于 ${where}。它的下一个任务会在那里开始；${here}运行中的任务会${here}完成。`;
+        return `${name} 现在改为${where}运行。它的下一个任务会在那里开始；${here}运行中的任务会${here}完成。`;
       case "zh-Hant":
-        return `${name} 現在改為 ${where} 執行。它的下一項任務會在那裡開始；${here}執行中的任務會${here}完成。`;
+        return `${name} 現在改為${where}執行。它的下一項任務會在那裡開始；${here}執行中的任務會${here}完成。`;
       case "en-XA":
         return `[${name} ŕûñš ${where} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ţĥéŕé; ţĥé öñé ŕûññîñĝ ${here} ƒîñîšĥéš ${here}. ~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -41000,15 +41368,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `${name} s’exécute désormais ${where}. Sa prochaine tâche y démarre ; une tâche déjà en cours se termine là où elle a commencé.`;
       case "ja":
-        return `${name} は今後 ${where} で実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。`;
+        return `${name} は今後${where}実行されます。次のタスクはそちらで開始し、実行中のタスクは開始した場所で完了します。`;
       case "ko":
         return `${name}은(는) 이제 ${where} 실행돼요. 다음 작업은 그곳에서 시작하고, 이미 실행 중인 작업은 시작한 곳에서 끝나요.`;
       case "pt-BR":
         return `${name} agora roda ${where}. A próxima tarefa começa lá; uma que já esteja rodando termina onde começou.`;
       case "zh-Hans":
-        return `${name} 现在运行于 ${where}。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。`;
+        return `${name} 现在改为${where}运行。它的下一个任务会在那里开始；已在运行的任务会在开始的地方完成。`;
       case "zh-Hant":
-        return `${name} 現在改為 ${where} 執行。它的下一項任務會在那裡開始；已在執行的任務會在開始的地方完成。`;
+        return `${name} 現在改為${where}執行。它的下一項任務會在那裡開始；已在執行的任務會在開始的地方完成。`;
       case "en-XA":
         return `[${name} ŕûñš ${where} ñöŵ. Îţš ñéẋţ ţášķ šţáŕţš ţĥéŕé; öñé áļŕéáðý ŕûññîñĝ ƒîñîšĥéš ŵĥéŕé îţ šţáŕţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -42797,6 +43165,144 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${name} takes no client file in this version of Infinitary.`;
   }
+  function integrationsConnectOfferBody(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بعدها يستطيع نائب القبطان والطاقم الوصول إلى ${name} بتسجيل دخولك. كل إجراء من إجراءاته، بما في ذلك إجراءات القراءة، يسألك في بطاقة حتى تختار «مسموح دائمًا».`;
+      case "de":
+        return `Dein erster Offizier und deine Crew erreichen ${name} dann mit deiner Anmeldung. Jede seiner Aktionen, auch Leseaktionen, fragt dich auf einer Karte, bis du „Immer erlaubt“ wählst.`;
+      case "es":
+        return `Después, tu primer oficial y tu tripulación pueden acceder a ${name} con tu sesión. Cada una de sus acciones, incluidas las lecturas, te pregunta en una tarjeta hasta que eliges «Siempre permitida».`;
+      case "fr":
+        return `Votre second et votre équipage pourront alors accéder à ${name} avec votre connexion. Chacune de ses actions, y compris les lectures, vous demande sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».`;
+      case "ja":
+        return `その後、一等航海士と乗組員はあなたのサインインで ${name} を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。`;
+      case "ko":
+        return `그 뒤 일등항해사와 선원들이 내 로그인으로 ${name}에 접근할 수 있어요. 읽기를 포함해 모든 동작은 “항상 허용”을 고를 때까지 카드로 물어봐요.`;
+      case "pt-BR":
+        return `Depois, seu imediato e sua tripulação podem acessar ${name} com o seu login. Cada ação, inclusive as leituras, pergunta a você em um cartão até você escolher “Sempre permitida”.`;
+      case "zh-Hans":
+        return `之后，你的大副和船员可以用你的登录访问 ${name}。它的每个操作，包括读取，都会在卡片上询问你，直到你选择“始终允许”。`;
+      case "zh-Hant":
+        return `之後，你的大副和船員可以用你的登入存取 ${name}。它的每個動作，包括讀取，都會在卡片上詢問你，直到你選擇「一律允許」。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé áñð ýöûŕ çŕéŵ çáñ ţĥéñ ŕéáçĥ ${name} ŵîţĥ ýöûŕ šîĝñ-îñ. Éáçĥ öƒ îţš áçţîöñš, ŕéáðš îñçļûðéð, ášķš ýöû öñ á çáŕð ûñţîļ ýöû çĥööšé Åļŵáýš áļļöŵ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate and your crew can then reach ‬${name}‮ with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.‬`;
+    }
+    return `Your first mate and your crew can then reach ${name} with your sign-in. Each of its actions, reads included, asks you on a card until you choose Always allow.`;
+  }
+  function integrationsConnectOfferButton() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `فتح التكاملات`;
+      case "de":
+        return `Integrationen öffnen`;
+      case "es":
+        return `Abrir Integraciones`;
+      case "fr":
+        return `Ouvrir Intégrations`;
+      case "ja":
+        return `連携を開く`;
+      case "ko":
+        return `연동 열기`;
+      case "pt-BR":
+        return `Abrir Integrações`;
+      case "zh-Hans":
+        return `打开集成`;
+      case "zh-Hant":
+        return `開啟整合`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations‬`;
+    }
+    return `Open Integrations`;
+  }
+  function integrationsConnectOfferNotNow() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `ليس الآن`;
+      case "de":
+        return `Nicht jetzt`;
+      case "es":
+        return `Ahora no`;
+      case "fr":
+        return `Pas maintenant`;
+      case "ja":
+        return `今はしない`;
+      case "ko":
+        return `나중에`;
+      case "pt-BR":
+        return `Agora não`;
+      case "zh-Hans":
+        return `暂不`;
+      case "zh-Hant":
+        return `暫時不要`;
+      case "en-XA":
+        return `[Ñöţ ñöŵ ~~~]`;
+      case "ar-XB":
+        return `‮Not now‬`;
+    }
+    return `Not now`;
+  }
+  function integrationsConnectOfferOpen(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `افتح التكاملات لتسجيل الدخول إلى ${name}.`;
+      case "de":
+        return `Öffne Integrationen, um dich bei ${name} anzumelden.`;
+      case "es":
+        return `Abre Integraciones para iniciar sesión en ${name}.`;
+      case "fr":
+        return `Ouvrez Intégrations pour vous connecter à ${name}.`;
+      case "ja":
+        return `連携を開いて ${name} にサインインしてください。`;
+      case "ko":
+        return `연동을 열어 ${name}에 로그인하세요.`;
+      case "pt-BR":
+        return `Abra Integrações para fazer login em ${name}.`;
+      case "zh-Hans":
+        return `打开“集成”登录 ${name}。`;
+      case "zh-Hant":
+        return `開啟「整合」登入 ${name}。`;
+      case "en-XA":
+        return `[Öþéñ Îñţéĝŕáţîöñš ţö šîĝñ îñ ţö ${name}. ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Open Integrations to sign in to ‬${name}‮.‬`;
+    }
+    return `Open Integrations to sign in to ${name}.`;
+  }
+  function integrationsConnectOfferTitle(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `ربط ${name}`;
+      case "de":
+        return `${name} verbinden`;
+      case "es":
+        return `Conectar ${name}`;
+      case "fr":
+        return `Connecter ${name}`;
+      case "ja":
+        return `${name} に接続`;
+      case "ko":
+        return `${name} 연결`;
+      case "pt-BR":
+        return `Conectar ${name}`;
+      case "zh-Hans":
+        return `连接 ${name}`;
+      case "zh-Hant":
+        return `連結 ${name}`;
+      case "en-XA":
+        return `[Çöññéçţ ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Connect ‬${name}`;
+    }
+    return `Connect ${name}`;
+  }
   function integrationsGoogleClientFileIncomplete() {
     switch (currentLanguage()) {
       case "ar":
@@ -42958,87 +43464,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮A new Google sign-in, kept in Secrets and the app's memory‬`;
     }
     return `A new Google sign-in, kept in Secrets and the app's memory`;
-  }
-  function integrationsGoogleReadyDetail() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `عميل Google الخاص بك محفوظ. سجّل الدخول به لتنتقل عن عميل Infinitary المشترك.`;
-      case "de":
-        return `Dein eigener Google-Client ist aufbewahrt. Melde dich damit an, um vom gemeinsamen Client von Infinitary zu wechseln.`;
-      case "es":
-        return `Tu propio cliente de Google está guardado. Inicia sesión con él para dejar el cliente compartido de Infinitary.`;
-      case "fr":
-        return `Votre propre client Google est gardé. Connectez-vous avec lui pour quitter le client partagé d’Infinitary.`;
-      case "ja":
-        return `自分の Google クライアントを保管しました。それでサインインすると、Infinitary の共有クライアントから移行できます。`;
-      case "ko":
-        return `내 Google 클라이언트가 보관되어 있습니다. 그것으로 로그인해 Infinitary의 공유 클라이언트에서 옮기세요.`;
-      case "pt-BR":
-        return `Seu próprio cliente do Google está guardado. Faça login com ele para deixar o cliente compartilhado do Infinitary.`;
-      case "zh-Hans":
-        return `你自己的 Google 客户端已保存。用它登录，即可不再使用 Infinitary 的共享客户端。`;
-      case "zh-Hant":
-        return `你自己的 Google 用戶端已保存。用它登入，即可不再使用 Infinitary 的共用用戶端。`;
-      case "en-XA":
-        return `[Ýöûŕ öŵñ Ĝööĝļé çļîéñţ îš ķéþţ. Šîĝñ îñ ŵîţĥ îţ ţö ɱöṽé öƒƒ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Your own Google client is kept. Sign in with it to move off Infinitary's shared client.‬`;
-    }
-    return `Your own Google client is kept. Sign in with it to move off Infinitary's shared client.`;
-  }
-  function integrationsGoogleRetiring() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `أعدّ اتصالك الخاص`;
-      case "de":
-        return `Eigene Verbindung einrichten`;
-      case "es":
-        return `Configura tu propia conexión`;
-      case "fr":
-        return `Configurez votre propre connexion`;
-      case "ja":
-        return `自分の接続を設定してください`;
-      case "ko":
-        return `내 연결을 설정하세요`;
-      case "pt-BR":
-        return `Configure sua própria conexão`;
-      case "zh-Hans":
-        return `请设置你自己的连接`;
-      case "zh-Hant":
-        return `請設定你自己的連線`;
-      case "en-XA":
-        return `[Šéţ ûþ ýöûŕ öŵñ çöññéçţîöñ ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Set up your own connection‬`;
-    }
-    return `Set up your own connection`;
-  }
-  function integrationsGoogleRetiringDetail() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `Google متصل عبر عميل Infinitary المشترك، وهو في طريقه إلى التوقف. يظل يعمل حتى ذلك الحين؛ أعدّ عميلك الخاص لتبقى متصلًا.`;
-      case "de":
-        return `Google ist über den gemeinsamen Client von Infinitary verbunden, der eingestellt wird. Bis dahin funktioniert er weiter; richte deinen eigenen Client ein, um verbunden zu bleiben.`;
-      case "es":
-        return `Google está conectado mediante el cliente compartido de Infinitary, que se retirará. Seguirá funcionando hasta entonces; configura tu propio cliente para seguir conectado.`;
-      case "fr":
-        return `Google est connecté par le client partagé d’Infinitary, qui va être retiré. Il fonctionne jusque-là ; configurez votre propre client pour rester connecté.`;
-      case "ja":
-        return `Google は Infinitary の共有クライアントで接続されていますが、このクライアントは廃止されます。それまでは使えます。接続を保つには自分のクライアントを設定してください。`;
-      case "ko":
-        return `Google은 곧 종료되는 Infinitary의 공유 클라이언트로 연결되어 있습니다. 그때까지는 작동하니, 연결을 유지하려면 내 클라이언트를 설정하세요.`;
-      case "pt-BR":
-        return `O Google está conectado pelo cliente compartilhado do Infinitary, que vai ser desativado. Ele continua funcionando até lá; configure seu próprio cliente para continuar conectado.`;
-      case "zh-Hans":
-        return `Google 目前通过 Infinitary 的共享客户端连接，该客户端即将停用。在那之前它仍可使用；请设置你自己的客户端以保持连接。`;
-      case "zh-Hant":
-        return `Google 目前透過 Infinitary 的共用用戶端連線，該用戶端即將停用。在那之前它仍可使用；請設定你自己的用戶端以保持連線。`;
-      case "en-XA":
-        return `[Ĝööĝļé îš çöññéçţéð ţĥŕöûĝĥ Îñƒîñîţáŕý'š šĥáŕéð çļîéñţ, ŵĥîçĥ îš ŕéţîŕîñĝ. Îţ ķééþš ŵöŕķîñĝ ûñţîļ ţĥéñ; šéţ ûþ ýöûŕ öŵñ çļîéñţ ţö šţáý çöññéçţéð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.‬`;
-    }
-    return `Google is connected through Infinitary's shared client, which is retiring. It keeps working until then; set up your own client to stay connected.`;
   }
   function integrationsGoogleSetUp() {
     switch (currentLanguage()) {
@@ -43341,7 +43766,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStays() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الكمبيوتر. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
+        return `يحفظ Infinitary سرّ العميل في الأسرار على هذا الحاسوب. لا يراه نائب القبطان ولا الطاقم أبدًا.`;
       case "de":
         return `Infinitary bewahrt das Geheimnis des Clients in Geheimnisse auf diesem Computer auf. Dein erster Offizier und deine Crew sehen es nie.`;
       case "es":
@@ -43395,29 +43820,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupStepPage() {
     switch (currentLanguage()) {
       case "ar":
-        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع، واقبل سياسة Google، واضغط Continue.`;
+        return `افتح صفحة Google وسجّل الدخول بحساب Google الذي ستربطه. سمِّ المشروع واترك مربع «Use this client for an AI-powered agent» دون تحديد، فهو مخصص فقط للعملاء الذين يستخدمون أدوات MCP من Google. ثم اقبل سياسة Google واضغط Continue.`;
       case "de":
-        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen, akzeptiere Googles Richtlinie und drücke Continue.`;
+        return `Öffne Googles Seite und melde dich mit dem Google-Konto an, das du verbinden willst. Gib dem Projekt einen Namen und lass das Kästchen „Use this client for an AI-powered agent“ ohne Haken, denn es ist nur für Clients gedacht, die Googles MCP-Tools nutzen. Akzeptiere dann Googles Richtlinie und drücke Continue.`;
       case "es":
-        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto, acepta la política de Google y pulsa Continue.`;
+        return `Abre la página de Google e inicia sesión con la cuenta de Google que vas a conectar. Ponle nombre al proyecto y deja sin marcar la casilla «Use this client for an AI-powered agent», porque solo es para clientes que usan las herramientas MCP de Google. Luego acepta la política de Google y pulsa Continue.`;
       case "fr":
-        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet, acceptez la règle de Google et appuyez sur Continue.`;
+        return `Ouvrez la page de Google et connectez-vous avec le compte Google que vous allez relier. Nommez le projet et laissez la case « Use this client for an AI-powered agent » décochée, car elle ne sert qu’aux clients qui utilisent les outils MCP de Google. Acceptez ensuite la règle de Google et appuyez sur Continue.`;
       case "ja":
-        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、Google のポリシーに同意して Continue を押します。`;
+        return `Google のページを開き、接続する Google アカウントでサインインします。プロジェクトに名前を付け、「Use this client for an AI-powered agent」はチェックを入れないままにします。このチェックボックスは Google の MCP ツールを使うクライアント専用です。そのあと Google のポリシーに同意して Continue を押します。`;
       case "ko":
-        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 Google의 정책에 동의한 뒤 Continue를 누르세요.`;
+        return `Google 페이지를 열고 연결할 Google 계정으로 로그인하세요. 프로젝트 이름을 정하고 “Use this client for an AI-powered agent”는 체크하지 않은 채로 두세요. 이 체크박스는 Google의 MCP 도구를 쓰는 클라이언트 전용이에요. 그런 다음 Google의 정책에 동의하고 Continue를 누르세요.`;
       case "pt-BR":
-        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto, aceite a política do Google e pressione Continue.`;
+        return `Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.`;
       case "zh-Hans":
-        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，接受 Google 的政策，然后按 Continue。`;
+        return `打开 Google 的页面，用你要连接的 Google 账号登录。为项目命名，并让“Use this client for an AI-powered agent”保持未勾选，因为这个复选框只用于使用 Google MCP 工具的客户端。然后接受 Google 的政策，按 Continue。`;
       case "zh-Hant":
-        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，接受 Google 的政策，然後按 Continue。`;
+        return `開啟 Google 的頁面，用你要連接的 Google 帳戶登入。為專案命名，並讓「Use this client for an AI-powered agent」保持未勾選，因為這個核取方塊只用於使用 Google MCP 工具的用戶端。然後接受 Google 的政策，按 Continue。`;
       case "en-XA":
-        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ, áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Öþéñ Ĝööĝļé'š þáĝé áñð šîĝñ îñ ŵîţĥ ţĥé Ĝööĝļé áççöûñţ ýöû'ļļ çöññéçţ. Ñáɱé ţĥé þŕöĵéçţ áñð ļéáṽé “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” ûñţîçķéð, šîñçé ţĥáţ ƀöẋ îš öñļý ƒöŕ çļîéñţš ţĥáţ ûšé Ĝööĝļé'š ṀÇÞ ţööļš. Ţĥéñ áççéþţ Ĝööĝļé'š þöļîçý áñð þŕéšš Çöñţîñûé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.‬`;
+        return `‮Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.‬`;
     }
-    return `Open Google's page and sign in with the Google account you'll connect. Name the project, accept Google's policy and press Continue.`;
+    return `Open Google's page and sign in with the Google account you'll connect. Name the project and leave “Use this client for an AI-powered agent” unticked, since that box is only for clients that use Google's MCP tools. Then accept Google's policy and press Continue.`;
   }
   function integrationsGoogleSetupTitle() {
     switch (currentLanguage()) {
@@ -43445,33 +43870,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Set up your own Google connection‬`;
     }
     return `Set up your own Google connection`;
-  }
-  function integrationsGoogleSignIn() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `تسجيل الدخول`;
-      case "de":
-        return `Anmelden`;
-      case "es":
-        return `Iniciar sesión`;
-      case "fr":
-        return `Se connecter`;
-      case "ja":
-        return `サインイン`;
-      case "ko":
-        return `로그인`;
-      case "pt-BR":
-        return `Fazer login`;
-      case "zh-Hans":
-        return `登录`;
-      case "zh-Hant":
-        return `登入`;
-      case "en-XA":
-        return `[Šîĝñ îñ ~~~]`;
-      case "ar-XB":
-        return `‮Sign in‬`;
-    }
-    return `Sign in`;
   }
   function integrationsGoogleSignInHint() {
     switch (currentLanguage()) {
@@ -49368,6 +49766,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Remove ${name}`;
   }
+  function placeAs(input2) {
+    const user = input2.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `باسم ${user}`;
+      case "de":
+        return `als ${user}`;
+      case "es":
+        return `como ${user}`;
+      case "fr":
+        return `sous l’utilisateur ${user}`;
+      case "ja":
+        return ` ${user} として`;
+      case "ko":
+        return `${user}(으)로`;
+      case "pt-BR":
+        return `como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份`;
+      case "zh-Hant":
+        return `以 ${user} 身分`;
+      case "en-XA":
+        return `[áš ${user} ~]`;
+      case "ar-XB":
+        return `‮as ‬${user}`;
+    }
+    return `as ${user}`;
+  }
   function placeHere() {
     switch (currentLanguage()) {
       case "ar":
@@ -49422,6 +49848,88 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮on ‬${computer}`;
     }
     return `on ${computer}`;
+  }
+  function placeOnOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `على الحاسوب الآخر`;
+      case "de":
+        return `auf dem anderen Computer`;
+      case "es":
+        return `en la otra computadora`;
+      case "fr":
+        return `sur l’autre ordinateur`;
+      case "ja":
+        return `別のコンピューターで`;
+      case "ko":
+        return `다른 컴퓨터에서`;
+      case "pt-BR":
+        return `no outro computador`;
+      case "zh-Hans":
+        return `在另一台电脑上`;
+      case "zh-Hant":
+        return `在另一台電腦上`;
+      case "en-XA":
+        return `[öñ ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~~]`;
+      case "ar-XB":
+        return `‮on the other computer‬`;
+    }
+    return `on the other computer`;
+  }
+  function placeOther() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الحاسوب الآخر`;
+      case "de":
+        return `Der andere Computer`;
+      case "es":
+        return `La otra computadora`;
+      case "fr":
+        return `L’autre ordinateur`;
+      case "ja":
+        return `別のコンピューター`;
+      case "ko":
+        return `다른 컴퓨터`;
+      case "pt-BR":
+        return `O outro computador`;
+      case "zh-Hans":
+        return `另一台电脑`;
+      case "zh-Hant":
+        return `另一台電腦`;
+      case "en-XA":
+        return `[Ţĥé öţĥéŕ çöɱþûţéŕ ~~~~~~]`;
+      case "ar-XB":
+        return `‮The other computer‬`;
+    }
+    return `The other computer`;
+  }
+  function placeRunningAs(input2) {
+    const user = input2.user;
+    switch (currentLanguage()) {
+      case "ar":
+        return `التشغيل باسم ${user}`;
+      case "de":
+        return `Läuft als ${user}`;
+      case "es":
+        return `Se ejecuta como ${user}`;
+      case "fr":
+        return `Sous l’utilisateur ${user}`;
+      case "ja":
+        return `${user} として実行`;
+      case "ko":
+        return `${user}(으)로 실행`;
+      case "pt-BR":
+        return `Rodando como ${user}`;
+      case "zh-Hans":
+        return `以 ${user} 身份运行`;
+      case "zh-Hant":
+        return `以 ${user} 身分執行`;
+      case "en-XA":
+        return `[Ŕûññîñĝ áš ${user} ~~~~]`;
+      case "ar-XB":
+        return `‮Running as ‬${user}`;
+    }
+    return `Running as ${user}`;
   }
   function placeThisComputer() {
     switch (currentLanguage()) {
@@ -50591,6 +51099,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Move ‬${repositories}‮ into a project of its own?‬`;
     }
     return `Move ${repositories} into a project of its own?`;
+  }
+  function projectsSetupLeftFolder() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مجلده لا يزال في مجلد مشاريعك، لذا تربط إضافتُه ذلك المجلد بدل استنساخ المشروع مرة أخرى.`;
+      case "de":
+        return `Sein Ordner liegt noch in deinem Projektordner, daher verknüpft das Hinzufügen diesen Ordner, statt das Projekt ein zweites Mal zu klonen.`;
+      case "es":
+        return `Su carpeta sigue en tu carpeta de proyectos, así que al agregarlo se vincula esa carpeta en lugar de clonar el proyecto otra vez.`;
+      case "fr":
+        return `Son dossier est encore dans votre dossier de projets, donc l’ajouter lie ce dossier au lieu de cloner le projet une deuxième fois.`;
+      case "ja":
+        return `フォルダがまだプロジェクトのフォルダに残っているので、追加するともう一度クローンせずにそのフォルダをリンクします。`;
+      case "ko":
+        return `폴더가 아직 프로젝트 폴더에 남아 있어서, 추가하면 다시 복제하지 않고 그 폴더를 연결해요.`;
+      case "pt-BR":
+        return `A pasta dele ainda está na sua pasta de projetos, então adicioná-lo vincula essa pasta em vez de clonar o projeto de novo.`;
+      case "zh-Hans":
+        return `它的文件夹还在你的项目文件夹中，所以添加时会关联这个文件夹，而不是再克隆一份。`;
+      case "zh-Hant":
+        return `它的資料夾還在你的專案資料夾中，所以加入時會連結這個資料夾，而不是再複製一份。`;
+      case "en-XA":
+        return `[Îţš ƒöļðéŕ îš šţîļļ îñ ýöûŕ þŕöĵéçţš ƒöļðéŕ, šö áððîñĝ îţ ļîñķš ţĥáţ ƒöļðéŕ îñšţéáð öƒ çļöñîñĝ á šéçöñð çöþý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.‬`;
+    }
+    return `Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.`;
   }
   function recordAgeDays(input2) {
     const count = formatNumber(input2.count);
@@ -52527,6 +53062,1158 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Open kept evidence`;
   }
+  function recordPartsClosedFold(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} جزء مغلق`;
+          case "one":
+            return `${count} جزء مغلق`;
+          case "two":
+            return `${count} جزآن مغلقان`;
+          case "few":
+            return `${count} أجزاء مغلقة`;
+          case "many":
+            return `${count} جزءًا مغلقًا`;
+          default:
+            return `${count} جزء مغلق`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} geschlossener Teil`;
+          default:
+            return `${count} geschlossene Teile`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} parte cerrada`;
+          case "many":
+            return `${count} de partes cerradas`;
+          default:
+            return `${count} partes cerradas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} partie close`;
+          case "many":
+            return `${count} parties closes`;
+          default:
+            return `${count} parties closes`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `終了したパート${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `닫힌 부분 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} parte encerrada`;
+          case "many":
+            return `${count} partes encerradas`;
+          default:
+            return `${count} partes encerradas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已关闭的部分`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已關閉的部分`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} çļöšéð þáŕţ ~~~~]`;
+          default:
+            return `[${count} çļöšéð þáŕţš ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ closed part‬`;
+          default:
+            return `${count}‮ closed parts‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} closed part`;
+      default:
+        return `${count} closed parts`;
+    }
+  }
+  function recordPartsCountBacklog(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} في المهام المؤجلة لديك`;
+          case "one":
+            return `${count} في المهام المؤجلة لديك`;
+          case "two":
+            return `${count} في المهام المؤجلة لديك`;
+          case "few":
+            return `${count} في المهام المؤجلة لديك`;
+          case "many":
+            return `${count} في المهام المؤجلة لديك`;
+          default:
+            return `${count} في المهام المؤجلة لديك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} in deinem Backlog`;
+          default:
+            return `${count} in deinem Backlog`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en tus pendientes`;
+          case "many":
+            return `${count} en tus pendientes`;
+          default:
+            return `${count} en tus pendientes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} dans votre réserve`;
+          case "many":
+            return `${count} dans votre réserve`;
+          default:
+            return `${count} dans votre réserve`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `バックログ${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `백로그 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} no seu backlog`;
+          case "many":
+            return `${count} no seu backlog`;
+          default:
+            return `${count} no seu backlog`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个在你的待办列表中`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個在你的待辦清單中`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îñ ýöûŕ ƀáçķļöĝ ~~~~~~]`;
+          default:
+            return `[${count} îñ ýöûŕ ƀáçķļöĝ ~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ in your backlog‬`;
+          default:
+            return `${count}‮ in your backlog‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} in your backlog`;
+      default:
+        return `${count} in your backlog`;
+    }
+  }
+  function recordPartsCountIdle(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} خامل`;
+          case "one":
+            return `${count} خامل`;
+          case "two":
+            return `${count} خامل`;
+          case "few":
+            return `${count} خامل`;
+          case "many":
+            return `${count} خامل`;
+          default:
+            return `${count} خامل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} untätig`;
+          default:
+            return `${count} untätig`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} inactiva`;
+          case "many":
+            return `${count} inactivas`;
+          default:
+            return `${count} inactivas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} inactive`;
+          case "many":
+            return `${count} inactives`;
+          default:
+            return `${count} inactives`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `待機中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `대기 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} ociosa`;
+          case "many":
+            return `${count} ociosas`;
+          default:
+            return `${count} ociosas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个空闲`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個閒置`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îðļé ~~]`;
+          default:
+            return `[${count} îðļé ~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ idle‬`;
+          default:
+            return `${count}‮ idle‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} idle`;
+      default:
+        return `${count} idle`;
+    }
+  }
+  function recordPartsCountInterrupted(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} متوقف`;
+          case "one":
+            return `${count} متوقف`;
+          case "two":
+            return `${count} متوقف`;
+          case "few":
+            return `${count} متوقف`;
+          case "many":
+            return `${count} متوقف`;
+          default:
+            return `${count} متوقف`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} unterbrochen`;
+          default:
+            return `${count} unterbrochen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrumpida`;
+          case "many":
+            return `${count} interrumpidas`;
+          default:
+            return `${count} interrumpidas`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrompue`;
+          case "many":
+            return `${count} interrompues`;
+          default:
+            return `${count} interrompues`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `中断${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `중단됨 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} interrompida`;
+          case "many":
+            return `${count} interrompidas`;
+          default:
+            return `${count} interrompidas`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个已中断`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個已中斷`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} îñţéŕŕûþţéð ~~~~]`;
+          default:
+            return `[${count} îñţéŕŕûþţéð ~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ interrupted‬`;
+          default:
+            return `${count}‮ interrupted‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} interrupted`;
+      default:
+        return `${count} interrupted`;
+    }
+  }
+  function recordPartsCountQueued(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} في قائمة الانتظار`;
+          case "one":
+            return `${count} في قائمة الانتظار`;
+          case "two":
+            return `${count} في قائمة الانتظار`;
+          case "few":
+            return `${count} في قائمة الانتظار`;
+          case "many":
+            return `${count} في قائمة الانتظار`;
+          default:
+            return `${count} في قائمة الانتظار`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} in der Warteschlange`;
+          default:
+            return `${count} in der Warteschlange`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en cola`;
+          case "many":
+            return `${count} en cola`;
+          default:
+            return `${count} en cola`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en file d’attente`;
+          case "many":
+            return `${count} en file d’attente`;
+          default:
+            return `${count} en file d’attente`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `キュー${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `대기열 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} na fila`;
+          case "many":
+            return `${count} na fila`;
+          default:
+            return `${count} na fila`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个排队中`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個排隊中`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ǫûéûéð ~~~]`;
+          default:
+            return `[${count} ǫûéûéð ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ queued‬`;
+          default:
+            return `${count}‮ queued‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} queued`;
+      default:
+        return `${count} queued`;
+    }
+  }
+  function recordPartsCountStarting(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} قيد البدء`;
+          case "one":
+            return `${count} قيد البدء`;
+          case "two":
+            return `${count} قيد البدء`;
+          case "few":
+            return `${count} قيد البدء`;
+          case "many":
+            return `${count} قيد البدء`;
+          default:
+            return `${count} قيد البدء`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} startet`;
+          default:
+            return `${count} starten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} iniciándose`;
+          case "many":
+            return `${count} iniciándose`;
+          default:
+            return `${count} iniciándose`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en démarrage`;
+          case "many":
+            return `${count} en démarrage`;
+          default:
+            return `${count} en démarrage`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `開始中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `시작 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} iniciando`;
+          case "many":
+            return `${count} iniciando`;
+          default:
+            return `${count} iniciando`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个正在启动`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個正在啟動`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} šţáŕţîñĝ ~~~]`;
+          default:
+            return `[${count} šţáŕţîñĝ ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ starting‬`;
+          default:
+            return `${count}‮ starting‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} starting`;
+      default:
+        return `${count} starting`;
+    }
+  }
+  function recordPartsCountWaiting(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} ينتظرك`;
+          case "one":
+            return `${count} ينتظرك`;
+          case "two":
+            return `${count} ينتظرك`;
+          case "few":
+            return `${count} ينتظرك`;
+          case "many":
+            return `${count} ينتظرك`;
+          default:
+            return `${count} ينتظرك`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} wartet auf dich`;
+          default:
+            return `${count} warten auf dich`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} te espera`;
+          case "many":
+            return `${count} te esperan`;
+          default:
+            return `${count} te esperan`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} vous attend`;
+          case "many":
+            return `${count} vous attendent`;
+          default:
+            return `${count} vous attendent`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `あなたを待っているもの${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `나를 기다리는 부분 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} aguardando você`;
+          case "many":
+            return `${count} aguardando você`;
+          default:
+            return `${count} aguardando você`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个在等你`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個在等你`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ŵáîţîñĝ öñ ýöû ~~~~~]`;
+          default:
+            return `[${count} ŵáîţîñĝ öñ ýöû ~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ waiting on you‬`;
+          default:
+            return `${count}‮ waiting on you‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} waiting on you`;
+      default:
+        return `${count} waiting on you`;
+    }
+  }
+  function recordPartsCountWorking(input2) {
+    const count = formatNumber(input2.count);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.count)) {
+          case "zero":
+            return `${count} قيد العمل`;
+          case "one":
+            return `${count} قيد العمل`;
+          case "two":
+            return `${count} قيد العمل`;
+          case "few":
+            return `${count} قيد العمل`;
+          case "many":
+            return `${count} قيد العمل`;
+          default:
+            return `${count} قيد العمل`;
+        }
+      case "de":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} arbeitet`;
+          default:
+            return `${count} arbeiten`;
+        }
+      case "es":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} trabajando`;
+          case "many":
+            return `${count} trabajando`;
+          default:
+            return `${count} trabajando`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} en cours`;
+          case "many":
+            return `${count} en cours`;
+          default:
+            return `${count} en cours`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `作業中${count}件`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `작업 중 ${count}개`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.count)) {
+          case "one":
+            return `${count} trabalhando`;
+          case "many":
+            return `${count} trabalhando`;
+          default:
+            return `${count} trabalhando`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 个正在工作`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.count)) {
+          default:
+            return `${count} 個正在工作`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `[${count} ŵöŕķîñĝ ~~~]`;
+          default:
+            return `[${count} ŵöŕķîñĝ ~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.count, "en")) {
+          case "one":
+            return `${count}‮ working‬`;
+          default:
+            return `${count}‮ working‬`;
+        }
+    }
+    switch (pluralCategory(input2.count)) {
+      case "one":
+        return `${count} working`;
+      default:
+        return `${count} working`;
+    }
+  }
+  function recordPartsLast() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار جزئها الأخير`;
+      case "de":
+        return `Wartet auf ihren letzten Teil`;
+      case "es":
+        return `Esperando su última parte`;
+      case "fr":
+        return `En attente de sa dernière partie`;
+      case "ja":
+        return `最後のパートを待っています`;
+      case "ko":
+        return `마지막 부분을 기다리는 중`;
+      case "pt-BR":
+        return `Aguardando a última parte dela`;
+      case "zh-Hans":
+        return `正在等待它的最后一个部分`;
+      case "zh-Hant":
+        return `正在等待它的最後一個部分`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ ƒöŕ îţš ļášţ þáŕţ ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting for its last part‬`;
+    }
+    return `Waiting for its last part`;
+  }
+  function recordPartsLastBacklog() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جزؤها الأخير ينتظر أن تضغط «بدء»`;
+      case "de":
+        return `Ihr letzter Teil wartet auf dein Starten`;
+      case "es":
+        return `Su última parte espera que presiones Iniciar`;
+      case "fr":
+        return `Sa dernière partie attend que vous appuyiez sur Démarrer`;
+      case "ja":
+        return `最後のパートがあなたの「開始」を待っています`;
+      case "ko":
+        return `마지막 부분이 시작을 기다려요`;
+      case "pt-BR":
+        return `A última parte dela aguarda você tocar em Iniciar`;
+      case "zh-Hans":
+        return `它的最后一个部分在等你点击“开始”`;
+      case "zh-Hant":
+        return `它的最後一個部分在等你按下「開始」`;
+      case "en-XA":
+        return `[Îţš ļášţ þáŕţ ŵáîţš ƒöŕ ýöûŕ Šţáŕţ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its last part waits for your Start‬`;
+    }
+    return `Its last part waits for your Start`;
+  }
+  function recordPartsLastBacklogGuidance(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} في المهام المؤجلة لديك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} liegt in deinem Backlog. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está en tus pendientes. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est dans votre réserve. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} はバックログにあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 백로그에 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está no seu backlog. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 在你的待办列表中。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 在你的待辦清單中。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš îñ ýöûŕ ƀáçķļöĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is in your backlog. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is in your backlog. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastIdle(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} خامل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} ist untätig. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está inactiva. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est inactive. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は待機中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 대기 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está ociosa. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 处于空闲。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 處於閒置。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš îðļé. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is idle. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is idle. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastInterrupted(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `توقف ${key}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} wurde unterbrochen. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} se interrumpió. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} a été interrompue. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は中断されました。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 중단됐어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} foi interrompida. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 已中断。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 已中斷。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} ŵáš îñţéŕŕûþţéð. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ was interrupted. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} was interrupted. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastQueued(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} في قائمة الانتظار. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} steht in der Warteschlange. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está en cola. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en file d’attente. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} はキューにあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 대기열에 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está na fila. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在排队。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在排隊。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš ǫûéûéð. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is queued. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is queued. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastStarting(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} قيد البدء. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} startet gerade. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} se está iniciando. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en train de démarrer. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は開始中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 시작하는 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está iniciando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在启动。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在啟動。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš šţáŕţîñĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is starting. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is starting. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastWaiting() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جزؤها الأخير ينتظرك`;
+      case "de":
+        return `Ihr letzter Teil wartet auf dich`;
+      case "es":
+        return `Su última parte te está esperando`;
+      case "fr":
+        return `Sa dernière partie vous attend`;
+      case "ja":
+        return `最後のパートがあなたを待っています`;
+      case "ko":
+        return `마지막 부분이 나를 기다려요`;
+      case "pt-BR":
+        return `A última parte dela está aguardando você`;
+      case "zh-Hans":
+        return `它的最后一个部分在等你`;
+      case "zh-Hant":
+        return `它的最後一個部分在等你`;
+      case "en-XA":
+        return `[Îţš ļášţ þáŕţ îš ŵáîţîñĝ öñ ýöû ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its last part is waiting on you‬`;
+    }
+    return `Its last part is waiting on you`;
+  }
+  function recordPartsLastWaitingGuidance(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لدى ${key} بطاقة لك. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} hat eine Karte für dich. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} tiene una tarjeta para ti. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} a une carte pour vous. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} にあなた宛てのカードがあります。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}에 나를 위한 카드가 있어요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} tem um cartão para você. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 有一张给你的卡片。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 有一張給你的卡片。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} ĥáš á çáŕð ƒöŕ ýöû. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ has a card for you. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} has a card for you. This task closes by itself once its parts close.`;
+  }
+  function recordPartsLastWorking(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${key} قيد العمل. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${key} arbeitet. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${key} está trabajando. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${key} est en cours. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${key} は作業中です。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${key}이(가) 작업 중이에요. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${key} está trabalhando. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${key} 正在工作。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${key} 正在工作。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${key} îš ŵöŕķîñĝ. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${key}‮ is working. This task closes by itself once its parts close.‬`;
+    }
+    return `${key} is working. This task closes by itself once its parts close.`;
+  }
+  function recordPartsOpen(input2) {
+    const open2 = input2.open;
+    const total = formatNumber(input2.total);
+    switch (currentLanguage()) {
+      case "ar":
+        switch (pluralCategory(input2.total)) {
+          case "zero":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          case "one":
+            return `بانتظار ${open2} من جزئها الواحد`;
+          case "two":
+            return `بانتظار ${open2} من جزأيها الاثنين`;
+          case "few":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          case "many":
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+          default:
+            return `بانتظار ${open2} من أجزائها الـ ${total}`;
+        }
+      case "de":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Wartet auf ${open2} von ihrem ${total} Teil`;
+          default:
+            return `Wartet auf ${open2} von ihren ${total} Teilen`;
+        }
+      case "es":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Esperando ${open2} de su ${total} parte`;
+          case "many":
+            return `Esperando ${open2} de sus ${total} de partes`;
+          default:
+            return `Esperando ${open2} de sus ${total} partes`;
+        }
+      case "fr":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `En attente de ${open2} sur sa ${total} partie`;
+          case "many":
+            return `En attente de ${open2} sur ses ${total} parties`;
+          default:
+            return `En attente de ${open2} sur ses ${total} parties`;
+        }
+      case "ja":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `${total}件のパートのうち${open2}件を待っています`;
+        }
+      case "ko":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `부분 ${total}개 중 ${open2}개를 기다리는 중`;
+        }
+      case "pt-BR":
+        switch (pluralCategory(input2.total)) {
+          case "one":
+            return `Aguardando ${open2} da ${total} parte dela`;
+          case "many":
+            return `Aguardando ${open2} das ${total} partes dela`;
+          default:
+            return `Aguardando ${open2} das ${total} partes dela`;
+        }
+      case "zh-Hans":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `正在等待它 ${total} 个部分中的 ${open2} 个`;
+        }
+      case "zh-Hant":
+        switch (pluralCategory(input2.total)) {
+          default:
+            return `正在等待它 ${total} 個部分中的 ${open2} 個`;
+        }
+      case "en-XA":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `[Ŵáîţîñĝ ƒöŕ ${open2} öƒ îţš ${total} þáŕţ ~~~~~~~~~]`;
+          default:
+            return `[Ŵáîţîñĝ ƒöŕ ${open2} öƒ îţš ${total} þáŕţš ~~~~~~~~~]`;
+        }
+      case "ar-XB":
+        switch (pluralCategory(input2.total, "en")) {
+          case "one":
+            return `‮Waiting for ‬${open2}‮ of its ‬${total}‮ part‬`;
+          default:
+            return `‮Waiting for ‬${open2}‮ of its ‬${total}‮ parts‬`;
+        }
+    }
+    switch (pluralCategory(input2.total)) {
+      case "one":
+        return `Waiting for ${open2} of its ${total} part`;
+      default:
+        return `Waiting for ${open2} of its ${total} parts`;
+    }
+  }
+  function recordPartsOpenGuidance(input2) {
+    const counts = input2.counts;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${counts}. تُغلق هذه المهمة من تلقاء نفسها عند إغلاق أجزائها.`;
+      case "de":
+        return `${counts}. Diese Aufgabe schließt sich von selbst, sobald ihre Teile geschlossen sind.`;
+      case "es":
+        return `${counts}. Esta tarea se cierra sola cuando se cierran sus partes.`;
+      case "fr":
+        return `${counts}. Cette tâche se ferme d’elle-même une fois ses parties closes.`;
+      case "ja":
+        return `${counts}。パートがすべて終了すると、このタスクは自動で終了します。`;
+      case "ko":
+        return `${counts}. 부분이 모두 닫히면 이 작업은 저절로 닫혀요.`;
+      case "pt-BR":
+        return `${counts}. Esta tarefa se encerra sozinha quando as partes dela se encerrarem.`;
+      case "zh-Hans":
+        return `${counts}。它的部分全部关闭后，此任务会自动关闭。`;
+      case "zh-Hant":
+        return `${counts}。它的部分全部關閉後，此任務會自動關閉。`;
+      case "en-XA":
+        return `[${counts}. Ţĥîš ţášķ çļöšéš ƀý îţšéļƒ öñçé îţš þáŕţš çļöšé. ~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${counts}‮. This task closes by itself once its parts close.‬`;
+    }
+    return `${counts}. This task closes by itself once its parts close.`;
+  }
   function recordPersonalNone(input2) {
     const computer = input2.computer;
     switch (currentLanguage()) {
@@ -52698,7 +54385,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الالتزام نفسه.`;
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}: الإيداع نفسه.`;
       case "de":
         return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat: derselbe Commit.`;
       case "es":
@@ -52727,7 +54414,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const key = input2.key;
     switch (currentLanguage()) {
       case "ar":
-        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الالتزام نفسه.`;
+        return `تحمل هذه المهمة المراجعة التي اجتازتها ${key} عند ${head2}، والإثبات المقبول هناك: الإيداع نفسه.`;
       case "de":
         return `Diese Aufgabe übernimmt das Review, das ${key} bei ${head2} bestanden hat, und den dort akzeptierten Nachweis: derselbe Commit.`;
       case "es":
@@ -55031,7 +56718,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetCommandNoConfirmation() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع هذا الكمبيوتر التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
+        return `لا يستطيع هذا الحاسوب التأكد هنا من أنك أنت، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو على الشاشة التي يعرضها Infinitary عندما يتعذّر فتحه.`;
       case "de":
         return `Dieser Computer kann hier nicht bestätigen, dass du es bist, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein oder auf dem Bildschirm, den Infinitary zeigt, wenn es sich nicht öffnen kann.`;
       case "es":
@@ -55058,7 +56745,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetCommandRunning() {
     switch (currentLanguage()) {
       case "ar":
-        return `Infinitary مفتوح على هذا الكمبيوتر، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
+        return `Infinitary مفتوح على هذا الحاسوب، لذا لم يُعَد تعيين أي شيء. استخدم إعادة تعيين Infinitary في الإعدادات ← عام، أو أغلق Infinitary وشغّل هذا الأمر مرة أخرى.`;
       case "de":
         return `Infinitary ist auf diesem Computer geöffnet, also wurde nichts zurückgesetzt. Nutze Infinitary zurücksetzen unter Einstellungen → Allgemein, oder beende Infinitary und führe dies erneut aus.`;
       case "es":
@@ -55085,7 +56772,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetConfirmReason() {
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على هذا الكمبيوتر.`;
+        return `إعادة تعيين Infinitary على هذا الحاسوب.`;
       case "de":
         return `Infinitary auf diesem Computer zurücksetzen.`;
       case "es":
@@ -55113,7 +56800,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const home = input2.home;
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر.`;
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب.`;
       case "de":
         return `Infinitary auf ${home} und diesem Computer zurücksetzen.`;
       case "es":
@@ -55141,7 +56828,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const home = input2.home;
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على ${home} وعلى هذا الكمبيوتر`;
+        return `إعادة تعيين Infinitary على ${home} وعلى هذا الحاسوب`;
       case "de":
         return `Infinitary auf ${home} und diesem Computer zurückzusetzen`;
       case "es":
@@ -55168,7 +56855,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetConfirmReasonMac() {
     switch (currentLanguage()) {
       case "ar":
-        return `إعادة تعيين Infinitary على هذا الكمبيوتر`;
+        return `إعادة تعيين Infinitary على هذا الحاسوب`;
       case "de":
         return `Infinitary auf diesem Computer zurückzusetzen`;
       case "es":
@@ -55494,7 +57181,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function resetScreenKeeps() {
     switch (currentLanguage()) {
       case "ar":
-        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها.`;
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها وإيداعاتها.`;
       case "de":
         return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit.`;
       case "es":
@@ -59342,6 +61029,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Added ${name}. Started git in this folder with an empty first commit.`;
   }
+  function settingsAddProjectAddedLeftFolder(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `أُضيف ${name}. كان مجلده لا يزال في مجلد مشاريعك، لذا رُبط ذلك المجلد بدل استنساخ المشروع من جديد.`;
+      case "de":
+        return `${name} hinzugefügt. Sein Ordner lag noch in deinem Projektordner, also wurde dieser Ordner verknüpft, statt das Projekt neu zu klonen.`;
+      case "es":
+        return `Se agregó ${name}. Su carpeta seguía en tu carpeta de proyectos, así que se vinculó esa carpeta en lugar de clonar el proyecto otra vez.`;
+      case "fr":
+        return `${name} ajouté. Son dossier était encore dans votre dossier de projets, donc ce dossier est lié au lieu de cloner à nouveau le projet.`;
+      case "ja":
+        return `${name} を追加しました。フォルダがプロジェクトのフォルダに残っていたので、もう一度クローンせずにそのフォルダをリンクしました。`;
+      case "ko":
+        return `${name}을(를) 추가했어요. 폴더가 프로젝트 폴더에 남아 있어서 다시 복제하지 않고 그 폴더를 연결했어요.`;
+      case "pt-BR":
+        return `${name} adicionado. A pasta dele ainda estava na sua pasta de projetos, então essa pasta foi vinculada em vez de clonar o projeto de novo.`;
+      case "zh-Hans":
+        return `已添加 ${name}。它的文件夹还在你的项目文件夹中，所以直接关联了它，没有重新克隆。`;
+      case "zh-Hant":
+        return `已加入 ${name}。它的資料夾還在你的專案資料夾中，所以直接連結了它，沒有重新複製。`;
+      case "en-XA":
+        return `[Åððéð ${name}. Îţš ƒöļðéŕ ŵáš šţîļļ îñ ýöûŕ þŕöĵéçţš ƒöļðéŕ, šö ţĥáţ ƒöļðéŕ îš ļîñķéð îñšţéáð öƒ çļöñéð áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Added ‬${name}‮. Its folder was still in your projects folder, so that folder is linked instead of cloned again.‬`;
+    }
+    return `Added ${name}. Its folder was still in your projects folder, so that folder is linked instead of cloned again.`;
+  }
   function settingsAddProjectAddedMark() {
     switch (currentLanguage()) {
       case "ar":
@@ -60746,29 +62461,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsAppearanceThemeDescription() {
     switch (currentLanguage()) {
       case "ar":
-        return `داكنة كالفضاء العميق، أو فاتحة كضوء النهار.`;
+        return `داكنة أو فاتحة أو سمة باسم صانعيها. تتبعها كل ألوان النافذة.`;
       case "de":
-        return `Dunkel wie der tiefe Weltraum oder hell wie das Tageslicht.`;
+        return `Dunkel, Hell oder ein Design unter dem Namen seiner Macher. Jede Farbe im Fenster folgt.`;
       case "es":
-        return `Oscuro como el espacio profundo o claro como la luz del día.`;
+        return `Oscuro, Claro o un tema con el nombre que le dio su autor. Todos los colores de la ventana lo siguen.`;
       case "fr":
-        return `Sombre comme l’espace lointain, ou clair comme le jour.`;
+        return `Sombre, Clair ou un thème sous le nom donné par ses auteurs. Toutes les couleurs de la fenêtre suivent.`;
       case "ja":
-        return `深宇宙のダーク、または日中のライト。`;
+        return `ダーク、ライト、または作者が名付けたテーマ。ウィンドウのすべての色が切り替わります。`;
       case "ko":
-        return `깊은 우주 같은 다크, 또는 한낮 같은 라이트.`;
+        return `다크, 라이트, 또는 제작자가 이름 붙인 테마. 창의 모든 색이 따라 바뀝니다.`;
       case "pt-BR":
-        return `Escuro como o espaço profundo ou claro como a luz do dia.`;
+        return `Escuro, Claro ou um tema com o nome dado por quem o criou. Todas as cores da janela acompanham.`;
       case "zh-Hans":
-        return `深空般的深色，或日光般的浅色。`;
+        return `深色、浅色，或由作者命名的主题。窗口中的所有颜色都会随之改变。`;
       case "zh-Hant":
-        return `深空般的深色，或日光般的淺色。`;
+        return `深色、淺色，或由作者命名的主題。視窗中的所有顏色都會隨之改變。`;
       case "en-XA":
-        return `[Ðééþ-šþáçé ðáŕķ, öŕ ðáýļîĝĥţ ļîĝĥţ. ~~~~~~~~~~~~]`;
+        return `[Ðáŕķ, Ļîĝĥţ, öŕ á ţĥéɱé îţš ɱáķéŕ ñáɱéð. Éṽéŕý çöļöŕ îñ ţĥé ŵîñðöŵ ƒöļļöŵš. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Deep-space dark, or daylight light.‬`;
+        return `‮Dark, Light, or a theme its maker named. Every color in the window follows.‬`;
     }
-    return `Deep-space dark, or daylight light.`;
+    return `Dark, Light, or a theme its maker named. Every color in the window follows.`;
   }
   function settingsAppearanceThemeLight() {
     switch (currentLanguage()) {
@@ -60796,6 +62511,142 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Light‬`;
     }
     return `Light`;
+  }
+  function settingsAppearanceThemeOwnDescribe() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `صف سمتك`;
+      case "de":
+        return `Eigenes beschreiben`;
+      case "es":
+        return `Describe el tuyo`;
+      case "fr":
+        return `Décrire le vôtre`;
+      case "ja":
+        return `自分で説明する`;
+      case "ko":
+        return `직접 설명하기`;
+      case "pt-BR":
+        return `Descrever o seu`;
+      case "zh-Hans":
+        return `描述你自己的`;
+      case "zh-Hant":
+        return `描述你自己的`;
+      case "en-XA":
+        return `[Ðéšçŕîƀé ýöûŕ öŵñ ~~~~~~]`;
+      case "ar-XB":
+        return `‮Describe your own‬`;
+    }
+    return `Describe your own`;
+  }
+  function settingsAppearanceThemeOwnDraft() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `اصنع سمة ألوان خاصة بي: `;
+      case "de":
+        return `Mach mir ein eigenes Farbdesign: `;
+      case "es":
+        return `Haz mi propio tema de colores: `;
+      case "fr":
+        return `Crée mon propre thème de couleurs : `;
+      case "ja":
+        return `自分だけのカラーテーマを作ってください：`;
+      case "ko":
+        return `나만의 색상 테마를 만들어 주세요: `;
+      case "pt-BR":
+        return `Crie meu próprio tema de cores: `;
+      case "zh-Hans":
+        return `为我做一个自己的颜色主题：`;
+      case "zh-Hant":
+        return `為我做一個自己的顏色主題：`;
+      case "en-XA":
+        return `[Ṁáķé ɱý öŵñ çöļöŕ ţĥéɱé:  ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Make my own color theme: ‬`;
+    }
+    return `Make my own color theme: `;
+  }
+  function settingsAppearanceThemeOwnRemove() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة`;
+      case "de":
+        return `Entfernen`;
+      case "es":
+        return `Quitar`;
+      case "fr":
+        return `Supprimer`;
+      case "ja":
+        return `削除`;
+      case "ko":
+        return `삭제`;
+      case "pt-BR":
+        return `Remover`;
+      case "zh-Hans":
+        return `移除`;
+      case "zh-Hant":
+        return `移除`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ~~]`;
+      case "ar-XB":
+        return `‮Remove‬`;
+    }
+    return `Remove`;
+  }
+  function settingsAppearanceThemeOwnRemoveNamed(input2) {
+    const name = input2.name;
+    switch (currentLanguage()) {
+      case "ar":
+        return `إزالة ${name}`;
+      case "de":
+        return `${name} entfernen`;
+      case "es":
+        return `Quitar ${name}`;
+      case "fr":
+        return `Supprimer ${name}`;
+      case "ja":
+        return `${name} を削除`;
+      case "ko":
+        return `${name} 삭제`;
+      case "pt-BR":
+        return `Remover ${name}`;
+      case "zh-Hans":
+        return `移除 ${name}`;
+      case "zh-Hant":
+        return `移除 ${name}`;
+      case "en-XA":
+        return `[Ŕéɱöṽé ${name} ~~~]`;
+      case "ar-XB":
+        return `‮Remove ‬${name}`;
+    }
+    return `Remove ${name}`;
+  }
+  function settingsAppearanceThemeYours() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `سماتك`;
+      case "de":
+        return `Deine`;
+      case "es":
+        return `Tuyos`;
+      case "fr":
+        return `Les vôtres`;
+      case "ja":
+        return `あなたのテーマ`;
+      case "ko":
+        return `내 테마`;
+      case "pt-BR":
+        return `Seus`;
+      case "zh-Hans":
+        return `你的`;
+      case "zh-Hant":
+        return `你的`;
+      case "en-XA":
+        return `[Ýöûŕš ~~]`;
+      case "ar-XB":
+        return `‮Yours‬`;
+    }
+    return `Yours`;
   }
   function settingsAppearanceWash() {
     switch (currentLanguage()) {
@@ -66488,34 +68339,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${model} · ${vendor} · on`;
   }
-  function settingsDecisionsOpenRouterModels() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `نماذج القرارات من OpenRouter`;
-      case "de":
-        return `Entscheidungsmodelle von OpenRouter`;
-      case "es":
-        return `Modelos de decisiones de OpenRouter`;
-      case "fr":
-        return `Modèles de décision OpenRouter`;
-      case "ja":
-        return `OpenRouter の判断用モデル`;
-      case "ko":
-        return `OpenRouter 결정 모델`;
-      case "pt-BR":
-        return `Modelos de decisão do OpenRouter`;
-      case "zh-Hans":
-        return `OpenRouter 决定模型`;
-      case "zh-Hant":
-        return `OpenRouter 決定模型`;
-      case "en-XA":
-        return `[ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļš ~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮OpenRouter decision models‬`;
-    }
-    return `OpenRouter decision models`;
-  }
-  function settingsDecisionsOpenRouterPrice(input2) {
+  function settingsDecisionsModelPrice(input2) {
     const model = input2.model;
     const price = input2.price;
     const vendor = input2.vendor;
@@ -66545,33 +68369,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${model} · ${vendor} · $${price} / million input tokens`;
   }
-  function settingsDecisionsOpenRouterUnavailable() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `OpenRouter غير متاح · يُستخدم أحد نماذجك`;
-      case "de":
-        return `OpenRouter nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
-      case "es":
-        return `OpenRouter no disponible · se usa uno de tus propios modelos`;
-      case "fr":
-        return `OpenRouter indisponible · un de vos propres modèles est utilisé`;
-      case "ja":
-        return `OpenRouter を利用できません · 自分のモデルの1つを使用中`;
-      case "ko":
-        return `OpenRouter 사용 불가 · 선장님의 모델 중 하나 사용 중`;
-      case "pt-BR":
-        return `OpenRouter indisponível · usando um dos seus próprios modelos`;
-      case "zh-Hans":
-        return `OpenRouter 不可用 · 正在使用你自己的一个模型`;
-      case "zh-Hant":
-        return `無法使用 OpenRouter · 正在使用你自己的一個模型`;
-      case "en-XA":
-        return `[ÖþéñŔöûţéŕ ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮OpenRouter unavailable · using one of your own models‬`;
-    }
-    return `OpenRouter unavailable · using one of your own models`;
-  }
   function settingsDecisionsPicker() {
     switch (currentLanguage()) {
       case "ar":
@@ -66598,6 +68395,179 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Choose the model that answers decisions‬`;
     }
     return `Choose the model that answers decisions`;
+  }
+  function settingsDecisionsProviderChoice() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أوقف أي استخدام في قائمة القرارات، أو اختر نموذج قرارات آخر.`;
+      case "de":
+        return `Schalte jede Verwendung in der Liste unter Entscheidungen aus oder wähle ein anderes Entscheidungsmodell.`;
+      case "es":
+        return `Desactiva cualquier uso en la lista de Decisiones o elige otro modelo de decisiones.`;
+      case "fr":
+        return `Désactivez n’importe quel usage dans la liste Décisions, ou choisissez un autre modèle de décision.`;
+      case "ja":
+        return `判断の一覧で用途をオフにするか、別の判断用モデルを選んでください。`;
+      case "ko":
+        return `결정 목록에서 원하는 용도를 끄거나 다른 결정 모델을 고르세요.`;
+      case "pt-BR":
+        return `Desative qualquer uso na lista de Decisões ou escolha outro modelo de decisão.`;
+      case "zh-Hans":
+        return `在决定列表中关闭任一用途，或选择另一个决定模型。`;
+      case "zh-Hant":
+        return `在決定清單中關閉任一用途，或選擇另一個決定模型。`;
+      case "en-XA":
+        return `[Ţûŕñ öƒƒ áñý ûšé îñ ţĥé Ðéçîšîöñš ļîšţ, öŕ çĥööšé áñöţĥéŕ ðéçîšîöñ ɱöðéļ. ~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Turn off any use in the Decisions list, or choose another decision model.‬`;
+    }
+    return `Turn off any use in the Decisions list, or choose another decision model.`;
+  }
+  function settingsDecisionsProviderCostAccount(input2) {
+    const model = input2.model;
+    const price = input2.price;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يدفع حسابك في ${provider} $${price} لكل مليون رمز إدخال؛ والإخراج مجاني. إذا لم يستطع ${model} الإجابة، تجيب نماذجك بدلًا منه.`;
+      case "de":
+        return `Dein ${provider}-Konto zahlt $${price} pro Million Eingabe-Tokens; die Ausgabe ist kostenlos. Wenn ${model} nicht antworten kann, antworten stattdessen deine eigenen Modelle.`;
+      case "es":
+        return `Tu cuenta de ${provider} paga $${price} por millón de tokens de entrada; la salida es gratis. Si ${model} no puede responder, responden tus propios modelos.`;
+      case "fr":
+        return `Votre compte ${provider} paie $${price} par million de jetons en entrée ; la sortie est gratuite. Si ${model} ne peut pas répondre, vos propres modèles répondent à sa place.`;
+      case "ja":
+        return `${provider} のアカウントが入力100万トークンあたり $${price} を支払います。出力は無料です。${model} が答えられないときは、自分のモデルが代わりに答えます。`;
+      case "ko":
+        return `${provider} 계정이 입력 토큰 100만 개당 $${price}를 내요. 출력은 무료예요. ${model}이 답하지 못하면 선장님의 모델이 대신 답해요.`;
+      case "pt-BR":
+        return `Sua conta do ${provider} paga $${price} por milhão de tokens de entrada; a saída é gratuita. Se ${model} não puder responder, seus próprios modelos respondem no lugar.`;
+      case "zh-Hans":
+        return `你的 ${provider} 账户按每百万输入 token $${price} 付费；输出免费。如果 ${model} 无法回答，由你自己的模型回答。`;
+      case "zh-Hant":
+        return `你的 ${provider} 帳號按每百萬輸入 token $${price} 付費；輸出免費。如果 ${model} 無法回答，由你自己的模型回答。`;
+      case "en-XA":
+        return `[Ýöûŕ ${provider} áççöûñţ þáýš $${price} þéŕ ɱîļļîöñ îñþûţ ţöķéñš; öûţþûţ îš ƒŕéé. Îƒ ${model} çáññöţ áñšŵéŕ, ýöûŕ öŵñ ɱöðéļš áñšŵéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your ‬${provider}‮ account pays $‬${price}‮ per million input tokens; output is free. If ‬${model}‮ cannot answer, your own models answer instead.‬`;
+    }
+    return `Your ${provider} account pays $${price} per million input tokens; output is free. If ${model} cannot answer, your own models answer instead.`;
+  }
+  function settingsDecisionsProviderCostAllowance(input2) {
+    const model = input2.model;
+    const price = input2.price;
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `كل استدعاء يُحتسب من رصيدك في ${provider} بسعر القائمة، $${price} لكل مليون رمز إدخال؛ والإخراج مجاني. إذا لم يستطع ${model} الإجابة، تجيب نماذجك بدلًا منه.`;
+      case "de":
+        return `Jeder Aufruf zählt zum Listenpreis gegen dein ${provider}-Kontingent, $${price} pro Million Eingabe-Tokens; die Ausgabe ist kostenlos. Wenn ${model} nicht antworten kann, antworten stattdessen deine eigenen Modelle.`;
+      case "es":
+        return `Cada llamada cuenta contra tu asignación de ${provider} a precio de lista, $${price} por millón de tokens de entrada; la salida es gratis. Si ${model} no puede responder, responden tus propios modelos.`;
+      case "fr":
+        return `Chaque appel est décompté de votre allocation ${provider} au prix catalogue, $${price} par million de jetons en entrée ; la sortie est gratuite. Si ${model} ne peut pas répondre, vos propres modèles répondent à sa place.`;
+      case "ja":
+        return `呼び出しごとに ${provider} の利用枠を定価で使います。入力100万トークンあたり $${price}、出力は無料です。${model} が答えられないときは、自分のモデルが代わりに答えます。`;
+      case "ko":
+        return `호출할 때마다 ${provider} 사용 한도에서 정가로 차감돼요. 입력 토큰 100만 개당 $${price}이고 출력은 무료예요. ${model}이 답하지 못하면 선장님의 모델이 대신 답해요.`;
+      case "pt-BR":
+        return `Cada chamada conta na sua franquia do ${provider} pelo preço de tabela, $${price} por milhão de tokens de entrada; a saída é gratuita. Se ${model} não puder responder, seus próprios modelos respondem no lugar.`;
+      case "zh-Hans":
+        return `每次调用按标价计入你的 ${provider} 额度，每百万输入 token $${price}；输出免费。如果 ${model} 无法回答，由你自己的模型回答。`;
+      case "zh-Hant":
+        return `每次呼叫按定價計入你的 ${provider} 額度，每百萬輸入 token $${price}；輸出免費。如果 ${model} 無法回答，由你自己的模型回答。`;
+      case "en-XA":
+        return `[Éáçĥ çáļļ çöûñţš áĝáîñšţ ýöûŕ ${provider} áļļöŵáñçé áţ ļîšţ þŕîçé, $${price} þéŕ ɱîļļîöñ îñþûţ ţöķéñš; öûţþûţ îš ƒŕéé. Îƒ ${model} çáññöţ áñšŵéŕ, ýöûŕ öŵñ ɱöðéļš áñšŵéŕ îñšţéáð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Each call counts against your ‬${provider}‮ allowance at list price, $‬${price}‮ per million input tokens; output is free. If ‬${model}‮ cannot answer, your own models answer instead.‬`;
+    }
+    return `Each call counts against your ${provider} allowance at list price, $${price} per million input tokens; output is free. If ${model} cannot answer, your own models answer instead.`;
+  }
+  function settingsDecisionsProviderModels(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `نماذج القرارات من ${provider}`;
+      case "de":
+        return `Entscheidungsmodelle von ${provider}`;
+      case "es":
+        return `Modelos de decisiones de ${provider}`;
+      case "fr":
+        return `Modèles de décision ${provider}`;
+      case "ja":
+        return `${provider} の判断用モデル`;
+      case "ko":
+        return `${provider} 결정 모델`;
+      case "pt-BR":
+        return `Modelos de decisão do ${provider}`;
+      case "zh-Hans":
+        return `${provider} 决定模型`;
+      case "zh-Hant":
+        return `${provider} 決定模型`;
+      case "en-XA":
+        return `[${provider} ðéçîšîöñ ɱöðéļš ~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ decision models‬`;
+    }
+    return `${provider} decision models`;
+  }
+  function settingsDecisionsProviderShared(input2) {
+    const model = input2.model;
+    const provider = input2.provider;
+    const vendor = input2.vendor;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يجيب ${model} (${vendor}) عن أسئلة القرارات في Infinitary عبر ${provider}، مثل نماذجك الأخرى. قد تتضمن الأسئلة تفاصيل المهام وردودك والمحادثة المجاورة والشيفرة.`;
+      case "de":
+        return `${model} (${vendor}) beantwortet die Entscheidungsfragen von Infinitary über ${provider}, wie deine anderen Modelle. Fragen können Aufgabendetails, deine Antworten, das Gespräch drumherum und Code enthalten.`;
+      case "es":
+        return `${model} (${vendor}) responde las preguntas de decisión de Infinitary a través de ${provider}, como tus otros modelos. Las preguntas pueden incluir detalles de tareas, tus respuestas, la conversación cercana y código.`;
+      case "fr":
+        return `${model} (${vendor}) répond aux questions de décision d’Infinitary via ${provider}, comme vos autres modèles. Les questions peuvent inclure les détails des tâches, vos réponses, la conversation autour et du code.`;
+      case "ja":
+        return `${model}（${vendor}）は、ほかのモデルと同じように ${provider} 経由で Infinitary の判断の質問に答えます。質問にはタスクの詳細、あなたの返信、周辺の会話、コードが含まれることがあります。`;
+      case "ko":
+        return `${model}(${vendor})은 다른 모델처럼 ${provider}를 통해 Infinitary의 결정 질문에 답해요. 질문에는 작업 세부 사항, 선장님의 답장, 주변 대화와 코드가 들어갈 수 있어요.`;
+      case "pt-BR":
+        return `${model} (${vendor}) responde às perguntas de decisão do Infinitary pelo ${provider}, como seus outros modelos. As perguntas podem incluir detalhes de tarefas, suas respostas, a conversa ao redor e código.`;
+      case "zh-Hans":
+        return `${model}（${vendor}）像你的其他模型一样，通过 ${provider} 回答 Infinitary 的决定问题。问题可能包含任务详情、你的回复、附近的对话和代码。`;
+      case "zh-Hant":
+        return `${model}（${vendor}）像你的其他模型一樣，透過 ${provider} 回答 Infinitary 的決定問題。問題可能包含任務詳情、你的回覆、附近的對話和程式碼。`;
+      case "en-XA":
+        return `[${model} (${vendor}) áñšŵéŕš Îñƒîñîţáŕý'š ðéçîšîöñ ǫûéšţîöñš ţĥŕöûĝĥ ${provider}, ļîķé ýöûŕ öţĥéŕ ɱöðéļš. Ǫûéšţîöñš çáñ îñçļûðé ţášķ ðéţáîļš, ýöûŕ ŕéþļîéš, ñéáŕƀý çöñṽéŕšáţîöñ áñð çöðé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${model}‮ (‬${vendor}‮) answers Infinitary's decision questions through ‬${provider}‮, like your other models. Questions can include task details, your replies, nearby conversation and code.‬`;
+    }
+    return `${model} (${vendor}) answers Infinitary's decision questions through ${provider}, like your other models. Questions can include task details, your replies, nearby conversation and code.`;
+  }
+  function settingsDecisionsProviderUnavailable(input2) {
+    const provider = input2.provider;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${provider} غير متاح · يُستخدم أحد نماذجك`;
+      case "de":
+        return `${provider} nicht verfügbar · eines deiner eigenen Modelle wird verwendet`;
+      case "es":
+        return `${provider} no disponible · se usa uno de tus propios modelos`;
+      case "fr":
+        return `${provider} indisponible · un de vos propres modèles est utilisé`;
+      case "ja":
+        return `${provider} を利用できません · 自分のモデルの1つを使用中`;
+      case "ko":
+        return `${provider} 사용 불가 · 선장님의 모델 중 하나 사용 중`;
+      case "pt-BR":
+        return `${provider} indisponível · usando um dos seus próprios modelos`;
+      case "zh-Hans":
+        return `${provider} 不可用 · 正在使用你自己的一个模型`;
+      case "zh-Hant":
+        return `無法使用 ${provider} · 正在使用你自己的一個模型`;
+      case "en-XA":
+        return `[${provider} ûñáṽáîļáƀļé · ûšîñĝ öñé öƒ ýöûŕ öŵñ ɱöðéļš ~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${provider}‮ unavailable · using one of your own models‬`;
+    }
+    return `${provider} unavailable · using one of your own models`;
   }
   function settingsDecisionsRemove(input2) {
     const model = input2.model;
@@ -66710,33 +68680,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Turn off ${model}`;
   }
-  function settingsDecisionsTurnOnOpenRouter(input2) {
+  function settingsDecisionsTurnOnThrough(input2) {
     const model = input2.model;
+    const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `تفعيل ${model} عبر OpenRouter`;
+        return `تفعيل ${model} عبر ${provider}`;
       case "de":
-        return `${model} über OpenRouter einschalten`;
+        return `${model} über ${provider} einschalten`;
       case "es":
-        return `Activar ${model} a través de OpenRouter`;
+        return `Activar ${model} a través de ${provider}`;
       case "fr":
-        return `Activer ${model} via OpenRouter`;
+        return `Activer ${model} via ${provider}`;
       case "ja":
-        return `OpenRouter 経由で ${model} をオンにする`;
+        return `${provider} 経由で ${model} をオンにする`;
       case "ko":
-        return `OpenRouter로 ${model} 켜기`;
+        return `${provider}로 ${model} 켜기`;
       case "pt-BR":
-        return `Ativar ${model} pelo OpenRouter`;
+        return `Ativar ${model} pelo ${provider}`;
       case "zh-Hans":
-        return `通过 OpenRouter 打开 ${model}`;
+        return `通过 ${provider} 打开 ${model}`;
       case "zh-Hant":
-        return `透過 OpenRouter 開啟 ${model}`;
+        return `透過 ${provider} 開啟 ${model}`;
       case "en-XA":
-        return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ÖþéñŔöûţéŕ ~~~~~~~~~]`;
+        return `[Ţûŕñ öñ ${model} ţĥŕöûĝĥ ${provider} ~~~~~~]`;
       case "ar-XB":
-        return `‮Turn on ‬${model}‮ through OpenRouter‬`;
+        return `‮Turn on ‬${model}‮ through ‬${provider}`;
     }
-    return `Turn on ${model} through OpenRouter`;
+    return `Turn on ${model} through ${provider}`;
   }
   function settingsDecisionsUseAuto() {
     switch (currentLanguage()) {
@@ -66794,32 +68765,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Use ${model} (${vendor})`;
   }
-  function settingsDecisionsUseOpenRouter() {
+  function settingsDecisionsUseProvider(input2) {
+    const provider = input2.provider;
     switch (currentLanguage()) {
       case "ar":
-        return `استخدام نموذج قرارات من OpenRouter`;
+        return `استخدام نموذج قرارات من ${provider}`;
       case "de":
-        return `Ein Entscheidungsmodell von OpenRouter verwenden`;
+        return `Ein Entscheidungsmodell von ${provider} verwenden`;
       case "es":
-        return `Usar un modelo de decisiones de OpenRouter`;
+        return `Usar un modelo de decisiones de ${provider}`;
       case "fr":
-        return `Utiliser un modèle de décision OpenRouter`;
+        return `Utiliser un modèle de décision ${provider}`;
       case "ja":
-        return `OpenRouter の判断用モデルを使う`;
+        return `${provider} の判断用モデルを使う`;
       case "ko":
-        return `OpenRouter 결정 모델 사용`;
+        return `${provider} 결정 모델 사용`;
       case "pt-BR":
-        return `Usar um modelo de decisão do OpenRouter`;
+        return `Usar um modelo de decisão do ${provider}`;
       case "zh-Hans":
-        return `使用 OpenRouter 决定模型`;
+        return `使用 ${provider} 决定模型`;
       case "zh-Hant":
-        return `使用 OpenRouter 決定模型`;
+        return `使用 ${provider} 決定模型`;
       case "en-XA":
-        return `[Ûšé áñ ÖþéñŔöûţéŕ ðéçîšîöñ ɱöðéļ ~~~~~~~~~~~]`;
+        return `[Ûšé á ðéçîšîöñ ɱöðéļ ƒŕöɱ ${provider} ~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Use an OpenRouter decision model‬`;
+        return `‮Use a decision model from ‬${provider}`;
     }
-    return `Use an OpenRouter decision model`;
+    return `Use a decision model from ${provider}`;
   }
   function settingsDecisionsUseSpecific() {
     switch (currentLanguage()) {
@@ -68818,23 +70790,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `إعداد العمل على ${device} من جديد`;
+        return `إعداد العمل من جديد: ${device}`;
       case "de":
-        return `Die Arbeit auf ${device} neu einrichten`;
+        return `Die Arbeit neu einrichten: ${device}`;
       case "es":
-        return `Volver a preparar el trabajo en ${device}`;
+        return `Volver a preparar el trabajo: ${device}`;
       case "fr":
-        return `Remettre en place le travail sur ${device}`;
+        return `Remettre en place le travail : ${device}`;
       case "ja":
-        return `${device} の作業をもう一度設定`;
+        return `作業をもう一度設定：${device}`;
       case "ko":
-        return `${device}의 작업 다시 설정`;
+        return `작업 다시 설정: ${device}`;
       case "pt-BR":
-        return `Preparar de novo o trabalho em ${device}`;
+        return `Preparar de novo o trabalho: ${device}`;
       case "zh-Hans":
-        return `重新设置 ${device} 上的工作`;
+        return `重新设置工作：${device}`;
       case "zh-Hant":
-        return `重新設定 ${device} 上的工作`;
+        return `重新設定工作：${device}`;
       case "en-XA":
         return `[Šéţ ûþ ţĥé ŵöŕķ öñ ${device} áĝáîñ ~~~~~~~~~]`;
       case "ar-XB":
@@ -69883,7 +71855,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const device = input2.device;
     switch (currentLanguage()) {
       case "ar":
-        return `مطابقة ${device} مع هذا الكمبيوتر`;
+        return `مطابقة ${device} مع هذا الحاسوب`;
       case "de":
         return `${device} an diesen Computer angleichen`;
       case "es":
@@ -71627,15 +73599,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Retrait de ce qu’Infinitary a installé ${where}…`;
       case "ja":
-        return `Infinitary が ${where} 準備したものを削除しています…`;
+        return `Infinitary が${where}準備したものを削除しています…`;
       case "ko":
         return `Infinitary가 ${where} 설정한 것을 제거하는 중…`;
       case "pt-BR":
         return `Removendo o que o Infinitary configurou ${where}…`;
       case "zh-Hans":
-        return `正在移除 Infinitary ${where} 设置的内容…`;
+        return `正在移除 Infinitary ${where}设置的内容…`;
       case "zh-Hant":
-        return `正在移除 Infinitary ${where} 設定的內容…`;
+        return `正在移除 Infinitary ${where}設定的內容…`;
       case "en-XA":
         return `[Ŕéɱöṽîñĝ ŵĥáţ Îñƒîñîţáŕý šéţ ûþ ${where}… ~~~~~~~~~~~]`;
       case "ar-XB":
@@ -72040,15 +74012,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Claude Code se connecte lui-même ${where}. Connectez-vous-y une fois là-bas, et Infinitary utilise cette connexion.`;
       case "ja":
-        return `Claude Code は ${where} 自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。`;
+        return `Claude Code は${where}自分でサインインします。そちらで一度ログインすれば、Infinitary はそのログインを使います。`;
       case "ko":
         return `Claude Code는 ${where} 직접 로그인해요. 그곳에서 한 번 로그인하면 Infinitary가 그 로그인을 써요.`;
       case "pt-BR":
         return `O Claude Code faz o próprio login ${where}. Faça login nele lá uma vez, e o Infinitary usa esse login.`;
       case "zh-Hans":
-        return `Claude Code 会 ${where} 自行登录。在那里登录一次，Infinitary 就会使用该登录。`;
+        return `Claude Code 会${where}自行登录。在那里登录一次，Infinitary 就会使用该登录。`;
       case "zh-Hant":
-        return `Claude Code 會 ${where} 自行登入。在那裡登入一次，Infinitary 就會使用那個登入。`;
+        return `Claude Code 會${where}自行登入。在那裡登入一次，Infinitary 就會使用那個登入。`;
       case "en-XA":
         return `[Çļáûðé Çöðé šîĝñš îñ ${where} îţšéļƒ. Ļöĝ îñ ţö îţ ţĥéŕé öñçé, áñð Îñƒîñîţáŕý ûšéš ţĥáţ ļöĝîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -72096,15 +74068,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Ajouter une API personnalisée ${where}`;
       case "ja":
-        return `${where} カスタム API を追加`;
+        return `カスタム API を${where}追加`;
       case "ko":
         return `${where} 사용자 지정 API 추가`;
       case "pt-BR":
         return `Adicionar uma API personalizada ${where}`;
       case "zh-Hans":
-        return `${where} 添加自定义 API`;
+        return `${where}添加自定义 API`;
       case "zh-Hant":
-        return `${where} 加入自訂 API`;
+        return `${where}加入自訂 API`;
       case "en-XA":
         return `[Åðð á çûšţöɱ ÅÞÎ ${where} ~~~~~~]`;
       case "ar-XB":
@@ -72346,15 +74318,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Ses propres connexions. Une tâche qui s’exécute ${where} n’utilise que celles-ci.`;
       case "ja":
-        return `専用のサインインです。${where} 実行するタスクはこれだけを使います。`;
+        return `専用のサインインです。タスクを${where}実行するときは、これだけを使います。`;
       case "ko":
-        return `이 컴퓨터만의 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
+        return `전용 로그인이에요. ${where} 실행되는 작업은 이 로그인만 써요.`;
       case "pt-BR":
         return `Os logins próprios dele. Uma tarefa que roda ${where} usa só estes.`;
       case "zh-Hans":
-        return `它自己的登录。${where} 运行的任务只使用这些登录。`;
+        return `它自己的登录。${where}运行的任务只使用这些登录。`;
       case "zh-Hant":
-        return `它自己的登入。${where} 執行的任務只會使用這些登入。`;
+        return `它自己的登入。${where}執行的任務只會使用這些登入。`;
       case "en-XA":
         return `[Îţš öŵñ šîĝñ-îñš. Å ţášķ ţĥáţ ŕûñš ${where} ûšéš öñļý ţĥéšé. ~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
@@ -72653,15 +74625,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Se connecter à ${provider} ${where}`;
       case "ja":
-        return `${where} ${provider} にサインイン`;
+        return `${provider} に${where}サインイン`;
       case "ko":
         return `${where} ${provider}에 로그인`;
       case "pt-BR":
         return `Fazer login no ${provider} ${where}`;
       case "zh-Hans":
-        return `${where} 登录 ${provider}`;
+        return `${where}登录 ${provider}`;
       case "zh-Hant":
-        return `${where} 登入 ${provider}`;
+        return `${where}登入 ${provider}`;
       case "en-XA":
         return `[Šîĝñ îñ ţö ${provider} ${where} ~~~~]`;
       case "ar-XB":
@@ -75666,21 +77638,50 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `Actions ${host} ${where}`;
       case "ja":
-        return `${where} の ${host} の操作`;
+        return `${host} に${where}行う操作`;
       case "ko":
-        return `${host} ${where} 작업`;
+        return `${where} ${host} 작업`;
       case "pt-BR":
         return `Ações de ${host} ${where}`;
       case "zh-Hans":
-        return `${where} 的 ${host} 操作`;
+        return `${host} 操作（${where}）`;
       case "zh-Hant":
-        return `${where} 的 ${host} 動作`;
+        return `${host} 動作（${where}）`;
       case "en-XA":
         return `[${host} ${where} áçţîöñš ~~~]`;
       case "ar-XB":
         return `${host}‮ ‬${where}‮ actions‬`;
     }
     return `${host} ${where} actions`;
+  }
+  function settingsForgeServerOn(input2) {
+    const name = input2.name;
+    const where = input2.where;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${name} ${where}`;
+      case "de":
+        return `${name} ${where}`;
+      case "es":
+        return `${name} ${where}`;
+      case "fr":
+        return `${name} ${where}`;
+      case "ja":
+        return `${name} は${where}`;
+      case "ko":
+        return `${where} ${name}`;
+      case "pt-BR":
+        return `${name} ${where}`;
+      case "zh-Hans":
+        return `${name}（${where}）`;
+      case "zh-Hant":
+        return `${name}（${where}）`;
+      case "en-XA":
+        return `[${name} ${where} ~]`;
+      case "ar-XB":
+        return `${name}‮ ‬${where}`;
+    }
+    return `${name} ${where}`;
   }
   function settingsForgeSignIn() {
     switch (currentLanguage()) {
@@ -76746,7 +78747,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralResetDeletesBoth() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحذف Infinitary كل ما يحتفظ به على الجهازين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
+        return `يحذف Infinitary كل ما يحتفظ به على الحاسوبين، ومن ذلك المهام وتسجيلات الدخول والأسرار والإعدادات والأجهزة المقترنة، ثم يفتح كل منهما كأنه ثُبّت للتو.`;
       case "de":
         return `Infinitary löscht alles, was es auf beiden aufbewahrt, darunter Aufgaben, Anmeldungen, Geheimnisse, Einstellungen und gekoppelte Geräte, und beide öffnen sich dann wie frisch installiert.`;
       case "es":
@@ -76855,7 +78856,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsGeneralResetKeeps() {
     switch (currentLanguage()) {
       case "ar":
-        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها والتزاماتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
+        return `تحتفظ المشاريع الموجودة في مجلداتك بكل ملفاتها وإيداعاتها. لمحو المهام فقط، استخدم محو بيانات المهام.`;
       case "de":
         return `Projekte in deinen eigenen Ordnern behalten jede Datei und jeden Commit. Um nur Aufgaben zu löschen, nutze Aufgabendaten endgültig löschen.`;
       case "es":
@@ -82848,9 +84849,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "pt-BR":
         return `${action} ${where}.`;
       case "zh-Hans":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "zh-Hant":
-        return `${where} ${action}。`;
+        return `${where}${action}。`;
       case "en-XA":
         return `[${action} ${where}. ~]`;
       case "ar-XB":
@@ -83157,6 +85158,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Changes to send back‬`;
     }
     return `Changes to send back`;
+  }
+  function settingsProjectsBatchCheckingFix(input2) {
+    const key = input2.key;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعمل فحوصاتها الآن مع التصحيح من ${key}، قبل أن توافق على ذلك التصحيح. إذا نجحت، فإن الموافقة عليه تدمج الدفعة كما هي.`;
+      case "de":
+        return `Die Überprüfungen laufen jetzt mit der Korrektur aus ${key}, bevor du sie freigibst. Sind sie erfolgreich, wird das Bündel mit deiner Freigabe so zusammengeführt, wie es ist.`;
+      case "es":
+        return `Sus comprobaciones se están ejecutando ahora con la corrección de ${key}, antes de que la apruebes. Si se superan, al aprobarla el lote se fusiona tal como está.`;
+      case "fr":
+        return `Ses vérifications tournent maintenant avec le correctif de ${key}, avant que vous l’approuviez. Si elles réussissent, l’approuver fusionne le lot tel quel.`;
+      case "ja":
+        return `${key} の修正を承認する前に、その修正を含めてチェックを実行しています。合格すれば、修正を承認するとこの一括プルリクエストがそのままマージされます。`;
+      case "ko":
+        return `${key}의 수정을 승인하기 전에, 그 수정을 포함해 검사를 실행하고 있어요. 통과하면 수정을 승인할 때 이 일괄 끌어오기 요청이 그대로 병합돼요.`;
+      case "pt-BR":
+        return `As verificações estão rodando agora com a correção de ${key}, antes de você aprová-la. Se passarem, aprovar a correção mescla o lote como está.`;
+      case "zh-Hans":
+        return `在你批准 ${key} 的修正之前，检查正在带上这个修正运行。若检查通过，批准该修正即会按原样合并这批改动。`;
+      case "zh-Hant":
+        return `在你核准 ${key} 的修正之前，檢查正帶上這個修正執行。若檢查通過，核准該修正就會照原樣合併這個批次。`;
+      case "en-XA":
+        return `[Îţš çĥéçķš áŕé ŕûññîñĝ ñöŵ ŵîţĥ ţĥé ƒîẋ ƒŕöɱ ${key}, ƀéƒöŕé ýöû áþþŕöṽé ţĥáţ ƒîẋ. Îƒ ţĥéý þášš, áþþŕöṽîñĝ îţ ɱéŕĝéš ţĥé ƀáţçĥ áš îţ îš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Its checks are running now with the fix from ‬${key}‮, before you approve that fix. If they pass, approving it merges the batch as it is.‬`;
+    }
+    return `Its checks are running now with the fix from ${key}, before you approve that fix. If they pass, approving it merges the batch as it is.`;
   }
   function settingsProjectsBatchGap() {
     switch (currentLanguage()) {
@@ -86910,15 +88939,15 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       case "fr":
         return `s’exécute ${where}`;
       case "ja":
-        return `${where} 実行`;
+        return `実行は${where}`;
       case "ko":
-        return `실행 위치: ${where}`;
+        return `${where} 실행`;
       case "pt-BR":
         return `roda ${where}`;
       case "zh-Hans":
-        return `${where} 运行`;
+        return `${where}运行`;
       case "zh-Hant":
-        return `${where} 執行`;
+        return `${where}執行`;
       case "en-XA":
         return `[ŕûñš ${where} ~~]`;
       case "ar-XB":
@@ -88654,6 +90683,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${provider} ${model} reasoning for ${slot}`;
   }
+  function settingsReasoningMax() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أقصى`;
+      case "de":
+        return `Max.`;
+      case "es":
+        return `Máximo`;
+      case "fr":
+        return `Max.`;
+      case "ja":
+        return `最大`;
+      case "ko":
+        return `최대`;
+      case "pt-BR":
+        return `Máximo`;
+      case "zh-Hans":
+        return `最大`;
+      case "zh-Hant":
+        return `最大`;
+      case "en-XA":
+        return `[Ṁáẋ ~]`;
+      case "ar-XB":
+        return `‮Max‬`;
+    }
+    return `Max`;
+  }
   function settingsReasoningSaveFailed() {
     switch (currentLanguage()) {
       case "ar":
@@ -89693,7 +91749,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCopyCannotConfirm() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يستطيع هذا الكمبيوتر التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
+        return `لا يستطيع هذا الحاسوب التأكد من أنك أنت الآن، لذا لا يمكنه نسخ قيمة.`;
       case "de":
         return `Dieser Computer kann gerade nicht bestätigen, dass du es bist, und daher keinen Wert kopieren.`;
       case "es":
@@ -89775,7 +91831,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const name = input2.name;
     switch (currentLanguage()) {
       case "ar":
-        return `نسخ ${name} إلى حافظة هذا الكمبيوتر.`;
+        return `نسخ ${name} إلى حافظة هذا الحاسوب.`;
       case "de":
         return `${name} in die Zwischenablage dieses Computers kopieren.`;
       case "es":
@@ -89910,7 +91966,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsSecretsCustodyMac() {
     switch (currentLanguage()) {
       case "ar":
-        return `محفوظة على هذا الكمبيوتر. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
+        return `محفوظة على هذا الحاسوب. يستخدمها طاقمك لكنه لا يراها أبدًا، إلا إذا نسخت واحدًا منها.`;
       case "de":
         return `Auf diesem Computer aufbewahrt. Deine Crew nutzt sie, sieht sie aber nie, außer du kopierst eines.`;
       case "es":
@@ -90697,7 +92753,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const seconds = input2.seconds;
     switch (currentLanguage()) {
       case "ar":
-        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الكمبيوتر بعد أن يتأكد كمبيوترك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
+        return `«نسخ القيمة» في صفه يضع القيمة في حافظة هذا الحاسوب بعد أن يتأكد حاسوبك من أنك أنت، ويمسحها بعد ${seconds} ثانية. ما تفعله هناك يبقى قرارك.`;
       case "de":
         return `„Wert kopieren“ in seiner Zeile legt den Wert in die Zwischenablage dieses Computers, sobald dein Computer bestätigt, dass du es bist, und entfernt ihn ${seconds} Sekunden später. Was du dort tust, bleibt deine Sache.`;
       case "es":
@@ -96573,7 +98629,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function settingsUsageConnectionEmailLine() {
     switch (currentLanguage()) {
       case "ar":
-        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الكمبيوتر تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
+        return `يحمل كل سجل بريد تسجيل دخولك إلى Claude Code، إن كان على هذا الحاسوب تسجيل دخول، كي يحسب عرضٌ لكل شخص عملك.`;
       case "de":
         return `Jeder Eintrag trägt die E-Mail-Adresse deiner Claude-Code-Anmeldung, wenn dieser Computer eine hat, damit eine Ansicht pro Person deine Arbeit zählt.`;
       case "es":
@@ -104645,7 +106701,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     const path = input2.path;
     switch (currentLanguage()) {
       case "ar":
-        return `على جهاز Mac، اكتب ${path} بدلًا من infinitary.`;
+        return `على حاسوب Mac، اكتب ${path} بدلًا من infinitary.`;
       case "de":
         return `Auf einem Mac tippst du ${path} statt infinitary.`;
       case "es":
@@ -105094,29 +107150,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function shellGateStillNeeds() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.`;
+        return `لا يزال نائب القبطان يحتاج إلى حساب يستجيب: Codex أو Grok أو Claude أو Kimi Code أو Copilot أو OpenCode Go أو OpenRouter بمفتاح API أو Amazon Bedrock بتسجيل دخول AWS.`;
       case "de":
-        return `Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.`;
+        return `Dein erster Offizier braucht noch ein Konto, das antwortet: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.`;
       case "es":
-        return `Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.`;
+        return `Tu primer oficial todavía necesita una cuenta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter con una clave de API o Amazon Bedrock con tu inicio de sesión de AWS.`;
       case "fr":
-        return `Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.`;
+        return `Votre second a encore besoin d’un compte qui répond : Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter avec une clé API, ou Amazon Bedrock avec votre connexion AWS.`;
       case "ja":
-        return `一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。`;
+        return `一等航海士には、応答するアカウントがまだ必要です。Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、API キーを使う OpenRouter、または AWS でサインインする Amazon Bedrock を接続してください。`;
       case "ko":
-        return `일등항해사에게 아직 응답하는 계정이 필요해요. Codex, Grok, Claude, Kimi Code, Copilot, API 키를 사용하는 OpenRouter 또는 AWS로 로그인하는 Amazon Bedrock을 연결하세요.`;
+        return `일등항해사에게 아직 응답하는 계정이 필요해요. Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, API 키를 사용하는 OpenRouter 또는 AWS로 로그인하는 Amazon Bedrock을 연결하세요.`;
       case "pt-BR":
-        return `Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.`;
+        return `Seu imediato ainda precisa de uma conta que responda: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter com uma chave de API ou Amazon Bedrock com seu login da AWS.`;
       case "zh-Hans":
-        return `你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。`;
+        return `你的大副还需要一个能应答的账号：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 密钥的 OpenRouter，或使用 AWS 登录的 Amazon Bedrock。`;
       case "zh-Hant":
-        return `你的大副還需要一個能回應的帳號：Codex、Grok、Claude、Kimi Code、Copilot、使用 API 金鑰的 OpenRouter，或使用 AWS 登入的 Amazon Bedrock。`;
+        return `你的大副還需要一個能回應的帳號：Codex、Grok、Claude、Kimi Code、Copilot、OpenCode Go、使用 API 金鑰的 OpenRouter，或使用 AWS 登入的 Amazon Bedrock。`;
       case "en-XA":
-        return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš áñ áççöûñţ ţĥáţ áñšŵéŕš: Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý, öŕ Åɱážöñ Ɓéðŕöçķ ŵîţĥ ýöûŕ ÅŴŠ šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ýöûŕ ƒîŕšţ ɱáţé šţîļļ ñééðš áñ áççöûñţ ţĥáţ áñšŵéŕš: Çöðéẋ, Ĝŕöķ, Çļáûðé, Ķîɱî Çöðé, Çöþîļöţ, ÖþéñÇöðé Ĝö, ÖþéñŔöûţéŕ ŵîţĥ áñ ÅÞÎ ķéý, öŕ Åɱážöñ Ɓéðŕöçķ ŵîţĥ ýöûŕ ÅŴŠ šîĝñ-îñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.‬`;
+        return `‮Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.‬`;
     }
-    return `Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.`;
+    return `Your first mate still needs an account that answers: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter with an API key, or Amazon Bedrock with your AWS sign-in.`;
   }
   function shellGateTitle() {
     switch (currentLanguage()) {
@@ -114262,6 +116318,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsConnectCustomApi,
     accountsConnectHow,
     accountsConnectInstallClaudeThere,
+    accountsConnectKeyWhere,
     accountsConnectNotSignedIn,
     accountsConnectNotSignedInYet,
     accountsConnectOpenSignIn,
@@ -114417,6 +116474,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiNameNeeded,
     accountsCustomApiNoList,
     accountsCustomApiNoModels,
+    accountsCustomApiNotChat,
     accountsCustomApiNotOffered,
     accountsCustomApiNotReached,
     accountsCustomApiNotSaved,
@@ -114499,6 +116557,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     accountsCustomApiUseModel,
     accountsCustomApiUseOn,
     accountsCustomApiUseTitle,
+    accountsQuotaOpenCodeGoNoPlan,
     accountsSavedResetBusy,
     accountsSavedResetCodexStopped,
     accountsSavedResetNoCodex,
@@ -114725,6 +116784,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardPastPictures,
     cardPastSentLead,
     cardPastUnreadable,
+    cardPicturesUnreadMove,
+    cardPicturesUnreadNoReader,
+    cardPicturesUnreadReader,
+    cardPicturesUnreadSettings,
+    cardPicturesUnreadTitle,
+    cardPicturesUnreadWaits,
     cardQuickAnswer,
     cardReaderAsksTitle,
     cardReaderCallChanges,
@@ -114746,6 +116811,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRecordCare,
     cardRecordChecking,
     cardRecordChildrenClosed,
+    cardRecordCouldNotStart,
     cardRecordDelivery,
     cardRecordDeliveryDirectPr,
     cardRecordDeliveryInPlace,
@@ -115323,6 +117389,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     feedBatchQueuedHost,
     feedBatchRetried,
     feedBatchSentBack,
+    feedBatchTrial,
+    feedBatchTrialFailed,
+    feedBatchTrialFailedUnnamed,
     feedBranchPushed,
     feedBuildRowKept,
     feedBuildRowNotFiled,
@@ -115458,15 +117527,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     handoverWontStopText,
     handoverWontStopTitle,
     integrationsClientFileNotTaken,
+    integrationsConnectOfferBody,
+    integrationsConnectOfferButton,
+    integrationsConnectOfferNotNow,
+    integrationsConnectOfferOpen,
+    integrationsConnectOfferTitle,
     integrationsGoogleClientFileIncomplete,
     integrationsGoogleClientFileNotJson,
     integrationsGoogleClientFileWeb,
     integrationsGoogleExchangeOperation,
     integrationsGoogleExchangeReason,
     integrationsGoogleExchangeResult,
-    integrationsGoogleReadyDetail,
-    integrationsGoogleRetiring,
-    integrationsGoogleRetiringDetail,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
     integrationsGoogleSetUpFirst,
@@ -115482,7 +117553,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleSetupStepFile,
     integrationsGoogleSetupStepPage,
     integrationsGoogleSetupTitle,
-    integrationsGoogleSignIn,
     integrationsGoogleSignInHint,
     integrationsGoogleStopped,
     integrationsGoogleStoppedDetail,
@@ -115694,8 +117764,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     pastedFileMeta,
     pastedFileRemove,
     pastedFileRemoveNamed,
+    placeAs,
     placeHere,
     placeOn,
+    placeOnOther,
+    placeOther,
+    placeRunningAs,
     placeThisComputer,
     policyAsksFirst,
     policyCareBound,
@@ -115724,6 +117798,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     projectsMoveOpenTasks,
     projectsMoveTitleInto,
     projectsMoveTitleOwn,
+    projectsSetupLeftFolder,
     recordAgeDays,
     recordAgeHours,
     recordAgeJustNow,
@@ -115783,6 +117858,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordMoreKnowledge,
     recordMoreValidation,
     recordOpenKeptEvidence,
+    recordPartsClosedFold,
+    recordPartsCountBacklog,
+    recordPartsCountIdle,
+    recordPartsCountInterrupted,
+    recordPartsCountQueued,
+    recordPartsCountStarting,
+    recordPartsCountWaiting,
+    recordPartsCountWorking,
+    recordPartsLast,
+    recordPartsLastBacklog,
+    recordPartsLastBacklogGuidance,
+    recordPartsLastIdle,
+    recordPartsLastInterrupted,
+    recordPartsLastQueued,
+    recordPartsLastStarting,
+    recordPartsLastWaiting,
+    recordPartsLastWaitingGuidance,
+    recordPartsLastWorking,
+    recordPartsOpen,
+    recordPartsOpenGuidance,
     recordPersonalNone,
     recordPersonalVersion,
     recordPolicyParentTask,
@@ -116009,6 +118104,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAddProjectAddFolder,
     settingsAddProjectAdded,
     settingsAddProjectAddedGit,
+    settingsAddProjectAddedLeftFolder,
     settingsAddProjectAddedMark,
     settingsAddProjectAdding,
     settingsAddProjectAlreadyAdded,
@@ -116062,6 +118158,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceThemeDark,
     settingsAppearanceThemeDescription,
     settingsAppearanceThemeLight,
+    settingsAppearanceThemeOwnDescribe,
+    settingsAppearanceThemeOwnDraft,
+    settingsAppearanceThemeOwnRemove,
+    settingsAppearanceThemeOwnRemoveNamed,
+    settingsAppearanceThemeYours,
     settingsAppearanceWash,
     settingsAppearanceWashDescription,
     settingsAppearanceWashValue,
@@ -116263,18 +118364,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsDecisionsKeysFrom,
     settingsDecisionsLastAnswer,
     settingsDecisionsLineNative,
-    settingsDecisionsOpenRouterModels,
-    settingsDecisionsOpenRouterPrice,
-    settingsDecisionsOpenRouterUnavailable,
+    settingsDecisionsModelPrice,
     settingsDecisionsPicker,
+    settingsDecisionsProviderChoice,
+    settingsDecisionsProviderCostAccount,
+    settingsDecisionsProviderCostAllowance,
+    settingsDecisionsProviderModels,
+    settingsDecisionsProviderShared,
+    settingsDecisionsProviderUnavailable,
     settingsDecisionsRemove,
     settingsDecisionsReplaceKey,
     settingsDecisionsSubtitle,
     settingsDecisionsTurnOff,
-    settingsDecisionsTurnOnOpenRouter,
+    settingsDecisionsTurnOnThrough,
     settingsDecisionsUseAuto,
     settingsDecisionsUseNative,
-    settingsDecisionsUseOpenRouter,
+    settingsDecisionsUseProvider,
     settingsDecisionsUseSpecific,
     settingsDecisionsUses,
     settingsDecisionsUsesAllow,
@@ -116576,6 +118681,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsForgeNotSignedIn,
     settingsForgeOpenHost,
     settingsForgeRowActions,
+    settingsForgeServerOn,
     settingsForgeSignIn,
     settingsForgeSignInAgain,
     settingsForgeSignInAgainSay,
@@ -116840,6 +118946,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsBatchAnswerRuleNote,
     settingsProjectsBatchAnswerYourself,
     settingsProjectsBatchChanges,
+    settingsProjectsBatchCheckingFix,
     settingsProjectsBatchGap,
     settingsProjectsBatchGapDescription,
     settingsProjectsBatchGapHours,
@@ -117012,6 +119119,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsWorkspaceDescription,
     settingsReasoningAuto,
     settingsReasoningLabel,
+    settingsReasoningMax,
     settingsReasoningSaveFailed,
     settingsReasoningSavedUnavailable,
     settingsReasoningUnavailable,
@@ -117925,6 +120033,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsConnectCustomApi": [],
     "accountsConnectHow": ["provider"],
     "accountsConnectInstallClaudeThere": [],
+    "accountsConnectKeyWhere": ["provider", "site"],
     "accountsConnectNotSignedIn": [],
     "accountsConnectNotSignedInYet": ["here", "provider"],
     "accountsConnectOpenSignIn": [],
@@ -118080,6 +120189,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiNameNeeded": [],
     "accountsCustomApiNoList": [],
     "accountsCustomApiNoModels": [],
+    "accountsCustomApiNotChat": [],
     "accountsCustomApiNotOffered": ["model"],
     "accountsCustomApiNotReached": [],
     "accountsCustomApiNotSaved": [],
@@ -118162,6 +120272,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "accountsCustomApiUseModel": ["model"],
     "accountsCustomApiUseOn": ["on"],
     "accountsCustomApiUseTitle": ["name", "on"],
+    "accountsQuotaOpenCodeGoNoPlan": [],
     "accountsSavedResetBusy": ["account"],
     "accountsSavedResetCodexStopped": [],
     "accountsSavedResetNoCodex": ["floor", "site"],
@@ -118388,6 +120499,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardPastPictures": ["count", "names"],
     "cardPastSentLead": [],
     "cardPastUnreadable": [],
+    "cardPicturesUnreadMove": ["model"],
+    "cardPicturesUnreadNoReader": [],
+    "cardPicturesUnreadReader": ["model"],
+    "cardPicturesUnreadSettings": [],
+    "cardPicturesUnreadTitle": [],
+    "cardPicturesUnreadWaits": ["model"],
     "cardQuickAnswer": [],
     "cardReaderAsksTitle": ["place"],
     "cardReaderCallChanges": [],
@@ -118409,6 +120526,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRecordCare": ["care"],
     "cardRecordChecking": [],
     "cardRecordChildrenClosed": ["closed", "total"],
+    "cardRecordCouldNotStart": ["reason"],
     "cardRecordDelivery": [],
     "cardRecordDeliveryDirectPr": [],
     "cardRecordDeliveryInPlace": [],
@@ -118986,6 +121104,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "feedBatchQueuedHost": ["label", "project"],
     "feedBatchRetried": ["label", "project"],
     "feedBatchSentBack": ["project", "reason", "title"],
+    "feedBatchTrial": ["label", "project"],
+    "feedBatchTrialFailed": ["checks", "label", "project"],
+    "feedBatchTrialFailedUnnamed": ["label", "project"],
     "feedBranchPushed": [],
     "feedBuildRowKept": ["task", "title"],
     "feedBuildRowNotFiled": ["title"],
@@ -119121,15 +121242,17 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "handoverWontStopText": ["to"],
     "handoverWontStopTitle": ["from"],
     "integrationsClientFileNotTaken": ["name"],
+    "integrationsConnectOfferBody": ["name"],
+    "integrationsConnectOfferButton": [],
+    "integrationsConnectOfferNotNow": [],
+    "integrationsConnectOfferOpen": ["name"],
+    "integrationsConnectOfferTitle": ["name"],
     "integrationsGoogleClientFileIncomplete": [],
     "integrationsGoogleClientFileNotJson": [],
     "integrationsGoogleClientFileWeb": [],
     "integrationsGoogleExchangeOperation": [],
     "integrationsGoogleExchangeReason": [],
     "integrationsGoogleExchangeResult": [],
-    "integrationsGoogleReadyDetail": [],
-    "integrationsGoogleRetiring": [],
-    "integrationsGoogleRetiringDetail": [],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
     "integrationsGoogleSetUpFirst": [],
@@ -119145,7 +121268,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleSetupStepFile": [],
     "integrationsGoogleSetupStepPage": [],
     "integrationsGoogleSetupTitle": [],
-    "integrationsGoogleSignIn": [],
     "integrationsGoogleSignInHint": [],
     "integrationsGoogleStopped": [],
     "integrationsGoogleStoppedDetail": [],
@@ -119357,8 +121479,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "pastedFileMeta": ["kilobytes", "lines"],
     "pastedFileRemove": ["lines"],
     "pastedFileRemoveNamed": ["name"],
+    "placeAs": ["user"],
     "placeHere": [],
     "placeOn": ["computer"],
+    "placeOnOther": [],
+    "placeOther": [],
+    "placeRunningAs": ["user"],
     "placeThisComputer": [],
     "policyAsksFirst": [],
     "policyCareBound": [],
@@ -119387,6 +121513,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "projectsMoveOpenTasks": ["count", "project"],
     "projectsMoveTitleInto": ["project", "repositories"],
     "projectsMoveTitleOwn": ["repositories"],
+    "projectsSetupLeftFolder": [],
     "recordAgeDays": ["count"],
     "recordAgeHours": ["count"],
     "recordAgeJustNow": [],
@@ -119446,6 +121573,26 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordMoreKnowledge": ["count"],
     "recordMoreValidation": [],
     "recordOpenKeptEvidence": [],
+    "recordPartsClosedFold": ["count"],
+    "recordPartsCountBacklog": ["count"],
+    "recordPartsCountIdle": ["count"],
+    "recordPartsCountInterrupted": ["count"],
+    "recordPartsCountQueued": ["count"],
+    "recordPartsCountStarting": ["count"],
+    "recordPartsCountWaiting": ["count"],
+    "recordPartsCountWorking": ["count"],
+    "recordPartsLast": [],
+    "recordPartsLastBacklog": [],
+    "recordPartsLastBacklogGuidance": ["key"],
+    "recordPartsLastIdle": ["key"],
+    "recordPartsLastInterrupted": ["key"],
+    "recordPartsLastQueued": ["key"],
+    "recordPartsLastStarting": ["key"],
+    "recordPartsLastWaiting": [],
+    "recordPartsLastWaitingGuidance": ["key"],
+    "recordPartsLastWorking": ["key"],
+    "recordPartsOpen": ["open", "total"],
+    "recordPartsOpenGuidance": ["counts"],
     "recordPersonalNone": ["computer"],
     "recordPersonalVersion": ["computer", "version", "when"],
     "recordPolicyParentTask": [],
@@ -119672,6 +121819,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAddProjectAddFolder": [],
     "settingsAddProjectAdded": ["name"],
     "settingsAddProjectAddedGit": ["name"],
+    "settingsAddProjectAddedLeftFolder": ["name"],
     "settingsAddProjectAddedMark": [],
     "settingsAddProjectAdding": [],
     "settingsAddProjectAlreadyAdded": ["name"],
@@ -119725,6 +121873,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceThemeDark": [],
     "settingsAppearanceThemeDescription": [],
     "settingsAppearanceThemeLight": [],
+    "settingsAppearanceThemeOwnDescribe": [],
+    "settingsAppearanceThemeOwnDraft": [],
+    "settingsAppearanceThemeOwnRemove": [],
+    "settingsAppearanceThemeOwnRemoveNamed": ["name"],
+    "settingsAppearanceThemeYours": [],
     "settingsAppearanceWash": [],
     "settingsAppearanceWashDescription": [],
     "settingsAppearanceWashValue": ["percent"],
@@ -119926,18 +122079,22 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsDecisionsKeysFrom": ["url"],
     "settingsDecisionsLastAnswer": ["tokens", "value"],
     "settingsDecisionsLineNative": ["model", "vendor"],
-    "settingsDecisionsOpenRouterModels": [],
-    "settingsDecisionsOpenRouterPrice": ["model", "price", "vendor"],
-    "settingsDecisionsOpenRouterUnavailable": [],
+    "settingsDecisionsModelPrice": ["model", "price", "vendor"],
     "settingsDecisionsPicker": [],
+    "settingsDecisionsProviderChoice": [],
+    "settingsDecisionsProviderCostAccount": ["model", "price", "provider"],
+    "settingsDecisionsProviderCostAllowance": ["model", "price", "provider"],
+    "settingsDecisionsProviderModels": ["provider"],
+    "settingsDecisionsProviderShared": ["model", "provider", "vendor"],
+    "settingsDecisionsProviderUnavailable": ["provider"],
     "settingsDecisionsRemove": ["model"],
     "settingsDecisionsReplaceKey": ["model"],
     "settingsDecisionsSubtitle": [],
     "settingsDecisionsTurnOff": ["model"],
-    "settingsDecisionsTurnOnOpenRouter": ["model"],
+    "settingsDecisionsTurnOnThrough": ["model", "provider"],
     "settingsDecisionsUseAuto": [],
     "settingsDecisionsUseNative": ["model", "vendor"],
-    "settingsDecisionsUseOpenRouter": [],
+    "settingsDecisionsUseProvider": ["provider"],
     "settingsDecisionsUseSpecific": [],
     "settingsDecisionsUses": [],
     "settingsDecisionsUsesAllow": [],
@@ -120239,6 +122396,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsForgeNotSignedIn": ["host"],
     "settingsForgeOpenHost": ["host"],
     "settingsForgeRowActions": ["host", "where"],
+    "settingsForgeServerOn": ["name", "where"],
     "settingsForgeSignIn": [],
     "settingsForgeSignInAgain": [],
     "settingsForgeSignInAgainSay": [],
@@ -120503,6 +122661,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsBatchAnswerRuleNote": [],
     "settingsProjectsBatchAnswerYourself": [],
     "settingsProjectsBatchChanges": [],
+    "settingsProjectsBatchCheckingFix": ["key"],
     "settingsProjectsBatchGap": [],
     "settingsProjectsBatchGapDescription": [],
     "settingsProjectsBatchGapHours": ["count"],
@@ -120675,6 +122834,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsWorkspaceDescription": [],
     "settingsReasoningAuto": [],
     "settingsReasoningLabel": ["model", "provider", "slot"],
+    "settingsReasoningMax": [],
     "settingsReasoningSaveFailed": [],
     "settingsReasoningSavedUnavailable": ["reasoning"],
     "settingsReasoningUnavailable": [],
@@ -124284,24 +126444,25 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     risk: riskAssessmentSchema.optional(),
     /**
      * False on a card that takes no reply, whoever its author is
-     * (docs/card-threads.md "A card with no reply row"): the chrome draws no
+     * (docs/card-threads.md "Who answers a card"): the chrome draws no
      * reply row and the core refuses one (`cardTakesReplies`). The host sets
-     * it on the welcome alone (`cards.replies`); absent on every other card,
-     * which takes replies as its author allows.
+     * it on the welcome and on the cards shown while the first mate is down,
+     * which nobody could answer: its pause cards, its failed-turn card and its
+     * own sign-in card (`cards.replies`); absent on every other card, which
+     * takes replies as its author allows.
      */
     replies: literal(false).optional(),
     /**
      * Who answers a reply under a card whose author cannot (`cards.answered_by`,
-     * read through `cardAnswerer`): "firstmate" on the host's stuck alert
-     * (`card-stall-<task>`, INF-1670), its next-move card
-     * (`card-next-move-<task>`), its decision on a stopped part left last
-     * (`card-last-part-<task>`) and on every card it raises through
-     * `raiseHostCard` unless the caller names another, so the first mate
-     * answers in the thread, never the task's crewmate; "crewmate" on the
-     * app's own card for a crewmate's ask (a secret to keep or use, secrets to
-     * move in, an integration call), so the crewmate that asked answers in the
-     * thread while its ask stays open. Absent on every other card, which takes
-     * replies as its author allows.
+     * read through `cardAnswerer`): "crewmate" on the app's own card for a
+     * crewmate's ask (a secret to keep or use, secrets to move in, an
+     * integration call, an unsafe data reader's held calls), so the crewmate
+     * that asked answers in the thread while its ask stays open; "firstmate"
+     * on every other host card that does not turn replies off, named by its
+     * builder or filled in as the card goes up and as it is restored
+     * (`withHostAnswerer`), so the first mate answers in the thread, never the
+     * task's crewmate. Absent on a crewmate's or the first mate's own card,
+     * which its author answers.
      */
     answeredBy: _enum(["firstmate", "crewmate"]).optional(),
     /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
@@ -124897,6 +127058,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }),
     unavailableSchema
   ]);
+  const knowledgeDirectionHeardSchema = strictObject({
+    from: _enum(["turn", "card", "crewmate-tab", "standing", "window"]),
+    /** The card's id and its title when it was heard, for `card`. */
+    card: string().min(1).max(200).optional(),
+    title: string().max(400).optional(),
+    /** The task's key, for `crewmate-tab` and `standing`. */
+    task: string().min(1).max(64).optional()
+  });
   const knowledgeDirectionRowSchema = object({
     id: string(),
     kind: literal("direction"),
@@ -124906,7 +127075,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     origin: string(),
     authority: _enum(["instruction", "advice"]),
     revision: number().int().positive(),
-    updatedAt: number()
+    updatedAt: number(),
+    /** Where the captain's words for the current revision were heard; absent when they were not. */
+    heard: knowledgeDirectionHeardSchema.optional()
   });
   const knowledgeDirectionsArgsSchema = knowledgeConceptsArgsSchema;
   discriminatedUnion("state", [
@@ -124934,7 +127105,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         origin: string(),
         scope: scopeSchema,
         evidence: string(),
-        at: number()
+        at: number(),
+        heard: knowledgeDirectionHeardSchema.optional()
       })
     ),
     page: number().int().nonnegative(),
@@ -124957,20 +127129,23 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       text: directionChangeTextSchema,
       /** `captain` for everywhere, read by the first mate alone; or one project's id, read by its crewmates too. */
       scope: scopeSchema.optional(),
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     }),
     strictObject({
       op: literal("revise"),
       id: directionChangeIdSchema,
       text: directionChangeTextSchema,
       expectedRevision: directionChangeRevisionSchema,
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     }),
     strictObject({
       op: literal("retire"),
       id: directionChangeIdSchema,
       expectedRevision: directionChangeRevisionSchema,
-      reason: directionChangeReasonSchema
+      reason: directionChangeReasonSchema,
+      heard: knowledgeDirectionHeardSchema.optional()
     })
   ]);
   object({
@@ -125580,9 +127755,11 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   var annotation = { enabled: false, mode: false, index: -1, current: null, queued: [], offered: false };
   var annotationControl = 'a,button,input,select,textarea,summary,label,[role=button],[contenteditable],[data-inf-action],[data-inf-draft]';
   function annotationParts() { return Array.from(document.querySelectorAll('[data-inf-target]')).filter(function(el) { return el.getClientRects().length && !el.matches(annotationControl); }); }
-  function annotationPart(node) {
+  // Words selected in an option's label belong to its question; a press there still ticks the option.
+  var annotationWordsControl = annotationControl.replace(',label,', ',');
+  function annotationPart(node, words) {
     var el = node && (node.nodeType === 1 ? node : node.parentElement);
-    if (!el || el.closest(annotationControl)) return null;
+    if (!el || el.closest(words ? annotationWordsControl : annotationControl)) return null;
     return el.closest('[data-inf-target]');
   }
   function annotationBoundary(el, offset) {
@@ -125662,8 +127839,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     if (!annotation.enabled) return false;
     var selection = window.getSelection();
     if (!selection || selection.isCollapsed || !selection.rangeCount) return false;
-    var range = selection.getRangeAt(0), el = annotationPart(range.startContainer);
-    var last = annotationPart(range.endContainer);
+    var range = selection.getRangeAt(0), el = annotationPart(range.startContainer, true);
+    var last = annotationPart(range.endContainer, true);
     if (!el || !last) return false;
     var prefix = document.createRange(); prefix.selectNodeContents(el); prefix.setEnd(range.startContainer,range.startOffset);
     var start = prefix.toString().length;
@@ -127959,6 +130136,16 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
       theme = data.theme;
       document.documentElement.setAttribute("data-theme", theme);
       if (document.body) document.body.setAttribute("data-theme", theme);
+      // The window's color theme (docs/themes.md): one sheet, last in the head, over the birth rule.
+      if (typeof data.colors === "string") {
+        var sheet = document.getElementById("inf-color-theme");
+        if (!sheet) {
+          sheet = document.createElement("style");
+          sheet.id = "inf-color-theme";
+        }
+        if (sheet.textContent !== data.colors) sheet.textContent = data.colors;
+        if (document.head && sheet.parentNode !== document.head) document.head.appendChild(sheet);
+      }
       themeListeners.slice().forEach(function (listener) { listener(theme); });
     }
   });
@@ -128202,7 +130389,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-3s+lc8EyIu8oPbb32Wz/fP+y7kyabpwqLGrvK1Xj+so=";
+  const FRAME_BRIDGE_SHA256 = "sha256-KUm1m7a4lexZfIfVb82KSJJFO2C3IA0WnuBK1IJOavo=";
   const APP_FRAME_SCHEME = "app-frame";
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
@@ -129582,12 +131769,12 @@ ${FRAME_KEYBOARD_SCRIPT}
     reason: string().optional()
   });
   const reasoningSchema = object({
-    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "default"]),
+    level: _enum(["off", "minimal", "low", "medium", "high", "xhigh", "max", "default"]),
     lower: _enum(["quick", "capped"]).optional()
   });
   const slotSchema = _enum(["premium", "high", "medium", "low"]);
   const slotMembershipSchema = union([slotSchema, array(slotSchema)]).transform((value) => Array.isArray(value) ? value : [value]);
-  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh"]);
+  const reasoningChoiceSchema = _enum(["low", "medium", "high", "xhigh", "max"]);
   const reasoningCapabilitiesSchema = object({
     levels: array(reasoningChoiceSchema),
     fixed: _enum(["off", "default"]).optional()
@@ -129838,9 +132025,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     /** Declared the held batch's fix: it joins that batch and ends the hold. */
     fix: literal(true).optional(),
     /**
-     * The held batch version a fix was built on, once a combine verified it:
-     * the fix is carried as its own difference from it from then on, and is
-     * left out, never carried whole, when its branch no longer builds on it.
+     * The held batch version a fix was built on, once its approval or a combine
+     * verified it: the fix is carried as its own difference from it from then
+     * on, and is left out, never carried whole, when its branch no longer builds
+     * on it.
      */
     heldBase: string().optional(),
     /**
@@ -129939,7 +132127,35 @@ ${FRAME_KEYBOARD_SCRIPT}
      * wrote it again under its own push (docs/forge.md, "A generated commit"):
      * then `head`. Taken once per combine; the next combine starts without it.
      */
-    generated: string().optional()
+    generated: string().optional(),
+    /**
+     * The batch's own checks run early on a held batch's declared fix
+     * (docs/forge.md, "A held batch"): once the fix's story is confirmed on
+     * its own branch at `version`, built on the newest held version, the held
+     * members plus the fix's own difference are combined at `head` and pushed
+     * to the batch's branch and pull request, while `head` and `members` above
+     * stay the held version. The fix is no member until approved; approved at
+     * `version` with the checks at `head` passed, the batch merges `head` as it
+     * is. `failed` names the checks that failed there.
+     */
+    trial: object({
+      /** The fix's task, whose story was confirmed. */
+      task: string(),
+      /** The fix's confirmed version on its own branch. */
+      version: string(),
+      head: string(),
+      base: string(),
+      /** The held members, then the fix, each with its commit at `head`. */
+      members: array(batchMemberSchema),
+      at: number(),
+      /** The checks that failed at `head` as last read; gone once they read otherwise. */
+      failed: array(string()).optional(),
+      /**
+       * The commit of generated files the project's checks added on the run, written again
+       * on it and pushed: `head` then names it (docs/forge.md, "A generated commit").
+       */
+      generated: string().optional()
+    }).optional()
   });
   const batchReceiptSchema = object({
     taskId: string(),
@@ -130042,6 +132258,12 @@ ${FRAME_KEYBOARD_SCRIPT}
      * the fix is carried from it, or left out when it no longer builds on it.
      */
     fixBases: record(string(), string()).optional(),
+    /**
+     * The exact commit each declared fix's task had committed as it declared
+     * it, by task, kept as long as the declaration: another task's change
+     * approved at that commit, and no other, carries the same declaration.
+     */
+    fixHeads: record(string(), string()).optional(),
     /**
      * When the project's last batch formed from the line (epoch ms): a
      * project's batch gap counts from it (`batchGap` on the project). A held
@@ -130152,7 +132374,9 @@ ${FRAME_KEYBOARD_SCRIPT}
           /** It waits for its repair's fix after changes were sent back (`OpenBatch.awaits`). */
           awaitsFix: boolean(),
           /** Its repair declared that a rerun passed the failed checks at its version. */
-          passed: boolean()
+          passed: boolean(),
+          /** The declared fix its checks run with before approval (`OpenBatch.trial`), until they fail. */
+          checkingFix: batchTaskSchema.nullable()
         }).nullable(),
         leftOut: array(
           batchTaskSchema.extend({
@@ -130701,7 +132925,9 @@ ${FRAME_KEYBOARD_SCRIPT}
   const customListedModelSchema = object({
     id: string().min(1).max(256),
     context: number().int().positive().optional(),
-    output: number().int().positive().optional()
+    output: number().int().positive().optional(),
+    /** The server says this model takes no chat turn; the form shows it unpickable. */
+    notChat: literal(true).optional()
   });
   const customCertificateViewSchema = object({
     subject: string(),
@@ -131099,6 +133325,34 @@ ${FRAME_KEYBOARD_SCRIPT}
     fetchedAt: number(),
     providers: array(quotaProviderViewSchema)
   });
+  function panelQuotaSnapshot(view) {
+    if (!view) return null;
+    return { fetchedAt: view.fetchedAt, providers: view.providers.map(panelQuotaProvider) };
+  }
+  function panelQuotaProvider(row) {
+    return {
+      provider: row.provider,
+      label: row.label,
+      ...row.accountLabel === void 0 ? {} : { accountLabel: row.accountLabel },
+      ...row.plan === void 0 ? {} : { plan: row.plan },
+      status: row.status,
+      stale: row.stale,
+      ...row.measuredAt === void 0 ? {} : { measuredAt: row.measuredAt },
+      ...row.detail === void 0 ? {} : { detail: row.detail },
+      windows: row.windows.map(panelQuotaWindow)
+    };
+  }
+  function panelQuotaWindow(window2) {
+    return {
+      id: window2.id,
+      label: window2.label,
+      ...window2.percentRemaining === void 0 ? {} : { percentRemaining: window2.percentRemaining },
+      ...window2.pace === void 0 ? {} : { pace: window2.pace },
+      ...window2.resetText === void 0 ? {} : { resetText: window2.resetText },
+      ...window2.resetsAtMs === void 0 ? {} : { resetsAtMs: window2.resetsAtMs },
+      ...window2.windowSeconds === void 0 ? {} : { windowSeconds: window2.windowSeconds }
+    };
+  }
   const catalogModelViewSchema = object({
     /** Quota provider id. */
     provider: string(),
@@ -131895,7 +134149,13 @@ ${FRAME_KEYBOARD_SCRIPT}
     repo: repoViewSchema,
     created: boolean(),
     initializedGit: boolean().optional(),
-    createdInitialCommit: boolean().optional()
+    createdInitialCommit: boolean().optional(),
+    /**
+     * The folder a removed project left in the projects folder, linked where it
+     * is instead of cloning a second copy (docs/fleet.md, "Adding a removed
+     * project back").
+     */
+    leftFolder: string().optional()
   });
   discriminatedUnion("kind", [
     object({ kind: literal("card"), cardId: string().min(1) }),
@@ -134489,7 +136749,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       return reading(mark, "Could not start");
     }
     if (task.status === "open") {
-      const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+      const mark = task.partsStatus ?? (task.startPolicy === "on-request" ? "backlog" : "queued");
       if (task.queueWait) return reading(mark, task.queueWait.line);
       const parts = task.children.total;
       const holds = task.flags.blocked ? "Blocked by another task" : task.flags.held ? "Held" : parts > 0 ? `Its ${parts} ${parts === 1 ? "part does" : "parts do"} the work` : null;
@@ -134540,7 +136800,10 @@ ${FRAME_KEYBOARD_SCRIPT}
     label: string(),
     taskKeys: array(string()).optional(),
     since: number().optional(),
-    next: object({ kind: _enum(["next-read", "check-back", "reset", "start"]), at: number() }).optional()
+    next: object({
+      kind: _enum(["next-read", "check-back", "reset", "start"]),
+      at: number()
+    }).optional()
   });
   const TIMELINE_SCHEMA_VERSION = 1;
   const TIMELINE_ACTORS = [
@@ -134960,6 +137223,13 @@ ${FRAME_KEYBOARD_SCRIPT}
       closed: number(),
       closedIds: array(string()).optional()
     }),
+    /**
+     * The most pressing status among its open parts, on a backlog parent that
+     * runs no program and nothing blocks (INF-6805's plan, piece 2): its parts
+     * do its work, so its status word follows them. Absent on every other
+     * task, on a row read without its parts, and from an older home.
+     */
+    partsStatus: _enum(["waiting", "interrupted", "working", "starting", "idle", "queued", "backlog"]).optional(),
     assignee: string().nullable(),
     model: string().nullable(),
     /**
@@ -135217,6 +137487,12 @@ ${FRAME_KEYBOARD_SCRIPT}
   });
   taskViewSchema.extend({
     cost: taskCostViewSchema.optional(),
+    /**
+     * Its parts, each as its Tasks row reads it, in the order they were filed
+     * (INF-6805's plan, item 1). Absent on a task with none, and from an
+     * older home.
+     */
+    parts: array(taskViewSchema).optional(),
     liveValidation: liveValidationSummarySchema.optional(),
     /** Current policies, separate from dispatch and published delivery history. */
     policies: effectiveTaskPoliciesSchema.nullable().optional(),
@@ -136801,6 +139077,8 @@ ${FRAME_KEYBOARD_SCRIPT}
     port;
     spec;
     theme;
+    /** The color theme's rule last given, sent with every theme; none until a host gives one. */
+    colors;
     ready = false;
     reuseReads = false;
     documentId;
@@ -136857,9 +139135,19 @@ ${FRAME_KEYBOARD_SCRIPT}
       this.spec = { ...this.spec, ...spec };
       this.subscriptions.redeclared(before, this.spec);
     }
-    setTheme(theme) {
+    /** Dark or Light, and the rule that lays the window's color theme over it (docs/themes.md). */
+    setTheme(theme, colors) {
       this.theme = theme;
-      if (this.ready) this.port.post({ fm: V, type: "theme", theme });
+      this.colors = colors;
+      if (this.ready) this.port.post(this.themeMessage());
+    }
+    themeMessage() {
+      return {
+        fm: V,
+        type: "theme",
+        theme: this.theme,
+        ...this.colors === void 0 ? {} : { colors: this.colors }
+      };
     }
     /** Hands a part back its state from the full-screen copy (`inf-expanded`). */
     expanded(index, state2) {
@@ -136962,7 +139250,7 @@ ${FRAME_KEYBOARD_SCRIPT}
           this.ready = true;
           this.reuseReads = message.reuseReads === true;
           this.documentId = message.document;
-          this.port.post({ fm: V, type: "theme", theme: this.theme });
+          this.port.post(this.themeMessage());
           if (this.spec.state !== void 0) {
             this.port.post({ fm: V, type: "state", state: this.spec.state });
           }
@@ -137737,6 +140025,7 @@ details[open]::details-content {
   --accent-strong: #38aae6;
   --accent-dim: rgba(127, 220, 255, 0.14);
   --accent-glow: rgba(127, 220, 255, 0.35);
+  --on-accent: #05070d; /* words and marks on an accent-filled control */
   /* semantic — two chromatic families only: ice cyan (calm) and ember (hot) */
   --ok: #7fdcff; /* calm cyan — done, pace ahead (same family as accent) */
   --ok-dim: rgba(127, 220, 255, 0.14);
@@ -137784,6 +140073,7 @@ details[open]::details-content {
   --accent-strong: #0a72a8;
   --accent-dim: rgba(14, 143, 208, 0.1);
   --accent-glow: rgba(14, 143, 208, 0.25);
+  --on-accent: #05070d;
   --ok: #0e8fd0;
   --ok-dim: rgba(14, 143, 208, 0.1);
   --hot: #d97a1f;
@@ -137957,7 +140247,7 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
     if (task.answerNoteId) return { end: "stop-task", next: "answer-done", blocked: false };
     const work = task.kind === "work";
     const end = !work ? task.kind === "decision" && task.waitingCardId ? "dismiss-question" : null : isUnstartedWork(task) ? "drop-task" : task.status === "active" ? "stop-task" : null;
-    const { mark } = taskStatusOf(task);
+    const { mark } = taskStatusOf(task.partsStatus ? { ...task, partsStatus: void 0 } : task);
     const parent = task.status === "open" && task.children.total > 0;
     const backlog = task.status === "active" && task.backlogSince !== void 0;
     const blocked = !backlog && (task.blockedBy.length > 0 || task.flags.blocked);
@@ -138173,6 +140463,7 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
           return value.map(({ said: said2, ...line2 }) => said2 ? { ...line2, text: wordedLine({ text: line2.text, said: said2 }) } : line2);
         }
         if (name === "computers.resources") return panelComputerResources(value);
+        if (name === "quota.snapshot") return panelQuotaSnapshot(value);
         return value;
       },
       onPresentation: (listener) => {

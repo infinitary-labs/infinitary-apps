@@ -5,7 +5,7 @@ import { forgePlace, kindByName } from "./forge";
 import { changeRequestKind } from "./forgeKinds";
 import { catalogEntry } from "./providers";
 import type { RepoHost } from "./repos";
-import type { ComputerSignIns, signInPlace } from "./signIns";
+import type { ComputerSignIns, PlaceWords } from "./signIns";
 import { signInsUnansweredInEnglish } from "./workSetupWords";
 
 /**
@@ -85,7 +85,7 @@ export type DeviceSetupFacts = {
   waitReason: string | null;
   signInsUnanswered?: boolean;
   /** How the home's words place the computer ("Mac mini", "Running as Builder"). */
-  place: ReturnType<typeof signInPlace>;
+  place: PlaceWords;
   /** What the join found there; absent for a computer whose join said nothing. */
   found?: FoundTools | undefined;
   /** What the computer last said of its own sign-ins; null before it said anything. */
@@ -168,7 +168,7 @@ export function deviceSetupRows(facts: DeviceSetupFacts): DeviceSetupRow[] {
 }
 
 /** The card's title: "Finish setting up Mac mini", "Finish setting up Running as Builder". */
-export function deviceSetupTitle(place: ReturnType<typeof signInPlace>): string {
+export function deviceSetupTitle(place: PlaceWords): string {
   return `Finish setting up ${place.label}`;
 }
 
@@ -321,10 +321,6 @@ export function deviceForgeSignInTitle(where: string, name = "GitHub"): string {
  * "GitHub on another device"): the project that runs there, what the
  * computer needs, and that nothing of this Mac's sign-in goes there.
  */
-export function deviceForgeSignInBody(
-  project: string,
-  place: ReturnType<typeof signInPlace>,
-  name = "GitHub",
-): string {
+export function deviceForgeSignInBody(project: string, place: PlaceWords, name = "GitHub"): string {
   return `<p>${escapeHtml(project)} runs ${escapeHtml(place.where)} now. ${escapeHtml(place.who)} needs its own ${escapeHtml(name)} sign-in to clone it and push.</p><p>Its next task waits for it. ${HERE.This}'s ${escapeHtml(name)} sign-in is not sent there.</p>`;
 }

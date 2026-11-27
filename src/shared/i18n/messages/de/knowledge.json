@@ -146,6 +146,12 @@
     "one": "Graph · {count} Begriff",
     "other": "Graph · {count} Begriffe"
   },
+  "knowledgePanelHeardCard": "Von dir gehört: auf der Karte „{title}“",
+  "knowledgePanelHeardStanding": "Von dir gehört: in deiner stehenden Antwort zu {task}",
+  "knowledgePanelHeardTab": "Von dir gehört: im Tab „Crewmitglied“ von {task}",
+  "knowledgePanelHeardTitle": "Wo du es gesagt hast",
+  "knowledgePanelHeardTurn": "Von dir gehört: in deinen Worten an deinen ersten Offizier",
+  "knowledgePanelHeardWindow": "Von dir in Wissen geändert",
   "knowledgePanelHops": {
     "plural": "count",
     "one": "{count} Schritt",
@@ -182,6 +188,7 @@
   "knowledgePanelNoSources": "Es wurde keine Quelle dazu aufbewahrt.",
   "knowledgePanelNoUses": "Noch keine Arbeit hat angegeben, dies verwendet zu haben.",
   "knowledgePanelNone": "Keine",
+  "knowledgePanelNotHeard": "Nicht von dir gehört, daher gibt sie allein nichts frei",
   "knowledgePanelNothingRecorded": "Noch nichts festgehalten",
   "knowledgePanelObservedBy": "Beobachtet · von {author}",
   "knowledgePanelOpLink": "Verknüpft",

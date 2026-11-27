@@ -6,10 +6,17 @@ import {
   type ShellEffect,
 } from "@shared/cards";
 import { ENDED_CLOSE, ENDED_CORNER, endedLineWords } from "@shared/endedCard";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ImageAttachment } from "../design";
+import { railStore } from "../plugins/railStore";
+import { projectFocus } from "./projectFocus";
+import { project, showBoard } from "./projectFocusTestKit";
 import { useShellStore } from "./store";
 import { card, DECIDE, gesture, resetShell } from "./storeTestKit";
+
+vi.mock("../plugins/reads/appExecutor", () =>
+  import("./projectFocusTestKit").then((kit) => kit.appExecutorStandIn()),
+);
 
 /** A note queued in a card's field, as point-at makes one. */
 const NOTE: CardNote = {
@@ -36,6 +43,41 @@ const OPENED = {
 } as const;
 
 /** What the captain does on a card (./cardActions.ts): a choice's receipt and its effects. */
+
+// INF-6860: a reply under a first mate card tells it the window's project filter,
+// so the filter is not forgotten until the next main-box message.
+describe("a reply's project filter", () => {
+  beforeEach(() => projectFocus.subscribe(() => {}));
+  afterEach(() => {
+    railStore.reset();
+    showBoard([]);
+    vi.unstubAllGlobals();
+    resetShell();
+  });
+
+  it("carries the project picked on the pill with the reply's words", async () => {
+    const reply = vi.fn(async () => ({ cardId: "fm-plan", messages: [] }));
+    vi.stubGlobal("window", {
+      infinitary: { cards: { reply }, settings: { setLayout: async () => ({}) } },
+    });
+    showBoard([
+      project("project-site", "SITE", "Website"),
+      project("project-app", "APP", "Mobile app"),
+    ]);
+    railStore.focusProject("project-app");
+    useShellStore.setState({
+      cards: [card({ id: "fm-plan", status: "ready", body: "Pick one." })],
+      cardIndex: 0,
+    });
+    useShellStore.getState().setReplyDraft("fm-plan", "start the second one");
+    await useShellStore.getState().sendReply("fm-plan");
+    expect(reply).toHaveBeenCalledWith(
+      "fm-plan",
+      expect.objectContaining({ text: "start the second one", focusedProjectId: "project-app" }),
+      gesture(),
+    );
+  });
+});
 
 describe("card action receipts", () => {
   const ready = card({ id: "choice", status: "ready", actions: DECIDE, body: "Choose." });

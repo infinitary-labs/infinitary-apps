@@ -369,7 +369,7 @@ export class ChangeMerge {
     boundary?: MergeBoundary,
     settle = false,
   ): Promise<MergeAttempt> {
-    const batched = await this.mergeInBatch(taskId, guard);
+    const batched = await this.mergeInBatch(taskId, guard, boundary);
     if (batched) return batched;
     // The change this re-check read, never an earlier one: a stale earlier
     // success must never survive a failed re-check.
@@ -631,6 +631,7 @@ export class ChangeMerge {
   private async mergeInBatch(
     taskId: string,
     guard: MergeGuard | undefined,
+    boundary?: MergeBoundary,
   ): Promise<MergeAttempt | undefined> {
     const batches = this.context.batches;
     const repo = batches ? this.context.ownBatch(taskId) : undefined;
@@ -833,7 +834,12 @@ export class ChangeMerge {
       const builtOn = stacked ? undefined : this.options.tasks.graph.unmergedBuiltOn(fresh);
       const held = guard.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };
-      const withdrawn = guard.beforeDispatch(change.headSha, true);
+      // The settle's own last look follows the approval's, as before a merge
+      // request, so the decisions hold stops a merge the captain did not
+      // click before its change goes in line.
+      const withdrawn =
+        guard.beforeDispatch(change.headSha, true) ??
+        boundary?.beforeDispatch(change.headSha, true);
       if (withdrawn)
         return {
           ok: false,

@@ -4,12 +4,7 @@ import XCTest
 @testable import Infinitary
 @testable import InfinitaryKit
 
-/// The captain's report: "full screen view of diagrams seem to render incorrectly when zoomed out". While a diagram is
-/// zoomed, WebKit keeps a copy of the whole page drawn at the fitted size under the sharp tiles of the current zoom.
-/// The viewer page drew no background of its own, so wherever the sharp tiles were empty that fitted copy, stretched to
-/// the zoom, showed through: every line and word grew a blurred edge after a pinch to the deepest zoom and back out.
-/// Hosts the shipped full-screen viewer with a timeline drawing as a card writes one out, pinches it in code to the
-/// deepest zoom and back out to 3.6 times fitted, and reads the window's own pixels across the timeline's line.
+/// The shipped full-screen viewer, hosted with a timeline drawing as a card writes one out, zoomed in code.
 @MainActor final class CardDiagramZoomTests: XCTestCase {
     /// The timeline's line: 2 units thick at y 70 of a 750 by 170 drawing, in the card's line color, with nothing else in
     /// the column measured.
@@ -29,44 +24,43 @@ import XCTest
         return CardDrawing.prefix + (svg.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? "")
     }()
 
+    /// The captain's report: "full screen view of diagrams seem to render incorrectly when zoomed out". While a diagram is
+    /// zoomed, WebKit keeps a copy of the whole page drawn at the fitted size under the sharp tiles of the current zoom.
+    /// The viewer page drew no background of its own, so wherever the sharp tiles were empty that fitted copy, stretched to
+    /// the zoom, showed through: every line and word grew a blurred edge after a pinch to the deepest zoom and back out.
+    /// These pinch it in code to the deepest zoom and back out to 3.6 times fitted, and read the window's own pixels
+    /// across the timeline's line.
     func testAZoomedOutDiagramDrawsOnlyItsSharpTilesInDark() async throws { try await zoomedOut(.dark) }
     func testAZoomedOutDiagramDrawsOnlyItsSharpTilesInLight() async throws { try await zoomedOut(.light) }
 
-    private func zoomedOut(_ style: UIUserInterfaceStyle) async throws {
-        let session = ReadOnlySession(mac: JoinedMac(addresses: [], pin: "diagram", deviceID: "diagram", name: "Mac"),
-                                      phone: try PhoneIdentity.loadOrCreate())
-        let presentation = PhoneJSON.object(["type": .string("picture"), "index": .number(0), "pictures": .array([.object([
-            "src": .string(Self.drawing), "width": .number(750), "height": .number(170), "alt": .string("Timeline"),
-        ])])])
-        // The host app may still be connecting its scene when the first test starts.
-        var connecting = PhoneWaitDeadline(20)
-        var connected: UIWindowScene?
-        while connected == nil {
-            connected = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
-            if connected == nil, connecting.expired() { XCTFail("The app connected no scene"); return }
-            if connected == nil { try await Task.sleep(for: .seconds(PhoneWaitDeadline.tick)) }
-        }
-        let scene = try XCTUnwrap(connected)
-        let window = UIWindow(windowScene: scene)
+    /// UIKit ignores a touch that starts on a view animating without interaction, and the scroll view's own animated zoom is
+    /// one. In phone run 45809067421 the double-tap that fitted the diagram again ran late, the swipe down after it began
+    /// inside that zoom, and the viewer stayed open. During the viewer's zoom back to fitted, a touch still reaches the
+    /// diagram inside the scroll view, as it does at rest, instead of stopping at the scroll view.
+    func testATouchStartingDuringTheZoomBackToFittedReachesTheDiagram() async throws {
+        guard let shown = try await shownFitted(.light) else { return }
+        let (window, viewer) = shown
         defer { window.isHidden = true; window.rootViewController = nil }
-        let size = scene.coordinateSpace.bounds.size
-        window.frame = CGRect(x: 0, y: 0, width: min(size.width, size.height), height: max(size.width, size.height))
-        window.overrideUserInterfaceStyle = style
-        window.rootViewController = UIHostingController(rootView: CardMediaView(presentation: presentation, session: session))
-        window.makeKeyAndVisible()
+        let scroll = viewer.scrollView
+        let centre = viewer.convert(CGPoint(x: viewer.bounds.midX, y: viewer.bounds.midY), to: window)
+        func named(_ view: UIView?) -> String { view.map { String(describing: type(of: $0)) } ?? "nothing" }
+        // Where the double-tap that enlarges leaves the diagram.
+        try await hold(viewer, at: scroll.minimumZoomScale * 2)
+        let atRest = window.hitTest(centre, with: nil)
+        XCTAssertTrue(atRest.map { $0 !== scroll && $0.isDescendant(of: scroll) } ?? false,
+                      "At rest a touch reaches the diagram, not \(named(atRest))")
+        CardMediaZoom.fit(scroll)
+        XCTAssertFalse(scroll.layer.animationKeys()?.isEmpty ?? true, "The zoom back to fitted animates")
+        let during = window.hitTest(centre, with: nil)
+        XCTAssertTrue(during.map { $0 !== scroll && $0.isDescendant(of: scroll) } ?? false,
+                      "A touch starting during the zoom back to fitted stops at \(named(during)), not the diagram")
+    }
 
-        // Drawn fitted first: the line shows at its own thickness, so WebKit has painted the page at its fitted scale.
+    private func zoomedOut(_ style: UIUserInterfaceStyle) async throws {
+        guard let shown = try await shownFitted(style) else { return }
+        let (window, viewer) = shown
+        defer { window.isHidden = true; window.rootViewController = nil }
         let background = UIColor(PhoneTheme.background).resolvedColor(with: window.traitCollection)
-        var loading = PhoneWaitDeadline(20)
-        var found: WKWebView?
-        while true {
-            try await settle()
-            found = Self.viewer(in: window)
-            if let found, found.bounds.width > 0, abs(Self.ink(at: found, in: window, background: background)
-                - Double(Self.lineWidth * found.bounds.width / 750 * window.screen.scale)) <= 0.5 { break }
-            if loading.expired() { XCTFail("The viewer never drew the diagram"); return }
-        }
-        let viewer = try XCTUnwrap(found)
         let scroll = viewer.scrollView
         // The reported route: the deepest pinch first, then out to about the captain's 3.6 times fitted.
         try await hold(viewer, at: scroll.minimumZoomScale * CardMediaZoom.deepest)
@@ -90,6 +84,44 @@ import XCTest
         XCTAssertEqual(scroll.zoomScale, scroll.minimumZoomScale * zoom, accuracy: 0.01, "The diagram stays zoomed")
         XCTAssertEqual(ink, own, accuracy: 0.5,
                        "The zoomed-out line carries \(ink) pixels of ink against its own \(own): a stretched fitted copy shows through")
+    }
+
+    /// The shipped full-screen viewer in a window of its own, showing the drawing fitted.
+    private func shownFitted(_ style: UIUserInterfaceStyle) async throws -> (UIWindow, WKWebView)? {
+        let session = ReadOnlySession(mac: JoinedMac(addresses: [], pin: "diagram", deviceID: "diagram", name: "Mac"),
+                                      phone: try PhoneIdentity.loadOrCreate())
+        let presentation = PhoneJSON.object(["type": .string("picture"), "index": .number(0), "pictures": .array([.object([
+            "src": .string(Self.drawing), "width": .number(750), "height": .number(170), "alt": .string("Timeline"),
+        ])])])
+        // The host app may still be connecting its scene when the first test starts.
+        var connecting = PhoneWaitDeadline(20)
+        var connected: UIWindowScene?
+        while connected == nil {
+            connected = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+            if connected == nil, connecting.expired() { XCTFail("The app connected no scene"); return nil }
+            if connected == nil { try await Task.sleep(for: .seconds(PhoneWaitDeadline.tick)) }
+        }
+        let scene = try XCTUnwrap(connected)
+        let window = UIWindow(windowScene: scene)
+        let size = scene.coordinateSpace.bounds.size
+        window.frame = CGRect(x: 0, y: 0, width: min(size.width, size.height), height: max(size.width, size.height))
+        window.overrideUserInterfaceStyle = style
+        window.rootViewController = UIHostingController(rootView: CardMediaView(presentation: presentation, session: session))
+        window.makeKeyAndVisible()
+
+        // Drawn fitted first: the line shows at its own thickness, so WebKit has painted the page at its fitted scale.
+        let background = UIColor(PhoneTheme.background).resolvedColor(with: window.traitCollection)
+        var loading = PhoneWaitDeadline(20)
+        var found: WKWebView?
+        while true {
+            try await settle()
+            found = Self.viewer(in: window)
+            if let found, found.bounds.width > 0, abs(Self.ink(at: found, in: window, background: background)
+                - Double(Self.lineWidth * found.bounds.width / 750 * window.screen.scale)) <= 0.5 { break }
+            if loading.expired() { XCTFail("The viewer never drew the diagram"); window.isHidden = true; window.rootViewController = nil; return nil }
+        }
+        guard let viewer = found else { return nil }
+        return (window, viewer)
     }
 
     /// Zooms in code to where a pinch would leave the diagram. Until the page has heard a zoom from the web view, each

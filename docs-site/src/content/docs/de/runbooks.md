@@ -1,5 +1,5 @@
 ---
-source: b17e14176dad1387
+source: 24d50cb6fd4f7420
 title: Leitfäden
 description: Die geschriebene Anleitung, der dein erster Offizier und deine Crew bei bestimmten Arten von Arbeit folgen – und wie du sie ein- oder ausschaltest, liest und eigene erstellst oder hinzufügst.
 ---
@@ -56,6 +56,9 @@ Vier sind anfangs aus, bis du sie einschaltest: **Gebündelte Pull Requests**, *
   Siehe [Projekte](/de/projects/#how-changes-reach-your-project).
 - **Pull-Request-Kommentare**: Ein Crewmitglied beantwortet Kommentare zu seinem Pull Request, bis er zusammengeführt ist.
   Eindeutige Korrekturen macht es selbst, unklare bringt es dir als Entscheidung.
+- **Externe Arbeitselemente**: Wenn Arbeit ein Issue, Ticket oder eine Anfrage beantwortet, die außerhalb von Infinitary liegt, antwortet eine eigene Aufgabe auf dieses Element und schließt es, sobald die Arbeit ausgeliefert ist.
+  Jede Antwort und jedes Schließen wartet auf deinen Klick, sofern du es nicht erlaubt hast.
+  Siehe [Ein Schritt, der auf Arbeit wartet](/de/tasks-and-crewmates/#a-step-that-waits-on-work).
 - **Herzschlag**: Wenn Arbeit zu warten beginnt und nichts sie zur Sprache bringt, oder nach langer Ruhe, sieht dein erster Offizier die wartende Arbeit durch, bringt sie voran oder fragt dich einmal.
   Er bringt eine Automatisierung mit, die du in Einstellungen → **Automatisierung** pausieren kannst; schaltest du den Leitfaden aus, verschwindet sie.
 - **Computer aufräumen**: ein Blick, der nur liest, nachdem du zugestimmt hast, und eine Karte, auf der du wählst, welche Überbleibsel gestoppt werden.

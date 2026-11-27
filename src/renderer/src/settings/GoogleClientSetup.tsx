@@ -201,22 +201,22 @@ export function GoogleClientSetup({
   );
 }
 
-/** What the Google row says of its client, and its one next step, when that outranks its health. */
+/**
+ * What the Google row says of its client when that outranks its health; its
+ * one next step is to set the client up again.
+ */
 export type GoogleClientState = {
   /** The row's short state words, in place of its health's. */
   words: string;
   tone: "danger" | "warn";
   /** The line under the row that says why and what to do. */
   detail: string;
-  /** The one next step: set the client up (again), or sign in with the one kept. */
-  next: "set-up" | "set-up-again" | "sign-in";
 };
 
 /**
- * The Google row's state from its client facts (the seven states of INF-5549's
- * plan): a refused client first, then a refused sign-in as every row shows
- * it, then a sign-in on Infinitary's retiring client, then one that ends.
- * Undefined, the row shows its health as any sign-in row does.
+ * The Google row's state from its client facts (INF-5549's plan): a refused
+ * client first, then a refused sign-in as every row shows it, then one that
+ * ends. Undefined, the row shows its health as any sign-in row does.
  */
 export function googleClientState(
   client: IntegrationClientView | undefined,
@@ -228,40 +228,15 @@ export function googleClientState(
       words: m.integrationsGoogleStopped(),
       tone: "danger",
       detail: m.integrationsGoogleStoppedDetail(),
-      next: "set-up-again",
     };
   if (health === "needs_reauth") return undefined;
-  if (client.retiring)
-    return client.kept
-      ? {
-          words: m.integrationsGoogleRetiring(),
-          tone: "warn",
-          detail: m.integrationsGoogleReadyDetail(),
-          next: "sign-in",
-        }
-      : {
-          words: m.integrationsGoogleRetiring(),
-          tone: "warn",
-          detail: m.integrationsGoogleRetiringDetail(),
-          next: "set-up",
-        };
   if (client.endsAt !== undefined) {
     const date = formatDate(client.endsAt, { dateStyle: "medium" });
     return {
       words: m.integrationsGoogleStops({ date }),
       tone: "warn",
       detail: m.integrationsGoogleStopsDetail({ date }),
-      next: "set-up-again",
     };
   }
   return undefined;
-}
-
-/** The words of a state's next step. */
-export function googleNextWords(next: GoogleClientState["next"]): string {
-  return next === "sign-in"
-    ? m.integrationsGoogleSignIn()
-    : next === "set-up"
-      ? m.integrationsGoogleSetUp()
-      : m.integrationsGoogleSetUpAgain();
 }

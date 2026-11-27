@@ -1,38 +1,32 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { BATCH_STATUS_WORDS } from "@shared/batches";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
 import type { HostedPresentationDestination } from "@shared/presentationDestination";
-import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, type MockInstance, vi } from "vitest";
 import {
   BATCH_BASE,
-  BatchHostForge,
+  type BatchHostForge,
   commitId as id,
   METER_DESTINATION,
-  standInGit,
 } from "../../../tests/helpers/batchHost";
 import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
-import { insertTask, setup } from "../../../tests/helpers/prCiHarness";
-import { BATCH_WORDS, Batches } from "../batches/batches";
+import { BRANCH, HEAD, home, REPO, STORY, TASK } from "../../../tests/helpers/ownBatchChangeHome";
+import { BATCH_WORDS } from "../batches/batches";
 import { LEFT_OUT_WORDS } from "../batches/combine";
 import { BATCH_CHECK, BATCH_WAITING_WORDS, presentationCommitMessage } from "../forge";
 import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
 import type { MergeAuthorization } from "../storage/taskRecords";
-import { seedProject } from "../workspace/seedProject";
 import { askEndingOf } from "./askEnding";
 import { CardService } from "./cardService";
-import { BATCH_MERGE_WORDS, type MergeGuard } from "./changeMerge";
+import { BATCH_MERGE_WORDS } from "./changeMerge";
 import { BATCH_OPEN_WORDS } from "./changePublication";
-import { BATCH_DECLARATION_WORDS, PROJECT_ABSENCE_WORDS } from "./checkChangeTool";
-import { candidateHead, standingAuthorization } from "./mergeAuthorization";
+import { PROJECT_ABSENCE_WORDS } from "./checkChangeTool";
 import { MERGE_CARD_WORDS } from "./mergeCardSteps";
-import { approvedWhere } from "./ownBatches";
 import type { SettleServiceHost } from "./settleHost";
 import { createSettleOwners } from "./settleOwners";
 
@@ -52,132 +46,6 @@ import { createSettleOwners } from "./settleOwners";
 vi.mock("../utilityQos", async (importOriginal) =>
   (await import("../../../tests/helpers/unclampedQos")).unclampedQos(importOriginal),
 );
-
-const REPO = "repo-meter";
-const TASK = "ab12cd34";
-const BRANCH = "fm/task-ab12cd34";
-const HEAD = "5f0c2a9e41b7d3c8a6e2f9b0d4c1a7e3b8f6d2c0";
-const STORY: ChangePresentation = {
-  version: 1,
-  taskId: TASK,
-  revision: 1,
-  title: "fix(parser): read dates with a time zone",
-  base: BATCH_BASE,
-  head: HEAD,
-  destination: METER_DESTINATION,
-  why: ["A date with a time zone was read an hour off."],
-  whatChanged: ["Dates with a time zone are read as written."],
-  before: ["A date with a zone lost its offset."],
-  after: ["The date keeps the offset it was written with."],
-  noPicture: "The change is in how a date is read, which no screen shows.",
-  views: [],
-  assets: [],
-  pictures: [],
-  verification: ["Ran the parser's date tests."],
-  risk: Object.fromEntries(
-    RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "One parser function." }]),
-  ) as RiskDeclaration,
-  requiredActions: [],
-  unfinished: [],
-  projectText: "",
-};
-
-/**
- * The project and its host. `dir` is the project's folder, a real repository where a
- * case reads git, and `head` the pushed version the story and the approval name.
- */
-function home(where: { dir?: string; head?: string } = {}) {
-  const head = where.head ?? HEAD;
-  const story: ChangePresentation = { ...STORY, head };
-  const forge = new BatchHostForge(head);
-  const approvals = new Map<string, string>();
-  const conflicting = new Set<string>();
-  const heard = {
-    sentBack: [] as { taskId: string; reason: string }[],
-    addressMoved: [] as { taskId: string; reason: string }[],
-    settled: [] as string[][],
-  };
-  let clock = 10_000;
-  const tick = () => {
-    clock += 1;
-    return clock;
-  };
-  const at = setup({ forge, batches: () => batches });
-  seedProject(at.db, {
-    id: REPO,
-    name: "meter",
-    path: where.dir ?? tmpdir(),
-    origin: "https://github.com/acme/meter.git",
-    delivery: "queue-pr",
-  });
-  insertTask(at.tasks, { repoId: REPO });
-  at.readHead.mockImplementation(async () => forge.pushed ?? "");
-  const batches: Batches = new Batches({
-    repos: at.repos,
-    forgeFor: () => forge,
-    now: tick,
-    naming: () => BUNDLED_NAMING,
-    // As the app reads it: the captain's standing approval covers the version, or the
-    // stand-in's own click for a change that has none on its record.
-    approved: (taskId, version, repo) => {
-      const kept = standingAuthorization(at.tasks.get(taskId)?.delivery);
-      if (kept && candidateHead(kept) === version) return approvedWhere(kept, repo);
-      return approvals.get(taskId) === version;
-    },
-    runsNoChecks: (taskId, head) => at.service.checks.declaredAbsent(taskId, head),
-    live: () => true,
-    story: async (member) => ({ region: `<!-- story of ${member.taskId} -->`, projectText: "" }),
-    settle: (taskIds) => heard.settled.push(taskIds),
-    sentBack: (change, sent) => heard.sentBack.push({ taskId: change.taskId, reason: sent.reason }),
-    addressMoved: (change, reason) => heard.addressMoved.push({ taskId: change.taskId, reason }),
-    held: () => {},
-    note: () => {},
-    taskNote: () => {},
-    ...standInGit(forge, conflicting),
-  });
-  const prepare = (prepared: ChangePresentation = story) =>
-    at.tasks.delivery.updateChangePresentation(TASK, () => ({
-      revisions: [prepared],
-      receipts: [],
-    }));
-  /** The captain's click on the merge card: the approval kept at the version it showed. */
-  const guard = (overrides: Partial<MergeGuard> = {}): MergeGuard => {
-    approvals.set(TASK, overrides.head ?? head);
-    return { head, unattended: false, beforeDispatch: () => undefined, ...overrides };
-  };
-  /** The story confirmed on the pushed branch, as open_change leaves it. */
-  const confirmed = async () => {
-    prepare();
-    await at.service.publication.open(TASK, { title: STORY.title, presentation: 1 });
-  };
-  return {
-    ...at,
-    forge,
-    batches,
-    approvals,
-    conflicting,
-    heard,
-    prepare,
-    guard,
-    confirmed,
-    pass: () => batches.pass(REPO),
-    line: () => batches.record(REPO).line,
-    open: () => batches.record(REPO).open,
-    /** Another task's approved change, already in line. */
-    other(taskId: string, title: string, head: string) {
-      insertTask(at.tasks, { id: taskId, repoId: REPO, branch: `fm/task-${taskId}` });
-      approvals.set(taskId, head);
-      batches.enqueue(REPO, {
-        taskId,
-        branch: `fm/task-${taskId}`,
-        head,
-        title,
-        body: "",
-        at: tick(),
-      });
-    },
-  };
-}
 
 /**
  * A real project folder for a repair's git facts: main, the change the captain approved
@@ -209,9 +77,10 @@ function repairedProject() {
 
 /**
  * The app's kept merge over the project's record (`createSettleOwners`), as the check
- * watch runs it once a change's checks settle; the cards it raised.
+ * watch runs it once a change's checks settle; the cards it raised. `autonomy` is whether
+ * the task merges on its own.
  */
-function keptMerge(at: ReturnType<typeof home>) {
+function keptMerge(at: ReturnType<typeof home>, { autonomy = false } = {}) {
   const now = () => 20_000;
   const cards = new CardService({
     now,
@@ -241,7 +110,7 @@ function keptMerge(at: ReturnType<typeof home>) {
     isPersonalTask: () => false,
     deliverableOf: () => "change",
     taskDelivery: () => "queue-pr",
-    taskAutonomy: () => false,
+    taskAutonomy: () => autonomy,
     resolveTaskRef: (ref) => {
       const record = at.tasks.resolve(ref);
       if (!record) throw new Error(`Unknown task "${ref}".`);
@@ -260,6 +129,36 @@ function keptMerge(at: ReturnType<typeof home>) {
     stack: cards,
     settle,
   };
+}
+
+const QUESTION = "card-question";
+
+/** What the project's line and open batch carry, as `[task, version]`, once a pass ran. */
+async function carried(at: ReturnType<typeof home>): Promise<string[][]> {
+  await at.pass();
+  return [...at.line(), ...(at.open()?.members ?? [])].map((change) => [
+    change.taskId,
+    change.head,
+  ]);
+}
+
+/** The crewmate's question about the task, as its card goes up on the stack. */
+function askZone(kept: ReturnType<typeof keptMerge>): void {
+  kept.stack.put({
+    id: QUESTION,
+    taskId: TASK,
+    author: "crewmate",
+    priority: 1,
+    title: "Which zone reads first?",
+    meta: TASK,
+    body: "<p>Which zone reads first?</p>",
+    actions: [
+      { id: "local", label: "The local zone", default: true },
+      { id: "utc", label: "UTC" },
+    ],
+    status: "ready",
+    createdAt: 1_200,
+  });
 }
 
 describe("a change of a project that gets batches of the person's own", () => {
@@ -566,6 +465,175 @@ describe("the merge of a change that joins a batch", () => {
       expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toBeUndefined();
       expect(kept.cards().map((card) => card.id)).toContain(CARD);
       expect(at.line()).toEqual([]);
+    });
+
+    // Intent: the approval these words keep is not the captain's click, so a question
+    // opened while its checks still ran holds it before it goes in line, as the decisions
+    // hold holds the first mate's merge of a pull request of its own at its last look.
+    it("holds the kept approval when a question opens while its checks run, until it is answered", async () => {
+      const { at, kept } = await merging();
+      at.forge.states = ["pending"];
+      const waiting = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(waiting.text).not.toContain("Approved and in line");
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        status: "standing",
+        issuer: "captain",
+        waiting: { on: "checks" },
+      });
+      expect(await carried(at)).toEqual([]);
+
+      askZone(kept);
+      at.forge.states = ["success"];
+      await kept.runMergeAuthorization(TASK);
+      expect(await carried(at)).toEqual([]);
+      expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+        status: "standing",
+        waiting: { on: "refused", head: HEAD },
+      });
+      expect(
+        at.tasks
+          .timeline(TASK)
+          .some((event) => event.text?.includes('the open question "Which zone reads first?"')),
+      ).toBe(true);
+
+      kept.stack.takeDown(QUESTION, "The zone order is settled.");
+      await kept.runMergeAuthorization(TASK);
+      expect(await carried(at)).toEqual([[TASK, HEAD]]);
+    });
+  });
+
+  // Intent: a batched change approved by the app under autonomy, or by the first mate on
+  // the captain's words, waits on an open crewmate question, a recorded captain wait, or a
+  // captain, time or allowance gate on its task before it goes in line, as a merge of its
+  // own pull request does. The captain's own click passes them.
+  describe("at the last look before it goes in line", () => {
+    type Hold = (at: ReturnType<typeof home>, kept: ReturnType<typeof keptMerge>) => () => void;
+    /** A standing approval at HEAD: the app's under autonomy, or the captain's click. */
+    const approved = (at: ReturnType<typeof home>, issuer: MergeAuthorization["issuer"]) =>
+      at.tasks.delivery.recordPermissionRecords(TASK, {
+        mergeAuthorization: {
+          version: 1,
+          id: "auth-1",
+          generation: 1,
+          issuer,
+          at: 1,
+          card: { id: `card-${TASK}-1`, offerId: "offer-1", actionId: "merge" },
+          target: {
+            repoId: REPO,
+            host: "github.com",
+            owner: "acme",
+            name: "meter",
+            branch: BRANCH,
+            delivery: "direct-pr",
+            method: "squash",
+          },
+          approvedHead: HEAD,
+          lineage: [],
+          proceedWithOpen: false,
+          status: "standing",
+        },
+      });
+
+    it.each<[string, Hold, string]>([
+      [
+        "a crewmate's open question",
+        (_at, kept) => {
+          askZone(kept);
+          return () => kept.stack.takeDown(QUESTION, "The zone order is settled.");
+        },
+        'the open question "Which zone reads first?" needs an answer',
+      ],
+      [
+        "a recorded wait on the captain",
+        (at) => {
+          at.tasks.turns.recordReport(TASK, {
+            text: "Choose the zone order before merging.",
+            declared: { wait: { reason: "Choose the zone order", cardId: "card-plan" } },
+          });
+          return () => at.tasks.turns.recordReport(TASK, { text: "The zone order is chosen." });
+        },
+        "the crewmate is waiting on the captain: Choose the zone order",
+      ],
+      [
+        "a captain gate",
+        (at) => {
+          at.tasks.placement.setGate(TASK, { kind: "captain", ref: "card-plan" });
+          return () => at.tasks.placement.setGate(TASK, null);
+        },
+        "the task is parked on the captain",
+      ],
+      [
+        "an allowance gate",
+        (at) => {
+          at.tasks.placement.setGate(TASK, { kind: "quota-reset", ref: "bucket:high" });
+          return () => at.tasks.placement.setGate(TASK, null);
+        },
+        "the task is waiting for your plan's allowance",
+      ],
+      [
+        "a scheduled continuation",
+        (at) => {
+          at.tasks.placement.setGate(TASK, { kind: "at-time", until: 1_200_000 });
+          return () => at.tasks.placement.setGate(TASK, null);
+        },
+        "the task is waiting for its scheduled continuation",
+      ],
+    ])(
+      "holds the app's approval under autonomy while %s stands, and puts it in line once it is gone",
+      async (_hold, hold, words) => {
+        const at = home();
+        const kept = keptMerge(at, { autonomy: true });
+        await at.confirmed();
+        approved(at, "autonomy");
+        const release = hold(at, kept);
+
+        await kept.runMergeAuthorization(TASK);
+        expect(await carried(at)).toEqual([]);
+        expect(at.tasks.get(TASK)?.delivery?.mergeAuthorization).toMatchObject({
+          status: "standing",
+          waiting: { on: "refused", head: HEAD },
+        });
+        expect(at.tasks.timeline(TASK).some((event) => event.text?.includes(words))).toBe(true);
+
+        release();
+        await kept.runMergeAuthorization(TASK);
+        expect(await carried(at)).toEqual([[TASK, HEAD]]);
+      },
+    );
+
+    it("holds the app's approval that the first mate runs on the captain's words passing only asking first", async () => {
+      const at = home();
+      const kept = keptMerge(at, { autonomy: true });
+      await at.confirmed();
+      at.tasks.delivery.recordChangeEvidence(TASK, { headSha: HEAD });
+      approved(at, "autonomy");
+      at.tasks.delivery.recordPermissionRecords(TASK, {
+        override: {
+          words: "merge",
+          holds: ["asks-first"],
+          until: "version",
+          head: HEAD,
+          at: 1_100,
+        },
+      });
+      askZone(kept);
+
+      const held = await kept.settle.settleTaskDetailed(TASK, "merge-pr");
+      expect(held.ok).toBe(false);
+      expect(held.text).toContain('the open question "Which zone reads first?" needs an answer');
+      expect(held.text).toContain(softHoldWords("decisions", "firstmate"));
+      expect(await carried(at)).toEqual([]);
+    });
+
+    it("puts the captain's own click in line past an open question", async () => {
+      const at = home();
+      const kept = keptMerge(at);
+      await at.confirmed();
+      approved(at, "captain");
+      askZone(kept);
+
+      await kept.runMergeAuthorization(TASK);
+      expect(await carried(at)).toEqual([[TASK, HEAD]]);
     });
   });
 
@@ -1302,233 +1370,6 @@ describe("the merge of a change that joins a batch", () => {
     });
     await at.pass();
     expect(at.open()?.members).toMatchObject([{ taskId: TASK, head: HEAD }]);
-  });
-});
-
-describe("a repair's answer to its project's held batch", () => {
-  const PARSER_HEAD = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
-  const EXPORT_HEAD = "0f9e8d7c6b5a49382716f5e4d3c2b1a009182736";
-  const LEGEND_HEAD = "7e6d5c4b3a2918070f6e5d4c3b2a190817263544";
-  const AXIS_HEAD = "3c2b1a0918f7e6d5c4b3a2918070f6e5d4c3b2a1";
-
-  /** Three other tasks' changes in one batch whose checks failed; this task is the repair. */
-  async function held() {
-    const at = home();
-    at.other("parser01", "fix(parser): read dates with a time zone", PARSER_HEAD);
-    at.other("export02", "feat(export): add a CSV export", EXPORT_HEAD);
-    at.other("legend03", "fix(chart): keep the legend inside the chart", LEGEND_HEAD);
-    await at.pass();
-    at.forge.atHead[at.forge.batchHead] = [{ name: "unit-tests", state: "failure" }];
-    await at.pass();
-    expect(at.open()?.hold).toMatchObject({ reason: "checks", checks: ["unit-tests"] });
-    return at;
-  }
-  const evidence =
-    "The date test fails with the parser change alone and passes without it; the export and legend changes touch neither.";
-
-  it("refuses a declaration where no batch of the project is held", async () => {
-    const at = home();
-    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
-      BATCH_DECLARATION_WORDS.none,
-    );
-  });
-
-  it("sends two changes back, each with the reason its crewmate reads, and the rest go on", async () => {
-    const at = await held();
-    const said = await at.service.checkTool.checkForCrew(TASK, {
-      batch: {
-        sendBack: [
-          { task: "parser01", reason: "its date test fails on the batch's version" },
-          { task: "export02", reason: "its export reads the dates the parser change moved" },
-        ],
-        evidence,
-      },
-    });
-    expect(said).toBe(BATCH_DECLARATION_WORDS.sentBack(2));
-    expect(at.heard.sentBack).toEqual([
-      { taskId: "parser01", reason: "its date test fails on the batch's version" },
-      { taskId: "export02", reason: "its export reads the dates the parser change moved" },
-    ]);
-    expect(at.open()?.members.map((member) => member.taskId)).toEqual(["legend03"]);
-    expect(at.open()?.hold).toBeUndefined();
-  });
-
-  it("refuses a send-back that names a change the batch does not carry, or gives no reason", async () => {
-    const at = await held();
-    expect(
-      await at.service.checkTool.checkForCrew(TASK, {
-        batch: { sendBack: [{ task: TASK, reason: "it broke the date test" }], evidence },
-      }),
-    ).toBe(
-      // The batch's changes are named by the keys a person reads on their tasks.
-      BATCH_DECLARATION_WORDS.notMember(
-        TASK,
-        ["parser01", "export02", "legend03"].map((member) => at.tasks.get(member)?.key as string),
-      ),
-    );
-    expect(
-      await at.service.checkTool.checkForCrew(TASK, {
-        batch: { sendBack: [{ task: "parser01", reason: "  " }], evidence },
-      }),
-    ).toBe(BATCH_DECLARATION_WORDS.reason("parser01"));
-    expect(at.heard.sentBack).toEqual([]);
-    expect(at.open()?.members).toHaveLength(3);
-  });
-
-  it("refuses a declaration with no evidence, with neither answer, and one sent beside another declaration", async () => {
-    const at = await held();
-    const tool = at.service.checkTool;
-    expect(await tool.checkForCrew(TASK, { batch: { fix: true, evidence: " " } })).toBe(
-      BATCH_DECLARATION_WORDS.evidence,
-    );
-    expect(await tool.checkForCrew(TASK, { batch: { evidence } })).toBe(
-      BATCH_DECLARATION_WORDS.one,
-    );
-    expect(
-      await tool.checkForCrew(TASK, {
-        batch: { fix: true, evidence },
-        absentChecks: { headSha: HEAD, evidence: "none run", localGate: "passed" },
-      }),
-    ).toBe("Batch declaration refused: send batch on its own, not beside absentChecks.");
-    expect(at.batches.record(REPO).fixes).toBeUndefined();
-    expect(at.open()?.hold).toBeDefined();
-  });
-
-  // Intent: the captain's approved plan to stop changes bouncing between batches, piece 3:
-  // one declaration sends the change at fault back and declares the repair's own change the
-  // fix, which the old route refused.
-  it("sends a change back and declares its own change the fix in one declaration: the batch waits for the fix", async () => {
-    const at = await held();
-    const before = at.forge.batchHead;
-    const sendBack = [{ task: "parser01", reason: "its date test fails on the batch's version" }];
-    expect(
-      await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, sendBack, evidence } }),
-    ).toBe(BATCH_DECLARATION_WORDS.fixAndSentBack(1));
-    expect(at.heard.sentBack).toEqual([
-      { taskId: "parser01", reason: "its date test fails on the batch's version" },
-    ]);
-    // The change sent back keeps its approval (INF-5097, the captain's answer Keep), and
-    // its version stands sent back, so it cannot join with the fix.
-    expect(at.approvals.has("parser01")).toBe(true);
-    expect(at.batches.standing(REPO, "parser01", PARSER_HEAD)).toMatchObject({
-      state: "sent-back",
-    });
-    expect(at.batches.record(REPO).fixes).toEqual([TASK]);
-    await at.pass();
-    expect(at.open()?.hold).toBeDefined();
-    expect(at.forge.batchHead).toBe(before);
-
-    await at.confirmed();
-    await at.service.merges.merge(TASK, at.guard());
-    await at.pass();
-    expect(at.open()?.members.map((member) => member.taskId)).toEqual([
-      "export02",
-      "legend03",
-      TASK,
-    ]);
-    expect(at.open()?.hold).toBeUndefined();
-    expect(at.forge.batchHead).not.toBe(before);
-  });
-
-  // Intent: INF-4421's finding, a bug being fixed: a repair's change approved before it was
-  // declared the held batch's fix never joined, and its kept approval left it no new merge
-  // card, so the batch and the fix waited on each other.
-  it("declares its own change the fix after its approval: it joins the held batch at once with the changes waiting in line", async () => {
-    const at = await held();
-    const before = at.forge.batchHead;
-    at.other("axis04", "fix(chart): label the time axis in local time", AXIS_HEAD);
-    await at.confirmed();
-    await at.service.merges.merge(TASK, at.guard());
-    await at.pass();
-    expect(at.open()?.hold).toBeDefined();
-    expect(at.line().map((change) => change.taskId)).toEqual(["axis04", TASK]);
-
-    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
-      BATCH_DECLARATION_WORDS.fixApproved,
-    );
-    await at.pass();
-    expect(at.open()?.members.map((member) => member.taskId)).toEqual([
-      "parser01",
-      "export02",
-      "legend03",
-      TASK,
-      "axis04",
-    ]);
-    expect(at.open()?.hold).toBeUndefined();
-    expect(at.line()).toEqual([]);
-    expect(at.forge.batchHead).not.toBe(before);
-  });
-
-  it("declares its own change the batch's fix: once approved it joins the held batch and ends the hold", async () => {
-    const at = await held();
-    const before = at.forge.batchHead;
-    expect(await at.service.checkTool.checkForCrew(TASK, { batch: { fix: true, evidence } })).toBe(
-      BATCH_DECLARATION_WORDS.fix,
-    );
-    expect(at.batches.record(REPO).fixes).toEqual([TASK]);
-    // Declared, not yet approved: the batch stays held.
-    await at.pass();
-    expect(at.open()?.hold).toBeDefined();
-
-    await at.confirmed();
-    await at.service.merges.merge(TASK, at.guard());
-    await at.pass();
-    expect(at.open()?.members.map((member) => member.taskId)).toEqual([
-      "parser01",
-      "export02",
-      "legend03",
-      TASK,
-    ]);
-    expect(at.open()?.hold).toBeUndefined();
-    expect(at.forge.batchHead).not.toBe(before);
-    expect(at.forge.batch?.title).toBe("chore: merge 4 approved changes");
-  });
-
-  // Intent: the captain's fix 2 from the daily velocity review: "Merge a held batch once its
-  // version passes, even on a rerun, and send a test-only fix declared meanwhile to the next
-  // batch." The project's own rerun passed the failed test, while the host still reads it failed.
-  it("declares the held version passed on its rerun beside its own fix: the batch merges as it is, and the fix goes next", async () => {
-    const at = await held();
-    const version = at.forge.batchHead;
-    expect(
-      await at.service.checkTool.checkForCrew(TASK, {
-        batch: { passed: version, fix: true, evidence },
-      }),
-    ).toBe(BATCH_DECLARATION_WORDS.passedRecorded(true));
-    expect(at.batches.record(REPO).fixes).toEqual([TASK]);
-    (at.forge.batch as NonNullable<BatchHostForge["batch"]>).readiness = "clean";
-    await at.pass();
-    expect(at.open()).toBeUndefined();
-    expect(at.batches.record(REPO).receipts.map((receipt) => receipt.taskId)).toEqual([
-      "parser01",
-      "export02",
-      "legend03",
-    ]);
-
-    await at.confirmed();
-    await at.service.merges.merge(TASK, at.guard());
-    await at.pass();
-    expect(at.open()?.members).toMatchObject([{ taskId: TASK, fix: true }]);
-  });
-
-  it("refuses passed for a version the batch is not held at, or beside a send-back", async () => {
-    const at = await held();
-    const tool = at.service.checkTool;
-    expect(await tool.checkForCrew(TASK, { batch: { passed: PARSER_HEAD, evidence } })).toBe(
-      BATCH_DECLARATION_WORDS.passed["other-version"],
-    );
-    expect(
-      await tool.checkForCrew(TASK, {
-        batch: {
-          passed: at.forge.batchHead,
-          sendBack: [{ task: "parser01", reason: "its date test fails" }],
-          evidence,
-        },
-      }),
-    ).toBe(BATCH_DECLARATION_WORDS.passedSentBack);
-    expect(at.open()?.passed).toBeUndefined();
-    expect(at.open()?.members).toHaveLength(3);
-    expect(at.batches.record(REPO).fixes).toBeUndefined();
   });
 });
 

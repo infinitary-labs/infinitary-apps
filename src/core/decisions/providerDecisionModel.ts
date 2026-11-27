@@ -4,7 +4,7 @@ import type {
   DecisionQuestion,
   DecisionState,
 } from "@shared/decisions";
-import { classifyOpenRouter } from "../pi/decisionModels";
+import { classifyWithProvider } from "../pi/decisionModels";
 import type { ModelRuntime } from "../pi/types";
 import {
   abstentionOf,
@@ -15,12 +15,17 @@ import {
   questionVersion,
 } from "./decisionModel";
 
-export class OpenRouterDecisionModel implements DecisionModel {
+/**
+ * A decision model a signed-in account's Pi catalog lists, such as
+ * OpenRouter's or OpenCode Go's, asked through that account's runtime.
+ */
+export class ProviderDecisionModel implements DecisionModel {
   readonly native = true;
-  readonly id = "openrouter";
+  readonly id: string;
   readonly pick: string;
   constructor(
     private readonly options: {
+      provider: string;
       model: string;
       selectAccount: (taskId: string) => string | undefined | Promise<string | undefined>;
       runtimeFor: (accountId: string) => Promise<ModelRuntime>;
@@ -28,7 +33,8 @@ export class OpenRouterDecisionModel implements DecisionModel {
       baseUrl?: string;
     },
   ) {
-    this.pick = `openrouter/${options.model}`;
+    this.id = options.provider;
+    this.pick = `${options.provider}/${options.model}`;
   }
 
   async decide(
@@ -55,7 +61,8 @@ export class OpenRouterDecisionModel implements DecisionModel {
         questionVersion(question, JSON.stringify(served[id])),
       ]),
     );
-    const source = `openrouter/${this.options.model}`;
+    const { provider } = this.options;
+    const source = this.pick;
     const fail = (reason: string): DecisionRun => ({
       answers: Object.fromEntries(
         Object.entries(questions).map(([id, question]) => [
@@ -84,8 +91,9 @@ export class OpenRouterDecisionModel implements DecisionModel {
       if (!accountId) return fail("no-account");
       const runtime = await this.options.runtimeFor(accountId);
       if (bound.aborted) return fail(stopReason());
-      const call = await classifyOpenRouter(
+      const call = await classifyWithProvider(
         runtime,
+        provider,
         this.options.model,
         {
           state: Object.fromEntries(
@@ -105,7 +113,7 @@ export class OpenRouterDecisionModel implements DecisionModel {
         ? [
             {
               accountId,
-              model: { provider: "openrouter", id: this.options.model },
+              model: { provider, id: this.options.model },
               usage: answeredBy
                 ? { ...call.usage, models: [{ ...call.usage, model: answeredBy }] }
                 : call.usage,
@@ -138,7 +146,7 @@ export class OpenRouterDecisionModel implements DecisionModel {
       for (const [id, question] of Object.entries(questions)) {
         const answer = result.answers[id];
         const version = versions[id] ?? question.version;
-        const servedSource = `openrouter/${answeredBy ?? result.model}`;
+        const servedSource = `${provider}/${answeredBy ?? result.model}`;
         if (
           answer?.type !== "choice" ||
           !Object.hasOwn(served[id]?.criteria ?? {}, answer.choice) ||

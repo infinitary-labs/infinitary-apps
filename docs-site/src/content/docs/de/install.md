@@ -1,5 +1,5 @@
 ---
-source: 2633a75241365106
+source: a8386567e2fc7990
 title: Installieren
 description: Lade die stabile Version von Infinitary für Mac, Linux oder Windows herunter oder frag eine private TestFlight-Einladung für iPhone und iPad an.
 ---
@@ -46,7 +46,7 @@ Unter [iPhone und iPad](/de/iphone-and-ipad/) steht, wie du dich mit deinem Comp
 - **Einen Computer.**
   Einen Mac mit macOS 12 oder neuer, einen Linux-Computer mit x64-Prozessor oder einen Windows-11-PC mit x64-Prozessor (experimentell).
 - **Ein KI-Abo.**
-  Dein erster Offizier braucht mindestens ein Abo, das antworten kann: Codex, Grok, Claude, Kimi Code, Copilot, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.
+  Dein erster Offizier braucht mindestens ein Abo, das antworten kann: Codex, Grok, Claude, Kimi Code, Copilot, OpenCode Go, OpenRouter mit einem API-Schlüssel oder Amazon Bedrock mit deiner AWS-Anmeldung.
 - **Claude Code, für Claude.**
   Wenn du ein Claude-Abo nutzt, installier zuerst Claude Code auf diesem Computer.
   Infinitary nutzt das Claude Code, das du installiert hast.

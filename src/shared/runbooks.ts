@@ -21,6 +21,8 @@ export const runbookMatchSchema = z.strictObject({
   care: z.array(z.string()).optional(),
   backend: z.array(z.string()).optional(),
   project: z.array(z.string()).optional(),
+  /** Whether the task is a side-effect task (`shape.side_effect`, docs/task-graph.md). */
+  sideEffect: z.array(z.boolean()).optional(),
 });
 export type RunbookFacts = {
   kind: string;
@@ -29,6 +31,8 @@ export type RunbookFacts = {
   care: string;
   backend: string;
   project?: string;
+  /** Absent reads as false: a caller that knows no task knows no side-effect task. */
+  sideEffect?: boolean;
 };
 /**
  * A naming runbook's data (docs/runbooks.md, "Built-ins"): the app holds no
@@ -137,7 +141,9 @@ export function runbookMatches(
   return (
     !when ||
     Object.entries(when).every(([key, values]) =>
-      (values as readonly string[]).includes(facts[key as keyof RunbookFacts] ?? ""),
+      (values as readonly (string | boolean)[]).includes(
+        key === "sideEffect" ? facts.sideEffect === true : (facts[key as keyof RunbookFacts] ?? ""),
+      ),
     )
   );
 }

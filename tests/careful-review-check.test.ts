@@ -82,7 +82,13 @@ function pullRequest({
 }
 
 type Pull = ReturnType<typeof pullRequest>;
-type Comment = { id: number; user: typeof bot; body: string };
+type Comment = { id: number; user: { login: string; type: string }; body: string };
+/** An account of the project's maintainers, which GitHub's collaborator permission reads as write. */
+const maintainer = { login: "infinitary-maintainer", type: "User" };
+const permissions: Record<string, string> = {
+  [maintainer.login]: "write",
+  [contributor.login]: "read",
+};
 
 /** GitHub's API for this project, in memory: the live pull request, its comments and the statuses written. */
 function gitHub(live: Pull) {
@@ -113,6 +119,9 @@ function gitHub(live: Pull) {
         },
       },
       repos: {
+        getCollaboratorPermissionLevel: async ({ username }: { username: string }) => ({
+          data: { permission: permissions[username] ?? "none" },
+        }),
         createCommitStatus: async (status: (typeof statuses)[number]) => {
           statuses.push(status);
           return { data: status };
@@ -127,6 +136,10 @@ function gitHub(live: Pull) {
     statuses,
     writes,
     comments: () => comments,
+    /** A comment someone else writes, as GitHub lists it. */
+    say: (user: Comment["user"], body: string) => {
+      comments = [...comments, { id: next++, user, body }];
+    },
     push: (change: Partial<Pull> & { head?: Pull["head"] }) => {
       pull = { ...pull, ...change };
     },
@@ -276,6 +289,70 @@ describe("the Careful review check on an outside pull request", () => {
       expect(text).not.toContain("example.com");
       expect(text).not.toContain("@someone");
     }
+  });
+});
+
+// INF-7061 builds INF-7050's approved plan (the captain: "for this case and
+// future cases like this in our intake process, i'd like to make it my crew's
+// responsibility to carry an all-good-to-go PR across the finish line", and
+// the pick "The author's own branch, so their pull request merges as
+// theirs"): when the crew brings a reviewed outside pull request up to date on
+// the author's branch, the author's record names the version before it, and
+// the crew's comment from an account that can write is the proof.
+describe("the Careful review check after the maintainer's crew brings the branch up to date", () => {
+  // The merge of main the crew pushes on top of the author's recorded version.
+  const updated = "4d3824347c0b2f8e1a6d9c5b7e3f2a1d0c9b8a76";
+  const crewLine = (from: string, to: string) =>
+    [
+      "_Written by an Infinitary crewmate, an AI agent working for this project's maintainer._",
+      "",
+      "The maintainer's crew brought this branch up to date with the main branch, keeping both imports at the top of one file.",
+      "",
+      `<!-- infinitary-crew-update v1 from=${from} to=${to} -->`,
+    ].join("\n");
+
+  it("passes the author's record for the version the crew's update starts from", async () => {
+    const pull = pullRequest({ body: story(newer), head: updated });
+    const api = gitHub(pull);
+    api.say(maintainer, crewLine(newer, updated));
+    expect(await check({ ...api, core: makeCore(), context: event(pull, "synchronize") })).toBe(
+      "passed: crew update",
+    );
+    expect(api.lastStatus()).toMatchObject({ sha: updated, state: "success", context: STATUS });
+    expect(api.lastStatus()?.description).toBe(
+      `The Careful record covers ${newer.slice(0, 12)}, brought up to date by the maintainer's crew: go, 2 of 2 live.`,
+    );
+    expect(api.writes).toEqual([]);
+  });
+
+  it("follows two crew updates in a row to the newest version", async () => {
+    const again = "19cfd124bd7a6e5f4c3b2a1908f7e6d5c4b3a291";
+    const pull = pullRequest({ body: story(newer), head: again });
+    const api = gitHub(pull);
+    api.say(maintainer, crewLine(newer, updated));
+    api.say(maintainer, crewLine(updated, again));
+    expect(await check({ ...api, core: makeCore(), context: event(pull, "synchronize") })).toBe(
+      "passed: crew update",
+    );
+  });
+
+  it("fails the same words from an account that cannot write, such as the author's", async () => {
+    const pull = pullRequest({ body: story(newer), head: updated });
+    const api = gitHub(pull);
+    api.say(contributor, crewLine(newer, updated));
+    expect(await check({ ...api, core: makeCore(), context: event(pull, "synchronize") })).toBe(
+      "failed: another version",
+    );
+    expect(api.lastStatus()?.state).toBe("failure");
+  });
+
+  it("fails a version pushed after the crew's update, which its mark does not name", async () => {
+    const pull = pullRequest({ body: story(newer), head: older });
+    const api = gitHub(pull);
+    api.say(maintainer, crewLine(newer, updated));
+    expect(await check({ ...api, core: makeCore(), context: event(pull, "synchronize") })).toBe(
+      "failed: another version",
+    );
   });
 });
 

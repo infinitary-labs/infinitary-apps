@@ -60,6 +60,8 @@ An answer that needs a cause traced across past runs, a computer the app does no
 A retrieval crewmate is the captain's quick answer: its card's first sentence answers the question as asked from what is inside that boundary, saying how sure it is, and it stops at the boundary rather than climbing on its own (INF-1430, INF-4344).
 When the answer stops short, the card ends with a line beginning "Quick answer." that says what was not checked and what Look deeper adds, and makes Look deeper the default, which the first mate answers with a read-only research step built on that answer.
 When its sources hold no meaningful answer, it shows no card and reports so, and the first mate starts that research step at once.
+When its goal asks for something done rather than known - a comment or story published, something sent, merged, built or changed, or a merge card shown - it shows no card and hands the goal back with `needs_firstmate`, and the first mate starts that work at once as asked, never as research (INF-6952).
+The classifier's retrieval boundary sorts such a goal as a change, never as any kind that delivers an answer; the hand-back catches one that reaches a quick answer anyway, such as a filed follow-up the first mate starts as filed.
 A reply under its card that asks for more than those sources hold - how to do something, what is usual, a source past the reach, or an action - gets one sentence of what the sources establish, and may get one more from general knowledge that begins "Not checked here:"; then the crewmate closes its card and hands the reply to the first mate with `needs_firstmate`, and the first mate starts the work the captain's words need at once, built on that answer (INF-4583).
 The quick model answers in seconds and never climbs on its own; the hand-off is how a reply reaches a model that can solve it.
 The app marks every crewmate card from a retrieval task with a Quick answer chip (`Card.quick`, `isQuickAnswer`).
@@ -120,7 +122,7 @@ A move, a stop, a quit or a close that takes the task while it routes supersedes
 
 ## A level's words
 
-A level names how hard a task is, so a person never reads it as the reasoning, whose words are Low, Medium, High and Extra high.
+A level names how hard a task is, so a person never reads it as the reasoning, whose words are Low, Medium, High, Extra high and Max.
 The saved values stay premium, high, medium and low; a person reads Premium, Hard, Normal and Simple (`src/shared/levelWords.ts`).
 `levelWord` is the badge's word in the app's language, `levelList` names the work a model takes ("hard and normal tasks"), and `levelModel` and `levelModels` name a level's models in a sentence ("a model for hard tasks", "premium models").
 Premium names models, since the app sorts no work into it on its own.
@@ -180,6 +182,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
 - Reasoning effort: a fresh crewmate with a routed model inherits the served slot's table level (`src/shared/routingPolicy.ts`: premium/high xhigh, medium/low medium).
   Pi clamps to the nearest offered level at or below it (or the lowest offered); Claude sends the level explicitly on its opening query for supported models and omits it for legacy Haiku.
   Haiku 5.5 receives medium for ordinary low-slot work and low for Quick; saved slot choices remain untouched.
+  Max is offered only where Pi lists it for the model; the Claude client caps a Max request to Extra high, and a computer that runs work without the `reasoning-max` contract change is asked for Extra high instead.
   Settings → Intelligence → Models offers a reasoning menu beside each model in each used level.
   An explicit provider/model/served-level choice overrides that default, after routing, and keeps its chosen level under Quick care, bounded by the executing backend's capabilities.
   A reasoning effort the captain named for the task (`override_reasoning` on its shape) outranks that choice for this task alone and is treated the same way; the Settings choice is unchanged.

@@ -4,8 +4,8 @@ import type { Reasoning } from "@shared/reasoning";
 import { openingReasoning, type ThinkingLevel } from "../session/session";
 import type { ModelRuntime } from "./types";
 
-const THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh"] as const;
-const CHOICES: readonly ThinkingLevel[] = ["low", "medium", "high", "xhigh"];
+const THINKING_LEVELS = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
+const CHOICES: readonly ThinkingLevel[] = ["low", "medium", "high", "xhigh", "max"];
 
 /** The same corrected model definition drives menus and opening requests. */
 export function piReasoningCapabilities(

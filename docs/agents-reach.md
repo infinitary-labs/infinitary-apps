@@ -94,8 +94,8 @@ Every refusal an agent was served names its hold: a soft hold with its way out, 
 ## An unsafe data reader
 
 A task that reads words strangers can write, such as its project's issues and pull requests, starts as an unsafe data reader: a read-only answer task whose shape says `unsafe_data_reader` (`src/shared/routingPolicy.ts`).
-Only the first mate sets it, on `spawn_crewmate`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
-`spawn_crewmate` refuses one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
+Only the first mate sets it, on `spawn_crewmate` or `create_task`; the fence is the host's, so it holds whatever those words say, and the crewmate cannot set or clear it.
+Both refuse one on the personal workspace, whose files are the captain's own, or that is not an answer (`UNSAFE_DATA_READER_PROJECT`, `UNSAFE_DATA_READER_ANSWERS` and, for a task that is filed, `UNSAFE_DATA_READER_ANSWERS_RULE` in `src/core/orchestrator/workShape.ts`); a takeover or a stronger model's retry keeps it.
 One with no project runs in an empty folder of its own, `crewmates/<taskId>/reader/` (`crewmateReaderDir`), never a copy of the default workspace, whose files other tasks' work leaves there; its record names no working copy, so its close removes none, and the folder goes with the task's other leftover files.
 
 - Its session is fenced (`SessionSpec.fenced`): no shell, no file change and no browser, on both kinds of model session; its one way onto the web is `web_read` (below).
@@ -159,6 +159,7 @@ The host keeps it as a Build row on the reader's approval card instead of filing
 - A row is a `WriteAsk` of kind `build` (`src/shared/writeAsk.ts`): it joins the task's waiting card of writes, counts toward the same cap, and is drawn with its title, the issue as a link, Reproduce first or Plan first, its goal and why whole, and one choice that arrives on Keep for later (`forgeApprovalCard`).
 - On Only this time, Start now files the task and asks for its start as the captain's Start does, so the first mate's directions apply; Keep for later files it on request; Don't file files nothing; Not now files none of them (`BuildRows.answer`).
   The reader hears which in its `write-answered` steer, which marks the ask as a Build row so a row not filed is asked again with `file_followup`, never as a write.
+  The first mate hears each filed row once, before a Start now's own wake: the filed task and the reader by key, the captain's pick, and the issue's number and the address the host read open (`build-row-filed`), so a waiting task's words can name that address without taking it from the reader (`docs/task-graph.md`, "A side-effect task").
 - Don't file also holds back every write of the same click that addresses the row's issue in its project, such as a reply under it, so the issue never gets a reply that promises work the captain chose not to file (`addressesRowIssue`, `CardWriteAsks.answerIntegrationCard`).
   The reader hears in the same steer that the write was held back and why, and may write a new reply that fits the choice, which waits on a new card.
 - The filed task's brief is the row's goal and why as the captain read them, one line on where they come from, and how it starts (`buildRowBrief`); it carries no issue number or link, and the record keeps the reader's goal and why marked as every reader follow-up's.

@@ -1,6 +1,6 @@
 The one dialog that asks the person to agree before something is shared with or charged by someone other than the models they already use.
 Besides the custom API connection's own dialog, it is the only modal Settings opens: every other form there stays inline (`AddProject.prompt.md`).
-Every consent takes this dialog, whatever asks for it: turning on a decision model that is reached with the person's own key (Jev, with its key field inside), picking an OpenRouter decision model, and turning on a use whose answering model was approved on an older screen (`docs/decision-models.md`, "The uses").
+Every consent takes this dialog, whatever asks for it: turning on a decision model that is reached with the person's own key (Jev, with its key field inside), picking a decision model from a provider such as OpenRouter or OpenCode Go, and turning on a use whose answering model was approved on an older screen (`docs/decision-models.md`, "The uses").
 
 **The surface.**
 The modal-level surface command search and the picture viewer use: `--bg-0` at 80% under `--blur-overlay`, over the whole window.

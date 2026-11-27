@@ -45,6 +45,7 @@ import { toolObservationSchema } from "./toolCompletion";
 import {
   bundledRefSchema,
   bundleSchema,
+  checkedOutSchema,
   dispatchBaseSchema,
   keptWorkSchema,
   readableRefSchema,
@@ -236,7 +237,7 @@ export const placedSpecSchema = z.object({
   }),
   model: modelRefSchema.optional(),
   thinking: z.object({
-    level: z.enum(["low", "medium", "high", "xhigh", "off"]),
+    level: z.enum(["low", "medium", "high", "xhigh", "max", "off"]),
     quick: z.boolean().optional(),
   }),
   instructions: z.string(),
@@ -436,6 +437,8 @@ export const placedCardSchema = z.object({
       default: z.boolean().optional(),
       effect: cardEffectSchema.optional(),
       danger: z.boolean().optional(),
+      /** Its author's own way to say no, so the home adds no Decline beside it (`card-action-declines.md`); an older home drops it. */
+      declines: z.literal(true).optional(),
       until: putOffUntilSchema.optional(), // a put-off choice the home keeps and raises again
     }),
   ),
@@ -1566,14 +1569,8 @@ export const workOrders = {
        * a computer on an older contract, and when no working copy is there.
        */
       origin: z.string().max(4096).nullable().optional(),
-      /**
-       * The branch the working copy has checked out, null when its checkout
-       * is detached, and the commit it points at (INF-2490). Absent from a
-       * computer on an older contract, and when no working copy is there.
-       */
-      checkedOut: z
-        .object({ branch: z.string().min(1).max(255).nullable(), head: commitSchema })
-        .optional(),
+      /** Its checkout; absent from a computer on an older contract, and when no copy is there. */
+      checkedOut: checkedOutSchema.optional(),
     }),
   },
   /**

@@ -28,6 +28,7 @@ const PI_PROVIDERS = [
   "xai",
   "kimi-coding",
   "github-copilot",
+  "opencode-go",
   "openrouter",
 ] as const;
 
@@ -58,6 +59,7 @@ describe.runIf(live)("the live Pi catalog (pi.dev overlay, live catalog probe)",
         xai: { type: "api_key", key: "probe" },
         openrouter: { type: "api_key", key: "probe" },
         "kimi-coding": { type: "api_key", key: "probe" },
+        "opencode-go": { type: "api_key", key: "probe" },
         "openai-codex": {
           type: "oauth",
           access: "probe",

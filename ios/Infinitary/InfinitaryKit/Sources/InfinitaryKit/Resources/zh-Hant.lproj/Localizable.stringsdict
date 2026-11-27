@@ -1627,6 +1627,132 @@
       <string>知識 %1$ld</string>
     </dict>
   </dict>
+  <key>recordPartsClosedFold</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個已關閉的部分</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountBacklog</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個在你的待辦清單中</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountIdle</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個閒置</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountInterrupted</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個已中斷</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountQueued</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個排隊中</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountStarting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個正在啟動</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountWaiting</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個在等你</string>
+    </dict>
+  </dict>
+  <key>recordPartsCountWorking</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%1$#@count@</string>
+    <key>count</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>%1$ld 個正在工作</string>
+    </dict>
+  </dict>
+  <key>recordPartsOpen</key>
+  <dict>
+    <key>NSStringLocalizedFormatKey</key>
+    <string>%2$#@total@</string>
+    <key>total</key>
+    <dict>
+      <key>NSStringFormatSpecTypeKey</key>
+      <string>NSStringPluralRuleType</string>
+      <key>NSStringFormatValueTypeKey</key>
+      <string>ld</string>
+      <key>other</key>
+      <string>正在等待它 %2$ld 個部分中的 %1$@ 個</string>
+    </dict>
+  </dict>
   <key>recordShowEarlier</key>
   <dict>
     <key>NSStringLocalizedFormatKey</key>

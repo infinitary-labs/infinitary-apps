@@ -1,5 +1,6 @@
 import type { AccountView } from "@shared/accounts";
 import { automationRuleSchema, automationRunSchema, eventsWords } from "@shared/automation";
+import { inLanguage } from "@shared/i18n/current";
 import * as m from "@shared/i18n/messages.generated";
 import { deviceSignInsSchema } from "@shared/signIns";
 import { describe, expect, it } from "vitest";
@@ -95,6 +96,11 @@ describe("the phone's Intelligence page with a computer that runs work", () => {
     const [, away] = page("out-of-reach").groups;
     expect(away?.note).toMatch(/^out of reach · as of /);
     expect(away?.rows[0]?.meters).toMatchObject([{ label: "weekly", text: "38%" }]);
+  });
+
+  it("says where a waiting account signs in in the phone's language", () => {
+    const { groups } = inLanguage("de", () => page("in-reach"));
+    expect(groups[1]?.rows[1]?.signIn).toBe("Anmelden auf Mac mini.");
   });
 });
 

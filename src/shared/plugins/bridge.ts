@@ -634,7 +634,11 @@ export type HostMessage =
   | (FrameResponse & { ok: false; error: FrameError })
   | ({ fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number } & ReadTransfer)
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number; error: FrameError }
-  | { fm: typeof FRAME_BRIDGE_VERSION; type: "theme"; theme: "dark" | "light" }
+  /**
+   * Dark or Light, and with it the rule that lays the window's color theme over the document's color sheet
+   * (docs/themes.md): the theme's tokens, or the base's own. A host that sends no rule leaves the sheet as it is.
+   */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "theme"; theme: "dark" | "light"; colors?: string }
   /** The card is shown: a held page releases its scripts and animations. */
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "activate" }
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "width"; width: CardWidth }

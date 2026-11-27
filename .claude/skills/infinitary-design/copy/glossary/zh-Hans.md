@@ -153,6 +153,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | sign-in / sign in | 登录 | Used instead of token, OAuth or credential. |
 | Signed-in sites (Settings → Secrets) | 已登录的网站 | The sites the crew's browser stays signed in to. |
 | standing direction | 长期指引 | 指引 with 长期 for standing. |
+| standing reply (your words kept on a task, which pass its holds) | 有效回复 | |
 | start | 开始 | |
 | starter | 开头语 | The tappable opening phrases on the welcome card. |
 | Steer (button) | 引导 |  |
@@ -176,6 +177,7 @@ Counts take a measure word after the number (3 个部分, 2 条消息, 1 张卡�
 | token (on the Usage page) | token | Billable tokens stay as token, as in the first-run check line. |
 | unsafe data reader | 不安全数据读取者 | A crewmate that reads words anyone can write. |
 | Usage (the Settings section) | 用量 | |
+| user (another user account on this computer) | 用户 | "as {user}" is 以 {user} 身份, as in 以另一个用户身份运行. |
 | version | 版本 | Used instead of SHA, hash or head. |
 | where the project lives | 项目托管处 | Used instead of remote, origin or upstream. |
 | working copy | 工作副本 | Used instead of worktree. |

@@ -366,6 +366,7 @@ A saved ready answer offers Done in the next slot; otherwise the record keeps ge
 A ready choice outranks a blocker or an interruption in the action bar, whose next slot is then Show the card, while the body's attention box still names the blocker or interruption.
 
 CardService declares stack changes through `presentationChanged` at its broadcast seam, including pending shown-version revisions, reply holds, close-out, Working/ready, retirement and restoration.
+It compares the stack's presentation once per event-loop turn, in an immediate that runs before the board's coalescing timer, so readings that land in one turn rebuild the stack once rather than once each.
 `TaskService` alone advances `task_board.seq` for that invalidation, without changing task rows, updated/idle/recovery clocks, timeline or feed.
 TaskProtocol delivers the focusable card snapshot before its board snapshot or delta, explicitly, not by relative timer delays.
 Its task-flag read uses the card owner's staged versions and durable open heads, without rebuilding each card's message graph, task title or seen state.
@@ -617,17 +618,25 @@ The record's Info tab is shaped like the crew summary a task's circle shows on h
 The window draws its overview from the shared task facts (`TaskFactRows`, `TaskFactStrip`, `src/renderer/src/design/core/TaskFacts.tsx`), in this order:
 
 1. The attention sentence, when something is wrong or the task waits: a failure, an interruption, a hold or a wait (`recordAttentionOf`, `src/shared/recordAttention.ts`), with a charted filing's Why and a closed task's one line (`recordClosedLineOf`) beside it (`RecordAttention`, `src/renderer/src/cards/RecordHead.tsx`).
+   A backlog parent with open parts, one that waits for your Start and runs no program of its own, neither blocked nor waiting on a dropped task, says what its parts wait on: its last part by name (`Its last part waits for your Start`, `Its last part is waiting on you`, `Waiting for its last part`), or how many are open with each status counted, most pressing first, and that the parent closes by itself once its parts close; the status pill shows no reason beside it.
+   Its pill's word follows those parts: the most pressing among them, so it reads Working while a part works and Waiting on you while a part's card waits, from the row's `partsStatus` (`settlePartsStatus`, INF-6805), which reads a part's own open parts too, so a parent of a parent follows its deepest work; a blocked parent keeps Backlog, and its bar stays its own, so it never offers a part's Show the card or Continue.
+   A queued parent, which starts by itself when nothing holds it, and a program say their queue line, `Waiting for its parts · since <date>` (`queueWaitOf`, `src/core/tasks/queueWait.ts`).
 2. On a task closed as done, the Delivered row: each delivery fact the close read, with how it is known (`RecordDelivered`).
 3. The task's place among other tasks as rows of keys: Part of, Waits on, Holds up and Parts, and the outside issue it answers as a link under Issue (`RecordRelations`; `docs/agents-reach.md`, "A reader's Build rows").
+   Parts is a fold, open at first, its summary the count of closed parts and a bar of them by status; open, it lists every part in filing order, each with its status mark, title, key and status word, and pressing a part opens its record (`RecordParts`, `TaskDetail.parts`, INF-6805).
+   Past eight parts with some closed, the closed rows fold behind one line counting them.
+   A part row has no Start or Show the card: the captain opens the part and acts there.
+   Each part row is its own Tab stop, an exception to the one-Tab-stop list rule (`docs/keyboard.md`) that the captain chose for this list.
 4. The goal, whole, with the captain's words folded under it, closed, the fold's name counting them ("Your 2 messages"); the fold also holds why a crew filing was filed and why the first mate built without a plan (`RecordGoal`, `recordWordsFoldName`).
    The title stays the task's one line in the chrome.
 5. Project, Now, Progress and the Browser line, as the summary draws them.
    Project names the task's project, and in a project of several repositories the repository it works in beside it ("Harbor Ledger · ledger-api"; `projectFact`, `src/renderer/src/character/crew/projectFact.ts`, and `PhoneRecord.projectFact` on the phone).
    Tags follows Project once the project has tags or the task carries one: the tags it carries, then Edit tags (`RecordTags`, `docs/task-tags.md`).
 6. One row of facts under a hairline, as the summary's footer row: the model, the task's Difficulty badge (the level its routing asked for), the reasoning, the change with its checks as one cell, the review, Delivery, Runs on, a dim mono Use cell and a Run cell beside it ("Live resource use"), then Why this model.
+   A backlog parent that runs no program never runs itself, so its record leaves out Now, Delivery, Runs on and Use, and keeps Spend (`partsDoTheWork`); a queued parent and a program keep every fact.
 7. One closed More row at the end, scrolling with the body: the facts the summary leaves out, with their policy sources, Knowledge used and Live validation; a short dim preview beside its name says what it holds.
 
-The words fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with both closed.
+The words fold, the parts fold and More are remembered per task while its record stays in the stack, as every record section is (`recordOpenSections`): paging away and back keeps them, and closing the record ends its visit, so reopening starts with the words fold and More closed and the parts fold open.
 Cards and Activity are the record's own tabs (`docs/task-card-tabs.md`): the record's sandboxed body draws them and More, and the window tells it which view to show (`view` in its state, `[data-record-view]` on each part).
 
 ## Live resource use
@@ -674,12 +683,12 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   A nested write is one change with one seq; a no-op write bumps nothing; a refused write notifies nothing.
   The board is the LIVE set (open/active, closed within `BOARD_RECENT_MS`, plus shown rows' parents; links only across shown rows), plus every pinned task whatever its age, which lists in Tasks' Pinned alone and brings no old closed parent with it (INF-3127); all other history is `tasks.detail`, one task at a time.
   Building it reads only those rows, the rows at the other ends of their links and their children's counts, never the older closed history, since every crew event pushes it and a long record is mostly that history (INF-703; `taskProtocol.cache.test.ts` counts the rows read).
-  Between pushes the board keeps what its last build read (`BoardCache` in `boardCache.ts`, the row cache of INF-2078): one change rebuilds only the rows it reached - the rows the writer touched, the rows at the other ends of their edges (a blocker, what it blocks, a filing's origin, a dropped row's carrier), their parents, the active rows whose standing waits name them, and any row whose card facts moved - and every other row keeps the view it had, the same object, so a change costs the rows it reached and not the board.
+  Between pushes the board keeps what its last build read (`BoardCache` in `boardCache.ts`, the row cache of INF-2078): one change rebuilds only the rows it reached - the rows the writer touched, the rows at the other ends of their edges (a blocker, what it blocks, a filing's origin, a dropped row's carrier), their parents, the active rows whose standing waits name them, and any row whose card facts moved - then every shown parent reads its shown parts' views again, and a parent whose parts' status word moved takes a new view with no rebuild (INF-6805's plan, piece 2); every other row keeps the view it had, the same object, so a change costs the rows it reached and not the board.
   A touched row closed before the board's window that no shown row holds is ruled out from the record its write left, with no read, so closed history written since the last push costs the update nothing (the scale check, `tests/scale-check.test.ts`).
   A rebuilt row is still derived from SQLite and the live host facts at that read; a host fact that moved with no row written (`TaskService.invalidatePresentation`, carried as `TaskChange.presentation`) has every shown row's live facts read again and the rows they moved on rebuilt; a purge or an import rebuilds from nothing; `taskProtocol.cache.test.ts` pins the kept board against a build from nothing after every shape of write, and the rows read and views built per change against a board four times the size.
   A push that builds the board from nothing (the first, or the one after a purge or an import) runs its parts - the rows the board shows, what joins them, and their views - on separate turns of the main process, so other work runs between them (INF-3453).
   Rows written meanwhile reach the pushed board as any change does, and a read that comes before the last part finishes the parts at once (`taskProtocol.push.test.ts`).
-  A record's `tasks.detail` reads the same way: the record, the rows its concerning events, standing waits and gate's card name, the rows at the other ends of their links, and one row on its own for any other task its Activity names, never the whole history, since each open of the Info tab reads it several times (INF-939).
+  A record's `tasks.detail` reads the same way: the record, the rows its concerning events, standing waits and gate's card name, its parts and the open parts beneath its open ones, the rows at the other ends of their links, and one row on its own for any other task its Activity names, never the whole history, since each open of the Info tab reads it several times (INF-939).
   The one exception is the Tasks filter: typed text also asks `inf:tasks:search` / `tasks.search` (`TaskProtocol.search`) for closed work older than the window, for dropped work, and for questions, decisions and operations closed within the window (the panel never lists those), matched on key, title and goal only, newest closed first, at most 50, empty text finding nothing, with the graph read around the found rows alone; the panel paints them as an `earlier` group and a row opens the record through `tasks.detail` like any row.
   That search finds its matches in the read-only record process below (`selectClosedTasks`), which returns only their ids, and the main process composes views for those rows alone; a key a panel looks up is one such search, so a burst of lookups never walks the closed history on the main thread, where it would stall the window (`docs/freeze-recorder.md`).
   A host with no record process reads the same selection in its own process.
@@ -757,7 +766,7 @@ Each note carries the typed requested, sent and provider-confirmed service with 
 
 ## Requested reasoning
 
-A reasoning effort the captain names for a task - low, medium, high or extra high - is its shape's `override_reasoning`: `spawn_crewmate.shape.override_reasoning` at the start, or `update_task reasoning` on open work no crewmate holds, which null clears.
+A reasoning effort the captain names for a task - low, medium, high, extra high or max - is its shape's `override_reasoning`: `spawn_crewmate.shape.override_reasoning` at the start, or `update_task reasoning` on open work no crewmate holds, which null clears.
 It is the captain's own word for that task, never the first mate's judgment, and never inherited from a parent, basis or failed attempt; start again copies it with the task's other asks.
 Its crewmate opens at it in place of the model's Settings → Models choice and the level's default, capped to what the model offers and not stepped down for Quick care (`docs/routing.md`, "Reasoning effort"); the Settings choice is unchanged.
 A started conversation keeps the level it opened at, so the edit is refused once a crewmate holds the task.
@@ -841,8 +850,8 @@ Desktop kanban tiles replace their generic status reason with grouped standing w
 The Tasks list and board list rows retain their existing presentation.
 The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
-Dependencies retain their keys and recorded-since dates; missing end times stay unknown.
+Dependencies say `Waiting on` and their keys, with their recorded-since dates; a wait with no recorded event shows no time at all.
 A lone dependency whose line goes further or ends in a hold names where it stops in the blocker explanation, as its tile does, keeping when the wait was recorded (`waitStopsOf`, INF-5578).
 Only recorded events carry clock times: next read, check-back, reset or start time.
-Past events say was due, not resumed; Backlog still requires Start.
+Past events say was due, not resumed; Backlog still requires Start, and a parent whose parts do its work never waits for a Start of its own (`taskWaitsOf`).
 Older homes without the optional projection retain the previous presentation.

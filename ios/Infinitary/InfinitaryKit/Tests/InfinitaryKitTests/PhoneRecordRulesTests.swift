@@ -4,9 +4,9 @@ import Testing
 
 /// INF-2935 (INF-2928 piece 2, the captain's direction A): the phone's task record follows the Mac's. These replay the
 /// desktop record's own reading of one task in each state it draws (`recordBarOf`, `recordPillToneOf`, the record's
-/// status reason, `taskTabsOf`, `recordAttentionOf`, `recordClosedLineOf`, the fold under the goal, Drop task's question
-/// and `crewStateOf`), which scripts/generate-phone-scene.ts records, so the phone's record says and offers what the
-/// Mac's does for the same task.
+/// status reason and why a start could not begin from `recordStartOf`, `taskTabsOf`, `recordAttentionOf`,
+/// `recordClosedLineOf`, the fold under the goal, Drop task's question and `crewStateOf`), which
+/// scripts/generate-phone-scene.ts records, so the phone's record says and offers what the Mac's does for the same task.
 struct PhoneRecordRulesTests {
     private struct Fixture: Decodable { let now: Double; let cases: [Case] }
     private struct Case: Decodable {
@@ -16,6 +16,7 @@ struct PhoneRecordRulesTests {
         let bar: Bar?
         let pillTone: String
         let status: Status
+        let notice: String?
         let tabs: [Tab]
         let crew: String
         let attention: Attention?
@@ -49,6 +50,7 @@ struct PhoneRecordRulesTests {
             let status = PhoneRecord.status(task, now: recorded.now)
             #expect(status.mark == reading.status.mark && status.word == reading.status.word, "\(name): the pill")
             #expect(status.reason == reading.status.reason, "\(name): the reason beside the pill")
+            #expect(PhoneRecord.startNotice(task) == reading.notice, "\(name): why the start could not begin, in the bar")
             let tabs = PhoneRecord.tabs(task)
             #expect(tabs.map(\.id) == reading.tabs.map(\.kind), "\(name): the tabs")
             #expect(tabs.map(\.label) == reading.tabs.map(\.label), "\(name): the tabs' words")

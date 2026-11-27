@@ -183,10 +183,11 @@ With no link it exits 1 and says why on its error output:
 | What it read | What it says |
 | --- | --- |
 | No door answers and no app holds the data folder | "Infinitary is not running here, as this user." and "Start it with infinitary run, or open it, then run this again." |
-| An app holds the folder but no door answers, as an older app | "Infinitary is open here, but it did not answer this command." and "Quit it and start it again, then run this again." |
+| An app holds the folder but no door answers, as an older app or one that has not opened its door yet | "Infinitary is open here, but it did not answer this command." and "Quit it and start it again, then run this again." |
 | This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer." and "Make the link on that computer instead." |
 | Pairing made no link, as when the saved device list is unreadable | "Infinitary here could not make a link: " and pairing's reason |
 
+An app holds the folder when Chromium's lock there is held: on a Mac or Linux the lock names its process, which must be alive, and on Windows it is a file that names none, read as held while the app keeps it open (`lockHolder`, `src/main/runCommand.ts`).
 The link reaches this command's output alone: the door writes it to no log, and the command is this account's, as the door's key is.
 `src/main/linkCommand.ts` owns the command and its words.
 

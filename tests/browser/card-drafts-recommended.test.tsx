@@ -31,11 +31,21 @@ const BODY = `
     <label><input type="radio" name="report" value="daily"> Daily</label>
   </fieldset>`;
 
-const pick = (value: string) =>
+/**
+ * Picks each option in turn, all in one run inside the card body, as quick
+ * picks land in the body. Picks sent one by one from the command process
+ * arrive one round trip apart, and on a loaded runner a stalled round trip
+ * can outlast the pause (DRAFT_QUIET_MS) between two of them: a pause the
+ * captain never made, after which the pick so far rightly goes.
+ */
+const pick = (...values: string[]) =>
   inCardBody(
     TITLE,
-    (picked) => (document.querySelector(`input[value="${picked}"]`) as HTMLInputElement).click(),
-    value,
+    (picked) => {
+      for (const value of picked)
+        (document.querySelector(`input[value="${value}"]`) as HTMLInputElement).click();
+    },
+    values,
   );
 
 test("a pick of a card's recommended option goes to the card's shared draft, keeping its answer unchanged", async () => {
@@ -60,9 +70,7 @@ test("a pick of a card's recommended option goes to the card's shared draft, kee
   ]);
 
   // Section: picked again after another option, before the pause, it still goes.
-  await pick("you");
-  await pick("anyone");
-  await pick("you");
+  await pick("you", "anyone", "you");
   await expect.poll(() => bridge.requests("inf:cards:draft").length).toBe(2);
   expect(bridge.requests("inf:cards:draft")[1]?.[1]?.answers).toEqual([
     { name: "merge", values: ["you"], labels: ["You"], changed: false },

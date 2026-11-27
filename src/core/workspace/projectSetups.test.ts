@@ -77,3 +77,59 @@ describe("a proposed folder", () => {
     );
   });
 });
+
+/**
+ * Adding back a removed project (docs/fleet.md, "Adding a removed project
+ * back"): the setup card for a project whose folder is still in the projects
+ * folder names that folder, says it is linked where it is, and offers no
+ * fresh clone beside it, whether its address or its folder was proposed.
+ */
+describe("the setup card for a folder a removed project left", () => {
+  const origin = "git@github.com:octo/field-notes.git";
+
+  const proposer = (folder: string) => {
+    const bodies: string[] = [];
+    const setups = new ProjectSetups({
+      repos: {
+        check: async () => ({
+          name: "field-notes",
+          origin,
+          host: { kind: "github", name: "github.com" },
+          startsGit: false,
+          leftFolder: folder,
+        }),
+        batchesOffered: () => false,
+        list: () => [],
+      },
+      devices: () => [],
+      raiseCard: (card) => bodies.push(card.body),
+      tell: () => undefined,
+      broadcast: () => undefined,
+      home: scratchDir("infinitary-setup-home-"),
+    });
+    return { setups, bodies };
+  };
+
+  it.each(["clone", "adopt"] as const)(
+    "names the folder and links it where it is for a %s proposal",
+    async (kind) => {
+      const folder = join(scratchDir("infinitary-fleet-"), "field-notes");
+      mkdirSync(folder);
+      const { setups, bodies } = proposer(folder);
+      await setups.propose(
+        kind === "clone"
+          ? { kind, origin: "https://github.com/octo/field-notes" }
+          : { kind, path: folder },
+      );
+      const body = bodies[0] ?? "";
+      expect(body).toContain(`<span class="inf-fact-v inf-mono">${folder}</span>`);
+      expect(body).toContain(`<span class="inf-fact-v inf-mono">${origin}</span>`);
+      expect(body).toContain("Linked where it is");
+      expect(body).not.toContain("Cloned into your projects folder");
+      expect(body).toContain(
+        "Its folder is still in your projects folder, so adding it links that folder instead of cloning a second copy.",
+      );
+      expect(body).not.toContain('name="landing"');
+    },
+  );
+});

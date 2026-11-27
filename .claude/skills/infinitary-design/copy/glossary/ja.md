@@ -157,6 +157,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | server (a custom API's) | サーバー | Long-vowel mark, as for コンピューター. |
 | Settings | 設定 | macOS Japanese. |
 | sign-in / sign in | サインイン / サインインする | Apple and GitHub Japanese use サインイン; never トークン or 認証情報. |
+| standing reply (your words kept on a task, which pass its holds) | 有効な返信 | |
 | start | 開始 | Standard. |
 | starter | 書き出し | The welcome's sentence starters. |
 | Steer (button) | 伝える | 指示 is the Instruction kind. |
@@ -181,6 +182,7 @@ A number placeholder sits directly against its counter with no space (「{count}
 | token (what Usage counts) | トークン | The same unit as the model sizes in the custom API row above; a sign-in or a key is never a トークン. |
 | unsafe data reader | 安全でないデータの読み手 | A crewmate that reads words anyone can write. |
 | Usage | 使用量 | Settings section name. |
+| user (another user account on this computer) | ユーザー | "as {user}" is 「{user} として」, as in 「別のユーザーとして実行」. |
 | version (for a SHA) | バージョン | Never ハッシュ or SHA in a sentence. |
 | Where changes go | 変更の届け先 | Row title in Settings → Projects; pairs with 届け方 for Delivery. |
 | where the project lives | プロジェクトの保管先 | Plain phrase for the remote; never リモート or オリジン. |

@@ -29,8 +29,11 @@ export type AnswerDeliveryHost = {
   now: () => number;
   /** Put the one notice on the stack (a host card; its own record, no crewmate task). */
   raiseNotice: (card: Pick<Card, "id" | "title" | "meta" | "body" | "actions">) => void;
-  /** Take a notice down unanswered: an answering card went up after it. Absent, notices stay up. */
-  withdrawNotice?: (cardId: string) => void;
+  /**
+   * Take a notice down unanswered: an answering card went up after it, or
+   * the captain took its message back. Absent, notices stay up.
+   */
+  withdrawNotice?: (cardId: string, reason: string) => void;
   /** The title of a card the captain replied under, when it is still on the stack. */
   cardTitle: (cardId: string) => string | undefined;
   /**
@@ -309,11 +312,28 @@ export class AnswerDeliveryCheck {
   }
 
   /**
+   * The captain took the message back, on its own or by sending its
+   * replacement (docs/task-capture.md, "Taking back a message"): it has
+   * ended, so a retry still waiting on the lane for it leaves the lane, and
+   * its notice, if one is up, comes down. A retry a turn was already handed
+   * finds the message covered when that turn ends, and raises nothing.
+   */
+  takenBack(askId: string): void {
+    if (this.host.observe) return;
+    const retries = this.host.inbox
+      .allFor(FIRSTMATE_RECIPIENT)
+      .filter((row) => row.facts?.kind === "answer-missing" && row.facts.askId === askId);
+    this.host.inbox.withdraw(retries.map((row) => row.id));
+    this.withdrawNotices();
+  }
+
+  /**
    * A notice up for a message whose work now shows an answering card on the
    * stage, offered after the notice, is taken back (INF-2664): a card still
    * held for its author's close-out waits until it is released. The message
    * waits on that card again, as one that never had a notice would. The notice keeps its id on the message, so if that card closes
    * with no answer the same notice comes back, with no second reminder.
+   * A notice for a message the captain took back comes down for good.
    */
   withdrawNotices(): void {
     const withdraw = this.host.withdrawNotice;
@@ -321,6 +341,11 @@ export class AnswerDeliveryCheck {
     for (const notice of this.host.ending.noticesUp()) {
       try {
         const ask = this.host.tasks.capture.getAsk(notice.askId);
+        if (ask?.takenBackAt !== undefined) {
+          // i18n-exempt: a closing reason kept on the notice's record, never shown to a person
+          withdraw(noticeCardId(ask.id), "the captain took the message back");
+          continue;
+        }
         if (!ask?.followed || ask.delivery !== "unresolved") continue;
         if (ask.noticeCardId !== noticeCardId(ask.id)) continue;
         const thread = this.host.ending.thread(ask.id);
@@ -328,7 +353,8 @@ export class AnswerDeliveryCheck {
         if (!thread || !card || !onStage(card)) continue;
         if (this.host.ending.offeredAt(card) < notice.shownAt) continue;
         this.host.tasks.capture.setAskDelivery(ask.id, "covered");
-        withdraw(noticeCardId(ask.id));
+        // i18n-exempt: a closing reason kept on the notice's record, never shown to a person
+        withdraw(noticeCardId(ask.id), "an answering card went up");
       } catch (caught) {
         console.warn("[firstmate] answer delivery could not take back a notice:", caught);
       }

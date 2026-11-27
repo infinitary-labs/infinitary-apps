@@ -591,18 +591,17 @@ export class TaskEventStore {
    * line of a failed start that put it back on request (`startPolicy`).
    */
   latestStopLine(taskId: string): TaskEvent | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT * FROM task_events WHERE task_id = ? AND kind IN ('note', 'status')
-         AND CASE WHEN json_valid(data_json) THEN
-           json_type(data_json, '$.backlog') IS NOT NULL
-           OR json_type(data_json, '$.startPolicy') IS NOT NULL
-           OR json_type(data_json, '$.changes.startPolicy') IS NOT NULL
-           OR json_type(data_json, '$.captainStop') IS NOT NULL
-         END
-         ORDER BY at DESC, id DESC LIMIT 1`,
-      )
-      .get(taskId) as Row | undefined;
+    const row = prepared(
+      this.db,
+      `SELECT * FROM task_events WHERE task_id = ? AND kind IN ('note', 'status')
+       AND CASE WHEN json_valid(data_json) THEN
+         json_type(data_json, '$.backlog') IS NOT NULL
+         OR json_type(data_json, '$.startPolicy') IS NOT NULL
+         OR json_type(data_json, '$.changes.startPolicy') IS NOT NULL
+         OR json_type(data_json, '$.captainStop') IS NOT NULL
+       END
+       ORDER BY at DESC, id DESC LIMIT 1`,
+    ).get(taskId) as Row | undefined;
     return row ? fromRow(row) : undefined;
   }
 

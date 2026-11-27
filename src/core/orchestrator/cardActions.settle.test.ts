@@ -40,6 +40,7 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { THREAD_STEER_PREAMBLE } from "./captainWakes";
+import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
 import { cannotMergeText, discardedText } from "./settleWords";
 import { renderWake, type WakeFacts } from "./wakes";
 
@@ -873,6 +874,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     // Reopening and repeating a refused confirmation must not erase the pending reply.
@@ -945,6 +947,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
     await tick();
@@ -1181,15 +1184,11 @@ describe("CrewSupervisor: the card thread", () => {
     const { card, taskId } = await withCard(harness);
 
     // The host's own agent-down cards answer to nobody.
-    harness.supervisor.cards.hostCards.addSystemNoteCard(
-      "card-host-1",
-      "Host note",
-      "nothing to reply to",
-    );
+    harness.supervisor.cards.hostCards.addFirstmateFailureCard("<p>The turn failed.</p>");
     await tick();
-    expect(() => harness.supervisor.cardActions.replyToCard("card-host-1", "hello")).toThrow(
-      /no author to reply to/,
-    );
+    expect(() =>
+      harness.supervisor.cardActions.replyToCard(FIRSTMATE_FAILURE_CARD_ID, "hello"),
+    ).toThrow(/takes no reply/);
     expect(() => harness.supervisor.cardActions.replyToCard("ghost", "hello")).toThrow(
       /Unknown card/,
     );
@@ -1402,6 +1401,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(crewmate.promptCalls.some((call) => call.includes("which build is it?"))).toBe(false);
   });
@@ -1423,7 +1423,7 @@ describe("CrewSupervisor: the card thread", () => {
     await tick();
     const thread = harness.supervisor.cardActions.replyToCard(cardId, "the second option is wrong");
     expect(thread.messages).toMatchObject([{ who: "captain", text: "the second option is wrong" }]);
-    // The turn keeps the line the reply was saved as (INF-6115 piece 3).
+    // The turn keeps the saved line (INF-6115 piece 3) and leaves the last filter in place (INF-6860).
     expect(converseAboutCard).toHaveBeenCalledWith(
       cardId,
       "the second option is wrong",
@@ -1431,6 +1431,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       thread.messages[0]?.id,
+      undefined,
     );
     const answers = [
       { name: "look", values: ['{"tiltDeg":57}'], changed: true, json: true as const },
@@ -1449,6 +1450,7 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
       undefined,
       expect.any(Number),
+      undefined,
     );
     expect(
       harness.cardStore

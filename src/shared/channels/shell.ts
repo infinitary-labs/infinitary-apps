@@ -32,6 +32,13 @@ export type WindowState = z.infer<typeof windowStateSchema>;
 export const presenceSchema = z.strictObject({ away: z.boolean(), watched: z.boolean() });
 export type Presence = z.infer<typeof presenceSchema>;
 
+/**
+ * Seconds since this computer's keyboard or mouse was last touched, from the
+ * system; 0 where presence is not watched, which reads as just touched.
+ */
+export const idleSchema = z.strictObject({ seconds: z.number().nonnegative() });
+export type Idle = z.infer<typeof idleSchema>;
+
 /** The window's fence, asked and pushed back with the same token (`inf:window:fence`). */
 export const windowFenceSchema = z.strictObject({ token: z.number().int().nonnegative() });
 
@@ -197,6 +204,14 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([]),
     response: presenceSchema,
+  },
+  // How long this computer went untouched, which a card's seen report reads
+  // (`reportWhileHere`, src/renderer/src/cards/useSeenReport.ts); the music never reads it.
+  "inf:window:idle": {
+    effect: "read",
+    surface: "host",
+    request: z.tuple([]),
+    response: idleSchema,
   },
   // Chromium can hand the window an answer before a push sent ahead of it,
   // since the two arrive on separate queues. The fence comes back as the

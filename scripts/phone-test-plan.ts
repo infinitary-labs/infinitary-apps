@@ -82,6 +82,8 @@ export const PHONE_PARTS = [
   { name: "cards-revise", test: "testRevisionKeepsTheThreadShowing", photos: false },
   // INF-6136: only a card's one-line top bar stays in place, its minus on that line, and its choices can be pressed.
   { name: "cards-top-bar", test: "testCardTopBar", photos: false },
+  // INF-6865: a long card revised in place into folded sections while read at its end still scrolls to its choices.
+  { name: "cards-revised-scroll", test: "testRevisedCardScrollsToItsChoices", photos: false },
   // INF-6388: a card from an unsafe data reader says a link or request on it may come from a stranger.
   { name: "cards-reader", test: "testReaderCardUnsafeLine", photos: false },
   // INF-3124: a thread read from its start keeps its place as new lines arrive.
@@ -142,7 +144,7 @@ export const PHONE_PARTS = [
   { name: "talk-compose", test: "testComposeAndSend", photos: true, devices: ["ipad"], why: "the composer turned beside the wide layout's sidebar, and the iPad's own photo picker" },
   // The last part runs every test no other part names: the app-hosted tests and any new one that
   // needs no fresh app, since its simulator already holds the character journey's join.
-  { name: "rest", test: "testCharacterAndPastChoices", photos: true, devices: ["ipad"], why: "the iPad's own photo picker, an approval enrolled as iPad, and the computer's sheet and alert drawn over the scene" },
+  { name: "rest", test: "testCharacterAndPastChoices", photos: true, devices: ["ipad"], why: "the iPad's own photo picker, an approval enrolled as iPad, and Settings' Your computer page and its alert drawn over the scene" },
 ] as const satisfies readonly PhonePartRow[];
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
 

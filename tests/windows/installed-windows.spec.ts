@@ -46,6 +46,7 @@ import { readWindowsTable, resumeWindowsRun } from "../../src/core/placed/window
 import { onlyOwnerReaches, readAccessList } from "../../src/core/storage/ownerOnly";
 import { GIT_FOR_WINDOWS } from "../../src/core/windowsGit";
 import { START_HERE_ARG } from "../../src/main/besideRun";
+import { LINK_WORDS } from "../../src/main/linkCommand";
 import { PERSON_WORD_ARG, WORD_TEMP_DIR } from "../../src/main/personWordArg";
 import { commandPipe, commandPipeHeld, RUN_LAST_STOP, RUN_MARKER } from "../../src/main/runCommand";
 import { BOOT_WORDS } from "../../src/main/startAtBoot";
@@ -319,6 +320,22 @@ test("the Windows installer installs for this person, offers Git, starts the com
     keep("opened-after-install.json", JSON.stringify(top, null, 2));
     // A shell open of the Start menu entry: Explorer starts it, never the installer.
     expect(top.map((process) => process.parent.toLowerCase())).toEqual(["explorer.exe"]);
+  });
+
+  await test.step("while the Git offer holds the data folder with no door open yet, the link command says Infinitary is open here but did not answer", async () => {
+    // The window takes the folder's lock, a file Chromium holds open that names no process, before
+    // it offers Git, and opens the door the command asks at only once the offer is answered.
+    let said = "";
+    const ask = () => {
+      const run = spawnSync(executable, ["link", "--phone"], { encoding: "utf8", timeout: 60_000 });
+      said = `exit ${run.status}\n${run.stdout ?? ""}${run.stderr ?? ""}`;
+      keep("link-during-git-offer.txt", said);
+      return said;
+    };
+    await expect
+      .poll(ask, { timeout: 90_000, intervals: [1_000] })
+      .toContain(LINK_WORDS.noAnswer.join("\n"));
+    expect(said.startsWith("exit 1\n")).toBe(true);
   });
 
   const gitRoot = join(localAppData, "Programs", "Git");

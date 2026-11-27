@@ -61,7 +61,7 @@ A tile is `--bg-1` with a `--line-1` border, `--radius-m`, `--space-2` by `--spa
 3. The status word in `--fg-2` and its reason in `--fg-3`, `--text-sm`, two lines at most and whole on hover or focus when no structured wait replaces it.
    On kanban tiles only, structured waits stay in that two-line area without growing on hover or focus, and replace the generic reason with grouped names and the earliest recorded event, preserving the event before shortening names.
    When the one wait is a task whose line goes further or ends in a hold, the second line names where it stops instead of the event, and wraps rather than widening the column.
-   The task card keeps every cause and its own time, including unknown times and recorded-since dates; tiles add no separate recorded-since row.
+   The task card keeps every cause and its own time where one is recorded, and recorded-since dates; tiles add no separate recorded-since row.
    Kanban columns retain their existing minimum, expanding to the event’s intrinsic width before using the board’s horizontal scroll.
    List rows keep their existing wording, layout and dated lines.
 

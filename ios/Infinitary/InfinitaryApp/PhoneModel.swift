@@ -391,7 +391,7 @@ struct AddressJoin: Equatable {
         }
     }
 
-    /// INF-5265: shows another kept computer, as the computer sheet's tap asks. The one shown before stays kept. True
+    /// INF-5265: shows another kept computer, as a tap on Your computer's page asks. The one shown before stays kept. True
     /// once that computer shows.
     @discardableResult func show(_ pin: String) -> Bool {
         if kept.shown?.pin == pin { return true }

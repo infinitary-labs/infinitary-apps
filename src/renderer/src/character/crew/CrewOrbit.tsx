@@ -8,11 +8,13 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
+import { useThemeColorsDrawn } from "../../app/colorTheme";
 import { useCommandKeys } from "../../app/keyHints";
 import { motionToken } from "../../design/motion";
 import { litTask, useLitTaskId } from "../../plugins/point/litTask";
@@ -36,7 +38,7 @@ import {
   drawStarJoin,
   type Rgb,
 } from "./crewmate";
-import { type FocusLightInput, type FocusLightState, lightFrame } from "./focusLight";
+import { type FocusLightInput, type FocusLightState, lightFrame, restedLight } from "./focusLight";
 import {
   type Box,
   CREW_HOVER,
@@ -132,6 +134,8 @@ export type CrewOrbitProps = {
    */
   focus?: FocusLightInput;
 };
+
+const NO_FOCUS: FocusLightInput = { project: null, projectOf: () => undefined };
 
 /** Clear air between a summary and the edge of where it may sit, px. */
 const SUMMARY_MARGIN_PX = 8;
@@ -516,7 +520,10 @@ export function CrewOrbit({
     boost: 1,
   });
   const lastRead = useRef(0);
-  const paintedTheme = useRef<Theme | undefined>(undefined);
+  // The base and the color theme over it: either one changes what the ring reads.
+  const colorsDrawn = useThemeColorsDrawn();
+  const shownColors = `${theme ?? ""}:${colorsDrawn}`;
+  const paintedTheme = useRef<string | undefined>(undefined);
   const ariaRef = useRef("");
   /** Whether the last frame painted anything, so an empty ring skips the clears. */
   const paintedRef = useRef(true);
@@ -789,9 +796,15 @@ export function CrewOrbit({
   }, [interactive, setHovered]);
 
   // The project focus's light per crewmate, eased in real time over the
-  // surface move, whatever the stage's own rate.
-  const focusRef = useRef(focus);
-  focusRef.current = focus;
+  // surface move, whatever the stage's own rate. An open summary lights its
+  // crewmate's project in place of the window's light; it follows the
+  // summary, not the pointer, so a sweep across the crew waits its beat.
+  const lit = useMemo(
+    () => restedLight(focus ?? NO_FOCUS, shown !== null && !leaving ? shown : null),
+    [focus, shown, leaving],
+  );
+  const focusRef = useRef(lit);
+  focusRef.current = lit;
   const lightRef = useRef<{ state: FocusLightState; at: number; duration: number | null }>({
     state: new Map(),
     at: 0,
@@ -810,7 +823,7 @@ export function CrewOrbit({
       const supernova = reducedMotion ? null : crewSupernova.frame(now);
       const frame = lightFrame(
         model.update(now, reducedMotion, crewRush.level(now), warp, supernova),
-        focusRef.current ?? { project: null, projectOf: () => undefined },
+        focusRef.current,
         light.state,
         light.at === 0 ? 0 : real - light.at,
         reducedMotion ? 0 : light.duration,
@@ -1047,10 +1060,12 @@ export function CrewOrbit({
       paintedRef.current = !empty;
       if (
         !empty &&
-        (lastRead.current === 0 || paintedTheme.current !== theme || real - lastRead.current > 400)
+        (lastRead.current === 0 ||
+          paintedTheme.current !== shownColors ||
+          real - lastRead.current > 400)
       ) {
-        paintedTheme.current = theme;
-        // Live theme switches re-paint: the wire tokens follow data-theme.
+        paintedTheme.current = shownColors;
+        // Live theme switches re-paint: the wire tokens follow data-theme and the color theme.
         const cs = getComputedStyle(near.canvas);
         const accent = cs.getPropertyValue("--wire-accent") || cs.getPropertyValue("--accent");
         const hot = cs.getPropertyValue("--wire-hot") || cs.getPropertyValue("--hot");
@@ -1078,7 +1093,7 @@ export function CrewOrbit({
         supernova,
       );
     },
-    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}:${focus?.project ?? ""}`,
+    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${shownColors}:${lit.project ?? ""}`,
   );
 
   // A move to another display, or the size control's zoom, changes the pixel

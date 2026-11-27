@@ -295,7 +295,6 @@ extension PhoneJourney {
         XCTAssertEqual(labels.filter { $0 == "Old terminal" }.count, 1, "The own theme is one tile, under its own name")
         XCTAssertLessThan(theme.buttons["Tokyo Night"].frame.maxY, yours.frame.minY, "Yours follows the built-in themes")
         XCTAssertLessThanOrEqual(yours.frame.maxY, terminal.frame.minY)
-        let shown = waitForRedraw(scope, from: nil)
         // On an iPhone the built-in themes fill the sheet, so the list scrolls the tile into view for its picture and
         // the scope line back for its colors. A tile under the sheet's foot still reads hittable, so its frame decides.
         let foot = app.frame.maxY - 40
@@ -304,6 +303,13 @@ extension PhoneJourney {
         bringUp()
         XCTAssertLessThanOrEqual(terminal.frame.maxY, foot, "The own theme's tile shows whole")
         picture("phone-theme-yours")
+        // Under Light the own tile keeps its own colors, the light half of this change's hero picture pair.
+        bringDown()
+        tapOnPhone(theme.buttons["Light"])
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: theme.buttons["Light"], timeout: 10), .completed)
+        bringUp()
+        try drawn("phone-theme-yours-light", dark: false)
+        let shown = waitForRedraw(scope, from: nil)
         tapOnPhone(terminal)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: terminal, timeout: 10), .completed)
         bringDown()

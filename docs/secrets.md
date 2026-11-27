@@ -367,7 +367,7 @@ A requester whose receipt said waiting also hears once, through the same inbox (
 It goes when the program has started (`SecretRequests`' `began`, which the recipient calls at its spawn, or a computer that runs work calls when it takes the values), never at the click, so a use whose last check fails before its program starts sends only its end; the start always comes before the end, and its new turn clears the task's report that it waits on the captain.
 A use a saved decision starts at once sends no start: its first receipt already says it runs.
 Terminal requests invalidate their private offers and withdraw any obsolete approval card.
-The caller receives its own cancellation directly, while other waiting requesters hear neither the start nor the end.
+The caller receives its own cancellation directly and hears neither the start nor the end, while other waiting requesters still hear the result.
 Pending approval and notification registrations remain process-local (`UseRequesters`); after a restart, the requester reads the durable receipt before continuing, never repeats an unknown effect and never reuses an old card.
 A use the restart ended is told to the task its intent names, while that task is open, as Secrets opens again (`secrets-use-ended` with `restarted`, see "Journal and reconciliation").
 

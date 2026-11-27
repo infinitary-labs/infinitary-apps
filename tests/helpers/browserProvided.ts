@@ -74,6 +74,7 @@ declare module "vitest/browser" {
       argument?: unknown,
     ): Promise<unknown>;
     holdTouchInFrame(frame: string, selector: string, holdMs: number): Promise<void>;
+    dragAcrossWordsInFrame(title: string, selector: string, words: string): Promise<void>;
     clearCookies(): Promise<void>;
     collectGarbage(): Promise<void>;
     seededHome(input?: unknown): Promise<FreshHomeAnswers>;

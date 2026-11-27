@@ -103,10 +103,14 @@ describe("a drawn update is reported only while someone is at the computer", () 
   });
 
   it("drawn while the screen is locked, it is reported only after the unlock", async () => {
-    const pc = computer(Date.now() - 600_000);
+    // Touched just before and during the lock, so only the lock holds the report.
+    const pc = computer(Date.now() - 3_000);
     const report = vi.fn();
     reportWhileHere({ away: true, watched: true }, Date.now(), report, pc.touches);
+    pc.touchWindow();
     await vi.advanceTimersByTimeAsync(60_000);
+    pc.touchElsewhere();
+    await vi.advanceTimersByTimeAsync(2_000);
     expect(report).not.toHaveBeenCalled();
     // Unlocking is typing the password; the window draws the card anew once the lock ends.
     pc.touchElsewhere();

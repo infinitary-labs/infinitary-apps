@@ -206,7 +206,7 @@ export const shellChannels = {
     response: presenceSchema,
   },
   // How long this computer went untouched, which a card's seen report reads
-  // (src/renderer/src/cards/someoneHere.ts); the music never reads it.
+  // (`reportWhileHere`, src/renderer/src/cards/useSeenReport.ts); the music never reads it.
   "inf:window:idle": {
     effect: "read",
     surface: "host",

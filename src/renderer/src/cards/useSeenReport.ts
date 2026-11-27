@@ -109,7 +109,9 @@ const windowTouches: Touches = {
         lastWindowTouch = Date.now();
         for (const heard of [...windowTouchListeners]) heard();
       };
-      for (const type of ["keydown", "pointerdown", "pointermove", "wheel"])
+      // A pointer move or wheel can reach the page with no hand on the mouse, such as when a
+      // window covering this one goes away under a resting cursor, so only a key or a press counts.
+      for (const type of ["keydown", "pointerdown"])
         window.addEventListener(type, touched, { capture: true, passive: true });
     }
     windowTouchListeners.add(listener);

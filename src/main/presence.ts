@@ -68,7 +68,7 @@ export function followPresence(win: BrowserWindow): void {
       win.webContents.send("inf:window:presence", presence);
   });
   const stopDisplay =
-    hostPlatform() === "win32"
+    watched.watched && hostPlatform() === "win32"
       ? watchWindowsDisplay(win, (off) => watched.set("screen-off", off))
       : null;
   win.once("closed", () => {

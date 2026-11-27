@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "等你處理";
 "taskGroupWorking" = "進行中";
 "taskNoteReworkHeld" = "在新版本的檢查結束前，暫不把合併卡片「%1$@」交給你。";
+"taskOverrideDirectionGone" = "你的指引 d:%1$@ 已不再有效，它在這項任務上越過的暫緩重新生效。";
+"taskOverrideDirectionRevised" = "你的指引 d:%1$@ 有了新的修訂，它在這項任務上越過的暫緩重新生效。";
+"taskOverrideDirectionTask" = "你的指引 d:%1$@ 讓這項任務在餘下的時間裡越過你的大副指明的暫緩，直到它被修訂或停用：「%2$@」";
+"taskOverrideDirectionVersion" = "你的指引 d:%1$@ 讓這個版本越過你的大副指明的暫緩，直到它被修訂或停用：「%2$@」";
 "taskPinPin" = "釘選";
 "taskPinUnpin" = "取消釘選";
 "taskStatusComputerUpdating" = "%1$@ 正在更新";

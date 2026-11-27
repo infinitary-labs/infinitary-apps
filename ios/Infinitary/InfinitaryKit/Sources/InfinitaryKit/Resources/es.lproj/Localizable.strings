@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "esperándote";
 "taskGroupWorking" = "trabajando";
 "taskNoteReworkHeld" = "Retuve la tarjeta de fusión «%1$@» hasta que terminen las comprobaciones de su nueva versión.";
+"taskOverrideDirectionGone" = "Tu directriz d:%1$@ ya no está vigente, así que las retenciones que superaba en esta tarea vuelven a aplicarse.";
+"taskOverrideDirectionRevised" = "Tu directriz d:%1$@ tiene una nueva versión, así que las retenciones que superaba en esta tarea vuelven a aplicarse.";
+"taskOverrideDirectionTask" = "Tu directriz d:%1$@ supera las retenciones que nombró tu primer oficial durante el resto de esta tarea, hasta que tenga una nueva versión o se retire: «%2$@»";
+"taskOverrideDirectionVersion" = "Tu directriz d:%1$@ supera las retenciones que nombró tu primer oficial para el cambio tal como está ahora, hasta que tenga una nueva versión o se retire: «%2$@»";
 "taskPinPin" = "Fijar";
 "taskPinUnpin" = "Desfijar";
 "taskStatusComputerUpdating" = "%1$@ se está actualizando";

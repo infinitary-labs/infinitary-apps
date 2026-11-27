@@ -181,6 +181,15 @@ export type HoldOverride = {
    * carrying this marker remain in history but never stand or pass a hold.
    */
   mergeClick?: true;
+  /**
+   * The words are the text of the captain's standing direction of the
+   * task's project, cited by its id (INF-7021), at the revision that was
+   * current and heard when the first mate cited it. The override stands
+   * only while that revision does: the host ends it once the direction is
+   * revised or retired (`CaptainOverrides.directionsChanged`), and the
+   * captain's own words replace it but never the other way round.
+   */
+  direction?: { id: string; revision: number };
   at: number;
 };
 
@@ -290,6 +299,23 @@ export function reviewerOverrideWords(
   if (!holdNames(override.holds))
     return `The captain's standing words on this change ${overrideSpan(override)}: "${override.words}". The earlier count holds are retired; access or a step their words cover is not a finding.`;
   return `The captain's standing override on this change: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Access or a step their words cover is not a finding.`;
+}
+
+/**
+ * What a crewmate is served beside a standing override whose words are a
+ * direction's (INF-7021): it lasts only while that direction's revision does.
+ */
+export function directionOverrideWords(direction: NonNullable<HoldOverride["direction"]>): string {
+  // i18n-exempt: served to a crewmate, never shown to a person
+  return `These words are the captain's direction d:${direction.id}, revision ${direction.revision}: the override ends when that direction is revised or retired.`;
+}
+
+/** What a crewmate is served when the direction its standing override cited changes (INF-7021). */
+export function directionOverrideEndedWords(
+  override: Pick<HoldOverride, "holds"> & { direction: NonNullable<HoldOverride["direction"]> },
+): string {
+  // i18n-exempt: served to a crewmate, never shown to a person
+  return `The captain's direction d:${override.direction.id} was revised or retired, so the standing override on this task that cited it ended: ${holdNames(override.holds)} hold again, and its words no longer stand in for your consent asks.`;
 }
 
 /** What a crewmate is served when the captain takes his override back (INF-1216). */

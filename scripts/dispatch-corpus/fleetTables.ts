@@ -76,6 +76,8 @@ export type RecordedOverride = {
   head: string | null;
   /** The words were the captain's click on a merge (INF-1966): such an override never stands. */
   mergeClick: boolean;
+  /** The heard direction whose words it cites (INF-7021), as `d:<id>`; null when the captain's own words. */
+  direction: string | null;
   /**
    * The override the task's record held when this one was written, which
    * this one replaced; null when none stood or a take-back came between.
@@ -423,8 +425,15 @@ function recordedOverrideFrom(
     until: override.until === "version" || override.until === "task" ? override.until : null,
     head: typeof override.head === "string" ? override.head : null,
     mergeClick: override.mergeClick === true,
+    direction: directionOf(override.direction),
     replaces: replaced ? { at: replaced.at, holds: replaced.holds } : null,
   };
+}
+
+/** The `d:` id of the direction an override row cites, or null. */
+function directionOf(value: unknown): string | null {
+  const id = (value as { id?: unknown } | null | undefined)?.id;
+  return typeof value === "object" && typeof id === "string" ? `d:${id}` : null;
 }
 
 /** Whether a `note` row is a take-back: it carries the override it took back. */

@@ -132,6 +132,8 @@ export type KnowledgeHandle = {
     read: (store: KnowledgeStore | undefined) => T,
   ) => T | { state: "unavailable"; reason: string };
   readonly scopeName: (scope: string) => string;
+  /** Say a write committed or a purge ran: `deps.changed` and every `onChange` listener hear it. */
+  readonly changed: () => void;
 };
 
 const ID_ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -152,6 +154,7 @@ export class KnowledgeService {
   private failure: KnowledgeUnavailableError | undefined;
   private readonly now: () => number;
   private readonly nameOf = (scope: string) => this.scopeName(scope);
+  private readonly listeners = new Set<() => void>();
 
   constructor(private readonly deps: KnowledgeDeps) {
     this.now = deps.now ?? Date.now;
@@ -163,6 +166,7 @@ export class KnowledgeService {
       open: () => this.open(),
       browsing: (read) => this.browsing(read),
       scopeName: this.nameOf,
+      changed: () => this.changed(),
     };
     this.directions = new StandingDirections(handle);
     this.window = new KnowledgeWindow(handle);
@@ -203,7 +207,23 @@ export class KnowledgeService {
   purge(): void {
     this.close();
     if (this.deps.dir) rmSync(this.deps.dir, { recursive: true, force: true });
+    this.changed();
+  }
+
+  /**
+   * Hear every committed write and purge, as `deps.changed` does, for an
+   * owner outside the collection that keeps something resting on it (an
+   * override citing a direction, `CaptainOverrides.directionsChanged`).
+   * Returns the way to stop hearing.
+   */
+  onChange(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  private changed(): void {
     this.deps.changed?.();
+    for (const listener of this.listeners) listener();
   }
 
   scopeName(scope: string): string {
@@ -443,7 +463,7 @@ export class KnowledgeService {
         return { ...done, committed: true };
       });
       if (outcome.committed) {
-        this.deps.changed?.();
+        this.changed();
         if (input.action === "retire_many") {
           this.deps.announce?.(
             `First mate · retired ${outcome.ids.length} knowledge ${outcome.ids.length === 1 ? "entry" : "entries"} the captain approved${input.task ? ` (${input.task.trim()})` : ""}`,

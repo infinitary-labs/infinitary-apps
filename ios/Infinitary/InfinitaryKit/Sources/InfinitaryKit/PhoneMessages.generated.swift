@@ -4594,6 +4594,10 @@ public enum PhoneMessages {
     public static func `taskGroupWaiting`() -> String { PhoneWords.format("taskGroupWaiting", []) }
     public static func `taskGroupWorking`() -> String { PhoneWords.format("taskGroupWorking", []) }
     public static func `taskNoteReworkHeld`(`title`: String) -> String { PhoneWords.format("taskNoteReworkHeld", [`title`]) }
+    public static func `taskOverrideDirectionGone`(`direction`: String) -> String { PhoneWords.format("taskOverrideDirectionGone", [`direction`]) }
+    public static func `taskOverrideDirectionRevised`(`direction`: String) -> String { PhoneWords.format("taskOverrideDirectionRevised", [`direction`]) }
+    public static func `taskOverrideDirectionTask`(`direction`: String, `words`: String) -> String { PhoneWords.format("taskOverrideDirectionTask", [`direction`, `words`]) }
+    public static func `taskOverrideDirectionVersion`(`direction`: String, `words`: String) -> String { PhoneWords.format("taskOverrideDirectionVersion", [`direction`, `words`]) }
     public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
     public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
     public static func `taskStatusComputerUpdating`(`computer`: String) -> String { PhoneWords.format("taskStatusComputerUpdating", [`computer`]) }
@@ -9413,6 +9417,10 @@ extension PhoneWords {
         "taskGroupWaiting": [],
         "taskGroupWorking": [],
         "taskNoteReworkHeld": ["title"],
+        "taskOverrideDirectionGone": ["direction"],
+        "taskOverrideDirectionRevised": ["direction"],
+        "taskOverrideDirectionTask": ["direction", "words"],
+        "taskOverrideDirectionVersion": ["direction", "words"],
         "taskPinPin": [],
         "taskPinUnpin": [],
         "taskStatusComputerUpdating": ["computer"],

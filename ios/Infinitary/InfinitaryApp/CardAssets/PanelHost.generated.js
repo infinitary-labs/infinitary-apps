@@ -109682,6 +109682,120 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Kept the merge card “${title}” from you until its new version's checks end.`;
   }
+  function taskOverrideDirectionGone(input2) {
+    const direction = input2.direction;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يعد توجيهك d:${direction} قائمًا، فعادت التعليقات التي كان يتجاوزها في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} gilt nicht mehr, daher wird diese Aufgabe wieder dort zurückgehalten, wo die Vorgabe sie weiterließ.`;
+      case "es":
+        return `Tu directriz d:${direction} ya no está vigente, así que las retenciones que superaba en esta tarea vuelven a aplicarse.`;
+      case "fr":
+        return `Votre consigne d:${direction} n’est plus en vigueur : les retenues qu’elle levait sur cette tâche s’appliquent de nouveau.`;
+      case "ja":
+        return `あなたの方針 d:${direction} は有効でなくなったため、このタスクで越えていた保留が再び有効になりました。`;
+      case "ko":
+        return `지침 d:${direction}의 효력이 끝나, 이 작업에서 넘어갔던 보류가 다시 적용돼요.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} não vale mais, então as retenções que ela liberava nesta tarefa voltam a valer.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 已不再有效，它在这个任务上越过的暂缓重新生效。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 已不再有效，它在這項任務上越過的暫緩重新生效。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ñö ļöñĝéŕ šţáñðš, šö ţĥé ĥöļðš îţ þáššéð öñ ţĥîš ţášķ ĥöļð áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ no longer stands, so the holds it passed on this task hold again.‬`;
+    }
+    return `Your direction d:${direction} no longer stands, so the holds it passed on this task hold again.`;
+  }
+  function taskOverrideDirectionRevised(input2) {
+    const direction = input2.direction;
+    switch (currentLanguage()) {
+      case "ar":
+        return `صار لتوجيهك d:${direction} تعديل جديد، فعادت التعليقات التي كان يتجاوزها في هذه المهمة.`;
+      case "de":
+        return `Deine Vorgabe d:${direction} hat eine neue Revision, daher wird diese Aufgabe wieder dort zurückgehalten, wo die Vorgabe sie weiterließ.`;
+      case "es":
+        return `Tu directriz d:${direction} tiene una nueva versión, así que las retenciones que superaba en esta tarea vuelven a aplicarse.`;
+      case "fr":
+        return `Votre consigne d:${direction} a une nouvelle révision : les retenues qu’elle levait sur cette tâche s’appliquent de nouveau.`;
+      case "ja":
+        return `あなたの方針 d:${direction} が改訂されたため、このタスクで越えていた保留が再び有効になりました。`;
+      case "ko":
+        return `지침 d:${direction}에 새 수정본이 생겨, 이 작업에서 넘어갔던 보류가 다시 적용돼요.`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} tem uma nova versão, então as retenções que ela liberava nesta tarefa voltam a valer.`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 有了新的修订，它在这个任务上越过的暂缓重新生效。`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 有了新的修訂，它在這項任務上越過的暫緩重新生效。`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} ĥáš á ñéŵ ŕéṽîšîöñ, šö ţĥé ĥöļðš îţ þáššéð öñ ţĥîš ţášķ ĥöļð áĝáîñ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ has a new revision, so the holds it passed on this task hold again.‬`;
+    }
+    return `Your direction d:${direction} has a new revision, so the holds it passed on this task hold again.`;
+  }
+  function taskOverrideDirectionTask(input2) {
+    const direction = input2.direction;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} التعليقات التي سمّاها نائب القبطان طوال ما تبقّى من هذه المهمة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} wird diese Aufgabe für den Rest ihrer Laufzeit nicht mehr dort zurückgehalten, wo dein erster Offizier es genannt hat, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera las retenciones que nombró tu primer oficial durante el resto de esta tarea, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève les retenues nommées par votre second pour le reste de cette tâche, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このタスクは残りの期間、一等航海士が挙げた保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 작업은 남은 기간 동안 일등항해사가 지정한 보류를 넘어가요. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera as retenções que seu imediato apontou pelo resto desta tarefa, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个任务在余下的时间里越过你的大副指明的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這項任務在餘下的時間裡越過你的大副指明的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ţĥé ĥöļðš ýöûŕ ƒîŕšţ ɱáţé ñáɱéð ƒöŕ ţĥé ŕéšţ öƒ ţĥîš ţášķ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes the holds your first mate named for the rest of this task, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes the holds your first mate named for the rest of this task, until it is revised or retired: “${words2}”`;
+  }
+  function taskOverrideDirectionVersion(input2) {
+    const direction = input2.direction;
+    const words2 = input2.words;
+    switch (currentLanguage()) {
+      case "ar":
+        return `يتجاوز توجيهك d:${direction} التعليقات التي سمّاها نائب القبطان في هذه النسخة، إلى أن يُعدَّل أو يُستبعَد: «${words2}»`;
+      case "de":
+        return `Wegen deiner Vorgabe d:${direction} wird diese Version nicht mehr dort zurückgehalten, wo dein erster Offizier es genannt hat, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „${words2}“`;
+      case "es":
+        return `Tu directriz d:${direction} supera las retenciones que nombró tu primer oficial para el cambio tal como está ahora, hasta que tenga una nueva versión o se retire: «${words2}»`;
+      case "fr":
+        return `Votre consigne d:${direction} lève les retenues nommées par votre second pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « ${words2} »`;
+      case "ja":
+        return `あなたの方針 d:${direction} により、このバージョンは一等航海士が挙げた保留を越えて進めます。改訂または廃止されるまで有効です：「${words2}」`;
+      case "ko":
+        return `지침 d:${direction} 덕분에 이 버전은 일등항해사가 지정한 보류를 넘어가요. 지침이 수정되거나 폐기될 때까지 유효해요: “${words2}”`;
+      case "pt-BR":
+        return `Sua diretriz d:${direction} libera as retenções que seu imediato apontou para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “${words2}”`;
+      case "zh-Hans":
+        return `你的指引 d:${direction} 让这个版本越过你的大副指明的暂缓，直到它被修订或停用：“${words2}”`;
+      case "zh-Hant":
+        return `你的指引 d:${direction} 讓這個版本越過你的大副指明的暫緩，直到它被修訂或停用：「${words2}」`;
+      case "en-XA":
+        return `[Ýöûŕ ðîŕéçţîöñ ð:${direction} þáššéš ţĥé ĥöļðš ýöûŕ ƒîŕšţ ɱáţé ñáɱéð ƒöŕ ţĥîš ṽéŕšîöñ, ûñţîļ îţ îš ŕéṽîšéð öŕ ŕéţîŕéð: “${words2}” ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your direction d:‬${direction}‮ passes the holds your first mate named for this version, until it is revised or retired: “‬${words2}‮”‬`;
+    }
+    return `Your direction d:${direction} passes the holds your first mate named for this version, until it is revised or retired: “${words2}”`;
+  }
   function taskPinPin() {
     switch (currentLanguage()) {
       case "ar":
@@ -119794,6 +119908,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskGroupWaiting,
     taskGroupWorking,
     taskNoteReworkHeld,
+    taskOverrideDirectionGone,
+    taskOverrideDirectionRevised,
+    taskOverrideDirectionTask,
+    taskOverrideDirectionVersion,
     taskPinPin,
     taskPinUnpin,
     taskStatusComputerUpdating,
@@ -123509,6 +123627,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskGroupWaiting": [],
     "taskGroupWorking": [],
     "taskNoteReworkHeld": ["title"],
+    "taskOverrideDirectionGone": ["direction"],
+    "taskOverrideDirectionRevised": ["direction"],
+    "taskOverrideDirectionTask": ["direction", "words"],
+    "taskOverrideDirectionVersion": ["direction", "words"],
     "taskPinPin": [],
     "taskPinUnpin": [],
     "taskStatusComputerUpdating": ["computer"],

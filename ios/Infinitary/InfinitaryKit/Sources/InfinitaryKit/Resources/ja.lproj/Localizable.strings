@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "あなた待ち";
 "taskGroupWorking" = "作業中";
 "taskNoteReworkHeld" = "新しいバージョンのチェックが終わるまで、マージカード「%1$@」をあなたに戻さずにおきました。";
+"taskOverrideDirectionGone" = "あなたの方針 d:%1$@ は有効でなくなったため、このタスクで越えていた保留が再び有効になりました。";
+"taskOverrideDirectionRevised" = "あなたの方針 d:%1$@ が改訂されたため、このタスクで越えていた保留が再び有効になりました。";
+"taskOverrideDirectionTask" = "あなたの方針 d:%1$@ により、このタスクは残りの期間、一等航海士が挙げた保留を越えて進めます。改訂または廃止されるまで有効です：「%2$@」";
+"taskOverrideDirectionVersion" = "あなたの方針 d:%1$@ により、このバージョンは一等航海士が挙げた保留を越えて進めます。改訂または廃止されるまで有効です：「%2$@」";
 "taskPinPin" = "固定";
 "taskPinUnpin" = "固定を解除";
 "taskStatusComputerUpdating" = "%1$@ は更新中";

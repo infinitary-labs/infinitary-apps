@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "waiting on you";
 "taskGroupWorking" = "working";
 "taskNoteReworkHeld" = "Kept the merge card “%1$@” from you until its new version's checks end.";
+"taskOverrideDirectionGone" = "Your direction d:%1$@ no longer stands, so the holds it passed on this task hold again.";
+"taskOverrideDirectionRevised" = "Your direction d:%1$@ has a new revision, so the holds it passed on this task hold again.";
+"taskOverrideDirectionTask" = "Your direction d:%1$@ passes the holds your first mate named for the rest of this task, until it is revised or retired: “%2$@”";
+"taskOverrideDirectionVersion" = "Your direction d:%1$@ passes the holds your first mate named for this version, until it is revised or retired: “%2$@”";
 "taskPinPin" = "Pin";
 "taskPinUnpin" = "Unpin";
 "taskStatusComputerUpdating" = "%1$@ is updating";

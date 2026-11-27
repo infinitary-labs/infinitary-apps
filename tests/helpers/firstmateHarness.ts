@@ -343,6 +343,12 @@ export function setup(
     /** Knowledge (docs/knowledge.md), in memory for this fixture. */
     knowledge?: boolean;
     /**
+     * The crew reads the same knowledge, as the app's own crew does
+     * (`startHomeCrew`): an override citing a direction reads it there.
+     * Absent, only the first mate reads it.
+     */
+    crewKnowledge?: boolean;
+    /**
      * What the last process left behind, written before the agent boots:
      * a restart's open messages and the rows still on the lane.
      */
@@ -372,6 +378,12 @@ export function setup(
   const seededCards = new CardStore(db);
   for (const card of options.seedCards ?? []) seededCards.upsert(card);
   const crew = fakeSessionFactory();
+  const knowledge =
+    options.knowledge !== false
+      ? new KnowledgeService({
+          projects: { get: (id) => repos.get(id), list: () => repos.list() },
+        })
+      : undefined;
   const supervisor = new CrewSupervisor({
     sessions: { pi: crew },
     ...(options.crewSource ? { source: options.crewSource } : {}),
@@ -407,6 +419,7 @@ export function setup(
       cards = snapshot;
     },
     ...(options.machines ? { machines: options.machines } : {}),
+    ...(options.crewKnowledge && knowledge ? { knowledge } : {}),
   });
   const session = options.session ?? fakeSession();
   const specs: SessionSpec[] = [];
@@ -414,12 +427,6 @@ export function setup(
   const selfSourceDir = join(paths.userData, "self-source");
   mkdirSync(selfSourceDir, { recursive: true });
   writeFileSync(join(selfSourceDir, "self-marker.txt"), "SELF_SOURCE_JAIL_OK\n");
-  const knowledge =
-    options.knowledge !== false
-      ? new KnowledgeService({
-          projects: { get: (id) => repos.get(id), list: () => repos.list() },
-        })
-      : undefined;
   const pushes: unknown[] = [];
   const preferences = new ShellPreferencesService(settings, (channel, payload) => {
     pushes.push({ channel, payload });

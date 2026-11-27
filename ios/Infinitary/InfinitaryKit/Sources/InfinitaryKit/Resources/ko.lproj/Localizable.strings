@@ -4419,6 +4419,10 @@
 "taskGroupWaiting" = "선장님을 기다림";
 "taskGroupWorking" = "작업 중";
 "taskNoteReworkHeld" = "새 버전의 검사가 끝날 때까지 병합 카드 “%1$@”을(를) 보내지 않고 두었어요.";
+"taskOverrideDirectionGone" = "지침 d:%1$@의 효력이 끝나, 이 작업에서 넘어갔던 보류가 다시 적용돼요.";
+"taskOverrideDirectionRevised" = "지침 d:%1$@에 새 수정본이 생겨, 이 작업에서 넘어갔던 보류가 다시 적용돼요.";
+"taskOverrideDirectionTask" = "지침 d:%1$@ 덕분에 이 작업은 남은 기간 동안 일등항해사가 지정한 보류를 넘어가요. 지침이 수정되거나 폐기될 때까지 유효해요: “%2$@”";
+"taskOverrideDirectionVersion" = "지침 d:%1$@ 덕분에 이 버전은 일등항해사가 지정한 보류를 넘어가요. 지침이 수정되거나 폐기될 때까지 유효해요: “%2$@”";
 "taskPinPin" = "고정";
 "taskPinUnpin" = "고정 해제";
 "taskStatusComputerUpdating" = "%1$@ 업데이트 중";

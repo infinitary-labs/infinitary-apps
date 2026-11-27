@@ -211,7 +211,7 @@ export class StandingDirections {
         refuse("The direction changed. Read it again before writing.");
       store.saveDirection(next, change.op === "add" ? "publish" : change.op, reason, heard);
     });
-    this.handle.deps.changed?.();
+    this.handle.changed();
     return { op: change.op, direction: this.row({ ...next, heard }) };
   }
 
@@ -250,6 +250,26 @@ export class StandingDirections {
       (store?.directions() ?? [])
         .filter((row) => !row.retired && row.heard === undefined && this.known(row.scope))
         .map((row) => this.row(row)),
+    );
+  }
+
+  /**
+   * Each direction's current revision and whether it is retired, read as a
+   * browser read is (`unmarked`): what an override citing a direction checks
+   * it still rests on (`CaptainOverrides.directionsChanged`). A collection
+   * nothing has recorded in holds none, and one of a removed project's
+   * directions is left out, as every other read leaves it out.
+   */
+  revisions():
+    | Map<string, { revision: number; retired: boolean }>
+    | { state: "unavailable"; reason: string } {
+    return this.handle.browsing(
+      (store) =>
+        new Map(
+          (store?.directions() ?? [])
+            .filter((row) => this.known(row.scope))
+            .map((row) => [row.id, { revision: row.revision, retired: row.retired }] as const),
+        ),
     );
   }
 

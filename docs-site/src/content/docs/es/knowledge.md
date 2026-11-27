@@ -1,5 +1,5 @@
 ---
-source: a12b644ccfb84c74
+source: 0fee6cc7d6812497
 title: Conocimiento
 description: Las directrices permanentes que guarda tu primer oficial, lo que le cuentas sobre ti y las fuentes que pides a tu tripulación que guarde, y cómo leerlas, cambiarlas o borrarlas.
 ---
@@ -38,6 +38,7 @@ Una guardada desde cualquier otro lugar se marca como **Consejo**, que tu tripul
 Ninguna directriz permite más de lo que dicen sus propias palabras.
 Una directriz permite algo, como un paso que no necesita preguntarte, solo mientras su redacción actual se te haya oído a ti: en tus palabras a tu primer oficial, en una tarjeta o en la pestaña **Tripulante** de una tarea.
 Una que tu primer oficial guardó o reformuló sin tus palabras guía a tu tripulación, pero por sí sola no permite nada.
+Tu primer oficial también puede dejar que una tarea siga sin preguntarte, hasta donde llegue una directriz que dijiste para su proyecto; en cuanto cambies o retires esa directriz, la tarea vuelve a preguntarte.
 Tras actualizar desde una versión que no anotaba esto, tu primer oficial te pregunta una sola vez, en una tarjeta, cuáles de tus directrices dijiste tú, y las que marques cuentan como oídas.
 
 ## Ver, cambiar o retirar una directriz {#see-change-or-retire-a-direction}

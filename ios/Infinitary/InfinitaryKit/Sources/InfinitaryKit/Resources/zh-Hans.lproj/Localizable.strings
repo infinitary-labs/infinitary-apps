@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "等你处理";
 "taskGroupWorking" = "处理中";
 "taskNoteReworkHeld" = "在新版本的检查结束前，暂不把合并卡片“%1$@”交给你。";
+"taskOverrideDirectionGone" = "你的指引 d:%1$@ 已不再有效，它在这个任务上越过的暂缓重新生效。";
+"taskOverrideDirectionRevised" = "你的指引 d:%1$@ 有了新的修订，它在这个任务上越过的暂缓重新生效。";
+"taskOverrideDirectionTask" = "你的指引 d:%1$@ 让这个任务在余下的时间里越过你的大副指明的暂缓，直到它被修订或停用：“%2$@”";
+"taskOverrideDirectionVersion" = "你的指引 d:%1$@ 让这个版本越过你的大副指明的暂缓，直到它被修订或停用：“%2$@”";
 "taskPinPin" = "固定";
 "taskPinUnpin" = "取消固定";
 "taskStatusComputerUpdating" = "%1$@ 正在更新";

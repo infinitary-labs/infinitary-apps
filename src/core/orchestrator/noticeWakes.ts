@@ -16,7 +16,13 @@ import {
   type CaptainAllowance,
 } from "@shared/captainAllowances";
 import { HERE } from "@shared/deviceNames";
-import { type HoldOverride, overrideTakenBackWords, standingOverrideWords } from "@shared/holds";
+import {
+  directionOverrideEndedWords,
+  directionOverrideWords,
+  type HoldOverride,
+  overrideTakenBackWords,
+  standingOverrideWords,
+} from "@shared/holds";
 import type { PanelFailingRead } from "@shared/personal/manifest";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import type { CorrectionInput, CorrectionReview } from "../decisions/correctionTypes";
@@ -233,8 +239,10 @@ export type NoticeFacts =
        */
       kind: "task-override-changed";
       task: { id: string; key: string; title: string };
-      override: Pick<HoldOverride, "words" | "holds" | "until">;
+      override: Pick<HoldOverride, "words" | "holds" | "until" | "direction">;
       withdrawn?: true;
+      /** It ended because the direction it cited was revised or retired (INF-7021). */
+      directionChanged?: true;
     }
   | {
       /**
@@ -626,10 +634,15 @@ export const NOTICE_WORDS: KindWords<NoticeFacts> = {
   "away-copy-kept": (facts) => awayCopyKeptWords(facts),
   "task-policies-changed": (facts) =>
     `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope. Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.guidance?.length ? `\n\n${POLICY_GUIDANCE_HEADING}\n\n${facts.guidance.join("\n\n")}` : ""}`,
-  "task-override-changed": (facts) =>
-    facts.withdrawn
-      ? overrideTakenBackWords(facts.override)
-      : standingOverrideWords(facts.override),
+  "task-override-changed": ({ override, withdrawn, directionChanged }) => {
+    const direction = override.direction;
+    if (withdrawn)
+      return directionChanged && direction
+        ? directionOverrideEndedWords({ holds: override.holds, direction })
+        : overrideTakenBackWords(override);
+    const words = standingOverrideWords(override);
+    return direction ? `${words} ${directionOverrideWords(direction)}` : words;
+  },
   "task-allowed-changed": (facts) =>
     [
       ...(facts.takenBack ? [allowanceTakenBackWords(facts.takenBack)] : []),

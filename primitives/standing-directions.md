@@ -31,6 +31,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - What a crewmate's conversation holds: `../src/core/orchestrator/crewDirections.ts`, which says whether a turn carries the set and keeps it held once the conversation reads it.
 - The agent's door: the app action catalog's `direction` line (`../src/shared/actions.ts`), whose change channel `inf:knowledge:direction:set` (`../src/shared/channels/knowledge.ts`) runs `StandingDirections.change` through the dispatcher.
 - Window reads: `knowledge.directions` and `knowledge.direction` (`../src/shared/reads.ts`, shapes in `../src/shared/knowledge.ts`), answered by `StandingDirections.page` and `StandingDirections.read`.
+- Change hook: every change runs `KnowledgeService.onChange` listeners after the window's own refresh, and `StandingDirections.revisions` reads each known direction's current revision and whether it is retired, for an owner outside the collection that keeps something resting on a direction.
 
 ## Operations and lifecycle
 
@@ -80,18 +81,21 @@ Directions are instructions to weigh with the work, not data to search: they nev
 
 - A validation request can name a captain-origin project direction heard from the captain by its `d:` id for consent to the check's resources or to the exact independently cleared effect.
   The action gate only uses the wording current when the request was recorded; a revision or retirement ends its reach.
+- A task's override can cite a heard current project direction by its `d:` id to pass the task's soft holds; `CaptainOverrides` ends it on the change hook when that direction is revised or retired, and once at start for a change made while the app was closed (`../docs/delivery-rigor.md`, "The override").
 
 ## Failure and recovery
 
 - An unreadable or newer collection stays unchanged, and new agent work pauses because its standing directions cannot be read; no turn runs without them.
 - A carry-over conflict stops startup rather than silently losing a direction.
 - A refused change (unknown id, stale revision, duplicate add) throws as every catalog change does, and nothing is written.
+- A listener's failure stays its own: the crew's watch logs it and the change still saves.
 - The Settings purge clears directions with the rest of Knowledge; nothing restores them from the retired notes tables.
 
 ## Uses
 
 - The first mate's served context: the complete directions in `directions` in each conversation's first context and again after any change, including background wakes.
 - Crewmate turns: a crewmate working in a project receives that project's directions once per conversation and again after a change or a fold, including a task held on another computer.
+- Task overrides: a direction-cited override passes the task's soft holds while its revision stands, and ends when it does not.
 - The Knowledge panel and the browser's Directions tab list active directions, captain instructions before advice, with project tags, and Ask about this drafts a question naming `d:<id>`.
 - A direction the captain chooses on a crewmate's card is saved by the first mate on that crewmate's report, without the captain typing it (`../tests/e2e/knowledge-directions.spec.ts`).
 
@@ -107,6 +111,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - [`../src/core/personal/panelInstructions.test.ts`](../src/core/personal/panelInstructions.test.ts): the panel instructions carry, its repeat and its unreadable-Knowledge case.
 - [`../tests/e2e/personalize.spec.ts`](../tests/e2e/personalize.spec.ts) ("a panel instruction is a standing direction for the personal workspace"): the captain's words become a direction listed in the Knowledge browser.
 - [`../tests/e2e/knowledge-directions.spec.ts`](../tests/e2e/knowledge-directions.spec.ts): directions stay distinct from personal facts, forty directions arrive on an unrelated ask, carry-over and restart, forget and purge without a notes fallback.
+- [`../src/core/orchestrator/captainOverrides.direction.test.ts`](../src/core/orchestrator/captainOverrides.direction.test.ts): an override citing a heard direction, the ones refused, its end on a revision, a retirement and the next start, and which override stands.
 - [`../tests/e2e/knowledge-gate.spec.ts`](../tests/e2e/knowledge-gate.spec.ts): unreadable directions pause new work without replacing the collection.
 
 ## Where the detail lives

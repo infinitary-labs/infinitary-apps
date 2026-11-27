@@ -545,13 +545,19 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         // report (INF-1582 finding 2). A scheduled check carries none.
         // A click on a merge is his approval of it, never words that pass
         // the checks (INF-1966): the host says which, from the card's action.
-        const cited = captainWordsIn(host.turn, input.from, (from) =>
-          supervisor.overrides.citedCaptainWords(record.id, from, { partOf: true }),
-        );
+        // A heard direction of the task's project is his words too, kept on
+        // the record, so a scheduled check may cite it (INF-7021).
+        const from = input.from?.trim();
+        const cited = from?.startsWith("d:")
+          ? supervisor.overrides.citedDirection(record.id, from)
+          : captainWordsIn(host.turn, input.from, (cite) =>
+              supervisor.overrides.citedCaptainWords(record.id, cite, { partOf: true }),
+            );
         if (!cited.ok) return cited.text;
         const said = {
           words: cited.words,
-          ...(cited.mergeClick ? { mergeClick: true as const } : {}),
+          ...("mergeClick" in cited && cited.mergeClick ? { mergeClick: true as const } : {}),
+          ...(cited.direction ? { direction: cited.direction } : {}),
         };
         host.asks.attach(record.id, "update_task", undefined, "tie");
         const declared = supervisor.overrides.declareOverride(record.id, {

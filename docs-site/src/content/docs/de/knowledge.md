@@ -1,5 +1,5 @@
 ---
-source: a12b644ccfb84c74
+source: 0fee6cc7d6812497
 title: Wissen
 description: Die Vorgaben, die dein erster Offizier festhält, was du ihm über dich erzählst und die Quellen, die deine Crew speichern soll – und wie du sie liest, änderst oder löschst.
 ---
@@ -38,6 +38,7 @@ Eine Vorgabe, die aus einer anderen Quelle festgehalten wurde, trägt die Markie
 Keine Vorgabe erlaubt mehr, als ihre eigenen Worte sagen.
 Eine Vorgabe erlaubt etwas, etwa einen Schritt ohne Nachfrage, nur solange ihr aktueller Wortlaut von dir gehört wurde: in deinen Worten an deinen ersten Offizier, auf einer Karte oder im Tab **Crewmitglied** einer Aufgabe.
 Eine Vorgabe, die dein erster Offizier ohne deine Worte festgehalten oder umformuliert hat, leitet deine Crew, erlaubt aber für sich allein nichts.
+Dein erster Offizier kann eine Aufgabe auch ohne Nachfrage weiterlaufen lassen, so weit eine Vorgabe reicht, die du für ihr Projekt gesagt hast; sobald du diese Vorgabe änderst oder zurückziehst, fragt die Aufgabe dich wieder.
 Nach einem Update von einer Version, die das noch nicht festhielt, fragt dich dein erster Offizier einmal auf einer Karte, welche deiner Vorgaben du gesagt hast, und die du ankreuzt, gelten als gehört.
 
 ## Eine Vorgabe ansehen, ändern oder zurückziehen {#see-change-or-retire-a-direction}

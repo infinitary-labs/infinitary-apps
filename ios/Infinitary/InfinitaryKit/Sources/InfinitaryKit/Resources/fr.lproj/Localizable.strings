@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "en attente de vous";
 "taskGroupWorking" = "en cours";
 "taskNoteReworkHeld" = "Carte de fusion « %1$@ » gardée de côté jusqu’à la fin des vérifications de sa nouvelle version.";
+"taskOverrideDirectionGone" = "Votre consigne d:%1$@ n’est plus en vigueur : les retenues qu’elle levait sur cette tâche s’appliquent de nouveau.";
+"taskOverrideDirectionRevised" = "Votre consigne d:%1$@ a une nouvelle révision : les retenues qu’elle levait sur cette tâche s’appliquent de nouveau.";
+"taskOverrideDirectionTask" = "Votre consigne d:%1$@ lève les retenues nommées par votre second pour le reste de cette tâche, jusqu’à ce qu’elle soit révisée ou retirée : « %2$@ »";
+"taskOverrideDirectionVersion" = "Votre consigne d:%1$@ lève les retenues nommées par votre second pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « %2$@ »";
 "taskPinPin" = "Épingler";
 "taskPinUnpin" = "Désépingler";
 "taskStatusComputerUpdating" = "%1$@ se met à jour";

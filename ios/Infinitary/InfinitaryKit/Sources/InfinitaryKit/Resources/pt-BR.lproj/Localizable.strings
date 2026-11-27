@@ -4417,6 +4417,10 @@
 "taskGroupWaiting" = "aguardando você";
 "taskGroupWorking" = "trabalhando";
 "taskNoteReworkHeld" = "Segurei o cartão de mesclagem “%1$@” até as verificações da nova versão terminarem.";
+"taskOverrideDirectionGone" = "Sua diretriz d:%1$@ não vale mais, então as retenções que ela liberava nesta tarefa voltam a valer.";
+"taskOverrideDirectionRevised" = "Sua diretriz d:%1$@ tem uma nova versão, então as retenções que ela liberava nesta tarefa voltam a valer.";
+"taskOverrideDirectionTask" = "Sua diretriz d:%1$@ libera as retenções que seu imediato apontou pelo resto desta tarefa, até ganhar uma nova versão ou ser desativada: “%2$@”";
+"taskOverrideDirectionVersion" = "Sua diretriz d:%1$@ libera as retenções que seu imediato apontou para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “%2$@”";
 "taskPinPin" = "Fixar";
 "taskPinUnpin" = "Desafixar";
 "taskStatusComputerUpdating" = "%1$@ está atualizando";

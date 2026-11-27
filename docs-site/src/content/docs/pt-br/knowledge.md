@@ -1,5 +1,5 @@
 ---
-source: a12b644ccfb84c74
+source: 0fee6cc7d6812497
 title: Conhecimento
 description: As diretrizes permanentes que seu imediato guarda, o que você conta a ele sobre você e as fontes que você pede para sua tripulação salvar, e como lê-las, mudá-las ou apagá-las.
 ---
@@ -38,6 +38,7 @@ Uma guardada a partir de qualquer outra origem é marcada como **Conselho**, que
 Nenhuma diretriz permite mais do que as próprias palavras dizem.
 Uma diretriz permite algo, como um passo que não precisa perguntar, só enquanto as palavras atuais dela foram ouvidas de você: no que você disse ao seu imediato, em um cartão ou na aba **Tripulante** de uma tarefa.
 Uma que seu imediato guardou ou reescreveu sem as suas palavras orienta sua tripulação, mas sozinha não permite nada.
+Seu imediato também pode deixar uma tarefa seguir sem perguntar a você, até onde alcança uma diretriz que você disse para o projeto dela; assim que você muda ou desativa essa diretriz, a tarefa volta a perguntar a você.
 Depois de atualizar de uma versão que não anotava isso, seu imediato pergunta uma única vez, em um cartão, quais das suas diretrizes foram ditas por você, e as que você marcar contam como ouvidas.
 
 ## Ver, mudar ou desativar uma diretriz {#see-change-or-retire-a-direction}

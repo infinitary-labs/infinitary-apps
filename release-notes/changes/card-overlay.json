@@ -4,7 +4,7 @@
       "id": "card-overlay",
       "kind": "feature",
       "title": "Answer a card over a full-screen game without leaving it",
-      "body": "On a Mac, turn on Show cards over other apps in Settings › Keyboard, then press Control+Shift+O, or a key you choose, in any app, even a full-screen game. The card waiting for you, the one your last notification was about first, opens at the edge of the screen and takes your keys while the game stays in front. Answer it, press the key again or Escape, or click the game, and your keys go straight back to the game; anything you typed and did not send is kept. If another app already uses the key, Settings says so and keeps the key that works.",
+      "body": "On a Mac, turn on Show cards over other apps in Settings › Keyboard, then press Control+Shift+O, or a key you choose, in any app, even a full-screen game. The card waiting for you, the one your last notification was about first, opens at the edge of the screen and takes your keys while the game stays in front. Answer it, press the key again or Escape, or click the game, and your keys go straight back to the game; anything you typed and did not send is kept. Choose a key no other app uses: when two apps use the same key, only the one that set it last hears it.",
       "area": "cards",
       "picture": {
         "dark": "card-overlay-dark.webp",

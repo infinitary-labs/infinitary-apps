@@ -19,8 +19,9 @@ It must hold Control, Option or Command, so plain typing and a game's Shift-modi
 The switch and key live in `card-overlay.json` in this computer's app data, whichever first mate the window follows, since the key is pressed on this keyboard; `cardOverlayFile` is that file's one writer, and a file it cannot read is off.
 
 The app registers the key with the system (`globalShortcut`) only while the switch is on, and lets it go when the switch goes off, the key changes, or the app quits.
-A key another program already holds is refused whole: the switch and key stay as they were and the key that worked keeps working, and the row says which key was refused and which one the cards keep.
-At startup, a saved key another program has taken since shows on the row as not working.
+A key the system will not register is refused whole: the switch and key stay as they were and the key that worked keeps working, and the row says which key was refused and which one the cards keep.
+At startup, a saved key the system will not register shows on the row as not working.
+On a Mac the system does not refuse a key another program holds: both programs register it, and only the one that registered it last hears it, so the app cannot tell that another program wanted the key (seen on macOS 26, with a program registering it as a Carbon hot key).
 The dictation key is not a system-wide shortcut and stays as it is.
 
 Every desktop but a Mac's reports `unsupported`, and the row does not show there.

@@ -1557,7 +1557,7 @@ A rerun of an old workflow still uses its old routing, so use the current workfl
 ### A phone check the placement service puts in a virtual Mac
 
 The `phone` kind in `MAC_QUEUES` keeps the exact label `mini-mac-phone` (INF-2202, DOP-246), and the `phone_small` kind names `mini-mac-phone-small`, where a request the chooser dealt into one or two jobs waits; the placement service starts it before a bigger check's phone jobs (INF-7079's fix 1; `docs/testing.md`, "Each Mac job's kind and size").
-The fleet serves both labels from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike, never the captain's Mac mini VM; which places serve it is the fleet's setup, not this project's.
+The fleet serves both labels from every phone place the placement service runs, one on each compute Mac, never the captain's Mac mini VM; which places serve it is the fleet's setup, not this project's.
 The one native job, `native-phone`, requires the `phone` mapping, reading `phone_small` first for a small check, with no per-run override, fixed-clone switch or generic-Mac fallback.
 An absent, empty or malformed `phone` mapping supplies no runnable destination instead of redirecting to the mini, and an absent `phone_small` mapping leaves a small check on `phone`.
 The other queue mappings and the generic Mac labels remain unchanged for non-phone jobs.

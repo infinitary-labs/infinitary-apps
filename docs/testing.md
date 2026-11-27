@@ -985,7 +985,7 @@ The job summary names each kept part with its distance and reason, and the `phon
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
 Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`; the run's own group, which lets a newer same-selection request on a task branch cancel it, is in "What a task branch requests".
-The phone queue and the small phone queue are served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike, and each of those places also takes other kinds of Mac work, the merge batch's Mac lanes included, so a phone check waits for any free place and holds one that a batch lane could take (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The phone queue and the small phone queue are served from every phone place the placement service runs, one on each compute Mac, and each of those places also takes other kinds of Mac work, the merge batch's Mac lanes included, so a phone check waits for any free place and holds one that a batch lane could take (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
@@ -1795,7 +1795,7 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 | `native` | `verify.yml`'s native tests, replay and package and its parallel journeys, ahead of `split` and of a batch's or release's `release_split` | GitHub's own `macos-15`, not the placement service |
 | `check` | none of its own: the full Mac check's lanes fall back to it after `split` and `journeys` | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
-| `phone` | `phone.yml`'s `native-phone` | on any Mac place: the rented vBoxx places and the compute Macs alike |
+| `phone` | `phone.yml`'s `native-phone` | on any compute Mac's phone place |
 | `phone_small` | `phone.yml`'s `native-phone` when the request job dealt one or two jobs | as `phone`, ahead of a bigger check's `phone` jobs |
 | `testflight` | `ios-release.yml`'s `testflight`, which signs after the separate unsigned phone job succeeds | on the real Mac |
 | `build` | `mac-installer.yml`'s `build`, which also checks the copies it signed | in a virtual Mac only |
@@ -1816,7 +1816,7 @@ Removing `native` from `MAC_QUEUES` sends them back to `split` in one parallel j
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.
 `tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
-The `phone` mapping remains `mini-mac-phone`, and `phone_small` maps to `mini-mac-phone-small`; both are served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike.
+The `phone` mapping remains `mini-mac-phone`, and `phone_small` maps to `mini-mac-phone-small`; both are served from every phone place the placement service runs, one on each compute Mac.
 The request job prints `small` when it dealt a check into at most `SMALL_PHONE_CHECK_JOBS` jobs, two (`scripts/affected-phone.ts`), and those jobs ask for `phone_small`, then `phone` until `MAC_QUEUES` names it.
 The placement service starts a waiting `phone_small` job before a bigger check's `phone` jobs, after a release's, the merge batch's, a branch's and `main`'s other Mac jobs, so a quick check does not wait behind every job of a bigger one (INF-7079's fix 1, after the captain's "When the phone places are full, start phone checks of one or two jobs before bigger ones").
 The phone release's call, whose own step hands on only the jobs it dealt, and a wait-clock or tool request ask for `phone`.

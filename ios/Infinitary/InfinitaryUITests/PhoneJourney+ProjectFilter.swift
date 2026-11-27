@@ -27,14 +27,14 @@ extension PhoneJourney {
         XCTAssertFalse(app.otherElements["project-focus-row"].exists, "All projects: no focus row")
         // Home draws its crew scene only on an empty stage, so the home's note and south-pier's decision are put aside;
         // the decision still waits on the captain, and its crewmate shows the light the focus sets. The decision is put
-        // aside only once the stage has shown it and marked it seen, which also clears its new-card notice, so the order
-        // never depends on which comes first.
+        // aside only once the home has recorded the stage's seen mark for it: the phone clears its new-card notice before
+        // sending that mark, so no notice is left over Tasks.
         let aside = app.buttons["put-aside-card"]
         XCTAssertTrue(aside.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(aside)
         let decision = app.staticTexts.matching(NSPredicate(format: "identifier == 'card-title' AND label CONTAINS 'south pier'")).firstMatch
         XCTAssertTrue(decision.waitForPresence(timeout: 10), "South-pier's decision takes the stage\n\(app.debugDescription)")
-        XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), "The stage marks the decision seen\n\(app.debugDescription)")
+        _ = try await home("seen-wait", body: decision.label)
         tapOnPhone(aside)
         XCTAssertTrue(aside.waitForAbsence(timeout: 10), "Both cards are put aside\n\(app.debugDescription)")
         let crewmate = app.buttons["crew-task-project-filter-spr-0"]

@@ -30,8 +30,7 @@ import XCTest
 
     /// The first mate in each of its three states, every reaction and every fidget, warps included, and the busy
     /// first mate whose halo is a blurred layer, in Dark and Light. Each built-in color theme draws the resting and the
-    /// busy first mate only: every other form takes its colors from the same palette, and drawing each form in each
-    /// theme added about a minute to the phone check's rest part, which a part's ten-minute wall cap ends.
+    /// busy first mate only: every other form takes its colors from the same palette.
     func testTheFirstMateDrawsTheSameThroughBothPens() throws {
         let modes = CharacterMachine.Mode.allCases.filter { $0 != .fidget }
         let forms: [(CharacterMachine.Mode, CharacterMachine.Fidget?)] = modes.map { ($0, nil) }

@@ -1256,9 +1256,6 @@
 "integrationsGoogleExchangeOperation" = "Concluir o login no Google com seu próprio cliente do Google";
 "integrationsGoogleExchangeReason" = "O Infinitary conclui seu login no Google com seu próprio cliente do Google.";
 "integrationsGoogleExchangeResult" = "Um novo login no Google, guardado em Segredos e na memória do app";
-"integrationsGoogleReadyDetail" = "Seu próprio cliente do Google está guardado. Faça login com ele para deixar o cliente compartilhado do Infinitary.";
-"integrationsGoogleRetiring" = "Configure sua própria conexão";
-"integrationsGoogleRetiringDetail" = "O Google está conectado pelo cliente compartilhado do Infinitary, que vai ser desativado. Ele continua funcionando até lá; configure seu próprio cliente para continuar conectado.";
 "integrationsGoogleSetUp" = "Configurar";
 "integrationsGoogleSetUpAgain" = "Configurar de novo";
 "integrationsGoogleSetUpFirst" = "Primeiro configure seu próprio cliente do Google, em Ajustes → Integrações → Google.";
@@ -1274,7 +1271,6 @@
 "integrationsGoogleSetupStepFile" = "Baixe com Download JSON o arquivo de cliente que o Google mostra e depois solte-o aqui, escolha-o ou cole o conteúdo dele.";
 "integrationsGoogleSetupStepPage" = "Abra a página do Google e faça login com a conta do Google que você vai conectar. Dê um nome ao projeto e deixe desmarcada a caixa “Use this client for an AI-powered agent”, porque ela só serve para clientes que usam as ferramentas MCP do Google. Depois aceite a política do Google e pressione Continue.";
 "integrationsGoogleSetupTitle" = "Configure sua própria conexão com o Google";
-"integrationsGoogleSignIn" = "Fazer login";
 "integrationsGoogleSignInHint" = "Faça login com a conta do Google que criou seu cliente: ele só atende essa conta.";
 "integrationsGoogleStopped" = "Seu cliente do Google parou";
 "integrationsGoogleStoppedDetail" = "O Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud. Configure-o de novo para reconectar o Google.";

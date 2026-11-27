@@ -70,10 +70,7 @@ struct PhoneGoogleSection: View {
             }
             PhoneChoiceRow {
                 if let state = google.clientState {
-                    Button(state.nextWords) {
-                        address = ""
-                        if state.next == .signIn { google.begin() } else { google.beginSetup() }
-                    }
+                    Button(state.nextWords) { address = ""; google.beginSetup() }
                     .buttonStyle(PhoneChoiceStyle(.primary))
                     .disabled(google.busy || !session.canChange || !google.homeTakesReturn)
                     .accessibilityIdentifier("google-client-next")

@@ -1159,6 +1159,7 @@ The start has `PHONE_FACE_ID_BUDGET_MS` on the load clock; an interface not star
 Every other command the gate runs has a deadline on the same load clock too (`scripts/phone-deadlines.ts`, INF-5387's plan, piece 1), clean-up on a frozen simulator included.
 A part has twice its time in `scripts/phone-part-times.json`, and at least three minutes (`phonePartBudget`); a part with no recorded time counts as the median part.
 The part's `xcodebuild` has that and one command deadline more, and the gate gives the part's own process one more again for its clean-up.
+A deadline longer than the load clock's ten-minute wall cap, as the part's own process's always is, runs its whole length on the wall clock and ends there, so its failure names the minutes it ran (`waitCap`).
 The build has `PHONE_BUILD_BUDGET_MS`, the package tests `PHONE_PACKAGE_TESTS_BUDGET_MS`, and every other command, each `simctl` call, log read and diagnostic's close among them, `PHONE_COMMAND_BUDGET_MS`; each rests on recorded times (`scripts/limits.ts`).
 A command past its deadline is ended with every process under it, and the gate keeps what it waited on in `hung-<command>-<time>.txt` beside its log: its processes, a sample of each and its simulator's state.
 It fails naming the command and its minutes, and nothing is retried; a failed part then stops the others at the first failure as any failed part does.
@@ -1200,7 +1201,7 @@ A missing appearance fails with the last frame named `unconfirmed` and its quadr
 This checks the journey's fixtures, not the appearance of arbitrary pictures or other apps.
 Its load clock, `PhoneWaitDeadline`, lives in `PhoneLoadClock/`, which both test targets compile, so the app-hosted display samples read the same clock.
 On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, at most two ticks counted across a stall, and a share reduced by one-minute load per active processor above 1.
-Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes; direct predicate evaluation preserves INF-975's short-window fix.
+Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes or its own budget where that is longer; direct predicate evaluation preserves INF-975's short-window fix.
 The phone launcher starts the Node load clock for its failure timers too, and the disposable control server keeps idle connections for a finite capped interval so a queued POST survives a frozen home.
 A graded run keeps each original wall-clock budget, and the launcher writes that reading into every test target's own test plan.
 XCTest timeouts are enabled in both modes: an ordinary test's default and maximum allowance is its part's deadline (`phonePartBudget`, below), while graded tests use Xcode's own allowances.

@@ -84,23 +84,26 @@ const UNAUTHENTICATED = googleError(
 );
 const NOT_FOUND = googleError(404, "Requested entity was not found.", "notFound", "NOT_FOUND");
 
-/** Google's refusal of a call to an MCP service the person's project has not turned on. */
-function serviceDisabled(service: GoogleMcpService) {
+/**
+ * Google's refusal of a tool call to an MCP service the person's project has
+ * not turned on, as Google's Calendar server gave it live: status 403 with a
+ * finished tool result whose only words name the page that turns it on.
+ */
+function serviceDisabled(service: GoogleMcpService, id: unknown) {
   const name = `${service}mcp.googleapis.com`;
   const activationUrl = `https://console.developers.google.com/apis/api/${name}/overview?project=${STAND_IN_PROJECT}`;
   return {
-    error: {
-      code: 403,
-      message: `${service === "gmail" ? "Gmail" : "Google Calendar"} MCP API has not been used in project ${STAND_IN_PROJECT} before or it is disabled. Enable it by visiting ${activationUrl} then retry.`,
-      status: "PERMISSION_DENIED",
-      details: [
+    id,
+    jsonrpc: "2.0",
+    result: {
+      content: [
         {
-          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
-          reason: "SERVICE_DISABLED",
-          domain: "googleapis.com",
-          metadata: { service: name, activationUrl, consumer: `projects/${STAND_IN_PROJECT}` },
+          text: `${service === "gmail" ? "Gmail" : "Calendar"} MCP API has not been used in project ${STAND_IN_PROJECT} before or it is disabled. Enable it by visiting ${activationUrl} then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.`,
+          type: "text",
         },
       ],
+      isError: true,
+      resultType: "complete",
     },
   };
 }
@@ -240,6 +243,7 @@ export async function startGoogleStandIn() {
     const rpc = (() => {
       try {
         return JSON.parse(body) as {
+          id?: unknown;
           method?: string;
           params?: { name?: string; arguments?: Record<string, unknown> };
         };
@@ -264,7 +268,9 @@ export async function startGoogleStandIn() {
       return json(response, 401, UNAUTHENTICATED, {
         "www-authenticate": 'Bearer error="invalid_token"',
       });
-    if (knobs.off.has(service)) return json(response, 403, serviceDisabled(service));
+    // Google's server still answers the handshake and its list with the service off.
+    if (knobs.off.has(service) && rpc?.method === "tools/call")
+      return json(response, 403, serviceDisabled(service, rpc.id));
     const wait = knobs.limited.shift();
     if (wait !== undefined)
       return json(

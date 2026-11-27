@@ -7,7 +7,6 @@ import {
   SdkHttpError,
   StreamableHTTPClientTransport,
 } from "@modelcontextprotocol/client";
-import { GOOGLE_MCP_ENABLE_PAGE, googleConsoleLink } from "@shared/integrations";
 import { IntegrationOutcomeUnknown } from "../../binding";
 
 /**
@@ -133,22 +132,22 @@ class GoogleStopped extends Error {
 
 const TOOL_CALL = /"method"\s*:\s*"tools\/call"/;
 
+/** The console page that turns one of Google's MCP services on in a project. */
+const ACTIVATION_PAGE =
+  /https:\/\/console\.(?:developers|cloud)\.google\.com\/apis\/api\/[a-z0-9-]+mcp\.googleapis\.com\/overview\?project=[a-z0-9-]+/;
+
 /**
- * Google's SERVICE_DISABLED refusal anywhere in an answer: the address it
- * names to turn the service on, kept only on Google's own console.
+ * The page a refusal names to turn an MCP service on, wherever in the answer
+ * its words stand. Google's servers refuse a call to a service that is off
+ * with a finished tool result whose only words name that page, and no
+ * reason field to read instead.
  */
-export function disabledServiceLink(body: unknown): string | undefined {
+function disabledServiceLink(body: unknown): string | undefined {
   const seen = new Set<unknown>();
   const walk = (value: unknown): string | undefined => {
+    if (typeof value === "string") return ACTIVATION_PAGE.exec(value)?.[0];
     if (!value || typeof value !== "object" || seen.has(value)) return undefined;
     seen.add(value);
-    const entry = value as { reason?: unknown; metadata?: { activationUrl?: unknown } };
-    if (entry.reason === "SERVICE_DISABLED") {
-      const named = entry.metadata?.activationUrl;
-      return typeof named === "string" && named.length <= 2048 && googleConsoleLink(named)
-        ? named
-        : GOOGLE_MCP_ENABLE_PAGE;
-    }
     for (const inner of Object.values(value)) {
       const found = walk(inner);
       if (found) return found;

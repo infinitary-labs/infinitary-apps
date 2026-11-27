@@ -60,6 +60,10 @@ struct PhoneFilterSheet: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { sheet = $0 }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .onKeyPress(.escape) { dismiss(); return .handled }
+        .onPlainKey(.return) { pick(current) }
+        .onPlainKey(.space) { pick(current) }
+        .onPlainKey(.downArrow) { focusedRow = step(order, from: current, by: 1) }
+        .onPlainKey(.upArrow) { focusedRow = step(order, from: current, by: -1) }
         .presentationDetents([.custom(PhoneFittedDetent.self), .large], selection: $detent).presentationDragIndicator(.visible)
         .presentationContentInteraction(.resizes)
         .environment(\.phoneSheetFit, rows > 0 && shown > 0 && sheet > shown ? rows + sheet - shown : 0).phoneSheetSurface()
@@ -67,20 +71,18 @@ struct PhoneFilterSheet: View {
 
     private var projects: some View {
         let pills = session.projectPills
-        let order = [Self.allRow] + pills.projects.map(\.id)
         return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             PhoneSectionLabel(PhoneMessages.phoneFilterProject())
             PhoneList {
-                row(Self.allRow, title: PhoneMessages.shellProjectAll(), waiting: pills.waiting, working: pills.working,
-                    order: order)
+                row(Self.allRow, title: PhoneMessages.shellProjectAll(), waiting: pills.waiting, working: pills.working)
                 ForEach(pills.projects) { pill in
-                    row(pill.id, title: pill.name, waiting: pill.waiting, working: pill.working, order: order)
+                    row(pill.id, title: pill.name, waiting: pill.waiting, working: pill.working)
                 }
             }
         }
     }
 
-    private func row(_ id: String, title: String, waiting: Int, working: Int, order: [String]) -> some View {
+    private func row(_ id: String, title: String, waiting: Int, working: Int) -> some View {
         let checked = (session.projectFocus ?? Self.allRow) == id
         let line = PhoneMessages.phoneFilterCounts(waiting: PhoneProjectFilterWords.count(waiting),
                                                    working: PhoneProjectFilterWords.count(working))
@@ -99,11 +101,14 @@ struct PhoneFilterSheet: View {
         .focusable().focused($focusedRow, equals: id)
         // The opening focus is set from the focusable row itself, as the Settings sheet's Appearance page sets its own.
         .onAppear { if checked { focusedRow = id } }
-        .onPlainKey(.return) { pick(id) }
-        .onPlainKey(.space) { pick(id) }
-        .onPlainKey(.downArrow) { focusedRow = step(order, from: id, by: 1) }
-        .onPlainKey(.upArrow) { focusedRow = step(order, from: id, by: -1) }
     }
+
+    private var order: [String] { [Self.allRow] + session.projectPills.projects.map(\.id) }
+
+    /// The row the keys act on. The sheet's root takes the keys, as it takes Escape, because the opening focus can fail:
+    /// reopened a second after a pick, the iPad's focus update found no row, and keys sent to the rows went nowhere.
+    /// The checked row then stands in, so the keys still start there.
+    private var current: String { focusedRow ?? session.projectFocus ?? Self.allRow }
 
     private func pick(_ id: String) {
         session.savedProjectFocus = id == Self.allRow ? nil : id

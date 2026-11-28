@@ -445,13 +445,14 @@ export type FirstmateApi = {
     ) => Promise<import("./cardOverlay").CardOverlaySet>;
     /**
      * The card the newest notification on this computer was about, which the
-     * overlay shows first, and the window's unsent message lent for this opening.
+     * overlay shows first, and this opening's message: the window's unsent one,
+     * words kept from an earlier overlay, or an empty one.
      */
     start: () => Promise<{
       cardId: string | null;
       lent?: import("./overlayDraft").LentDraft | null;
     }>;
-    /** The overlay's message box hands the lent message back as the overlay goes. */
+    /** The overlay's message box hands its message back as the overlay goes, to the window or to be kept. */
     handBack: (lent: import("./overlayDraft").LentDraft) => Promise<{ ok: true }>;
     /** The overlay drew its card, or found none waiting. */
     ready: (cards: boolean) => Promise<{ ok: true }>;

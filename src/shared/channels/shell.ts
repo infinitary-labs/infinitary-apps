@@ -176,7 +176,8 @@ export const shellChannels = {
     response: cardOverlaySetSchema,
   },
   // The overlay's page starts: the card the newest notification was about, never taken from the
-  // click, and the window's unsent message, lent for this opening (docs/card-overlay.md, "The message box").
+  // click, and this opening's message - the window's unsent one, words kept from an earlier overlay,
+  // or an empty one (docs/card-overlay.md, "The message box").
   "inf:overlay:start": {
     effect: "read",
     surface: "host",
@@ -186,7 +187,8 @@ export const shellChannels = {
       lent: lentDraftSchema.nullable().optional(),
     }),
   },
-  // The overlay's page goes: its message box hands the lent message back to the window that lent it.
+  // The overlay's page goes: its message box hands its message back to the window that lent it, or,
+  // when none did, to be kept for the next opening or an empty window box.
   "inf:overlay:hand-back": {
     effect: "change",
     surface: "host",

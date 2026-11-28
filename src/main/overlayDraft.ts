@@ -40,6 +40,12 @@ export class DraftRelay<Window> {
   private readonly open = new Map<number, Window | null>();
   /** Words handed back with no window to take them. */
   private keptDraft: MainDraft | null = null;
+  /**
+   * The opening the kept words went to. They stay kept until it hands back,
+   * since a page whose first reads fail, or that goes while starting, never
+   * does; the next opening gets them again.
+   */
+  private keptFor: number | null = null;
 
   constructor(private readonly deps: DraftRelayDeps<Window>) {}
 
@@ -48,12 +54,14 @@ export class DraftRelay<Window> {
     const ask = ++this.asks;
     // One overlay opens at a time: an earlier opening whose page never came back is over.
     this.open.clear();
+    this.keptFor = null;
     const window = this.deps.lender();
-    if (window === null) return Promise.resolve(this.opened(ask, null, this.takeKept() ?? EMPTY));
+    if (window === null)
+      return Promise.resolve(this.opened(ask, null, this.offerKept(ask) ?? EMPTY));
     return new Promise((resolve) => {
       const timer = this.deps.later(() => {
         this.waiting.delete(ask);
-        resolve(this.opened(ask, null, this.takeKept() ?? EMPTY));
+        resolve(this.opened(ask, null, this.offerKept(ask) ?? EMPTY));
       }, LEND_LIMIT_MS);
       this.waiting.set(ask, {
         window,
@@ -71,8 +79,10 @@ export class DraftRelay<Window> {
     const waiting = this.waiting.get(lent.ask);
     if (!waiting || waiting.window !== from) return;
     this.waiting.delete(lent.ask);
-    // An empty box opens with the kept words; handed back, they reach this window.
-    const draft = holdsWords(lent.draft) ? lent.draft : (this.takeKept() ?? lent.draft);
+    // An empty box opens with the kept words, and the window's recall when they have none;
+    // handed back, they reach this window.
+    const kept = holdsWords(lent.draft) ? null : this.offerKept(lent.ask);
+    const draft = kept ? { ...kept, lastSent: kept.lastSent ?? lent.draft.lastSent } : lent.draft;
     waiting.resolve(this.opened(lent.ask, from, draft));
   }
 
@@ -84,6 +94,10 @@ export class DraftRelay<Window> {
     if (!this.open.has(lent.ask)) return;
     const window = this.open.get(lent.ask) ?? null;
     this.open.delete(lent.ask);
+    if (this.keptFor === lent.ask) {
+      this.keptDraft = null;
+      this.keptFor = null;
+    }
     if (window !== null) {
       this.deps.handBack(window, lent);
       return;
@@ -93,11 +107,19 @@ export class DraftRelay<Window> {
     this.deps.kept();
   }
 
-  /** The kept words, given once: to a window with an empty box or the next opening. */
+  /** The kept words, given once to a window with an empty box; none while an opening holds them. */
   takeKept(): MainDraft | null {
+    if (this.keptFor !== null) return null;
     const kept = this.keptDraft;
     this.keptDraft = null;
     return kept;
+  }
+
+  /** The kept words for this opening, still kept until it hands back. */
+  private offerKept(ask: number): MainDraft | null {
+    if (this.keptDraft === null) return null;
+    this.keptFor = ask;
+    return this.keptDraft;
   }
 
   private opened(ask: number, window: Window | null, draft: MainDraft): LentDraft {

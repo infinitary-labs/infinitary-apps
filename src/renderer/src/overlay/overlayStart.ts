@@ -50,7 +50,7 @@ export function startOverlayStore(): Promise<void> {
 /** This opening's message - the window's, kept words or an empty one - handed back as the overlay goes. */
 let lent: number | null = null;
 
-/** The message box opens with the window's unsent message. */
+/** The message box opens with this opening's message: the window's, kept words or an empty one. */
 export function takeLentDraft(draft: LentDraft | null | undefined): void {
   if (!draft) return;
   lent = draft.ask;

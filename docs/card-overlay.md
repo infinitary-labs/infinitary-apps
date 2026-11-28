@@ -106,7 +106,7 @@ Each way out sends the panel away without answering, keeping what was typed:
 - a click on the game, another app, another Space (the panel loses the keys);
 - the screen locking, the computer sleeping, or a display going away.
 
-The panel hides at once, the page sends its unsent drafts (`DraftSync.settle`) and hands the main message back to the window, and the window is destroyed once it has, or after one second.
+The panel hides at once, the page sends its unsent drafts (`DraftSync.settle`) and hands the main message back to the window that lent it, or to the main process to keep when none did, and the window is destroyed once it has, or after one second.
 Nothing brings the main window forward, and the game stays the front app; a game that quit meanwhile stays gone.
 A click on the card can still make Infinitary the active app, although the panel is nonactivating (seen on macOS 26), and the game would then get no keys once the panel went.
 So the panel notes which app was in front when the key was pressed (`lsappinfo`), and when the card was clicked and the panel still has the keys as it goes, it makes that app active again through Launch Services (`open -b`), only while that same instance still runs.
@@ -127,8 +127,9 @@ As the panel opens, `inf:overlay:start` asks the main window for its unsent mess
 As the panel goes, the page hands the message back once, to the window that lent it (`inf:overlay:hand-back`, then `inf:composer:hand-back`); the window takes it only while its own box still holds what it lent, so words typed in the window meanwhile are never replaced.
 A message sent from the box becomes the one Up recalls in the window, unless the window sent one since.
 When no window lends - none is open, or it answers after `LEND_LIMIT_MS` - the box opens with the words an earlier overlay kept, or empty, and as it goes the main process keeps the words it holds, in memory only (the captain's choice on the change's review: "Keep them for the next overlay opening or window").
-Kept words go once: to the next overlay opening, when no window lends or the window lends an empty box, or to a window whose box holds nothing, which takes them as it opens or when the main process says words are kept (`inf:composer:kept`, then `inf:composer:take-kept`).
+Kept words go once: to the next overlay opening, when no window lends or the window lends an empty box (keeping that window's last sent message for Up when the kept words have none), or to a window whose box holds nothing, which takes them as it opens or when the main process says words are kept (`inf:composer:kept`, then `inf:composer:take-kept`).
 A window whose box holds words of its own leaves them kept.
+Words an opening took stay kept until that opening hands back, so a page whose first reads fail, or that goes while starting, loses nothing: the next opening gets them again, and no window takes them meanwhile.
 
 A send carries the shown card's id as the window's does (`visibleCardId`), as a hint, not the topic.
 After a send from the box in this opening, the newest round - the message, the first mate's mark, its working words and its reply line - shows above the field on the same surface; it is not a button and opens nothing, since the conversation stays in the window.

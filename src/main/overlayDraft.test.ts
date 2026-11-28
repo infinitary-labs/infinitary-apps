@@ -81,7 +81,19 @@ describe("DraftRelay", () => {
     expect(announced()).toBe(1);
 
     await expect(drafts.lend()).resolves.toEqual(lent(2, "typed with no window"));
+    drafts.handBack(lent(2, ""));
     await expect(drafts.lend()).resolves.toEqual(lent(3, ""));
+  });
+
+  it("offers kept words again when the opening that took them never hands back", async () => {
+    const { drafts } = relay(null);
+    await drafts.lend();
+    drafts.handBack(lent(1, "kept words"));
+    // Section: the second opening's page fails its first reads and never hands back.
+    await drafts.lend();
+    expect(drafts.takeKept()).toBeNull();
+
+    await expect(drafts.lend()).resolves.toEqual(lent(3, "kept words"));
   });
 
   it("keeps nothing when the overlay hands back an empty box", async () => {
@@ -108,7 +120,7 @@ describe("DraftRelay", () => {
     expect(drafts.takeKept()).toBeNull();
   });
 
-  it("gives kept words to the next opening when the window lends an empty box, and hands them back to that window", async () => {
+  it("gives kept words to the next opening when the window lends an empty box, keeping its recall, and hands them back to that window", async () => {
     const main = { name: "main" };
     const { drafts, handed, timers } = relay(main);
     const first = drafts.lend();
@@ -117,10 +129,15 @@ describe("DraftRelay", () => {
     await first;
     drafts.handBack(lent(1, "kept words"));
 
-    // Section: the next opening's window lends its empty box, and the kept words take its place.
+    // Section: the next opening's window lends its empty box, and the kept words take its place,
+    // keeping the window's last sent message for Up.
     const second = drafts.lend();
-    drafts.lent(main, lent(2, ""));
-    await expect(second).resolves.toEqual(lent(2, "kept words"));
+    const recall = { text: "sent from the window", pastes: [], attachments: [] };
+    drafts.lent(main, { ask: 2, draft: { ...draft(""), lastSent: recall } });
+    await expect(second).resolves.toEqual({
+      ask: 2,
+      draft: { ...draft("kept words"), lastSent: recall },
+    });
     drafts.handBack(lent(2, "kept words, edited"));
     expect(handed).toEqual([["main", lent(2, "kept words, edited")]]);
     expect(drafts.takeKept()).toBeNull();

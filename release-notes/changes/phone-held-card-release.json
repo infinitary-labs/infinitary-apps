@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-held-card-release",
+      "reason": "Internal: the phone check's test home holds and releases its readiness card through the card's thread and the first mate's turn end, as the app does, without changing app behavior."
+    }
+  ]
+}

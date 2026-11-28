@@ -107103,6 +107103,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `${computer} could not be asked for its sites right now.`;
   }
+  function settleBranchOpenElsewhere() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الفرع الذي يُدمج فيه مفتوح في مجلد آخر - بدّل ذلك المجلد إلى فرع آخر أولًا`;
+      case "de":
+        return `der Branch, in den es zusammengeführt wird, ist in einem anderen Ordner geöffnet – wechsle dort zuerst zu einem anderen Branch`;
+      case "es":
+        return `la rama en la que se fusiona está abierta en otra carpeta: cambia esa carpeta a otra rama primero`;
+      case "fr":
+        return `la branche dans laquelle il fusionne est ouverte dans un autre dossier – passez d'abord ce dossier sur une autre branche`;
+      case "ja":
+        return `マージ先のブランチが別のフォルダで開かれています - 先にそのフォルダを別のブランチに切り替えてください`;
+      case "ko":
+        return `병합할 분기가 다른 폴더에서 열려 있어요. 먼저 그 폴더를 다른 분기로 바꾸세요`;
+      case "pt-BR":
+        return `o branch em que ele é mesclado está aberto em outra pasta - mude essa pasta para outro branch primeiro`;
+      case "zh-Hans":
+        return `要合并进的分支在另一个文件夹中打开着——请先把那个文件夹切换到其他分支`;
+      case "zh-Hant":
+        return `要合併進的分支在另一個資料夾中開啟著，請先把那個資料夾切換到其他分支`;
+      case "en-XA":
+        return `[ţĥé ƀŕáñçĥ îţ ɱéŕĝéš îñţö îš öþéñ îñ áñöţĥéŕ ƒöļðéŕ - šŵîţçĥ ţĥáţ ƒöļðéŕ ţö áñöţĥéŕ ƀŕáñçĥ ƒîŕšţ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮the branch it merges into is open in another folder - switch that folder to another branch first‬`;
+    }
+    return `the branch it merges into is open in another folder - switch that folder to another branch first`;
+  }
   function settleCannotMerge(input2) {
     const problem = input2.problem;
     switch (currentLanguage()) {
@@ -122082,6 +122109,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsWebsiteSignInsSavedYesterday,
     settingsWebsiteSignInsStorage,
     settingsWebsiteSignInsUnreachable,
+    settleBranchOpenElsewhere,
     settleCannotMerge,
     settleCouldNotDiscard,
     settleDiscardedPullOpen,
@@ -125888,6 +125916,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsWebsiteSignInsSavedYesterday": [],
     "settingsWebsiteSignInsStorage": [],
     "settingsWebsiteSignInsUnreachable": ["computer"],
+    "settleBranchOpenElsewhere": [],
     "settleCannotMerge": ["problem"],
     "settleCouldNotDiscard": ["problem"],
     "settleDiscardedPullOpen": ["problem"],
@@ -142137,6 +142166,10 @@ ${startersHtml()}`;
     {
       test: (error2) => /hit a conflict; resolve it manually/.test(error2),
       line: "could not bring it up to date - the work and your project changed the same place"
+    },
+    {
+      test: (error2) => /^\S+ is checked out at .+; switch that folder to another branch first\./m.test(error2),
+      line: () => settleBranchOpenElsewhere()
     }
   ];
   const RULES = [
@@ -142196,7 +142229,8 @@ ${startersHtml()}`;
     const raw = error2?.trim() ?? "";
     if (!raw) return PLAIN_PROBLEM_FALLBACK;
     const rules = RULES;
-    return rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
+    const line2 = rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
+    return typeof line2 === "function" ? line2() : line2;
   }
   const checkStateSchema = _enum([
     "success",

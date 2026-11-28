@@ -176,6 +176,10 @@ describe("plainProblem", () => {
         "Merging fm/task-1 into main hit a conflict; resolve it manually. CONFLICT (content)",
         "could not bring it up to date - the work and your project changed the same place",
       ],
+      [
+        "main is checked out at /work/video-script; switch that folder to another branch first.",
+        "the branch it merges into is open in another folder - switch that folder to another branch first",
+      ],
     ];
     for (const [raw, line] of cases) expect(plainProblem(raw), raw).toBe(line);
   });

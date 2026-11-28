@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "login ontem";
 "settingsWebsiteSignInsStorage" = "Eles ficam no perfil de navegador desse computador, não no armazenamento protegido.";
 "settingsWebsiteSignInsUnreachable" = "Não foi possível perguntar a %1$@ quais são os sites dele agora.";
+"settleBranchOpenElsewhere" = "o branch em que ele é mesclado está aberto em outra pasta - mude essa pasta para outro branch primeiro";
 "settleCannotMerge" = "Não é possível mesclar: %1$@";
 "settleCouldNotDiscard" = "Não foi possível descartar: %1$@";
 "settleDiscardedPullOpen" = "Descartada. A solicitação de pull dela continua aberta onde o projeto fica: %1$@";

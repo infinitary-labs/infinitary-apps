@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "الفرع الذي يُدمج فيه مفتوح في مجلد آخر - بدّل ذلك المجلد إلى فرع آخر أولًا",
   "settleCannotMerge": "تعذّر الدمج: {problem}",
   "settleCouldNotDiscard": "تعذّر التجاهل: {problem}",
   "settleDiscardedPullOpen": "تم التجاهل. لا يزال طلب السحب الخاص بها مفتوحًا حيث يُستضاف المشروع: {problem}",

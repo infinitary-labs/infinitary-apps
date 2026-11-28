@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "sesión iniciada ayer";
 "settingsWebsiteSignInsStorage" = "Se quedan en el perfil de navegador de esa computadora, no en el almacenamiento protegido.";
 "settingsWebsiteSignInsUnreachable" = "No se pudo preguntar a %1$@ por sus sitios en este momento.";
+"settleBranchOpenElsewhere" = "la rama en la que se fusiona está abierta en otra carpeta: cambia esa carpeta a otra rama primero";
 "settleCannotMerge" = "No se puede fusionar: %1$@";
 "settleCouldNotDiscard" = "No se pudo descartar: %1$@";
 "settleDiscardedPullOpen" = "Descartada. Su solicitud de incorporación de cambios sigue abierta donde se aloja el proyecto: %1$@";

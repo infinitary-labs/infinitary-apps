@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "要合并进的分支在另一个文件夹中打开着——请先把那个文件夹切换到其他分支",
   "settleCannotMerge": "无法合并：{problem}",
   "settleCouldNotDiscard": "无法丢弃：{problem}",
   "settleDiscardedPullOpen": "已丢弃。它的拉取请求在项目托管处仍处于打开状态：{problem}",

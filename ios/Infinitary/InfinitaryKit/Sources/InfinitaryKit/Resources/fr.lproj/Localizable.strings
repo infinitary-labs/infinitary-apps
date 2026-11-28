@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "connecté hier";
 "settingsWebsiteSignInsStorage" = "Ils restent dans le profil de navigateur de cet ordinateur, et non dans le stockage protégé.";
 "settingsWebsiteSignInsUnreachable" = "Impossible de demander ses sites à %1$@ pour l’instant.";
+"settleBranchOpenElsewhere" = "la branche dans laquelle il fusionne est ouverte dans un autre dossier – passez d'abord ce dossier sur une autre branche";
 "settleCannotMerge" = "Fusion impossible : %1$@";
 "settleCouldNotDiscard" = "Abandon impossible : %1$@";
 "settleDiscardedPullOpen" = "Abandonnée. Sa demande de tirage est toujours ouverte là où le projet est hébergé : %1$@";

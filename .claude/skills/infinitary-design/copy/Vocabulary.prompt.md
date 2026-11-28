@@ -19,7 +19,7 @@ The right column is the whole list of allowed forms; pick the one the sentence n
 | --- | --- |
 | repo, as the app's noun | your project, the project. "repository" names one of a project's repositories where a project holds several or can take another (Settings → Projects' "2 repositories" and "Add a repository", the setup card's "Add repository"), points at GitHub, or sits in text only the models read; the project is still what work, keys and tasks belong to |
 | worktree, working tree, checkout | a working copy (the isolated copy this app makes). A git branch is "branch" |
-| land, landing, landed, ship, put it in | merge; "merge the pull request", "merge the branch", "merge when checks pass", "merge after fixing errors", "Merged #N on GitHub", "Merged \"title\" into main", "Cannot merge" |
+| land, landing, landed, ship, put it in | merge; "merge the pull request", "merge the branch", "merge when checks pass", "merge after fixing errors", "Merged #N on GitHub", "Merged \"title\" into main" (naming the branch a local merge went into), "Cannot merge" |
 | file, filed (for a task that starts now or by itself) | start, with its moment: "starts now", "starts once INF-12 merges", "starts when INF-11 finishes". File means the backlog alone: "Filed INF-12 in the backlog", "it waits for your Start". The board's Queued lane keeps its name |
 | save point | commit; "commit subject" |
 | sent up | push; "pushed the branch", "deleted the pushed branch" |

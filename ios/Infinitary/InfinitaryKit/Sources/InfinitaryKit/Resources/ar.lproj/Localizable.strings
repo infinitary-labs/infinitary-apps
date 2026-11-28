@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "سُجّل الدخول أمس";
 "settingsWebsiteSignInsStorage" = "تبقى في ملف متصفح ذلك الحاسوب، لا في التخزين المحمي.";
 "settingsWebsiteSignInsUnreachable" = "تعذّر سؤال %1$@ عن مواقعه الآن.";
+"settleBranchOpenElsewhere" = "الفرع الذي يُدمج فيه مفتوح في مجلد آخر - بدّل ذلك المجلد إلى فرع آخر أولًا";
 "settleCannotMerge" = "تعذّر الدمج: %1$@";
 "settleCouldNotDiscard" = "تعذّر التجاهل: %1$@";
 "settleDiscardedPullOpen" = "تم التجاهل. لا يزال طلب السحب الخاص بها مفتوحًا حيث يُستضاف المشروع: %1$@";

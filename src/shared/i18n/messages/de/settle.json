@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "der Branch, in den es zusammengeführt wird, ist in einem anderen Ordner geöffnet – wechsle dort zuerst zu einem anderen Branch",
   "settleCannotMerge": "Zusammenführen nicht möglich: {problem}",
   "settleCouldNotDiscard": "Verwerfen nicht möglich: {problem}",
   "settleDiscardedPullOpen": "Verworfen. Sein Pull Request ist dort, wo das Projekt liegt, noch offen: {problem}",

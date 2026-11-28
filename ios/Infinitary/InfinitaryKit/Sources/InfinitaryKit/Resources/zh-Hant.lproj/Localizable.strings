@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "昨天登入";
 "settingsWebsiteSignInsStorage" = "它們保存在那台電腦的瀏覽器設定檔中，不在受保護的儲存空間中。";
 "settingsWebsiteSignInsUnreachable" = "目前無法向 %1$@ 詢問它的網站。";
+"settleBranchOpenElsewhere" = "要合併進的分支在另一個資料夾中開啟著，請先把那個資料夾切換到其他分支";
 "settleCannotMerge" = "無法合併：%1$@";
 "settleCouldNotDiscard" = "無法捨棄：%1$@";
 "settleDiscardedPullOpen" = "已捨棄。它的 pull request 在專案所在處仍是開啟的：%1$@";

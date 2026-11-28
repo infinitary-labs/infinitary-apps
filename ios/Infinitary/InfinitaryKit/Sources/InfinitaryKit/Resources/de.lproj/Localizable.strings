@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "gestern angemeldet";
 "settingsWebsiteSignInsStorage" = "Sie bleiben im Browserprofil dieses Computers, nicht im geschützten Speicher.";
 "settingsWebsiteSignInsUnreachable" = "%1$@ konnte gerade nicht nach seinen Websites gefragt werden.";
+"settleBranchOpenElsewhere" = "der Branch, in den es zusammengeführt wird, ist in einem anderen Ordner geöffnet – wechsle dort zuerst zu einem anderen Branch";
 "settleCannotMerge" = "Zusammenführen nicht möglich: %1$@";
 "settleCouldNotDiscard" = "Verwerfen nicht möglich: %1$@";
 "settleDiscardedPullOpen" = "Verworfen. Sein Pull Request ist dort, wo das Projekt liegt, noch offen: %1$@";

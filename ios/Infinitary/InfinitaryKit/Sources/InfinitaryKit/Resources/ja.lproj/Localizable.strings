@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "昨日サインイン";
 "settingsWebsiteSignInsStorage" = "これらはそのコンピューターのブラウザプロファイルに保管され、保護された保存場所には入りません。";
 "settingsWebsiteSignInsUnreachable" = "現在 %1$@ にサイトを問い合わせられませんでした。";
+"settleBranchOpenElsewhere" = "マージ先のブランチが別のフォルダで開かれています - 先にそのフォルダを別のブランチに切り替えてください";
 "settleCannotMerge" = "マージできません：%1$@";
 "settleCouldNotDiscard" = "破棄できませんでした：%1$@";
 "settleDiscardedPullOpen" = "破棄しました。プルリクエストはプロジェクトの保管先でまだ開いています：%1$@";

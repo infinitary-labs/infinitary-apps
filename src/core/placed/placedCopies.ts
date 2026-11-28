@@ -36,6 +36,7 @@ import {
   keptRefFor,
   keptRefsFor,
   keptWorkWords,
+  landingBranch,
   OLDER_KEPT_REF_PREFIX,
   sourceRefFor,
   type WorktreeAcquisition,
@@ -1331,15 +1332,16 @@ async function bundledName(
 
 /**
  * Where a project's repository on another computer starts when it has no
- * origin there to clone: this repository's own branch, at the commit the
- * task's branch left it at, or the task's commit when they share none.
+ * origin there to clone: the branch a local merge lands in here
+ * (`landingBranch`), at the commit the task's branch left it at, or the
+ * task's commit when they share none.
  */
 async function integrationBase(
   repoDir: string,
   head: string,
 ): Promise<{ branch: string; sha: string }> {
-  const branch = await git(repoDir, ["symbolic-ref", "--short", "HEAD"]).catch(() => "main");
-  const sha = await git(repoDir, ["merge-base", "HEAD", head]).catch(() => head);
+  const branch = (await landingBranch(repoDir)) || "main";
+  const sha = await git(repoDir, ["merge-base", `refs/heads/${branch}`, head]).catch(() => head);
   return { branch, sha };
 }
 

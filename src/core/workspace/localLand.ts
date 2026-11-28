@@ -1,4 +1,3 @@
-import { existsSync, realpathSync } from "node:fs";
 import { git } from "./git";
 
 /**
@@ -20,12 +19,12 @@ export async function landBesideFolder(input: {
   check: () => void;
 }): Promise<"fast-forward" | "merge"> {
   const { repoDir, branch, into, target, head } = input;
-  // Moving a branch another working copy has checked out would leave that
-  // copy's files behind its branch.
+  // Moving a branch a working copy has checked out would leave that copy's
+  // files behind its branch.
   const holder = await checkedOutAt(repoDir, into);
   if (holder)
     throw new Error(
-      `${into} is checked out in another working copy (${holder}); switch that copy to another branch first.`,
+      `${into} is checked out at ${holder}; switch that folder to another branch first.`,
     );
   const ref = `refs/heads/${into}`;
   // i18n-exempt: the reflog's line, read only through git.
@@ -38,20 +37,23 @@ export async function landBesideFolder(input: {
   input.check();
   let tree: string;
   try {
-    tree = await git(repoDir, ["merge-tree", "--write-tree", "--name-only", target, head]);
+    tree = await git(repoDir, [
+      "merge-tree",
+      "--write-tree",
+      "--name-only",
+      "--no-messages",
+      target,
+      head,
+    ]);
   } catch (caught) {
     const failure = caught as { code?: unknown; stdout?: unknown };
     if (failure.code !== 1) throw caught;
-    // On a conflict merge-tree prints the tree, then each conflicted path.
-    const paths = [
-      ...new Set(
-        String(failure.stdout ?? "")
-          .split("\n")
-          .slice(1)
-          .map((line) => line.trim())
-          .filter(Boolean),
-      ),
-    ];
+    // On a conflict merge-tree prints the tree, then each conflicted path once.
+    const paths = String(failure.stdout ?? "")
+      .split("\n")
+      .slice(1)
+      .map((line) => line.trim())
+      .filter(Boolean);
     throw new Error(
       `Merging ${branch} into ${into} hit a conflict; resolve it manually.${paths.length ? ` CONFLICT in ${paths.join(", ")}` : ""}`,
     );
@@ -71,20 +73,19 @@ export async function landBesideFolder(input: {
 }
 
 /**
- * The folder of another working copy of `repo` that has `branch` checked
- * out, or undefined when none does. `repo`'s own folder never counts.
+ * The folder of a working copy of `repo` that has `branch` checked out, or
+ * undefined when none does. The project's own folder counts too: it reaches
+ * here only on another branch, so holding `branch` now means the person
+ * switched it during the merge.
  */
 async function checkedOutAt(repo: string, branch: string): Promise<string | undefined> {
   const list = await git(repo, ["worktree", "list", "--porcelain"]).catch(() => "");
-  const own = realpathSync(repo);
   const held = `refs/heads/${branch}`;
   for (const entry of list.split("\n\n")) {
     const lines = entry.split("\n");
     const path = lines.find((line) => line.startsWith("worktree "))?.slice("worktree ".length);
-    if (!path || !lines.some((line) => line.startsWith("branch ") && line.slice(7) === held))
-      continue;
-    if (existsSync(path) && realpathSync(path) === own) continue;
-    return path;
+    if (path && lines.some((line) => line.startsWith("branch ") && line.slice(7) === held))
+      return path;
   }
   return undefined;
 }

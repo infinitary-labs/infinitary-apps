@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "signed in yesterday";
 "settingsWebsiteSignInsStorage" = "They stay in that computer's browser profile, not in protected storage.";
 "settingsWebsiteSignInsUnreachable" = "%1$@ could not be asked for its sites right now.";
+"settleBranchOpenElsewhere" = "the branch it merges into is open in another folder - switch that folder to another branch first";
 "settleCannotMerge" = "Cannot merge: %1$@";
 "settleCouldNotDiscard" = "Could not discard: %1$@";
 "settleDiscardedPullOpen" = "Discarded. Its pull request is still open where the project lives: %1$@";

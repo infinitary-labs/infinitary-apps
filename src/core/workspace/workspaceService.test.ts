@@ -1324,14 +1324,22 @@ describe("landTaskWork (forge-agnostic local landing)", () => {
     expect(existsSync(task.cwd)).toBe(false);
   });
 
-  it.each([false, true])(
-    "rechecks live permission before the %s fallback merge without moving main",
-    async (fallback) => {
+  it.each([
+    [false, "main"],
+    [true, "main"],
+    [false, "chapter-1"],
+    [true, "chapter-1"],
+  ] as const)(
+    "rechecks live permission before the %s fallback merge without moving main, the folder on %s",
+    async (fallback, folder) => {
       const { workspace } = await service();
-      const task = await workspace.createTaskWorktree(fallback ? "live2222" : "live1111");
+      const id = `live${fallback ? "2" : "1"}${folder === "main" ? "a" : "b"}11`;
+      const task = await workspace.createTaskWorktree(id);
       await git(task.cwd, ["commit", "--allow-empty", "-m", "feat: branch work"]);
       if (fallback)
         await git(task.repoDir, ["commit", "--allow-empty", "-m", "chore: main advanced"]);
+      if (folder !== "main") await git(task.repoDir, ["checkout", "--quiet", "-b", folder]);
+      const main = await git(task.repoDir, ["rev-parse", "main"]);
       const before = await git(task.repoDir, ["rev-parse", "HEAD"]);
       let calls = 0;
       const guard = () => {
@@ -1340,7 +1348,9 @@ describe("landTaskWork (forge-agnostic local landing)", () => {
       };
       await expect(workspace.landTaskWork(task, guard)).rejects.toThrow("asks before merging");
       expect(calls).toBe(fallback ? 2 : 1);
+      expect(await git(task.repoDir, ["rev-parse", "main"])).toBe(main);
       expect(await git(task.repoDir, ["rev-parse", "HEAD"])).toBe(before);
+      expect(await git(task.repoDir, ["symbolic-ref", "--short", "HEAD"])).toBe(folder);
       expect(await git(task.repoDir, ["status", "--porcelain"])).toBe("");
     },
   );
@@ -1473,7 +1483,7 @@ describe("landTaskWork (forge-agnostic local landing)", () => {
       const main = await git(task.repoDir, ["rev-parse", "main"]);
 
       await expect(workspace.landTaskWork(task)).rejects.toThrow(
-        "Merging fm/task-away3333 into main hit a conflict; resolve it manually. CONFLICT in README.md",
+        /^Merging fm\/task-away3333 into main hit a conflict; resolve it manually\. CONFLICT in README\.md$/,
       );
       expect(await git(task.repoDir, ["rev-parse", "main"])).toBe(main);
       await folderUnchanged(task.repoDir, chapter);
@@ -1487,7 +1497,7 @@ describe("landTaskWork (forge-agnostic local landing)", () => {
       const main = await git(task.repoDir, ["rev-parse", "main"]);
 
       await expect(workspace.landTaskWork(task)).rejects.toThrow(
-        /^main is checked out in another working copy/,
+        `main is checked out at ${realpathSync(holder)}; switch that folder to another branch first.`,
       );
       expect(await git(task.repoDir, ["rev-parse", "main"])).toBe(main);
     });

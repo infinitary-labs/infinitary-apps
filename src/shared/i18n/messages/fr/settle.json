@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "la branche dans laquelle il fusionne est ouverte dans un autre dossier – passez d'abord ce dossier sur une autre branche",
   "settleCannotMerge": "Fusion impossible : {problem}",
   "settleCouldNotDiscard": "Abandon impossible : {problem}",
   "settleDiscardedPullOpen": "Abandonnée. Sa demande de tirage est toujours ouverte là où le projet est hébergé : {problem}",

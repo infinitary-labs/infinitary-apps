@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "병합할 분기가 다른 폴더에서 열려 있어요. 먼저 그 폴더를 다른 분기로 바꾸세요",
   "settleCannotMerge": "병합할 수 없어요: {problem}",
   "settleCouldNotDiscard": "폐기하지 못했어요: {problem}",
   "settleDiscardedPullOpen": "폐기했어요. 끌어오기 요청은 프로젝트가 있는 곳에 아직 열려 있어요: {problem}",

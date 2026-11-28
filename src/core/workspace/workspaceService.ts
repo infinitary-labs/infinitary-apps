@@ -1038,10 +1038,7 @@ export class WorkspaceService {
     const current = await git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
       () => "",
     );
-    const named = await defaultBranchName(repoDir);
-    // A default branch with no local branch here (a clone's remote default
-    // never checked out) leaves the checked-out branch as the one to land in.
-    const into = (await resolveCommit(repoDir, `refs/heads/${named}`)) ? named : current;
+    const into = await landingBranch(repoDir);
     if (!into) throw new Error("The repository is on a detached HEAD; check out a branch first.");
     const target = await git(repoDir, ["rev-parse", `refs/heads/${into}^{commit}`]);
     const base = await git(repoDir, ["merge-base", target, head]);
@@ -1599,6 +1596,18 @@ export function normalizeChangeDiff(diff: string): string {
 }
 
 /**
+ * The branch a local merge lands in (`landTaskWork`): the default branch
+ * (`defaultBranchName`) when it is a local branch here, else the checked-out
+ * branch, as for a clone whose remote default was never checked out; empty
+ * on a detached HEAD with neither.
+ */
+export async function landingBranch(repoDir: string): Promise<string> {
+  const named = await defaultBranchName(repoDir);
+  if (await resolveCommit(repoDir, `refs/heads/${named}`)) return named;
+  return git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(() => "");
+}
+
+/**
  * The branch a new task starts from: `origin`'s declared default when git
  * knows it, else `main` or `master` where either exists, else whatever the
  * repository has checked out.
@@ -1688,7 +1697,7 @@ async function trackedIntegrationRefs(workspace: TaskWorkspace): Promise<string[
   candidates.add(OLDER_SEEDED_REF);
   // The local default branch is where a local merge lands (`landTaskWork`),
   // whichever branch the folder has checked out.
-  candidates.add(`refs/heads/${await defaultBranchName(repoDir).catch(() => "main")}`);
+  candidates.add(`refs/heads/${await defaultBranchName(repoDir)}`);
 
   try {
     const remotes = (await git(repoDir, ["remote"]))

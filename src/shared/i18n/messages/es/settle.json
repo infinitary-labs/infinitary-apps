@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "la rama en la que se fusiona está abierta en otra carpeta: cambia esa carpeta a otra rama primero",
   "settleCannotMerge": "No se puede fusionar: {problem}",
   "settleCouldNotDiscard": "No se pudo descartar: {problem}",
   "settleDiscardedPullOpen": "Descartada. Su solicitud de incorporación de cambios sigue abierta donde se aloja el proyecto: {problem}",

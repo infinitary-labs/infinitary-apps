@@ -3738,6 +3738,7 @@
   {"said":{"m":"settingsWebsiteSignInsSavedYesterday"},"words":"signed in yesterday"},
   {"said":{"m":"settingsWebsiteSignInsStorage"},"words":"They stay in that computer's browser profile, not in protected storage."},
   {"said":{"m":"settingsWebsiteSignInsUnreachable","a":{"computer":"‹computer›"}},"words":"‹computer› could not be asked for its sites right now."},
+  {"said":{"m":"settleBranchOpenElsewhere"},"words":"the branch it merges into is open in another folder - switch that folder to another branch first"},
   {"said":{"m":"settleCannotMerge","a":{"problem":"‹problem›"}},"words":"Cannot merge: ‹problem›"},
   {"said":{"m":"settleCouldNotDiscard","a":{"problem":"‹problem›"}},"words":"Could not discard: ‹problem›"},
   {"said":{"m":"settleDiscardedPullOpen","a":{"problem":"‹problem›"}},"words":"Discarded. Its pull request is still open where the project lives: ‹problem›"},

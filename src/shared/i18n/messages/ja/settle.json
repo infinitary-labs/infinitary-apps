@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "マージ先のブランチが別のフォルダで開かれています - 先にそのフォルダを別のブランチに切り替えてください",
   "settleCannotMerge": "マージできません：{problem}",
   "settleCouldNotDiscard": "破棄できませんでした：{problem}",
   "settleDiscardedPullOpen": "破棄しました。プルリクエストはプロジェクトの保管先でまだ開いています：{problem}",

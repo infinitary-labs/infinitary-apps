@@ -4339,6 +4339,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "昨天登录";
 "settingsWebsiteSignInsStorage" = "它们保存在那台电脑的浏览器配置文件中，不在受保护的存储中。";
 "settingsWebsiteSignInsUnreachable" = "暂时无法向 %1$@ 询问它的网站。";
+"settleBranchOpenElsewhere" = "要合并进的分支在另一个文件夹中打开着——请先把那个文件夹切换到其他分支";
 "settleCannotMerge" = "无法合并：%1$@";
 "settleCouldNotDiscard" = "无法丢弃：%1$@";
 "settleDiscardedPullOpen" = "已丢弃。它的拉取请求在项目托管处仍处于打开状态：%1$@";

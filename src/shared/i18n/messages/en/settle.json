@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "the branch it merges into is open in another folder - switch that folder to another branch first",
   "settleCannotMerge": "Cannot merge: {problem}",
   "settleCouldNotDiscard": "Could not discard: {problem}",
   "settleDiscardedPullOpen": "Discarded. Its pull request is still open where the project lives: {problem}",

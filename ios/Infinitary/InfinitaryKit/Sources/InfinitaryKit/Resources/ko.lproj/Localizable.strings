@@ -4341,6 +4341,7 @@
 "settingsWebsiteSignInsSavedYesterday" = "어제 로그인함";
 "settingsWebsiteSignInsStorage" = "이 로그인은 보호된 저장소가 아니라 그 컴퓨터의 브라우저 프로필에 보관됩니다.";
 "settingsWebsiteSignInsUnreachable" = "지금은 %1$@에 사이트 목록을 물어볼 수 없었어요.";
+"settleBranchOpenElsewhere" = "병합할 분기가 다른 폴더에서 열려 있어요. 먼저 그 폴더를 다른 분기로 바꾸세요";
 "settleCannotMerge" = "병합할 수 없어요: %1$@";
 "settleCouldNotDiscard" = "폐기하지 못했어요: %1$@";
 "settleDiscardedPullOpen" = "폐기했어요. 끌어오기 요청은 프로젝트가 있는 곳에 아직 열려 있어요: %1$@";

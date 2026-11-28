@@ -7,6 +7,7 @@ import {
 import { CLAUDE_ACCESS_REFUSED_LINE, type ClaudeAccessSource } from "./claudeAccess";
 import { HERE } from "./deviceNames";
 import { formatTime } from "./i18n/format";
+import * as m from "./i18n/messages.generated.ts";
 
 /**
  * What a failure means for the person, in the vocabulary's words (roadmap
@@ -67,7 +68,8 @@ export function isRunawayProviderError(error: string): boolean {
 
 type Rule = {
   test: (error: string) => boolean;
-  line: string;
+  /** A function for a catalog line, read in the language chosen when it is shown. */
+  line: string | (() => string);
   /** The rule reads a cut-off class out of words; a typed failure never uses it. */
   readsClass?: true;
 };
@@ -86,7 +88,7 @@ const ALLOWANCE_LINE = "your plan's allowance ran out - it comes back when it re
 /**
  * Git and GitHub failures, checked FIRST so a project's host never reads as
  * the AI provider: git's and gh's own words for a sign-in the host refused,
- * a project it cannot find, and a host it cannot reach, plus the three
+ * a project it cannot find, and a host it cannot reach, plus the four
  * refusals the local put-in writes itself (`WorkspaceService.landTaskWork`).
  * Keyed on the exact texts those programs print, never on loose words.
  */
@@ -151,6 +153,11 @@ const GIT_RULES: readonly Rule[] = [
   {
     test: (error) => /hit a conflict; resolve it manually/.test(error),
     line: "could not bring it up to date - the work and your project changed the same place",
+  },
+  {
+    test: (error) =>
+      /^\S+ is checked out at .+; switch that folder to another branch first\./m.test(error),
+    line: () => m.settleBranchOpenElsewhere(),
   },
 ];
 
@@ -273,7 +280,8 @@ export function plainProblem(error: string | undefined, typed?: TypedFailure): s
   const raw = error?.trim() ?? "";
   if (!raw) return PLAIN_PROBLEM_FALLBACK;
   const rules = typed ? WORD_RULES : RULES;
-  return rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
+  const line = rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
+  return typeof line === "function" ? line() : line;
 }
 
 /**

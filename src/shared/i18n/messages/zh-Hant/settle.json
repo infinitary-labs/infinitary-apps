@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "要合併進的分支在另一個資料夾中開啟著，請先把那個資料夾切換到其他分支",
   "settleCannotMerge": "無法合併：{problem}",
   "settleCouldNotDiscard": "無法捨棄：{problem}",
   "settleDiscardedPullOpen": "已捨棄。它的 pull request 在專案所在處仍是開啟的：{problem}",

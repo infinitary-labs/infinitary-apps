@@ -4517,6 +4517,7 @@ public enum PhoneMessages {
     public static func `settingsWebsiteSignInsSavedYesterday`() -> String { PhoneWords.format("settingsWebsiteSignInsSavedYesterday", []) }
     public static func `settingsWebsiteSignInsStorage`() -> String { PhoneWords.format("settingsWebsiteSignInsStorage", []) }
     public static func `settingsWebsiteSignInsUnreachable`(`computer`: String) -> String { PhoneWords.format("settingsWebsiteSignInsUnreachable", [`computer`]) }
+    public static func `settleBranchOpenElsewhere`() -> String { PhoneWords.format("settleBranchOpenElsewhere", []) }
     public static func `settleCannotMerge`(`problem`: String) -> String { PhoneWords.format("settleCannotMerge", [`problem`]) }
     public static func `settleCouldNotDiscard`(`problem`: String) -> String { PhoneWords.format("settleCouldNotDiscard", [`problem`]) }
     public static func `settleDiscardedPullOpen`(`problem`: String) -> String { PhoneWords.format("settleDiscardedPullOpen", [`problem`]) }
@@ -9436,6 +9437,7 @@ extension PhoneWords {
         "settingsWebsiteSignInsSavedYesterday": [],
         "settingsWebsiteSignInsStorage": [],
         "settingsWebsiteSignInsUnreachable": ["computer"],
+        "settleBranchOpenElsewhere": [],
         "settleCannotMerge": ["problem"],
         "settleCouldNotDiscard": ["problem"],
         "settleDiscardedPullOpen": ["problem"],

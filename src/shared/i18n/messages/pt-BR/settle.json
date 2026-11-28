@@ -1,4 +1,5 @@
 {
+  "settleBranchOpenElsewhere": "o branch em que ele é mesclado está aberto em outra pasta - mude essa pasta para outro branch primeiro",
   "settleCannotMerge": "Não é possível mesclar: {problem}",
   "settleCouldNotDiscard": "Não foi possível descartar: {problem}",
   "settleDiscardedPullOpen": "Descartada. A solicitação de pull dela continua aberta onde o projeto fica: {problem}",

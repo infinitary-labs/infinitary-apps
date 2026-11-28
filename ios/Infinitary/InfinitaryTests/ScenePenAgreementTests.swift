@@ -53,9 +53,9 @@ import XCTest
     }
 
     /// The whole window as the render thread draws it: about twenty crewmates on two computers around the first mate,
-    /// resting and busy, with keyboard browsing's outline and a summary's brackets, each warp under way, and a
-    /// supernova's blast with its sparks, shards and pulsar reaching through the crew. Each built-in color theme draws the
-    /// resting crowd once more.
+    /// resting and busy, with keyboard browsing's outline and a summary's brackets, each warp under way, a supernova's
+    /// blast with its sparks, shards and pulsar reaching through the crew, and each meteor fidget's sky. Each built-in
+    /// color theme draws the resting crowd once more.
     func testTheCrowdedSceneDrawsTheSameThroughBothPens() throws {
         let roster = try Self.roster(home: 12, remote: 8)
         let selected = try XCTUnwrap(roster.computers.first?.tasks.first)
@@ -72,16 +72,17 @@ import XCTest
                                bracketed: (selected.id, PhoneSceneRoster.computerID(selected)), in: &pen)
                 }
             }
-            for variant in [CharacterMachine.Fidget.tunnel, .sphere, .corkscrew, .supernova] {
+            for variant in [CharacterMachine.Fidget.tunnel, .sphere, .corkscrew, .supernova, .shower, .storm, .fireball] {
                 let motion = PhoneSceneMotion(), seconds = CharacterCatalog.shared.fidgets[variant.rawValue]! / 1000
                 var frame = motion.frame(roster: roster, now: 0, settled: false), pose = CharacterPose.still(.idle, at: 0)
                 for step in 0...Int(seconds * 0.45 * 60) {
                     let now = Double(step) / 60
                     pose = CharacterPose(mode: .fidget, progress: now / seconds, variant: variant, milliseconds: now * 1000)
                     frame = motion.frame(roster: roster, now: now, settled: false, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
-                                         supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27))
+                                         supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27),
+                                         meteors: CharacterMeteors.frame(pose, coreR: 280 * 0.27, home: Self.stormHome))
                 }
-                XCTAssertTrue(motion.warp != nil || motion.supernova != nil, "\(variant) is under way at the frame drawn")
+                XCTAssertTrue(motion.warp != nil || motion.supernova != nil || motion.meteors != nil, "\(variant) is under way at the frame drawn")
                 let drawn = pose
                 try agree("warp-\(variant)-\(theme)", size: Self.window) { pen in
                     Self.paint(frame, motion: motion, pose: drawn, roster: roster, now: drawn.milliseconds / 1000, palette: palette,
@@ -102,6 +103,12 @@ import XCTest
         }
     }
 
+    /// The storm's points where a first mate at rest draws them, near enough for the falling ones to cross the crew.
+    private static let stormHome: [Double] = (0..<32).map { k in
+        let angle = Double(k / 2) / 16 * 2 * Double.pi
+        return (k % 2 == 0 ? cos(angle) : sin(angle)) * 50
+    }
+
     // MARK: drawing both ways
 
     /// `PhoneSceneRenderer.paint`'s order, from a frame and pose the test holds still.
@@ -114,10 +121,16 @@ import XCTest
         if let supernova = motion.supernova {
             CharacterSupernova.drawBlast(supernova, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
         }
+        if let meteors = motion.meteors {
+            CharacterMeteors.drawSky(meteors, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, near: false, in: &pen)
+        }
         PhoneCrewPainter.draw(frame, roster: roster, now: now, still: false, in: &pen, palette: palette)
         var firstmate = pen
         firstmate.translateBy(x: roster.homeX - 140, y: roster.height / 2 - 140)
         CharacterPainter.draw(pose, in: &firstmate, size: CGSize(width: 280, height: 280), cache: CharacterPainter.Cache(), palette: palette, source: "")
+        if let meteors = motion.meteors {
+            CharacterMeteors.drawSky(meteors, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, near: true, in: &pen)
+        }
         PhoneCrewPainter.drawMarks(frame, selection: selection, bracketed: bracketed, in: &pen, palette: palette)
     }
 

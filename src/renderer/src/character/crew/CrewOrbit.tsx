@@ -26,6 +26,7 @@ import { prefersReducedMotion } from "../reducedMotion";
 import { stageClock, stageRateTarget } from "../stageClock";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER } from "./computers";
 import "./computers.css";
+import { drawMeteorSky, type MeteorFrame } from "../meteors";
 import { drawSupernovaBlast, type SupernovaFrame } from "../supernova";
 import { drawWarpBackdrop, type WarpFrame } from "../warp";
 import { CrewSummary } from "./CrewSummary";
@@ -48,6 +49,7 @@ import {
   type SummaryRoom,
 } from "./hover";
 import { markOf, programMarks, stageMarks } from "./marks";
+import { crewMeteors } from "./meteors";
 import { CREW_MODEL_LABEL, crewModelLabelPlacement, crewModelLabelsVisible } from "./modelLabels";
 import type { CrewOrbit as CrewOrbitModel, OrbitFrame } from "./orbit";
 import { CROWDED_PLANES } from "./orbitalPlanes";
@@ -185,6 +187,7 @@ function paintFrame(
   inspected: string | null,
   warp: WarpFrame | null,
   supernova: SupernovaFrame | null,
+  meteors: MeteorFrame | null,
 ): void {
   near.ctx.clearRect(0, 0, box.width, box.height);
   far.ctx.clearRect(0, 0, box.width, box.height);
@@ -209,19 +212,18 @@ function paintFrame(
       riders,
     );
   }
-  // So does a supernova's blast, which reaches through the crew's orbits.
-  if (supernova) {
-    const wire: [number, number, number] = [0, 1, 2].map(
+  // So do a supernova's blast and a meteor fidget's sky, which reach through the crew's orbits.
+  const lightOf = (heat: number) => ({
+    wire: [0, 1, 2].map(
       (i) =>
         (colors.accent[i] as number) +
-        ((colors.hot[i] as number) - (colors.accent[i] as number)) * supernova.heat,
-    ) as [number, number, number];
-    drawSupernovaBlast(far.ctx, supernova, cx, cy, {
-      wire,
-      bg: colors.bg ?? [5, 7, 13],
-      boost: colors.boost,
-    });
-  }
+        ((colors.hot[i] as number) - (colors.accent[i] as number)) * heat,
+    ) as [number, number, number],
+    bg: colors.bg ?? [5, 7, 13],
+    boost: colors.boost,
+  });
+  if (supernova) drawSupernovaBlast(far.ctx, supernova, cx, cy, lightOf(supernova.heat));
+  if (meteors) drawMeteorSky(far.ctx, meteors, cx, cy, lightOf(meteors.heat), false);
   const byId = new Map(frame.crew.map((cm) => [cm.id, cm]));
   // A constellation lies flat at its mark's depth, under the crew it seats.
   for (const program of frame.programs)
@@ -255,6 +257,8 @@ function paintFrame(
     drawCrewmate(ctx, cm, cx, cy, colors, now);
   }
   for (const p of frame.packets) drawPacket(near.ctx, p, cx, cy, colors);
+  // The storm's nearest streaks fall in front of the crew and the first mate.
+  if (meteors) drawMeteorSky(near.ctx, meteors, cx, cy, lightOf(meteors.heat), true);
 }
 
 /** The home formation's square, and the window height it keeps for the activity line and input. */
@@ -827,8 +831,9 @@ export function CrewOrbit({
       light.duration ??= motionToken(document.documentElement, "--dur-med");
       const warp = reducedMotion ? null : crewWarp.frame(now);
       const supernova = reducedMotion ? null : crewSupernova.frame(now);
+      const meteors = reducedMotion ? null : crewMeteors.frame(now);
       const frame = lightFrame(
-        model.update(now, reducedMotion, crewRush.level(now), warp, supernova),
+        model.update(now, reducedMotion, crewRush.level(now), warp, supernova, meteors),
         focusRef.current,
         light.state,
         light.at === 0 ? 0 : real - light.at,
@@ -933,6 +938,11 @@ export function CrewOrbit({
       if ((near.canvas.dataset.crewSupernova ?? "") !== blast) {
         if (blast) near.canvas.dataset.crewSupernova = blast;
         else delete near.canvas.dataset.crewSupernova;
+      }
+      const sky = meteors?.variant ?? "";
+      if ((near.canvas.dataset.crewMeteors ?? "") !== sky) {
+        if (sky) near.canvas.dataset.crewMeteors = sky;
+        else delete near.canvas.dataset.crewMeteors;
       }
       if (shownRef.current) placeSummary();
       placeLit();
@@ -1097,6 +1107,7 @@ export function CrewOrbit({
         inspectingRef.current,
         warp,
         supernova,
+        meteors,
       );
     },
     `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${shownColors}:${lit.project ?? ""}`,
@@ -1126,6 +1137,7 @@ export function CrewOrbit({
           colorsRef.current,
           view.now,
           inspectingRef.current,
+          null,
           null,
           null,
         );

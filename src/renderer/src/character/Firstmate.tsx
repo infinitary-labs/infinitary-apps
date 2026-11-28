@@ -4,6 +4,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef } from "react";
 import { useThemeColorsDrawn } from "../app/colorTheme";
 import { readLiveVoiceLevel } from "../voice/liveVoiceLevel";
+import { crewMeteors } from "./crew/meteors";
 import { crewRush } from "./crew/rush";
 import { crewSupernova } from "./crew/supernova";
 import { crewWarp } from "./crew/warp";
@@ -17,6 +18,7 @@ import {
 import {
   createSim,
   drawFrame,
+  FM_WINDING_RANK,
   fitBacking,
   type PointerGazeConfig,
   resolvePointerSetup,
@@ -29,6 +31,7 @@ import {
   type FirstmateState,
   type MachineSnapshot,
 } from "./machine";
+import { isMeteor } from "./meteors";
 import { useAnimationLoop } from "./motion";
 import { skipHiddenPaint } from "./paintHidden";
 import { onPixelRatioChange } from "./pixelRatio";
@@ -259,6 +262,18 @@ export function Firstmate({
     if (snap.state === "fidget" && snap.variant === "supernova" && !prefersReducedMotion()) {
       crewSupernova.playing(now - snap.phase, size * 0.27, simRef.current.heat);
     } else crewSupernova.stopped(now);
+    // A meteor fidget's sky reaches the crew too (./crew/meteors.ts).
+    if (snap.state === "fidget" && isMeteor(snap.variant) && !prefersReducedMotion()) {
+      const sim = simRef.current;
+      crewMeteors.playing(
+        snap.variant,
+        now - snap.phase,
+        size * 0.27,
+        sim.heat,
+        sim.stormHome,
+        FM_WINDING_RANK,
+      );
+    } else crewMeteors.stopped(now);
     if (snap.state !== ariaState.current) ariaState.current = snap.state;
     const drawn = {
       now,

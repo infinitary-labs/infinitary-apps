@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "meteor-fidgets",
+      "kind": "feature",
+      "title": "The first mate can watch a meteor shower",
+      "body": "The first mate has three new fidgets. In a shower, the stars come out and meteors stream from one point in the sky, and the first mate bows to make a wish on the brightest. In a storm, its frame fades away and returns piece by piece through a downpour of meteors. In a fireball, one bright meteor crosses the sky, scattering dust, and the first mate turns to follow it. Crewmates circling the first mate catch each meteor's light as it passes. It plays on your Mac, iPhone and iPad.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "meteor-fidgets-dark.webp",
+        "light": "meteor-fidgets-light.webp",
+        "alt": "The first mate with meteors streaking across a starry sky around it and its circling crew"
+      },
+      "noDocsSite": "No docs site page describes the first mate's idle animations.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -52,6 +52,11 @@ export type FidgetVariant =
   // The supernova (renderer character/supernova.ts): the first mate bursts
   // and falls back together, the blast kicking the crew as it passes.
   | "supernova"
+  // The meteor fidgets (renderer character/meteors.ts): a sky of stars comes
+  // out round the first mate and meteors cross it, lighting the crew.
+  | "shower"
+  | "storm"
+  | "fireball"
   | "blackhole";
 
 /**

@@ -55,7 +55,7 @@ private struct CharacterDrawing: View {
     let fold: CharacterFold
     @SwiftUI.State private var cache = CharacterPainter.Cache()
     var body: some View {
-        let pose = motion.advance(to: clock.now, state: state, fold: fold)
+        let pose = motion.advance(to: clock.now, state: state, fold: fold, stormHome: cache.stormHome)
         Canvas { context, size in CharacterPainter.draw(pose, in: &context, size: size, cache: cache) }
     }
 }
@@ -251,6 +251,8 @@ final class CharacterMotion: @unchecked Sendable {
     private var vel = 0.5
     private var blinker = Blinker(), gaze = Gaze()
     private var cinch: CharacterCinch.Clock?
+    /// The fireball's turn of the frame last frame, so the turn is added as it changes (CharacterMeteors).
+    private var meteorFollow = 0.0
     private var requests: [(CharacterMachine.Emote, CharacterMachine.Fidget?)] = []
     func request(_ emote: CharacterMachine.Emote, variant: CharacterMachine.Fidget? = nil) { lock.withLock { requests.append((emote, variant)) } }
     private var flickerAt = -Double.infinity, flickerBoost = 0.0
@@ -264,10 +266,11 @@ final class CharacterMotion: @unchecked Sendable {
     func discardReactions() { lock.withLock { requests.removeAll(keepingCapacity: true); flickerBoost = 0 } }
     var greeting: Bool { lock.withLock { machine?.mode == .greet } }
 
-    func advance(to time: Double, state: PhoneCharacter.State, fold: CharacterFold = .init()) -> CharacterPose {
-        lock.withLock { advanceLocked(to: time, state: state, fold: fold) }
+    /// `stormHome` is where the drawing last put the storm's points (CharacterPainter.Cache), which the eyes follow home.
+    func advance(to time: Double, state: PhoneCharacter.State, fold: CharacterFold = .init(), stormHome: [Double] = []) -> CharacterPose {
+        lock.withLock { advanceLocked(to: time, state: state, fold: fold, stormHome: stormHome) }
     }
-    private func advanceLocked(to time: Double, state: PhoneCharacter.State, fold: CharacterFold) -> CharacterPose {
+    private func advanceLocked(to time: Double, state: PhoneCharacter.State, fold: CharacterFold, stormHome: [Double]) -> CharacterPose {
         if machine == nil {
             machine = CharacterMachine(now: time)
             if CharacterCues.takeGreeting() { machine?.request(.greet, now: time) }
@@ -299,8 +302,15 @@ final class CharacterMotion: @unchecked Sendable {
         vel += (0.5 - vel) * min(dt * 1.5, 1)
         let warp = CharacterWarp.pose(of: pose)
         let supernova = machine.variant == .supernova && mode == .fidget ? CharacterSupernova.eyes(et) : nil
-        pose.a += (pose.cur.sa * body.spin + (warp?.sa ?? 0) + (CharacterSupernova.body(of: pose)?.spin ?? 0)) * dt
-        pose.b += (pose.cur.sb * body.spin + (warp?.sb ?? 0)) * dt
+        // A meteor fidget (CharacterMeteors): the hush slows the turn, the fireball turns the frame to follow it.
+        let meteor = CharacterMeteors.body(of: pose)
+        let meteorEyes = CharacterMeteors.eyes(of: pose, home: stormHome.count == 32 ? stormHome : [Double](repeating: 0, count: 32))
+        let meteorSpin = meteor?.spin ?? 1
+        pose.a += (pose.cur.sa * body.spin * meteorSpin + (warp?.sa ?? 0) + (CharacterSupernova.body(of: pose)?.spin ?? 0)) * dt
+        pose.b += (pose.cur.sb * body.spin * meteorSpin + (warp?.sb ?? 0)) * dt
+        let follow = pose.variant == .fireball ? meteor?.follow ?? 0 : 0
+        if meteor != nil, pose.variant == .fireball { pose.a += (follow - meteorFollow) * 0.55 }
+        meteorFollow = follow
         pose.hs += dt * vel * pose.cur.flat
         pose.milliseconds += dt * 1000
         let reply = CharacterReply.frame(mode, et)
@@ -319,6 +329,7 @@ final class CharacterMotion: @unchecked Sendable {
             else if machine.variant == .saturn { look = (0, 0.1) }
             else if let warp { look = warp.look }
             else if let supernova { look = supernova.look }
+            else if let meteorEyes { look = meteorEyes.look }
             else { look = (0, 0) }
             if let constellation = CharacterCatalog.shared.constellations[machine.variant?.rawValue ?? ""] {
                 look = (constellation.gaze[0], constellation.gaze[1])
@@ -335,9 +346,11 @@ final class CharacterMotion: @unchecked Sendable {
         if machine.variant == .blackhole { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * 0.3) }
         if let warp { pose.lid = max(pose.lid, warp.lid) }
         if let supernova { pose.lid = max(pose.lid, supernova.lid) }
+        if let meteorEyes { pose.lid = max(pose.lid, meteorEyes.lid) }
         if machine.variant == .galaxy { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * CharacterCatalog.shared.galaxy["lid"]!) }
         pose.wink = mode == .greet ? band(et, 0.42, 0.1, 0.68, 0.12) : 0
-        pose.happy = mode == .greet ? band(et, 0.12, 0.18, 0.82, 0.18) : mode == .celebrate ? band(et, 0.08, 0.15, 0.85, 0.15) : reply.happy
+        pose.happy = mode == .greet ? band(et, 0.12, 0.18, 0.82, 0.18) : mode == .celebrate ? band(et, 0.08, 0.15, 0.85, 0.15)
+            : max(reply.happy, meteorEyes?.happy ?? 0)
         return pose
     }
 }
@@ -383,6 +396,9 @@ enum CharacterPainter {
         fileprivate var prims = Primitives()
         fileprivate var sky = [CharacterSky.Placed](repeating: .init(point: .zero), count: 16)
         fileprivate var colors: Palette?
+        /// The storm's 16 points where they were last drawn, x, y pairs from the center at 280 points, for the crew's
+        /// sky and the eyes (CharacterMeteors).
+        var stormHome = [Double](repeating: 0, count: 32)
         func palette(_ environment: EnvironmentValues) -> Palette {
             if colors?.scheme != environment.colorScheme || colors?.theme != environment.shownColorTheme { colors = Palette(environment) }
             return colors!
@@ -444,6 +460,17 @@ enum CharacterPainter {
         // The supernova (CharacterSupernova): the collapse, the bounce and the eyes.
         let nova = CharacterSupernova.body(of: p), novaEyes = nova.map { _ in CharacterSupernova.eyes(et) }
         let squeeze = nova?.squeeze ?? 0
+        // A meteor fidget (CharacterMeteors): the hush, the meteors' light on the frame, and the storm's points,
+        // whose falling light reads where they were last drawn.
+        let meteor = CharacterMeteors.body(of: p), meteorVariant = meteor == nil ? nil : p.variant
+        let meteorSky = meteorVariant.map { v in
+            CharacterMeteors.lights(v, et, flights: v == .storm ? CharacterMeteors.flights(et, rank: CharacterSky.windingRank, home: cache.stormHome) : [])
+        }
+        let meteorLit = meteorSky.map { CharacterMeteors.lit($0.lights, 0, 0) } ?? 0, meteorHush = meteor?.hush ?? 0
+        let meteorEyes = CharacterMeteors.eyes(of: p, home: cache.stormHome)
+        // In the hush the wires sink to under half their light, so the frame reads as stars among the stars.
+        let meteorWire = (1 - 0.58 * meteorHush) * (1 + 0.9 * meteorLit)
+        var stormProgress = [Double](repeating: 0, count: 16), stormGlints: [(point: CGPoint, q: Double)] = []
         var trails: [(point: CGPoint, angle: Double, k: Double)] = []
         let R0 = s * 0.27 * breathe * cur.scale * (warp?.scale ?? 1)
         // The cinch draws the body tight, and it springs back past its size.
@@ -469,6 +496,8 @@ enum CharacterPainter {
             if p.variant == .yawn { let y = pulse(et, 0.12, 0.62); sy = 1 + 0.16 * y; sx = 1 - 0.09 * y }
             // The corkscrew leans into the wormhole and stretches with the speed.
             if let warp { rotation = warp.rot; sx = warp.sx; sy = warp.sy }
+            // The wish: one small bow.
+            else if let meteor, meteor.wish > 0 { ty = meteor.wish * R * 0.07 }
         }
         context.opacity *= CharacterSky.dim(p)
         let poseCos = cos(rotation), poseSin = sin(rotation)
@@ -478,7 +507,9 @@ enum CharacterPainter {
         }
 
         // The ambient glow, breathing while listening.
-        let glowA = haloBoost * cur.glow * (warp?.glow ?? 1) * (nova?.glow ?? 1) * (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * sin(now / 650))) + replyGlow * 0.18
+        let glowA = haloBoost * cur.glow * (warp?.glow ?? 1) * (nova?.glow ?? 1)
+            // The hush sinks the glow; a meteor's light on the frame lifts it.
+            * (1 - 0.7 * meteorHush) * (1 + 3 * meteorLit) * (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * sin(now / 650))) + replyGlow * 0.18
             + cinchKz * 0.08 * (0.4 + 0.6 * cinchFlight.arrival) + cinchLift * 0.3
         context.fill(Path(CGRect(x: 0, y: 0, width: s, height: s)), with: .radialGradient(
             PenGradient(colors: [bright.color(glowA), bright.color(0)]), center: CGPoint(x: c, y: c), startRadius: 0, endRadius: s / 2))
@@ -530,8 +561,26 @@ enum CharacterPainter {
                     trails.append((CGPoint(x: at.x, y: at.y), trail.angle + rotation, trail.k))
                 }
             }
+            if meteorVariant == .storm {
+                // The storm: the frame fades where it stands and its points come home down the stream, inner cell first.
+                let v = CharacterMeteors.stormVertex(rank: CharacterSky.windingRank[i], et: et)
+                stormProgress[i] = v.progress
+                placed.scale *= v.scale; placed.white = max(placed.white, v.white); placed.fade *= v.fade
+            }
+            // In the hush each point twinkles as a star, and a meteor's light lights it.
+            if meteorHush > 0.001 || meteorLit > 0.001 {
+                let twinkle = meteorHush * (0.5 + 0.5 * CharacterSky.twinkle(now / 1000 * 3.1 + Double(i) * 2.3))
+                placed.white = max(placed.white, 0.55 * twinkle, 0.8 * meteorLit)
+            }
             cache.sky[i] = placed
             (cache.points[i].x, cache.points[i].y) = posed(placed.point.x, placed.point.y)
+            if meteorVariant == .storm {
+                cache.stormHome[2 * i] = (cache.points[i].x - c) * 280 / s
+                cache.stormHome[2 * i + 1] = (cache.points[i].y - c) * 280 / s
+                if let q = CharacterMeteors.stormVertex(rank: CharacterSky.windingRank[i], et: et).glint {
+                    stormGlints.append((CGPoint(x: cache.points[i].x, y: cache.points[i].y), q))
+                }
+            }
             if let w = placed.w { cache.points[i].w += (w - cache.points[i].w) * placed.progress }
         }
 
@@ -550,13 +599,15 @@ enum CharacterPainter {
                 alpha += (min(1, 0.85 * boost) - alpha) * f
             }
             alpha *= 1 - min(cache.sky[p0].progress, cache.sky[q0].progress) * 0.97
+            // A storm's wire fades by the farther of its two ends, so it knits again only once both are home.
+            if meteorVariant != nil { alpha *= meteorWire * (1 - max(stormProgress[p0], stormProgress[q0]) * 0.97) }
             // The cinch dims the outer cell and lifts every wire at its end.
             if P.w > 0 && Q.w > 0 { alpha *= cinchBody.outer }
             alpha *= (1 + 0.5 * cinchLift) * (1 + 0.5 * squeeze)
             if alpha < 0.02 { continue }
             let m = max(clamp01(0.5 + (P.w + Q.w) * 0.35), f * 0.9, squeeze)
             cache.prims.edgeSkip[i] = false
-            cache.prims.edgeMix[i] = m
+            cache.prims.edgeMix[i] = max(m, 0.6 * meteorLit)
             cache.prims.edgeAlpha[i] = min(1, alpha * (0.85 + 0.15 * m) * (1 + 0.9 * p.flicker * CharacterFlicker.wire(i, now)))
             cache.prims.edgeCore[i] = max(neon > 0.02 && m > 0.5 ? min(1, alpha) * neon * 0.85 : 0, min(1, p.flicker * CharacterFlicker.wire(i, now) * 0.7),
                                           // A supernova's falling frame runs white-hot as it is squeezed.
@@ -602,6 +653,9 @@ enum CharacterPainter {
             }
         }
 
+        if !stormGlints.isEmpty {
+            CharacterMeteors.drawGlints(stormGlints, wire: bright, background: bg, boost: boost, k: s / 280, in: &context)
+        }
         CharacterSky.draw(p, over: true, context: &context, c: c, r: R, color: bright.color(1), background: bg.color(1))
         if let frame = p.cinch, !cinchFlight.motes.isEmpty {
             let corners = cache.points.filter { $0.w > 0 }.map { CGPoint(x: $0.x, y: $0.y) }
@@ -613,7 +667,7 @@ enum CharacterPainter {
         let eyeBase = acc.mix(hot, heat), eyeCol = eyeBase.mix(RGB(255, 246, 230), 0.45)
         let gxo = p.eyeX * R * 0.1, gyo = p.eyeY * R * 0.08
         // The supernova draws the eyes in through the collapse and opens them wide after.
-        let gather = novaEyes?.gather ?? 1, novaWide = novaEyes.map { $0.wide * (0.6 + 0.4 * $0.gather) } ?? 1
+        let gather = novaEyes?.gather ?? 1, novaWide = (novaEyes.map { $0.wide * (0.6 + 0.4 * $0.gather) } ?? 1) * (meteorEyes?.wide ?? 1)
         let pxo = sin(p.a) * R * 0.05 * (1 - f), pyo = sin(p.b * 0.8) * R * 0.04 * (1 - f)
         let eyes = [-1.0, 1.0].map { side -> (Double, CharacterSky.Eye) in
             let base = posed(c + (side * R * 0.34 + gxo + pxo) * gather, c + (-R * 0.1 + gyo + pyo) * gather)

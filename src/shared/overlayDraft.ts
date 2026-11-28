@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { turnImageSchema } from "./cards";
+import { TURN_IMAGES_MAX, turnImageSchema } from "./cards";
 import { PASTE_FILES_MAX } from "./composer";
 
 /**
@@ -21,20 +21,17 @@ const attachmentSchema = turnImageSchema.extend({
   preview: z.string().min(1),
 });
 
-/** Room for the pictures a draft may hold and the ones a refused paste briefly asks for. */
-const PICTURES_HELD = 16;
-
 const sentSchema = z.strictObject({
   text: z.string(),
   pastes: z.array(pastedTextSchema).max(PASTE_FILES_MAX),
-  attachments: z.array(attachmentSchema).max(PICTURES_HELD),
+  attachments: z.array(attachmentSchema).max(TURN_IMAGES_MAX),
   askId: z.string().min(1).max(256).optional(),
 });
 
 export const mainDraftSchema = z.strictObject({
   text: z.string(),
   pastes: z.array(pastedTextSchema).max(PASTE_FILES_MAX),
-  attachments: z.array(attachmentSchema).max(PICTURES_HELD),
+  attachments: z.array(attachmentSchema).max(TURN_IMAGES_MAX),
   lastSent: sentSchema.nullable(),
   replacing: z.string().min(1).max(256).nullable(),
 });

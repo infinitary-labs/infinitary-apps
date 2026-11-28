@@ -103,7 +103,6 @@ function ProjectPage({project,onBack,onPatch,onRemove}){
       description={p.personal?"Nothing here passes through a gate.":"The standing care for every task here."}
       control={p.personal?<span style={quiet}>none</span>
         :<GroupedPills name="Care" htmlName={`rigor-${p.id}`} value={p.rigor} options={CARE} onChange={(rigor)=>onPatch({rigor})}/>}/>
-    {!p.personal&&p.delivery==="local-only"&&p.rigor==="reviewed"&&<div style={{fontSize:"var(--text-xs)",color:"var(--warn)",paddingBottom:6}}>Changes that merge locally are done carefully, without a review - there is no pull request to look at.</div>}
   </>;
   return <div onKeyDown={onKeyDown}>
     <span ref={back} style={{display:"inline-block",marginLeft:-12,marginBottom:8}}><Button variant="ghost" size="sm" icon={backChevron} onClick={onBack}>Projects</Button></span>

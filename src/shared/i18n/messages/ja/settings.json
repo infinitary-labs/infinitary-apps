@@ -1015,7 +1015,6 @@
   "settingsProjectsGroupNameDescription": "プロジェクトのタスクキー {key} と履歴はそのまま残ります。各リポジトリは自分の名前を保ちます。",
   "settingsProjectsIntro": "ここでプロジェクトを追加するか、一等航海士に頼んでください。プロジェクトを開くと動作を変更できます。各行には、新しいプロジェクトと異なる設定だけが表示されます。新しいプロジェクトは、保管先でプルリクエストとして出され、マージ前にあなたの承認を待ち、慎重さは標準で、自動で選ばれたコンピューターで実行されます。",
   "settingsProjectsLabel": "プロジェクト",
-  "settingsProjectsLocalCareful": "ローカルでマージされる変更は慎重に行われますが、レビューはありません。確認するプルリクエストがないためです。",
   "settingsProjectsMoveChoose": "プロジェクトを選択",
   "settingsProjectsMoveConfirm": "移動",
   "settingsProjectsMoveFailed": "このリポジトリを移動できませんでした。",

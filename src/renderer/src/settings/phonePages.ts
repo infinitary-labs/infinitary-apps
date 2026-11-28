@@ -891,9 +891,6 @@ export function projectsPage(input: {
             !hostTakesBatches(repo.host)
               ? [{ text: batchNoHostWords(), warn: false }]
               : []),
-            ...(repo.delivery === "local-only" && repo.rigor === "reviewed"
-              ? [{ text: PROJECT_POLICY_WORDS.carefulLocal, warn: true }]
-              : []),
           ],
     };
   });

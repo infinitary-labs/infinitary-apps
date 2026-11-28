@@ -75,7 +75,7 @@ export function effectiveTaskPolicies(
   );
   const delivery = deliveryForRecord(record, repo?.delivery);
   const rigor =
-    rigorFor({ gated: true, delivery, ask: rigorAsk, repoRigor: repo?.rigor ?? undefined }).rigor ??
+    rigorFor({ gated: true, ask: rigorAsk, repoRigor: repo?.rigor ?? undefined }).rigor ??
     "standard";
   return {
     delivery: { value: delivery, source: deliveryAsk === undefined ? "project" : "task" },
@@ -115,8 +115,6 @@ export const POLICY_DELIVERY_WORDS = {
 } as const;
 export const POLICY_MERGING_WORDS = { on: "Merges on its own", off: "Asks first" } as const;
 export const POLICY_HELPER = "Ask your first mate to change these for this task.";
-export const POLICY_CARE_BOUND =
-  "Local merge uses Default rigor; Careful remains requested for pull requests.";
 
 /**
  * The policies' words as a person reads them on a task's record, in the process's language. The tables above keep

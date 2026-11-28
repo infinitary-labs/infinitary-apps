@@ -151,18 +151,43 @@ describe("what a crewmate reports", () => {
     expect(h.inbox.savedResponse("r6")).toMatchObject({ requestId: again });
   });
 
-  it("refuses validation for a change that opens no pull request, a decision by report, and an effect before review on a changed branch", async () => {
-    const plan = {
-      kind: "plan" as const,
-      previousRevision: 0,
-      reason: "The meter's count is read in the launched app.",
-      scenarios: [],
-    };
+  it("keeps the validation plan of local-only work, whose Careful review comes before the local merge", async () => {
+    // The captain's choice on INF-7174: Careful on local-only work runs a
+    // real review, so the careful-change skill's first record is kept there
+    // as on a pull request.
     const local = await builder("local-only");
-    await expect(local.report("Planned.", undefined, { validation: plan })).rejects.toThrow(
-      "Live validation belongs to a change delivered through a pull request.",
-    );
+    vi.mocked(local.workspace.branchHead).mockResolvedValue(HEAD);
+    vi.mocked(local.workspace.taskWorkStatus).mockResolvedValue({
+      dirty: false,
+      unlandedCommits: 1,
+    });
+    const answer = await local.report("Planned.", undefined, {
+      validation: {
+        kind: "plan",
+        previousRevision: 0,
+        reason: "The meter's count is read in the launched app.",
+        scenarios: [
+          {
+            id: "count-press",
+            source: "the captain's words",
+            importance: "required",
+            action: "Press the meter eight times",
+            expected: "The meter reads 8",
+            adverse: "A missed press reads 7",
+            environment: "The launched app on this Mac",
+            signal: "The meter's count on screen",
+            boundary: "A disposable app home",
+          },
+        ],
+      },
+    });
+    expect(answer).toMatch(/^Validation plan recorded/);
+    expect(
+      local.tasks.get(local.taskId)?.delivery?.liveValidation?.scenarios.map((row) => row.id),
+    ).toEqual(["count-press"]);
+  });
 
+  it("refuses a validation decision by report, and an effect before review on a changed branch", async () => {
     const h = await builder();
     vi.mocked(h.workspace.branchHead).mockResolvedValue(HEAD);
     await expect(

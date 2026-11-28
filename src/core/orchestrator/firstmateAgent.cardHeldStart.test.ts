@@ -154,6 +154,57 @@ describe("FirstmateAgent start held by its own open card", () => {
     expect(f.tasks.starts.startAttemptOf(f.task.id)).toBeFalsy();
   });
 
+  // INF-7238 review: a release-moment task waiting on a finished parent is held by the
+  // parent's merged part, which no edge names, so removing the parent's edge is its last wait.
+  it("removes a release-moment task's edge to a part its finished parent still holds, and refuses the parent's last edge while the card waits", async () => {
+    const f = await cardUp();
+    seedTask(f.tasks, { id: "export", title: "Rework the export", status: "queued" });
+    seedTask(f.tasks, {
+      id: "writer",
+      title: "Write the new export file",
+      status: "queued",
+      parentId: "export",
+    });
+    f.tasks.close("writer", { status: "done", reason: "merged", actor: "host" });
+    f.tasks.close("export", { status: "done", reason: "finished", actor: "host" });
+    await f.agent.converse("tell the issue once the export rework ships in a release");
+    await f.tools.get("update_task")?.execute("wait", {
+      task: f.task.key,
+      side_effect: true,
+      moment: "release",
+      start_policy: "when-ready",
+      blocked_by: ["export", "writer"],
+    });
+    f.session.emitTurnEnd("It waits for the release.");
+    f.session.resolveNextPrompt();
+    await tick();
+    expect(f.tasks.graph.waitingOn(f.task.id).map((row) => row.id)).toEqual(["writer"]);
+    await reportWake(f);
+    // The part's own edge goes, since the parent still holds the part.
+    const partRemoved = (
+      await f.tools.get("link_tasks")?.execute("unpart", {
+        from: "writer",
+        to: f.task.key,
+        type: "blocks",
+        remove: true,
+      })
+    )?.content[0]?.text;
+    expect(partRemoved).toMatch(/^Removed: /);
+    expect(f.tasks.graph.blockers(f.task.id).map((row) => row.id)).toEqual(["export"]);
+    const text = (
+      await f.tools.get("link_tasks")?.execute("unwait", {
+        from: "export",
+        to: f.task.key,
+        type: "blocks",
+        remove: true,
+      })
+    )?.content[0]?.text;
+    expect(text).toContain(`Wait not removed: your open card "${decision.title}"`);
+    await tick();
+    expect(f.tasks.graph.blockers(f.task.id).map((row) => row.id)).toEqual(["export"]);
+    expect(f.tasks.get(f.task.id)?.status).toBe("open");
+  });
+
   // The takeover review's settled finding: on batched pull requests an approved
   // wait counts as answered once needs_merge stops naming it, or once
   // start_at_approval names it, so either edit lets the ready sweep start it.

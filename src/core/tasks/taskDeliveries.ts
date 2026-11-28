@@ -63,7 +63,7 @@ import type {
   TaskRecord,
 } from "../storage/taskRecords";
 import { decideValidation, recordValidation } from "./liveValidation";
-import { TaskGraphRefusal } from "./taskGraph";
+import { TaskGraph, TaskGraphRefusal } from "./taskGraph";
 import { TaskService } from "./taskService";
 import { type DeliveryObservation, keyOrId, type TaskWriter } from "./taskWriter";
 import { liveWaitCycle } from "./waitCycles";
@@ -132,10 +132,9 @@ export class TaskDeliveries {
       for (const target of targets) {
         if (target.repoId !== reporter.repoId || target.projectId !== reporter.projectId)
           throw new TaskGraphRefusal("Release tasks must belong to your own project.");
-        if (
-          target.status !== "done" ||
-          (target.closedReason !== "merged" && target.closedReason !== "landed")
-        )
+        // The same merge a release-moment task waits on (`TaskGraph.workMerged`),
+        // so every wait that holds one can be released.
+        if (!TaskGraph.workMerged(target))
           throw new TaskGraphRefusal(`Release task ${keyOrId(target)} is not merged work.`);
         if (corrects !== undefined && target.delivery?.firstRelease?.version !== corrects)
           throw new TaskGraphRefusal(

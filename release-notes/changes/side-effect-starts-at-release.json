@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "side-effect-starts-at-release",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Replies to outside issues wait for the release",
+      "body": "A task that tells an issue or ticket how its work ended now starts once that work is in a release, when your project ships in releases, instead of starting at the merge and then sitting on hold. Until then its line in Tasks says which work it is waiting for to ship.",
+      "noPicture": "The change is when a waiting task starts; its only trace on screen is one line of words in the Tasks list.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

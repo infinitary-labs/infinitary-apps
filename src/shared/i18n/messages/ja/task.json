@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "あなたの方針 d:{direction} により、このバージョンは{holds}の保留を越えて進めます。改訂または廃止されるまで有効です：「{words}」",
   "taskPinPin": "固定",
   "taskPinUnpin": "固定を解除",
+  "taskQueueWaitRelease": "{tasks} のリリース待ち",
   "taskStatusComputerUpdating": "{computer} は更新中",
   "taskTabActivity": "アクティビティ",
   "taskTabCards": "カード",

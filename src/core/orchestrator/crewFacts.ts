@@ -4,6 +4,8 @@ import { HERE } from "@shared/deviceNames";
 import type { CrewCounts } from "@shared/events";
 import { forgePlace } from "@shared/forge";
 import { holdNames, overrideSpan, standingOverride } from "@shared/holds";
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { formatDurationShort } from "@shared/quotaSignals";
 import {
   autonomyForRecord,
@@ -373,12 +375,15 @@ export class CrewFacts {
       const queueWait =
         starting || !hasStartQueueWait(record)
           ? undefined
-          : queueWaitOf(
-              record,
-              this.core.options.tasks.graph.blockers(record.id),
-              this.core.options.tasks.graph.linksTo(record.id),
-              this.core.options.tasks.graph.children(record.id),
-              this.core.options.tasks.graph.nothingMerged(record) !== undefined,
+          : inLanguage(SOURCE_LANGUAGE, () =>
+              queueWaitOf(
+                record,
+                this.core.options.tasks.graph.blockers(record.id),
+                this.core.options.tasks.graph.linksTo(record.id),
+                this.core.options.tasks.graph.children(record.id),
+                this.core.options.tasks.graph.nothingMerged(record) !== undefined,
+                this.core.options.tasks.graph.awaitingRelease(record),
+              ),
             );
       // A started task in the backlog (INF-2062) waits for start_now, with how long it has.
       const backlog =

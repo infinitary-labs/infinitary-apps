@@ -611,6 +611,98 @@ describe("the task graph (R1)", () => {
     expect(served.match(/This is a side-effect task/g)).toHaveLength(1);
   });
 
+  // INF-7198 part 1, the captain's "Approve and build": the start sweep leaves a
+  // release-moment side-effect task unstarted after its wait merged, starts it once that
+  // work has a first release, and its brief names the moment and the release.
+  it("starts a release-moment side-effect task at its wait's first release, not its merge", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks } = setup(crew);
+    seedTask(tasks, {
+      id: "fix",
+      title: "Fix the negative reading",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    seedTask(tasks, {
+      id: "tell-item",
+      title: "Tell the issue how the fix ended",
+      status: "queued",
+      blockedBy: ["fix"],
+      shape: { kind: "unclear", side_effect: true, side_effect_moment: "release" },
+    });
+    tasks.close("fix", { status: "done", reason: "merged", actor: "host" });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(0);
+    expect(tasks.get("tell-item")?.status).toBe("open");
+
+    seedDelivery(tasks, "fix", {
+      firstRelease: {
+        version: "1.4.0-alpha.2",
+        url: "https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2",
+        evidence: "The release's notes list the fix.",
+      },
+    });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(1);
+    expect(crew.promptCalls[0]).toContain(
+      `- ${tasks.get("fix")?.key} "Fix the negative reading": merged; first shipped in release 1.4.0-alpha.2 (https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2)`,
+    );
+    expect(crew.promptCalls[0]).toContain(
+      "Its moment is the release: act only once every merged wait or part above shows its first release.",
+    );
+    expect(crew.promptCalls[0]).not.toContain("so the first mate holds you");
+  });
+
+  // INF-7238 review, from the approved plan's INF-6932 row: a parent the host closes finished
+  // when its last part merges shipped in that part, so a release-moment task waiting on it
+  // starts at the part's first release, and its brief names the part.
+  it("holds a release-moment side-effect task on a finished parent until its merged part ships", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks } = setup(crew);
+    seedTask(tasks, {
+      id: "export",
+      title: "Rework the export",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    seedTask(tasks, {
+      id: "writer",
+      title: "Write the new export file",
+      status: "queued",
+      startPolicy: "on-request",
+      parentId: "export",
+    });
+    seedTask(tasks, {
+      id: "tell-item",
+      title: "Tell the issue the export works",
+      status: "queued",
+      blockedBy: ["export"],
+      shape: { kind: "unclear", side_effect: true, side_effect_moment: "release" },
+    });
+    tasks.close("writer", { status: "done", reason: "merged", actor: "host" });
+    tasks.close("export", { status: "done", reason: "finished", actor: "host" });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(0);
+    expect(tasks.get("tell-item")?.status).toBe("open");
+
+    seedDelivery(tasks, "writer", {
+      firstRelease: {
+        version: "1.4.0-alpha.2",
+        url: "https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2",
+        evidence: "The release's notes list the new export file.",
+      },
+    });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(1);
+    expect(crew.promptCalls[0]).toContain(
+      `- ${tasks.get("export")?.key} "Rework the export": done (finished), shipped by its merged parts: ${tasks.get("writer")?.key} (merged; first shipped in release 1.4.0-alpha.2 (https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2))`,
+    );
+  });
+
   // INF-6845's piece 1: the waiting task's brief carries what each finished wait reported, so
   // its crewmate can say what a reproduce step found without reading tasks, and the Outside
   // work items crew section reaches the waiting task's crewmate and no other.

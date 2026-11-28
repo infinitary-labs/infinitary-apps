@@ -4517,6 +4517,7 @@
 "taskOverrideDirectionVersion" = "지침 d:%1$@ 덕분에 이 버전은 다음 보류를 넘어가요: %2$@. 지침이 수정되거나 폐기될 때까지 유효해요: “%3$@”";
 "taskPinPin" = "고정";
 "taskPinUnpin" = "고정 해제";
+"taskQueueWaitRelease" = "%1$@ 릴리스 대기 중";
 "taskStatusComputerUpdating" = "%1$@ 업데이트 중";
 "taskTabActivity" = "활동";
 "taskTabCards" = "카드";

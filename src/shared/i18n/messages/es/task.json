@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "Tu directriz d:{direction} supera {holds} para el cambio tal como está ahora, hasta que tenga una nueva versión o se retire: «{words}»",
   "taskPinPin": "Fijar",
   "taskPinUnpin": "Desfijar",
+  "taskQueueWaitRelease": "Esperando a que {tasks} salga en una versión",
   "taskStatusComputerUpdating": "{computer} se está actualizando",
   "taskTabActivity": "Actividad",
   "taskTabCards": "Tarjetas",

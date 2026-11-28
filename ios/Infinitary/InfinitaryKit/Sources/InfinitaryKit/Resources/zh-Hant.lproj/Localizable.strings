@@ -4515,6 +4515,7 @@
 "taskOverrideDirectionVersion" = "你的指引 d:%1$@ 讓這個版本越過%2$@的暫緩，直到它被修訂或停用：「%3$@」";
 "taskPinPin" = "釘選";
 "taskPinUnpin" = "取消釘選";
+"taskQueueWaitRelease" = "正在等待 %1$@ 隨版本發布";
 "taskStatusComputerUpdating" = "%1$@ 正在更新";
 "taskTabActivity" = "動態";
 "taskTabCards" = "卡片";

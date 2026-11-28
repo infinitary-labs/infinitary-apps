@@ -221,7 +221,11 @@ export function viewOf(
   facts: LiveFacts,
 ): TaskView {
   const blockers = graph.blockersOf.get(record.id) ?? [];
-  const waiting = blockers.filter((blocker) => !TaskService.blockerCleared(blocker));
+  const unreleased = options.tasks.graph.awaitingRelease(record);
+  const waiting = [
+    ...blockers.filter((blocker) => !TaskService.blockerCleared(blocker)),
+    ...unreleased,
+  ];
   const liveBlockers = blockers.filter(TaskService.blockerHoldsClose);
   const { repo, posture, place, startAttempt, computerMove } = facts;
   const baseline = TaskService.isClosed(record)
@@ -332,6 +336,7 @@ export function viewOf(
           graph.linksInto.get(record.id) ?? [],
           graph.parts.get(record.id) ?? [],
           awaitsGo,
+          unreleased,
         ),
     flags: {
       blocked,

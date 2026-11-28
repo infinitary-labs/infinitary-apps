@@ -580,9 +580,15 @@ export class TaskGraph {
     const approved = this.writer.store
       .listAwaitingApproval()
       .filter((record) => this.approvedBase(record) !== undefined);
+    // A release-moment task's merged work with no first release, a merged wait
+    // or a finished wait's merged part, still holds its start ("A side-effect
+    // task"); the store's query reads only status.
     const ready = this.writer.store
       .listReady()
-      .filter((record) => this.nothingMerged(record) === undefined);
+      .filter(
+        (record) =>
+          this.nothingMerged(record) === undefined && this.awaitingRelease(record).length === 0,
+      );
     if (approved.length === 0) return ready;
     return [...ready, ...approved].sort(
       (a, b) => a.priority - b.priority || a.createdAt - b.createdAt,
@@ -800,18 +806,27 @@ export class TaskGraph {
   }
 
   /**
-   * Whether a closed task's work shipped: its own merge (`workMerged`), or
-   * the merge of any part under it, read down its parts, since a parent the
+   * Whether a closed task's work shipped: some merge in `mergedWork`, its
+   * own or a part's.
+   */
+  workShipped(task: TaskRecord): boolean {
+    return this.mergedWork(task).length > 0;
+  }
+
+  /**
+   * The merges a closed task's work shipped in: its own (`workMerged`), or
+   * else each merged part under it, read down its parts, since a parent the
    * host closes done when its last part merges has no delivery of its own.
    * The host's own delivery machinery is no part.
    */
-  workShipped(task: TaskRecord, seen = new Set<string>()): boolean {
-    if (TaskGraph.workMerged(task)) return true;
-    if (task.status !== "done" || seen.has(task.id)) return false;
+  mergedWork(task: TaskRecord, seen = new Set<string>()): TaskRecord[] {
+    if (TaskGraph.workMerged(task)) return [task];
+    if (task.status !== "done" || seen.has(task.id)) return [];
     seen.add(task.id);
     return this.writer.store
       .listChildren(task.id)
-      .some((part) => !TaskService.isDeliveryChild(part) && this.workShipped(part, seen));
+      .filter((part) => !TaskService.isDeliveryChild(part))
+      .flatMap((part) => this.mergedWork(part, seen));
   }
 
   /**
@@ -895,13 +910,44 @@ export class TaskGraph {
     return this.writer.store.listDeadBlocked();
   }
 
+  /**
+   * What holds an open task's start: each wait not closed done, less the
+   * ones an approval answers, and, on a release-moment side-effect task,
+   * each merged wait or finished wait's merged part with no recorded first
+   * release (`awaitingRelease`).
+   */
   waitingOn(id: string): TaskRecord[] {
-    return this.unanswered(
+    const waiting = this.unanswered(
       id,
       this.blocksIn(
         id,
         statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
       ).map(({ task }) => task),
+    );
+    const record = this.writer.store.get(id);
+    return record ? [...waiting, ...this.awaitingRelease(record)] : waiting;
+  }
+
+  /**
+   * The merged work a release-moment side-effect task still waits on to
+   * ship (docs/task-graph.md, "A side-effect task"): each merge its done
+   * waits shipped in (`mergedWork`) with no recorded first release, in edge
+   * order, while the task is open. Empty for any other task.
+   */
+  awaitingRelease(record: Pick<TaskRecord, "id" | "status" | "shape">): TaskRecord[] {
+    if (!TaskGraph.startsAtRelease(record)) return [];
+    const merged = this.blocksIn(record.id, ["done"]).flatMap(({ task }) => this.mergedWork(task));
+    return [...new Map(merged.map((task) => [task.id, task])).values()].filter(
+      (task) => !task.delivery?.firstRelease,
+    );
+  }
+
+  /** Whether an open side-effect task's moment is the release ("A side-effect task"). */
+  static startsAtRelease(record: Pick<TaskRecord, "status" | "shape">): boolean {
+    return (
+      record.status === "open" &&
+      record.shape?.side_effect === true &&
+      record.shape.side_effect_moment === "release"
     );
   }
 

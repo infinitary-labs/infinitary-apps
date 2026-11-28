@@ -78,7 +78,9 @@ function inspect(all: Record<string, Workflow>) {
     for (const [id, job] of Object.entries(workflow.jobs)) {
       if (!job["runs-on"]) continue; // Reusable calls have no runner of their own.
       for (const [dryRun, small, release] of ["true", "false"].flatMap((dry) =>
-        ["true", "false"].flatMap((each) => [true, false].map((call) => [dry, each, call] as const)),
+        ["true", "false"].flatMap((each) =>
+          [true, false].map((call) => [dry, each, call] as const),
+        ),
       )) {
         // Both publishing paths matter: release-only queues must not join phone.
         // The alpha wait's matrix is the alpha cuts its find job listed, here

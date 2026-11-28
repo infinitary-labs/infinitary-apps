@@ -419,11 +419,15 @@ describe("the native gate on an affected request", () => {
   it("sends the phone release's call to the release phone queue and every other phone check to the phone queue", () => {
     const release = yaml.load(readFileSync(".github/workflows/ios-release.yml", "utf8"));
     const native = workflow.jobs[NATIVE_JOB];
-    const queues = { phone: "mini-mac-phone", release_phone: "mini-mac-release-phone" };
-    const placed = (inputs: Plain, named: Record<string, string> = queues) =>
+    const queues = {
+      phone: "mini-mac-phone",
+      phone_small: "mini-mac-phone-small",
+      release_phone: "mini-mac-release-phone",
+    };
+    const placed = (inputs: Plain, named: Record<string, string> = queues, small = "") =>
       workflowValue(native["runs-on"], {
         inputs,
-        needs: {},
+        needs: { request: { outputs: { small } } },
         vars: { MAC_QUEUES: JSON.stringify(named) },
       });
     const call = {
@@ -432,6 +436,8 @@ describe("the native gate on an affected request", () => {
     };
     expect(placed(call)).toBe("mini-mac-release-phone");
     expect(placed(call, { phone: "mini-mac-phone" })).toBe("mini-mac-phone");
+    // A release dealt into one or two jobs still goes ahead of small branch checks (INF-7079's fix 1 and fix 4).
+    expect(placed(call, queues, "true")).toBe("mini-mac-release-phone");
     expect(placed({})).toBe("mini-mac-phone");
     expect(placed({ waits: true })).toBe("mini-mac-phone");
     expect(placed({ affected: true, base: "origin/main" })).toBe("mini-mac-phone");
@@ -1120,8 +1126,13 @@ it("uses the dealt jobs and skips native work when Linux selects none", () => {
 it("sends a check dealt into one or two jobs to the small phone queue and every other phone check to the phone queue", () => {
   const native = workflow.jobs[NATIVE_JOB];
   const queues = { phone: "mini-mac-phone", phone_small: "mini-mac-phone-small" };
+  // A branch request's inputs name no release (INF-7079's fix 4 owns the release call's queue).
   const placed = (needs: Plain, named: Record<string, string> = queues) =>
-    workflowValue(native["runs-on"], { needs, vars: { MAC_QUEUES: JSON.stringify(named) } });
+    workflowValue(native["runs-on"], {
+      inputs: { release: false },
+      needs,
+      vars: { MAC_QUEUES: JSON.stringify(named) },
+    });
   // What the request job hands on when its chooser printed `small` for these dealt jobs.
   const request = (jobs: ReturnType<typeof requestJobs>) => ({
     request: {

@@ -43,11 +43,15 @@ Manual results read “Confirmed by you”.
 Instructions are inert text; a confirmation runs nothing.
 Not now, the close control, navigation, replies and opening Devices do not complete the action.
 Deferred actions stay under Waiting on you in Tasks, with Show the card on the record.
+Words typed in the card's field with Not now, the completion button or Open Devices reach the first mate in one card-choice wake marked carried out.
+The card marks none of its actions as its way to say no, so it carries the app's Decline (`docs/card-authoring.md`).
+Decline is the captain's no: in the closing interaction's transaction it drops the task as cancelled by the captain, marking the action cancelled, and closes the card.
+The first mate hears it once, in the card-choice wake with `DECLINE_WORDS`, the typed words and any pictures, and the required actions still waiting on the dropped one, which stay blocked.
 The existing card-button command and Tab/Enter reach the controls; reopening is a typed `show-card` task operation available to paired views too.
 The record survives restart without a worker, repeated cards or a new reminder scheduler.
 It failed is an ordinary action button beside the completion button, with the same action keys and submission as every other choice.
 The captain can paste output into the card's field, then choose It failed to send the failure and those words together.
-The choice closes its offer without completing the operation; the host offers the outstanding action again on the same card and delivers the failure to the first mate through its thread.
+The choice closes its offer without completing the operation; the host offers the outstanding action again on the same card and delivers the failure to the first mate through its thread, which only It failed does.
 The first mate arranges repair through the crew and answers with repair status there.
 Chat still sends a reply without choosing an action.
 While the thread awaits the first mate's answer, manual confirmation is paused; the action stays outstanding and Not now remains available.

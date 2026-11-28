@@ -1,5 +1,5 @@
 ---
-source: 8b70a675730a25eb
+source: cf25805d32836d90
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -161,6 +161,7 @@ Nachdem du zusammengeführt hast, kommt jedes davon als eigene Karte zurück.
 Tu, was sie sagt, und drück dann ihre Schaltfläche zur Bestätigung.
 Hat es nicht funktioniert, füg in ihr Feld ein, was du gesehen hast, und wähl **Es ist fehlgeschlagen**, und dein erster Offizier sorgt für eine Lösung.
 **Nicht jetzt** lässt es in „Aufgaben“ unter „Wartet auf dich“ liegen.
+**Ablehnen** heißt, dass du es nicht tust: Die Karte schließt sich, der Schritt wird verworfen, und dein erster Offizier erfährt dein Nein mit allem, was du geschrieben hast.
 
 ## Frühere Karten {#past-cards}
 

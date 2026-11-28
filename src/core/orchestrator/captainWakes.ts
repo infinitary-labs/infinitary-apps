@@ -100,6 +100,11 @@ export type CaptainFacts =
        * ask, that crewmate is told instead (`Card.answeredBy`).
        */
       carriedOut?: true;
+      /**
+       * The captain's Decline on a card for a step only they can do dropped
+       * that step's task (INF-7234), with the steps still waiting on it.
+       */
+      declinedStep?: { waiting: { key: string; title: string }[] };
     }
   | {
       /**
@@ -277,6 +282,21 @@ export type CaptainFacts =
 /** What the app's Decline means to the card's author (INF-3108). */
 export const DECLINE_WORDS =
   "The captain declined every choice on the card: go on without them, and ask again only with something new.";
+
+/** The close line of a step only the captain can do that their Decline dropped (INF-7234). */
+export const DECLINED_STEP_TEXT = "dropped - declined on its card";
+
+/** What the first mate hears beside `DECLINE_WORDS` when that Decline dropped a step (INF-7234). */
+export const DECLINED_STEP_WORDS = "The app dropped the step's task and closed its card.";
+
+/** The steps waiting on a declined one, which its drop never clears (INF-7234). */
+function declinedStepText(
+  declined: { waiting: { key: string; title: string }[] } | undefined,
+): string {
+  if (!declined) return "";
+  const waiting = declined.waiting.map((step) => `${step.key} "${step.title}"`).join(", ");
+  return ` ${DECLINED_STEP_WORDS}${waiting ? ` These steps wait on it and stay blocked, since a dropped step never clears a wait: ${waiting}.` : ""}`;
+}
 
 /** How the steer telling a crewmate the captain closed its card begins (FI3-435). */
 export const CARD_CLOSED_STEER_PREFIX = "The captain closed your card ";
@@ -662,7 +682,7 @@ export const CAPTAIN_WORDS: KindWords<CaptainFacts> = {
       const about = `card "${facts.card.title}"${facts.card.id ? ` (${facts.card.id})` : ""}${facts.card.taskId ? ` on task ${facts.card.taskId}` : ""}`;
       return facts.source === "frame"
         ? `[fm-op] a script chose "${facts.choice.label}" (${facts.choice.id}) on ${about}.${valueText(facts.choice)}${answersText(facts.choice, facts.source)}`
-        : `[user]\n${facts.choice.label}\nChoice on ${about}${facts.through ? `, ${FROM_THE_COMMAND}` : ""}.${declined}${facts.carriedOut ? ` ${CARRIED_OUT_WORDS}` : ""}${valueText(facts.choice)}${answersText(facts.choice)}${carriedText(facts.choice.carried)}`;
+        : `[user]\n${facts.choice.label}\nChoice on ${about}${facts.through ? `, ${FROM_THE_COMMAND}` : ""}.${declined}${declinedStepText(facts.declinedStep)}${facts.carriedOut ? ` ${CARRIED_OUT_WORDS}` : ""}${valueText(facts.choice)}${answersText(facts.choice)}${carriedText(facts.choice.carried)}`;
     }
     if (facts.browserGone) return renderBrowserGone(facts);
     return `Card "${facts.card.title}": ${facts.source === "frame" ? "a script" : "the user"} chose "${facts.choice.label}" (${facts.choice.id}).${fromText(facts.from, "chose it")}${declined}${facts.carriedOut ? ` ${CARRIED_OUT_ASKER_WORDS}` : ""}${valueText(facts.choice)}${answersText(facts.choice, facts.source)}${carriedText(facts.choice.carried)}`;

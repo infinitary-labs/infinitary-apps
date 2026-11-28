@@ -30,7 +30,6 @@ import { englishOf, type Said, wordSaid } from "@shared/i18n/said";
 import type { RepoView } from "@shared/repos";
 import type { NamingRule } from "@shared/runbooks";
 import {
-  BATCH_STORIES_MARKER,
   type Forge,
   ForgeAllowanceSpent,
   type ForgeChange,
@@ -39,33 +38,28 @@ import {
   ForgeError,
   ForgeMergeUnconfirmed,
   type ForgePull,
-  ForgeWriteError,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  presentationBodyLimit,
-  presentationCommentLimit,
   requestLinkAtRepo,
 } from "../forge";
 import { gitFailure } from "../workspace/git";
-import { composedName } from "../workspace/naming";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
-  batchVersionIn,
+  type batchVersionIn,
   type Combined,
   type CombineInput,
-  clashesWithBatch,
+  type clashesWithBatch,
   combine as combineChanges,
   generatedOnTop,
   LEFT_OUT_WORDS,
   landedCommits,
   pushBatch,
 } from "./combine";
-import { type BatchLimits, batchDescription, batchList } from "./description";
+import { batchList } from "./description";
 import {
   abandoned,
   awaitedJoins,
   batchStatus,
-  builtOnBatch,
   carried,
   clashesEnded,
   combined,
@@ -80,7 +74,6 @@ import {
   nextBatchAt,
   pruned,
   rebuildStands,
-  rebuildTold,
   release,
   reopened,
   repaired,
@@ -89,11 +82,12 @@ import {
   sendBack,
   sentBackOf,
   standing,
-  toldRebuild,
   unfixed,
   withBases,
   withdraw,
 } from "./line";
+import { BatchRebuilds } from "./rebuild";
+import { BatchStories, batchTitle, trialMark } from "./stories";
 import {
   approvedFixInLine,
   type ConfirmedFix,
@@ -104,13 +98,7 @@ import {
 } from "./trial";
 import { BATCH_WORDS } from "./words";
 
-export { BATCH_WORDS };
-
-/** A host on which the app can read, write and delete its own comments, to keep a batch's stories there. */
-type CommentingForge = Forge &
-  Required<Pick<Forge, "ownComments" | "writeComment" | "deleteComment">>;
-const keepsComments = (forge: Forge): forge is CommentingForge =>
-  Boolean(forge.ownComments && forge.writeComment && forge.deleteComment);
+export { BATCH_WORDS, batchTitle };
 
 const TIME_OF_DAY: Intl.DateTimeFormatOptions = { hour: "numeric", minute: "2-digit" };
 
@@ -133,21 +121,6 @@ function notRun(checks: ForgeChecks): string[] | undefined {
         (item.manual === true ||
           (item.failureAllowed === true && /^cancell?ed$/.test(item.status ?? "")))));
   return [...new Set(checks.items.filter(unfinished).map((item) => item.name))];
-}
-
-/**
- * The batch pull request's title. A batch of one carries its change's own.
- * A batch of several says how many it carries in the app's plain words, in
- * the form the active naming runbook gives a name the app writes itself; the
- * app holds no naming form of its own (docs/runbooks.md, "Built-ins").
- */
-export function batchTitle(
-  members: readonly Pick<BatchChange, "title">[],
-  naming: NamingRule | null,
-): string {
-  return members.length === 1
-    ? (members[0] as Pick<BatchChange, "title">).title
-    : composedName(`merge ${members.length} approved changes`, naming);
 }
 
 /** Why a repair's judgment that the held version passed on a rerun was refused (`declarePassed`). */
@@ -258,15 +231,6 @@ export type BatchesOptions = {
 };
 
 /**
- * The described mark for an early run's words at its commit (`followTrial`): that commit becomes
- * the batch's version once promoted, and its words then name the fix as not approved yet, so
- * the batch's own mark differs and the promoted batch is described again before it merges.
- */
-function trialMark(head: string): string {
-  return `trial ${head}`;
-}
-
-/**
  * Batches of your own (docs/forge.md, "Batches of your own"): the one
  * writer of a project's line of approved changes and its one open batch.
  * An approved change is a pushed branch with no pull request of its own.
@@ -282,36 +246,23 @@ export class Batches {
   /** One pass per project at a time; a pass asked for meanwhile runs after it. */
   private readonly passes = new Map<string, Promise<void>>();
   /**
-   * The version of each project's open batch whose pull request this run
-   * read carrying the batch's own title and description, or an early run's
-   * commit carrying the run's words (`trialMark`). Nothing is kept
-   * across a restart, so the first pass after one reads it again.
-   */
-  private readonly described = new Map<string, string>();
-  /** The changes of each project whose missing story this run already said, by task and version. */
-  private readonly storyless = new Map<string, Set<string>>();
-  /**
    * Each project's open batch's checks as the last pass read them, by
    * project, kept in memory alone: after a restart the next pass reads them.
    */
   private readonly readings = new Map<string, BatchChecksReading>();
-  /**
-   * The changes in line each project's passes already tried against its
-   * open batch's version, by task, version and batch version, kept in
-   * memory alone: after a restart each is tried once again.
-   */
-  private readonly tried = new Map<string, { at: string; keys: Set<string> }>();
 
-  /** The keys tried for a project's open batch version `at`; a new version starts afresh. */
-  private triedAt(repoId: string, at: string): Set<string> {
-    const kept = this.tried.get(repoId);
-    if (kept?.at === at) return kept.keys;
-    const keys = new Set<string>();
-    this.tried.set(repoId, { at, keys });
-    return keys;
+  private readonly rebuilds: BatchRebuilds;
+  private readonly stories: BatchStories;
+
+  constructor(private readonly options: BatchesOptions) {
+    this.rebuilds = new BatchRebuilds({
+      options,
+      record: (repoId) => this.record(repoId),
+      save: (repoId, record) => this.save(repoId, record),
+      stillAt: (repo) => this.stillAt(repo),
+    });
+    this.stories = new BatchStories({ options, label: (repo, open) => this.label(repo, open) });
   }
-
-  constructor(private readonly options: BatchesOptions) {}
 
   /** The open batch's checks as last read at its version; undefined before the first reading. */
   checksReading(repoId: string): BatchChecksReading | undefined {
@@ -412,7 +363,7 @@ export class Batches {
       const next = reworded(record, change);
       member = Boolean(next.open?.members.some((entry) => entry.taskId === change.taskId));
       // A story can read differently under the same title and words.
-      if (member) this.described.delete(repoId);
+      if (member) this.stories.described.delete(repoId);
       return JSON.stringify(next) === JSON.stringify(record) ? record : next;
     });
     // A held batch's declared fix starts the batch's own checks with it (`startTrial`).
@@ -439,8 +390,8 @@ export class Batches {
       stillAt: (repo) => this.stillAt(repo),
       generated: (repo, branch, head, pushed) => this.writeGenerated(repo, branch, head, pushed),
       describe: async (repo, open, forge) => {
-        if (this.described.get(repo.id) !== trialMark(open.head))
-          await this.describe(repo, open, forge, true);
+        if (this.stories.described.get(repo.id) !== trialMark(open.head))
+          await this.stories.describe(repo, open, forge, true);
       },
     };
   }
@@ -727,151 +678,12 @@ export class Batches {
       ((record.open?.members.length && !record.open.hold) || record.rebuilds?.length) &&
       record.line.some((entry) => !entry.onBatch && !entry.fix && !entry.after && !entry.base)
     )
-      record = await this.markRebuilt(repo, record);
+      record = await this.rebuilds.markRebuilt(repo, record);
     if (record.open) record = await this.follow(repo, record);
     if (forms(record, repo.batchGap, this.options.now()))
       record = await this.recombine(repo, record, "none");
-    await this.tryLine(repo);
+    await this.rebuilds.tryLine(repo);
     this.clashesEnded(repoId);
-  }
-
-  /**
-   * Each ordinary change in line whose branch builds on an open batch
-   * version, the one its crewmate was told to rebuild on or the open batch's
-   * version now, read from git's history whatever repair was declared, is
-   * marked as built on it (`onBatch`, docs/forge.md, "A change rebuilt on an
-   * open batch"), so it goes behind that batch's changes and is carried as
-   * its own difference from that version. Each version is read once per set
-   * of batch versions; one that cannot be read now is read again next pass.
-   */
-  private async markRebuilt(repo: RepoView, record: BatchRecord): Promise<BatchRecord> {
-    // A held batch's version is its repair's to build on: a version built on it is a fix,
-    // carried from the held version, never a change rebuilt on the batch.
-    const open = record.open?.members.length && !record.open.hold ? record.open.head : undefined;
-    const tried = this.triedAt(repo.id, record.open?.head ?? "");
-    let next = record;
-    for (const change of record.line) {
-      if (change.onBatch || change.fix || change.after || change.base) continue;
-      if (declarationsOf(record, change).length) continue;
-      const told = record.rebuilds?.find((entry) => entry.taskId === change.taskId)?.on;
-      const versions = [...new Set([told, open].filter((version) => version !== undefined))];
-      if (versions.length === 0) continue;
-      const key = `built:${change.taskId}:${change.head}:${versions.join(",")}`;
-      if (tried.has(key)) continue;
-      const on = await (this.options.builtOnVersion ?? batchVersionIn)({
-        repoDir: repo.path,
-        ...(repo.origin ? { remote: repo.origin } : {}),
-        branch: change.branch,
-        head: change.head,
-        versions,
-      }).catch(() => null);
-      if (on === null) continue;
-      tried.add(key);
-      const onBatch = on ? builtOnBatch(next, change.taskId, on) : undefined;
-      if (!onBatch) continue;
-      next = {
-        ...next,
-        line: next.line.map((entry) =>
-          entry.taskId === change.taskId && entry.head === change.head
-            ? { ...entry, onBatch }
-            : entry,
-        ),
-      };
-    }
-    return next === record || !this.stillAt(repo) ? record : this.save(repo.id, next);
-  }
-
-  /**
-   * While a batch is open and checked, each change waiting in line is tried
-   * once against its version with `merge-tree`, which writes no ref a
-   * person sees (docs/forge.md, "A change rebuilt on an open batch"): one
-   * that no longer combines with it has its crewmate told to rebuild it on
-   * that version now, once per version of the change and set of changes in
-   * the batch, rather than when the next batch leaves it out.
-   */
-  private async tryLine(repo: RepoView): Promise<void> {
-    const record = this.record(repo.id);
-    const open = record.open;
-    if (!open || open.hold || open.stale || open.members.length === 0 || !this.options.rebuild)
-      return;
-    const tried = this.triedAt(repo.id, open.head);
-    for (const change of record.line) {
-      // A version rebuilt on a batch whose changes no longer stand in the open batch at their
-      // versions, nor merged at them, is told once to rebuild on the open batch as it is now.
-      if (change.onBatch && !change.fix) {
-        if (!this.batchStands(record, change.onBatch) && !rebuildTold(record, change))
-          this.tellRebuild(repo.id, change, LEFT_OUT_WORDS.batchChanged(change.onBatch.head));
-        continue;
-      }
-      // A fix, a part built on another's version and a stacked change each have their own
-      // place; the combine judges them.
-      if (change.fix || change.after || change.base) continue;
-      const key = `${change.taskId}:${change.head}:${open.head}`;
-      if (tried.has(key) || rebuildTold(record, change) || rebuildStands(record, change)) continue;
-      const clashes = await (this.options.clashes ?? clashesWithBatch)({
-        repoDir: repo.path,
-        ...(repo.origin ? { remote: repo.origin } : {}),
-        branch: change.branch,
-        head: change.head,
-        batch: open.head,
-      });
-      // One that cannot be read at this version, as a moved branch, is tried again only once
-      // the batch's version or the change's version moves.
-      tried.add(key);
-      if (!clashes || !this.stillAt(repo)) continue;
-      this.tellRebuild(repo.id, change, LEFT_OUT_WORDS.clashesBatch);
-    }
-  }
-
-  /**
-   * Whether every change a rebuilt version was built on still stands where
-   * the combine carries it: in the open batch at that version, or merged at it.
-   */
-  private batchStands(record: BatchRecord, onBatch: NonNullable<BatchChange["onBatch"]>): boolean {
-    return onBatch.members.every(
-      (carried) =>
-        record.open?.members.some(
-          (member) => member.taskId === carried.taskId && member.head === carried.head,
-        ) ||
-        record.receipts.some(
-          (receipt) => receipt.taskId === carried.taskId && receipt.head === carried.head,
-        ),
-    );
-  }
-
-  /**
-   * The left-out changes whose crewmate was told to rebuild on the batch on
-   * `branch`, which just ended, merged or not: their merge reads their place
-   * again, which no longer asks them to rebuild on it.
-   */
-  private toldOn(record: BatchRecord, branch: string): string[] {
-    return record.leftOut
-      .filter((entry) => entry.rebuild?.branch === branch)
-      .map((entry) => entry.taskId);
-  }
-
-  /** Settle the left-out changes told to rebuild on the batch on `branch`, which ended unmerged. */
-  private settleTold(record: BatchRecord, branch: string): void {
-    const told = this.toldOn(record, branch);
-    if (told.length) this.options.settle(told);
-  }
-
-  /**
-   * Tell a change's crewmate to rebuild it on the open batch's version, once
-   * per version of the change and set of changes in the batch, and keep
-   * that on the record (`toldRebuild`).
-   */
-  private tellRebuild(
-    repoId: string,
-    change: Pick<BatchChange, "taskId" | "head">,
-    reason: string,
-  ): void {
-    const told = toldRebuild(this.record(repoId), change, this.options.now());
-    if (!told.told) return;
-    const saved = this.save(repoId, told.record);
-    if (!told.fresh || !saved.open) return;
-    this.options.taskNote(change.taskId, BATCH_WORDS.rebuild(reason, told.told.on));
-    this.options.rebuild?.({ change, reason, told: told.told, open: saved.open });
   }
 
   /** A kept approval covers a version only at its approved repository. */
@@ -946,7 +758,7 @@ export class Batches {
     if (open.number === undefined) {
       // A crash between the push and the pull request's confirmation: read before writing.
       const found = await forge.changeFor(open.branch);
-      const opened = found ? undefined : await this.openRequest(open, forge);
+      const opened = found ? undefined : await this.stories.openRequest(open, forge);
       const change = found ?? (opened as { change: ForgeChange }).change;
       if (change.number === undefined) return record;
       open = { ...open, number: change.number, url: forge.url(change) };
@@ -954,8 +766,8 @@ export class Batches {
       this.options.note(BATCH_WORDS.formed(repo.name, this.label(repo, open), open.members.length));
       // A pull request this pass opened carries the batch's words as sent, and the stories
       // past its description follow in comments.
-      if (opened && (await this.continueIn(forge, change.number, opened.comments, true)))
-        this.wrote(repo, open, opened.missing);
+      if (opened && (await this.stories.continueIn(forge, change.number, opened.comments, true)))
+        this.stories.wrote(repo, open, opened.missing);
     }
     if (!forge.pull) return record;
     const pull = await forge.pull(open.number as number);
@@ -975,7 +787,7 @@ export class Batches {
       // Closed where the project lives without a merge: the changes go back in line.
       await forge.deleteBranch?.(open.branch).catch(() => {});
       const saved = this.save(repo.id, reopened(record, this.options.now()));
-      this.settleTold(saved, open.branch);
+      this.rebuilds.settleTold(saved, open.branch);
       return saved;
     }
     // A comment reading that fails is read again on a later pass; the batch goes on.
@@ -1040,13 +852,14 @@ export class Batches {
     // merges as it is, and the fix goes to the next batch.
     if (fixWaits(record) && open.hold?.reason !== "checks")
       return this.recombine(repo, record, "line");
-    if (this.described.get(repo.id) !== open.head) await this.describe(repo, open, forge);
+    if (this.stories.described.get(repo.id) !== open.head)
+      await this.stories.describe(repo, open, forge);
     const change: ForgeChange = {
       number: pull.number,
       url: open.url ?? null,
       branch: open.branch,
       headSha: open.head,
-      title: pull.title ?? this.title(open.members),
+      title: pull.title ?? this.stories.title(open.members),
     };
     const checks = await forge.checks(change);
     // A check that ran on the batch pull request ends the project's record
@@ -1224,7 +1037,7 @@ export class Batches {
     if (pull.state !== "closed") return BATCH_WORDS.stillOpen(this.label(repo, open), forge.place);
     await forge.deleteBranch?.(open.branch).catch(() => {});
     const saved = this.save(repo.id, reopened(record, this.options.now()));
-    this.settleTold(saved, open.branch);
+    this.rebuilds.settleTold(saved, open.branch);
     await this.recombine(repo, saved, "line");
     return undefined;
   }
@@ -1272,7 +1085,7 @@ export class Batches {
       const answer = await forge.putIn(
         {
           ...change,
-          title: only ? only.title : this.title(open.members),
+          title: only ? only.title : this.stories.title(open.members),
           squashMessage: only ? only.body : batchList(open.members),
         },
         open.head,
@@ -1377,10 +1190,12 @@ export class Batches {
     // its place again: its left-out reason stands alone.
     this.options.settle([
       ...open.members.map((member) => member.taskId),
-      ...this.toldOn(saved, open.branch).filter(
-        (taskId) =>
-          !saved.leftOut.some((left) => left.taskId === taskId && rebuildStands(saved, left)),
-      ),
+      ...this.rebuilds
+        .toldOn(saved, open.branch)
+        .filter(
+          (taskId) =>
+            !saved.leftOut.some((left) => left.taskId === taskId && rebuildStands(saved, left)),
+        ),
     ]);
     return saved;
   }
@@ -1398,7 +1213,7 @@ export class Batches {
       });
     await forge.deleteBranch?.(open.branch).catch(() => {});
     const saved = this.save(repo.id, abandoned(unfixed(record, []), this.options.now()));
-    this.settleTold(saved, open.branch);
+    this.rebuilds.settleTold(saved, open.branch);
     return saved;
   }
 
@@ -1480,7 +1295,7 @@ export class Batches {
     for (const left of result.leftOut) {
       // A clash while a batch stays open is answered now: its crewmate rebuilds on that batch.
       if (left.clash && next.open && this.options.rebuild) {
-        this.tellRebuild(repo.id, left.change, left.reason);
+        this.rebuilds.tellRebuild(repo.id, left.change, left.reason);
         continue;
       }
       this.options.taskNote(
@@ -1498,19 +1313,6 @@ export class Batches {
       return next;
     }
     return this.follow(repo, next);
-  }
-
-  private async openRequest(
-    open: OpenBatch,
-    forge: Forge,
-  ): Promise<{ change: ForgeChange; comments: string[]; missing: BatchMember[] }> {
-    const { body, comments, missing } = await this.body(open, forge);
-    const change = await forge.openChange({
-      branch: open.branch,
-      title: this.title(open.members),
-      body,
-    });
-    return { change, comments, missing };
   }
 
   /**
@@ -1587,158 +1389,6 @@ export class Batches {
       if (caught instanceof ForgeError && caught.failure === "refused") return undefined;
       throw caught;
     }
-  }
-
-  /**
-   * Give the open pull request the batch's own title and description once
-   * its members changed, and the comments that carry the stories past it.
-   * A host replaces a description only at the version, words and title just
-   * read, so the pull request is read first; a rewrite the host did not take
-   * is sent again on the next pass.
-   */
-  private async describe(
-    repo: RepoView,
-    open: OpenBatch,
-    forge: Forge,
-    /** `open` is the early run with the held batch's fix (`followTrial`), its last member the fix. */
-    trial = false,
-  ): Promise<void> {
-    if (!forge.updateChangeBody || open.number === undefined) return;
-    const held = await forge.changeFor(open.branch);
-    if (!held || held.number !== open.number || held.headSha !== open.head) return;
-    const { body, comments, missing } = await this.body(open, forge, trial);
-    const title = this.title(open.members);
-    if ((held.body ?? "") !== body || held.title !== title) {
-      try {
-        await forge.updateChangeBody(held, body, title);
-      } catch (caught) {
-        // The pull request changed between the read and the write: the next pass reads it again.
-        if (
-          caught instanceof ForgeWriteError &&
-          caught.outcome === "failed" &&
-          caught.failure === "refused"
-        )
-          return;
-        throw caught;
-      }
-    }
-    if (await this.continueIn(forge, open.number, comments, false))
-      this.wrote(repo, open, missing, trial ? trialMark(open.head) : open.head);
-  }
-
-  /**
-   * Keep the app's own comments that carry the stories past the batch's
-   * description equal to `comments`, in order: a changed one is rewritten,
-   * a missing one posted and one left over deleted, so none still carries a
-   * story the batch no longer holds. A pull request just opened has none to
-   * read. Answers whether they are in step: one the host refused is tried
-   * again on a later pass, from a fresh reading, and the batch goes on.
-   */
-  private async continueIn(
-    forge: Forge,
-    number: number,
-    comments: readonly string[],
-    opened: boolean,
-  ): Promise<boolean> {
-    if (!keepsComments(forge)) return true;
-    if (opened && comments.length === 0) return true;
-    try {
-      const held = opened ? [] : await forge.ownComments(number, BATCH_STORIES_MARKER);
-      for (const [index, body] of comments.entries()) {
-        const kept = held[index];
-        if (kept?.body !== body) await forge.writeComment(number, body, kept?.id);
-      }
-      for (const left of held.slice(comments.length)) await forge.deleteComment(number, left.id);
-      return true;
-    } catch (caught) {
-      // A sign-in, the network or a busy host: the pass reads again.
-      if (isSignInForgeFailure(caught) || isTransientForgeFailure(caught)) throw caught;
-      console.warn(
-        "[batches] could not write the comments that carry the batch's stories:",
-        caught instanceof Error ? caught.message : caught,
-      );
-      return false;
-    }
-  }
-
-  /**
-   * The pull request holds the batch's words at this version. With every
-   * story in them, nothing is written again until the batch changes. A story
-   * that could not be written is said once for that version of its change,
-   * and the description is written again on each pass until it is there.
-   */
-  private wrote(
-    repo: RepoView,
-    open: OpenBatch,
-    missing: readonly BatchMember[],
-    mark: string = open.head,
-  ): void {
-    if (missing.length === 0) {
-      this.described.set(repo.id, mark);
-      this.storyless.delete(repo.id);
-      return;
-    }
-    const told = this.storyless.get(repo.id) ?? new Set<string>();
-    const fresh = missing.filter((member) => !told.has(`${member.taskId} ${member.head}`));
-    if (fresh.length === 0) return;
-    for (const member of fresh) told.add(`${member.taskId} ${member.head}`);
-    this.storyless.set(repo.id, told);
-    this.options.note(
-      BATCH_WORDS.noStory(
-        repo.name,
-        this.label(repo, open),
-        fresh.map((member) => member.title),
-      ),
-    );
-  }
-
-  /**
-   * The pull request's description, the comments that carry the stories it
-   * cannot hold, and the changes whose story could not be written into
-   * either this time. A batch of one reads as that change's own pull request
-   * does: the words around its story, then the story. A batch of several
-   * lists its changes, then carries each one's story under its title, within
-   * the host's limits (`batchDescription`).
-   */
-  private async body(
-    open: OpenBatch,
-    forge: Forge,
-    trial = false,
-  ): Promise<{ body: string; comments: string[]; missing: BatchMember[] }> {
-    const stories = await Promise.all(
-      open.members.map((member) => this.options.story(member, forge).catch(() => undefined)),
-    );
-    if (open.members.length === 1)
-      return {
-        body: [stories[0]?.projectText, stories[0]?.region].filter(Boolean).join("\n\n"),
-        comments: [],
-        missing: stories[0] ? [] : open.members,
-      };
-    const { body, comments, unplaced } = batchDescription(
-      open.members.map((member, index) => ({
-        title: member.title,
-        region: stories[index]?.region,
-      })),
-      this.limits(forge),
-      trial ? open.members.at(-1)?.title : undefined,
-    );
-    return {
-      body,
-      comments,
-      missing: open.members.filter((_member, index) => !stories[index] || unplaced.includes(index)),
-    };
-  }
-
-  /** What the project's host keeps: a description, and a comment where the app can write one. */
-  private limits(forge: Forge): BatchLimits {
-    return {
-      description: presentationBodyLimit(forge.kind),
-      comment: keepsComments(forge) ? presentationCommentLimit(forge.kind) : 0,
-    };
-  }
-
-  private title(members: readonly BatchMember[]): string {
-    return batchTitle(members, this.options.naming());
   }
 
   /** The merges the project allows, read now within a pass and kept for Settings. */

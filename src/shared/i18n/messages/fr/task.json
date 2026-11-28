@@ -45,11 +45,11 @@
   "taskTagsRemovedByFirstMate": "Votre second a retiré {tags} de cette tâche.",
   "taskTagsRemovedByYou": "Vous avez retiré {tags} de cette tâche.",
   "taskTagsTagRemoved": "L’étiquette {tag} a été retirée de ce projet, donc cette tâche ne la porte plus.",
+  "taskWaitBackgroundRunningSince": "Travail en arrière-plan · en cours depuis {time}",
   "taskWaitChainUntil": "Attend {on} · {end} attend jusqu’à {time}",
   "taskWaitChainUpdate": "Attend {on} · {end} attend une mise à jour de l’app",
   "taskWaitChainVia": "Attend {on} · qui attend {end}",
   "taskWaitOn": "Attend {on}",
   "taskWaitOnUntil": "Attend {on} · qui attend jusqu’à {time}",
-  "taskWaitOnUpdate": "Attend {on} · qui attend une mise à jour de l’app",
-  "taskWaitRunningSince": "{label} · en cours depuis {time}"
+  "taskWaitOnUpdate": "Attend {on} · qui attend une mise à jour de l’app"
 }

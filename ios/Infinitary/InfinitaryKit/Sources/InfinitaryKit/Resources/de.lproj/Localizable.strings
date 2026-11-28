@@ -2228,7 +2228,6 @@
 "phoneRecordWaitDueReset" = "Zurücksetzung war fällig %1$@";
 "phoneRecordWaitDueStart" = "Startzeit war fällig %1$@";
 "phoneRecordWaitLabelRecorded" = "%1$@ · Warten festgehalten %2$@";
-"phoneRecordWaitLabelRunningSince" = "%1$@ · läuft seit %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · Warten festgehalten %3$@";
 "phoneRecordWaitNextCheckBack" = "nächster Blick %1$@";
@@ -4502,13 +4501,13 @@
 "taskTagsRemovedByFirstMate" = "Dein erster Offizier hat %1$@ von dieser Aufgabe entfernt.";
 "taskTagsRemovedByYou" = "Du hast %1$@ von dieser Aufgabe entfernt.";
 "taskTagsTagRemoved" = "Das Tag %1$@ wurde aus diesem Projekt entfernt, darum trägt diese Aufgabe es nicht mehr.";
+"taskWaitBackgroundRunningSince" = "Hintergrundarbeit · läuft seit %1$@";
 "taskWaitChainUntil" = "Wartet auf %2$@ · %1$@ wartet bis %3$@";
 "taskWaitChainUpdate" = "Wartet auf %2$@ · %1$@ wartet auf ein App-Update";
 "taskWaitChainVia" = "Wartet auf %2$@ · das auf %1$@ wartet";
 "taskWaitOn" = "Wartet auf %1$@";
 "taskWaitOnUntil" = "Wartet auf %1$@ · das wartet bis %2$@";
 "taskWaitOnUpdate" = "Wartet auf %1$@ · das wartet auf ein App-Update";
-"taskWaitRunningSince" = "%1$@ · läuft seit %2$@";
 "trayOpen" = "Infinitary öffnen";
 "trayQuit" = "Infinitary beenden";
 "uiButtonPending" = "Wird ausgeführt ...";

@@ -2228,7 +2228,6 @@
 "phoneRecordWaitDueReset" = "リセットは %1$@ の予定でした";
 "phoneRecordWaitDueStart" = "開始は %1$@ の予定でした";
 "phoneRecordWaitLabelRecorded" = "%1$@ · %2$@ に待機を記録";
-"phoneRecordWaitLabelRunningSince" = "%1$@ · %2$@ から実行中";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · %3$@ に待機を記録";
 "phoneRecordWaitNextCheckBack" = "再確認 %1$@";
@@ -4502,13 +4501,13 @@
 "taskTagsRemovedByFirstMate" = "一等航海士がこのタスクから %1$@ を外しました。";
 "taskTagsRemovedByYou" = "あなたがこのタスクから %1$@ を外しました。";
 "taskTagsTagRemoved" = "タグ %1$@ はこのプロジェクトから削除されたため、このタスクにはもう付いていません。";
+"taskWaitBackgroundRunningSince" = "バックグラウンド処理 · %1$@ から実行中";
 "taskWaitChainUntil" = "%2$@ 待ち · %1$@ は %3$@ まで待機";
 "taskWaitChainUpdate" = "%2$@ 待ち · %1$@ はアプリのアップデート待ち";
 "taskWaitChainVia" = "%2$@ 待ち · その先は %1$@ 待ち";
 "taskWaitOn" = "%1$@ 待ち";
 "taskWaitOnUntil" = "%1$@ 待ち · %2$@ まで待機";
 "taskWaitOnUpdate" = "%1$@ 待ち · アプリのアップデート待ち";
-"taskWaitRunningSince" = "%1$@ · %2$@ から実行中";
 "trayOpen" = "Infinitary を開く";
 "trayQuit" = "Infinitary を終了";
 "uiButtonPending" = "処理中...";

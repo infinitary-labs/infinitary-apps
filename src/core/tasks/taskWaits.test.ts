@@ -246,6 +246,32 @@ describe("a job wait with no check-back", () => {
       db.close();
     }
   });
+  it("keeps an owning check-back's own time over a different job start", () => {
+    const db = openInMemoryDatabase();
+    try {
+      const tasks = new TaskService({ db, strict: true, now: () => 1_000_000 });
+      seedTask(tasks, { id: "work", title: "Publish the website", status: "completed" });
+      tasks.turns.recordReport("work", {
+        text: "Waiting for the website build.",
+        declared: { checkBack: { minutes: 5, waitingFor: "Website build" } },
+      });
+      const waits = taskWaitsOf({
+        record: mustTask(tasks, "work"),
+        holding: [],
+        since: {},
+        decision: false,
+        facts: { job: true, timerOwned: true, jobSince: 123_000 },
+      });
+      const job = waits.find((wait) => wait.kind === "job");
+      expect(job).toMatchObject({
+        label: "Website build",
+        next: { kind: "check-back", at: 1_300_000 },
+      });
+      expect(job?.since).toBe(1_000_000);
+    } finally {
+      db.close();
+    }
+  });
 });
 
 function mustTask(tasks: TaskService, id: string) {

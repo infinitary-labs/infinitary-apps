@@ -64,9 +64,11 @@ export function taskWaitText(
   if (!detail) return event ?? "";
   // A task wait's label is the bare key it waits on.
   const label = wait.kind === "dependency" ? m.taskWaitOn({ on: wait.label }) : wait.label;
-  // Background work has no end to name, so its start is what a person can read.
+  // A known start, never a future event: background work has no end to name, so a job
+  // wait without a next event says when it began. The whole line is one message so no
+  // language is left with the English label.
   if (wait.kind === "job" && !event && wait.since !== undefined)
-    return m.taskWaitRunningSince({ label, time: clock(wait.since) });
+    return m.taskWaitBackgroundRunningSince({ time: clock(wait.since) });
   return `${[label, event].filter(Boolean).join(" · ")}${recorded}`;
 }
 

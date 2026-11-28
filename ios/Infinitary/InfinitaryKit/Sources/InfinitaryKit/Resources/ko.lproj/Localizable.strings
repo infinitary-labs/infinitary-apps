@@ -2228,7 +2228,6 @@
 "phoneRecordWaitDueReset" = "한도 초기화 예정 시각 %1$@ 지남";
 "phoneRecordWaitDueStart" = "시작 예정 시각 %1$@ 지남";
 "phoneRecordWaitLabelRecorded" = "%1$@ · %2$@에 기다림 기록됨";
-"phoneRecordWaitLabelRunningSince" = "%1$@ · %2$@부터 실행 중";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · %3$@에 기다림 기록됨";
 "phoneRecordWaitNextCheckBack" = "다시 살펴보기 %1$@";
@@ -4504,13 +4503,13 @@
 "taskTagsRemovedByFirstMate" = "일등항해사가 이 작업에서 %1$@ 태그를 뗐어요.";
 "taskTagsRemovedByYou" = "이 작업에서 %1$@ 태그를 뗐어요.";
 "taskTagsTagRemoved" = "%1$@ 태그가 이 프로젝트에서 제거되어 이 작업에는 더 이상 붙어 있지 않아요.";
+"taskWaitBackgroundRunningSince" = "백그라운드 작업 · %1$@부터 실행 중";
 "taskWaitChainUntil" = "%2$@ 기다리는 중 · %1$@은(는) %3$@까지 대기";
 "taskWaitChainUpdate" = "%2$@ 기다리는 중 · %1$@은(는) 앱 업데이트 대기";
 "taskWaitChainVia" = "%2$@ 기다리는 중 · 그 작업은 %1$@ 대기";
 "taskWaitOn" = "%1$@ 기다리는 중";
 "taskWaitOnUntil" = "%1$@ 기다리는 중 · %2$@까지 대기";
 "taskWaitOnUpdate" = "%1$@ 기다리는 중 · 앱 업데이트 대기";
-"taskWaitRunningSince" = "%1$@ · %2$@부터 실행 중";
 "trayOpen" = "Infinitary 열기";
 "trayQuit" = "Infinitary 종료";
 "uiButtonPending" = "처리 중...";

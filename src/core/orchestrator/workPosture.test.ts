@@ -271,6 +271,35 @@ describe("the wait facts of background work", () => {
       fixture.db.close();
     }
   });
+  it("takes the host's job start when it began before the client's work", () => {
+    const fixture = record();
+    try {
+      const later = hostStart + 600_000;
+      const facts = postures(
+        { clientJobs: 1, clientJobsSince: later },
+        {
+          running: true,
+        },
+      ).workWaitFacts(active(fixture.record));
+      expect(facts).toMatchObject({ job: true, jobSince: hostStart });
+    } finally {
+      fixture.db.close();
+    }
+  });
+  it("ignores a client start left over after its work ended, and a host job that is gone", () => {
+    const fixture = record();
+    try {
+      const facts = postures({ clientJobs: 0, clientJobsSince: clientStart }, {}).workWaitFacts(
+        active(fixture.record),
+      );
+      expect(facts.job).toBe(false);
+      expect("jobSince" in facts).toBe(false);
+      const hostGone = postures({ clientJobs: 1 }, {}).workWaitFacts(active(fixture.record));
+      expect("jobSince" in hostGone).toBe(false);
+    } finally {
+      fixture.db.close();
+    }
+  });
   it("names no start when no job runs", () => {
     const fixture = record();
     try {

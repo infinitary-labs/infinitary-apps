@@ -428,7 +428,6 @@
   "phoneRecordWaitDueReset": "リセットは {time} の予定でした",
   "phoneRecordWaitDueStart": "開始は {time} の予定でした",
   "phoneRecordWaitLabelRecorded": "{label} · {time} に待機を記録",
-  "phoneRecordWaitLabelRunningSince": "{label} · {time} から実行中",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · {time} に待機を記録",
   "phoneRecordWaitNextCheckBack": "再確認 {time}",

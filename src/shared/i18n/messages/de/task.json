@@ -45,11 +45,11 @@
   "taskTagsRemovedByFirstMate": "Dein erster Offizier hat {tags} von dieser Aufgabe entfernt.",
   "taskTagsRemovedByYou": "Du hast {tags} von dieser Aufgabe entfernt.",
   "taskTagsTagRemoved": "Das Tag {tag} wurde aus diesem Projekt entfernt, darum trägt diese Aufgabe es nicht mehr.",
+  "taskWaitBackgroundRunningSince": "Hintergrundarbeit · läuft seit {time}",
   "taskWaitChainUntil": "Wartet auf {on} · {end} wartet bis {time}",
   "taskWaitChainUpdate": "Wartet auf {on} · {end} wartet auf ein App-Update",
   "taskWaitChainVia": "Wartet auf {on} · das auf {end} wartet",
   "taskWaitOn": "Wartet auf {on}",
   "taskWaitOnUntil": "Wartet auf {on} · das wartet bis {time}",
-  "taskWaitOnUpdate": "Wartet auf {on} · das wartet auf ein App-Update",
-  "taskWaitRunningSince": "{label} · läuft seit {time}"
+  "taskWaitOnUpdate": "Wartet auf {on} · das wartet auf ein App-Update"
 }

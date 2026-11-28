@@ -341,6 +341,15 @@ A captain click writes a `note` on the old task with `startAgain` naming the new
 It takes no other edits or operation in that call; start and steer refusals on dropped tasks point to it.
 Drop task and Discard ("One drop"), stronger-model retries, provider retries and closed-work retirement retain their meanings.
 
+## What a background-work wait says of time
+
+A task's "Background work" wait (`id: "job"`) has no scheduled end: the app learns it ended only when the host's job finishes or the Claude client reports a count of zero.
+So the wait never carries a `next` event of its own, and a header never invents one.
+What the host does know is when the work began: `WorkPostures.workWaitFacts` reads `jobSince`, the earlier of the host job's start (`oldestRunningJob`) and the client's first reported work (`clientJobsSince`), and only while a job runs, so a start left over after the work ended is dropped.
+`taskWaitsOf` puts it in the wait's `since`.
+A crewmate's check-back that owns the wait keeps its own `since` and its `check-back` event instead.
+`taskWaitText` and the phone's `PhoneRecordRules.waitText` then say `Background work · running since <time>`, one catalog message (`taskWaitBackgroundRunningSince`) so every language words the whole line; a known start is told apart from a future event, which reads `check-back <time>`.
+
 ## Ready waiting is a presentation projection
 
 Approved specification: FI3-275, direction A, reachable cards, split waiting children.

@@ -45,11 +45,11 @@
   "taskTagsRemovedByFirstMate": "Tu primer oficial quitó {tags} de esta tarea.",
   "taskTagsRemovedByYou": "Quitaste {tags} de esta tarea.",
   "taskTagsTagRemoved": "La etiqueta {tag} se quitó de este proyecto, así que esta tarea ya no la lleva.",
+  "taskWaitBackgroundRunningSince": "Trabajo en segundo plano · en ejecución desde {time}",
   "taskWaitChainUntil": "Esperando a {on} · {end} espera hasta {time}",
   "taskWaitChainUpdate": "Esperando a {on} · {end} espera una actualización de la app",
   "taskWaitChainVia": "Esperando a {on} · que espera a {end}",
   "taskWaitOn": "Esperando a {on}",
   "taskWaitOnUntil": "Esperando a {on} · espera hasta {time}",
-  "taskWaitOnUpdate": "Esperando a {on} · espera una actualización de la app",
-  "taskWaitRunningSince": "{label} · en ejecución desde {time}"
+  "taskWaitOnUpdate": "Esperando a {on} · espera una actualización de la app"
 }

@@ -45,11 +45,11 @@
   "taskTagsRemovedByFirstMate": "일등항해사가 이 작업에서 {tags} 태그를 뗐어요.",
   "taskTagsRemovedByYou": "이 작업에서 {tags} 태그를 뗐어요.",
   "taskTagsTagRemoved": "{tag} 태그가 이 프로젝트에서 제거되어 이 작업에는 더 이상 붙어 있지 않아요.",
+  "taskWaitBackgroundRunningSince": "백그라운드 작업 · {time}부터 실행 중",
   "taskWaitChainUntil": "{on} 기다리는 중 · {end}은(는) {time}까지 대기",
   "taskWaitChainUpdate": "{on} 기다리는 중 · {end}은(는) 앱 업데이트 대기",
   "taskWaitChainVia": "{on} 기다리는 중 · 그 작업은 {end} 대기",
   "taskWaitOn": "{on} 기다리는 중",
   "taskWaitOnUntil": "{on} 기다리는 중 · {time}까지 대기",
-  "taskWaitOnUpdate": "{on} 기다리는 중 · 앱 업데이트 대기",
-  "taskWaitRunningSince": "{label} · {time}부터 실행 중"
+  "taskWaitOnUpdate": "{on} 기다리는 중 · 앱 업데이트 대기"
 }

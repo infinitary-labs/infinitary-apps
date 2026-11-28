@@ -45,11 +45,11 @@
   "taskTagsRemovedByFirstMate": "أزال نائب القبطان {tags} عن هذه المهمة.",
   "taskTagsRemovedByYou": "أزلتَ {tags} عن هذه المهمة.",
   "taskTagsTagRemoved": "أُزيل الوسم {tag} من هذا المشروع، فلم تعد هذه المهمة تحمله.",
+  "taskWaitBackgroundRunningSince": "العمل في الخلفية · قيد التشغيل منذ {time}",
   "taskWaitChainUntil": "بانتظار {on} · {end} ينتظر حتى {time}",
   "taskWaitChainUpdate": "بانتظار {on} · {end} ينتظر تحديث التطبيق",
   "taskWaitChainVia": "بانتظار {on} · الذي ينتظر {end}",
   "taskWaitOn": "بانتظار {on}",
   "taskWaitOnUntil": "بانتظار {on} · الذي ينتظر حتى {time}",
-  "taskWaitOnUpdate": "بانتظار {on} · الذي ينتظر تحديث التطبيق",
-  "taskWaitRunningSince": "{label} · قيد التشغيل منذ {time}"
+  "taskWaitOnUpdate": "بانتظار {on} · الذي ينتظر تحديث التطبيق"
 }

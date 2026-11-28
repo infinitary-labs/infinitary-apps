@@ -8,7 +8,11 @@ export type TaskWaitFacts = {
   job: boolean;
   timerOwned: boolean;
   hold?: AccountHold;
-  /** When its oldest running job started: the host's own, or the client's reported work. */
+  /**
+   * When its oldest running job started: the host's own, or the client's reported work.
+   * A time that already happened, so it is the wait's `since`, never a `next` event;
+   * background work has no scheduled end.
+   */
   jobSince?: number;
 };
 

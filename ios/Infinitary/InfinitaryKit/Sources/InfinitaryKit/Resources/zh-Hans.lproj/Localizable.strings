@@ -2228,7 +2228,6 @@
 "phoneRecordWaitDueReset" = "重置原定于 %1$@";
 "phoneRecordWaitDueStart" = "开始时间原定于 %1$@";
 "phoneRecordWaitLabelRecorded" = "%1$@ · 等待记录于 %2$@";
-"phoneRecordWaitLabelRunningSince" = "%1$@ · 自 %2$@ 起运行";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · 等待记录于 %3$@";
 "phoneRecordWaitNextCheckBack" = "回头查看 %1$@";
@@ -4502,13 +4501,13 @@
 "taskTagsRemovedByFirstMate" = "你的大副从这个任务上去掉了 %1$@。";
 "taskTagsRemovedByYou" = "你从这个任务上去掉了 %1$@。";
 "taskTagsTagRemoved" = "标签 %1$@ 已从这个项目移除，所以这个任务不再带有它。";
+"taskWaitBackgroundRunningSince" = "后台工作 · 自 %1$@ 起运行";
 "taskWaitChainUntil" = "正在等待 %2$@ · %1$@ 等到 %3$@";
 "taskWaitChainUpdate" = "正在等待 %2$@ · %1$@ 在等待应用更新";
 "taskWaitChainVia" = "正在等待 %2$@ · 它在等待 %1$@";
 "taskWaitOn" = "正在等待 %1$@";
 "taskWaitOnUntil" = "正在等待 %1$@ · 它等到 %2$@";
 "taskWaitOnUpdate" = "正在等待 %1$@ · 它在等待应用更新";
-"taskWaitRunningSince" = "%1$@ · 自 %2$@ 起运行";
 "trayOpen" = "打开 Infinitary";
 "trayQuit" = "退出 Infinitary";
 "uiButtonPending" = "处理中...";

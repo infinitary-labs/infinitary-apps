@@ -45,11 +45,11 @@
   "taskTagsRemovedByFirstMate": "一等航海士がこのタスクから {tags} を外しました。",
   "taskTagsRemovedByYou": "あなたがこのタスクから {tags} を外しました。",
   "taskTagsTagRemoved": "タグ {tag} はこのプロジェクトから削除されたため、このタスクにはもう付いていません。",
+  "taskWaitBackgroundRunningSince": "バックグラウンド処理 · {time} から実行中",
   "taskWaitChainUntil": "{on} 待ち · {end} は {time} まで待機",
   "taskWaitChainUpdate": "{on} 待ち · {end} はアプリのアップデート待ち",
   "taskWaitChainVia": "{on} 待ち · その先は {end} 待ち",
   "taskWaitOn": "{on} 待ち",
   "taskWaitOnUntil": "{on} 待ち · {time} まで待機",
-  "taskWaitOnUpdate": "{on} 待ち · アプリのアップデート待ち",
-  "taskWaitRunningSince": "{label} · {time} から実行中"
+  "taskWaitOnUpdate": "{on} 待ち · アプリのアップデート待ち"
 }

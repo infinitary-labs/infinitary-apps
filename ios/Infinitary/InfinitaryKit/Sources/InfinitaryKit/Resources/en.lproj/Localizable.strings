@@ -2228,7 +2228,6 @@
 "phoneRecordWaitDueReset" = "reset was due %1$@";
 "phoneRecordWaitDueStart" = "start time was due %1$@";
 "phoneRecordWaitLabelRecorded" = "%1$@ · wait recorded %2$@";
-"phoneRecordWaitLabelRunningSince" = "%1$@ · running since %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · wait recorded %3$@";
 "phoneRecordWaitNextCheckBack" = "check-back %1$@";
@@ -4502,13 +4501,13 @@
 "taskTagsRemovedByFirstMate" = "Your first mate took %1$@ off this task.";
 "taskTagsRemovedByYou" = "You took %1$@ off this task.";
 "taskTagsTagRemoved" = "The tag %1$@ was removed from this project, so this task no longer carries it.";
+"taskWaitBackgroundRunningSince" = "Background work · running since %1$@";
 "taskWaitChainUntil" = "Waiting on %2$@ · %1$@ waits until %3$@";
 "taskWaitChainUpdate" = "Waiting on %2$@ · %1$@ waits for an app update";
 "taskWaitChainVia" = "Waiting on %2$@ · which waits on %1$@";
 "taskWaitOn" = "Waiting on %1$@";
 "taskWaitOnUntil" = "Waiting on %1$@ · it waits until %2$@";
 "taskWaitOnUpdate" = "Waiting on %1$@ · it waits for an app update";
-"taskWaitRunningSince" = "%1$@ · running since %2$@";
 "trayOpen" = "Open Infinitary";
 "trayQuit" = "Quit Infinitary";
 "uiButtonPending" = "Working...";

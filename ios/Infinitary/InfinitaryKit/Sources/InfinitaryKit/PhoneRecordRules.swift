@@ -161,9 +161,9 @@ public enum PhoneRecord {
         guard let next = wait.next else {
             guard let since = wait.since else { return label }
             let time = clock(since, now: now, zone: zone)
-            // Background work has no end to name, so its start is what a person can read.
+            // A known start, never a future event: background work has no end to name.
             return wait.kind == "job"
-                ? PhoneMessages.phoneRecordWaitLabelRunningSince(label: label, time: time)
+                ? PhoneMessages.taskWaitBackgroundRunningSince(time: time)
                 : PhoneMessages.phoneRecordWaitLabelRecorded(label: label, time: time)
         }
         let time = clock(next.at, now: now, zone: zone)

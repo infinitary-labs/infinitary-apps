@@ -428,7 +428,6 @@
   "phoneRecordWaitDueReset": "한도 초기화 예정 시각 {time} 지남",
   "phoneRecordWaitDueStart": "시작 예정 시각 {time} 지남",
   "phoneRecordWaitLabelRecorded": "{label} · {time}에 기다림 기록됨",
-  "phoneRecordWaitLabelRunningSince": "{label} · {time}부터 실행 중",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · {time}에 기다림 기록됨",
   "phoneRecordWaitNextCheckBack": "다시 살펴보기 {time}",

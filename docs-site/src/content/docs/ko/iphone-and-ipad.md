@@ -1,5 +1,5 @@
 ---
-source: 4689a21f9d4af463
+source: b6b6aafda3cee48d
 title: iPhone과 iPad
 description: iPhone과 iPad용 Infinitary의 비공개 TestFlight 초대를 요청하고, 컴퓨터에 연결해 카드를 읽고 메시지를 보내세요.
 ---
@@ -60,6 +60,8 @@ iPhone이나 iPad의 설정 → 모양 → **테마**는 그 기기만의 설정
 **기기 설정**, **다크**, **라이트** 또는 컴퓨터에 있는 열세 가지 테마 중 하나를 만든 이가 붙인 이름 그대로 고르세요. **Dracula**, **Catppuccin Latte** 같은 것이 있어요.
 고르면 카드를 포함한 앱 전체의 색이 바로 바뀌고, Infinitary를 닫은 뒤에도 유지돼요.
 컴퓨터와 다른 기기는 각자의 테마를 유지해요.
+컴퓨터에서 일등항해사와 만든 테마는 **내 테마** 아래에 나오고, 컴퓨터에서 바꾸면 여기서도 바뀌어요.
+컴퓨터가 여러 대라면 **내 테마**에 각 컴퓨터의 테마가 모두 나오고, 고른 테마는 컴퓨터를 바꿔도 그대로 골라져 있어요.
 
 ## 펼친 폴더블 iPhone에서 카드 읽기 {#read-a-card-on-an-open-foldable-iphone}
 

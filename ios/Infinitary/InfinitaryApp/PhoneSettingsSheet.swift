@@ -440,7 +440,7 @@ struct PhoneSettingsSheet: View {
             Text(PhoneMessages.phoneSettingsTheme()).font(PhoneFont.headline)
             Text(PhoneMessages.phoneSettingsThemeScope(computer: session.mac.name, device: label))
                 .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("phone-theme-scope")
-            PhoneThemeTiles(look: $appearance.look)
+            PhoneThemeTiles(look: $appearance.look, ownThemes: appearance.ownThemes)
             // The tiles take no keys of their own, and an unseen shortcut under a sheet never hears an unmodified arrow.
             // So the group holds focus while Appearance is open and its arrows move the choice, with no command.
             .focusable().focused($themeFocused)

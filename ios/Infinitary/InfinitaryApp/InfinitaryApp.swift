@@ -31,7 +31,7 @@ import SwiftUI
         WindowGroup {
             PhoneView(model: model)
                 // This device's own Theme (PhoneAppearance), set on the window so every sheet and the keyboard follow it.
-                .background(PhoneWindowLook(look: appearance.look))
+                .background(PhoneWindowLook(look: appearance.look, ownThemes: appearance.ownThemes))
                 .environment(appearance)
                 .font(PhoneFont.body)
                 .tint(PhoneTheme.accent)
@@ -41,6 +41,11 @@ import SwiftUI
                     else if phase == .background { model.active(false) }
                 }
                 .onOpenURL { model.propose($0.absoluteString) }
+                // Yours: the own themes each computer last sent, kept by this device's Theme under the computer's pin.
+                .onChange(of: model.connection?.ownThemes) { _, themes in
+                    if let themes, let pin = model.connection?.mac.pin { appearance.heard(themes, from: pin) }
+                }
+                .onChange(of: model.keptPins) { _, pins in if let pins { appearance.kept(pins) } }
         }
         .commands {
             CommandGroup(after: .textEditing) {

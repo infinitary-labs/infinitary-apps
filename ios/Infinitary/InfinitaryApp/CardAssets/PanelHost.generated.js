@@ -133426,447 +133426,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   }
   const PANEL_SERVER_ACTION = "server.invoke";
   const PANEL_INTEGRATIONS_ACTION = "integrations";
-  const COLOR_TOKENS = [
-    { name: "--bg-0", dark: "#05070d", light: "#eef1f7" },
-    { name: "--material-tint", dark: "rgba(5, 7, 13, 1)", light: "rgba(238, 241, 247, 1)" },
-    { name: "--bg-1", dark: "#0a0e18", light: "#f7f9fc" },
-    { name: "--bg-2", dark: "#0f1424", light: "#ffffff" },
-    { name: "--bg-3", dark: "#161c30", light: "#e7ecf5" },
-    { name: "--line-1", dark: "rgba(150, 180, 255, 0.2)", light: "rgba(30, 50, 90, 0.18)" },
-    { name: "--line-2", dark: "rgba(150, 180, 255, 0.24)", light: "rgba(30, 50, 90, 0.26)" },
-    { name: "--fg-1", dark: "#e9eef8", light: "#151b2b" },
-    { name: "--fg-2", dark: "#98a4bd", light: "#4d5a75" },
-    { name: "--fg-3", dark: "#7a86a0", light: "#6c7891" },
-    { name: "--accent", dark: "#7fdcff", light: "#0e8fd0" },
-    { name: "--accent-strong", dark: "#38aae6", light: "#0a72a8" },
-    { name: "--accent-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
-    { name: "--accent-glow", dark: "rgba(127, 220, 255, 0.35)", light: "rgba(14, 143, 208, 0.25)" },
-    { name: "--on-accent", dark: "#05070d", light: "#05070d" },
-    { name: "--ok", dark: "#7fdcff", light: "#0e8fd0" },
-    { name: "--ok-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
-    { name: "--hot", dark: "#ffa257", light: "#d97a1f" },
-    { name: "--hot-dim", dark: "rgba(255, 162, 87, 0.14)", light: "rgba(217, 122, 31, 0.12)" },
-    { name: "--hot-glow", dark: "rgba(255, 148, 66, 0.35)", light: "rgba(217, 122, 31, 0.28)" },
-    { name: "--warn", dark: "#ffa257", light: "#d97a1f" },
-    { name: "--warn-dim", dark: "rgba(255, 162, 87, 0.14)", light: "rgba(217, 122, 31, 0.12)" },
-    { name: "--danger", dark: "#ff6b52", light: "#cf4a2e" },
-    { name: "--danger-dim", dark: "rgba(255, 107, 82, 0.12)", light: "rgba(207, 74, 46, 0.1)" },
-    { name: "--captain", dark: "#b99aff", light: "#7254c9" },
-    { name: "--captain-dim", dark: "rgba(185, 154, 255, 0.14)", light: "rgba(114, 84, 201, 0.12)" },
-    { name: "--idle", dark: "#5d6884", light: "#8b96ad" },
-    { name: "--slot-premium", dark: "#ff6b52", light: "#cf4a2e" },
-    { name: "--slot-high", dark: "#ffa257", light: "#d97a1f" },
-    { name: "--slot-medium", dark: "#7fdcff", light: "#0e8fd0" },
-    { name: "--slot-low", dark: "#8a93a8", light: "#8b96ad" },
-    { name: "--wire-accent", dark: "#7fdcff", light: "#0a72a8" },
-    { name: "--wire-hot", dark: "#ffa257", light: "#e8760a" },
-    { name: "--wire-dim", dark: "#2e6a8c", light: "#82b4cf" }
-  ];
-  const BUILT_IN_THEMES = {
-    "rose-pine": {
-      name: "Rosé Pine",
-      source: "Rosé Pine",
-      seed: {
-        background: "#191724",
-        text: "#e0def4",
-        accent: "#9ccfd8",
-        hot: "#f6c177",
-        danger: "#eb6f92",
-        captain: "#c4a7e7"
-      }
-    },
-    "rose-pine-moon": {
-      name: "Rosé Pine Moon",
-      source: "Rosé Pine",
-      seed: {
-        background: "#232136",
-        text: "#e0def4",
-        accent: "#9ccfd8",
-        hot: "#f6c177",
-        danger: "#eb6f92",
-        captain: "#c4a7e7"
-      }
-    },
-    "rose-pine-dawn": {
-      name: "Rosé Pine Dawn",
-      source: "Rosé Pine",
-      seed: {
-        background: "#faf4ed",
-        text: "#575279",
-        accent: "#56949f",
-        hot: "#ea9d34",
-        danger: "#b4637a",
-        captain: "#907aa9"
-      }
-    },
-    "catppuccin-latte": {
-      name: "Catppuccin Latte",
-      source: "Catppuccin for VSCode",
-      seed: {
-        background: "#eff1f5",
-        text: "#4c4f69",
-        accent: "#8839ef",
-        hot: "#fe640b",
-        danger: "#d20f39",
-        captain: "#1e66f5"
-      }
-    },
-    "catppuccin-frappe": {
-      name: "Catppuccin Frappé",
-      source: "Catppuccin for VSCode",
-      seed: {
-        background: "#303446",
-        text: "#c6d0f5",
-        accent: "#ca9ee6",
-        hot: "#ef9f76",
-        danger: "#e78284",
-        captain: "#8caaee"
-      }
-    },
-    "catppuccin-macchiato": {
-      name: "Catppuccin Macchiato",
-      source: "Catppuccin for VSCode",
-      seed: {
-        background: "#24273a",
-        text: "#cad3f5",
-        accent: "#c6a0f6",
-        hot: "#f5a97f",
-        danger: "#ed8796",
-        captain: "#8aadf4"
-      }
-    },
-    "catppuccin-mocha": {
-      name: "Catppuccin Mocha",
-      source: "Catppuccin for VSCode",
-      seed: {
-        background: "#1e1e2e",
-        text: "#cdd6f4",
-        accent: "#cba6f7",
-        hot: "#fab387",
-        danger: "#f38ba8",
-        captain: "#89b4fa"
-      }
-    },
-    "one-dark": {
-      name: "One Dark",
-      source: "One Dark Pro",
-      seed: {
-        background: "#282c34",
-        text: "#abb2bf",
-        accent: "#61afef",
-        hot: "#d19a66",
-        danger: "#e06c75",
-        captain: "#c678dd"
-      }
-    },
-    "one-light": {
-      name: "One Light",
-      source: "Atom One Light Theme",
-      seed: {
-        background: "#eaeaeb",
-        text: "#383a42",
-        accent: "#4078f2",
-        hot: "#c18401",
-        danger: "#e45649",
-        captain: "#a626a4"
-      }
-    },
-    dracula: {
-      name: "Dracula",
-      source: "Dracula Theme Official",
-      seed: {
-        background: "#282a36",
-        text: "#f8f8f2",
-        accent: "#bd93f9",
-        hot: "#ffb86c",
-        danger: "#ff5555",
-        captain: "#ff79c6"
-      }
-    },
-    "night-owl": {
-      name: "Night Owl",
-      source: "Night Owl",
-      seed: {
-        background: "#011627",
-        text: "#d6deeb",
-        accent: "#82aaff",
-        hot: "#ffcb8b",
-        danger: "#ef5350",
-        captain: "#c792ea"
-      }
-    },
-    "night-owl-light": {
-      name: "Night Owl Light",
-      source: "Night Owl",
-      seed: {
-        background: "#f0f0f0",
-        text: "#403f53",
-        accent: "#2aa298",
-        hot: "#daaa01",
-        danger: "#de3d3b",
-        captain: "#994cc3"
-      }
-    },
-    "tokyo-night": {
-      name: "Tokyo Night",
-      source: "Tokyo Night",
-      seed: {
-        background: "#1a1b26",
-        text: "#c0caf5",
-        accent: "#7aa2f7",
-        hot: "#e0af68",
-        danger: "#f7768e",
-        captain: "#bb9af7"
-      }
-    }
-  };
-  function isBuiltInTheme(id2) {
-    return typeof id2 === "string" && Object.hasOwn(BUILT_IN_THEMES, id2);
-  }
-  string().min(1).max(40).regex(/^[a-z0-9-]+$/);
-  const FLOORS = {
-    text: 7,
-    quietText: 4.5,
-    faintText: 3,
-    /** Accent, hot, danger and captain, on the card surface. */
-    state: 3,
-    onAccent: 4.5
-  };
-  const APART = { accentHot: 0.12, accentDanger: 0.12, hotDanger: 0.06 };
-  const SHIPPED_ON_ACCENT = "#05070d";
-  const hexToRgb = (hex) => {
-    const h = hex.replace("#", "");
-    return [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16) / 255);
-  };
-  const rgbToHex = (rgb) => `#${rgb.map(
-    (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0")
-  ).join("")}`;
-  const linear = (v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
-  const gamma = (v) => v <= 31308e-7 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055;
-  function rgbToOklab([r0, g0, b0]) {
-    const r = linear(r0);
-    const g = linear(g0);
-    const b = linear(b0);
-    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-    return [
-      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
-    ];
-  }
-  function oklabToRgb([L, a, b]) {
-    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
-    const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
-    const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
-    return [
-      gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-      gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-      gamma(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)
-    ];
-  }
-  function toLch(hex) {
-    const [L, a, b] = rgbToOklab(hexToRgb(hex));
-    return { L, C: Math.hypot(a, b), H: (Math.atan2(b, a) * 180 / Math.PI + 360) % 360 };
-  }
-  const inGamut = (rgb) => rgb.every((v) => v >= -5e-4 && v <= 1.0005);
-  function fromLch({ L: given, C, H }) {
-    const L = Math.min(1, Math.max(0, given));
-    const at = (c) => oklabToRgb([L, c * Math.cos(H * Math.PI / 180), c * Math.sin(H * Math.PI / 180)]);
-    if (inGamut(at(C))) return rgbToHex(at(C));
-    let lo = 0;
-    let hi = C;
-    for (let i = 0; i < 24; i++) {
-      const mid = (lo + hi) / 2;
-      if (inGamut(at(mid))) lo = mid;
-      else hi = mid;
-    }
-    return rgbToHex(at(lo));
-  }
-  function luminance(hex) {
-    const [r, g, b] = hexToRgb(hex).map(linear);
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-  }
-  function contrast(a, b) {
-    const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
-    return (x + 0.05) / (y + 0.05);
-  }
-  function colorDistance(a, b) {
-    const p = rgbToOklab(hexToRgb(a));
-    const q = rgbToOklab(hexToRgb(b));
-    return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
-  }
-  const rgba = (hex, alpha) => {
-    const [r, g, b] = hexToRgb(hex).map((v) => Math.round(v * 255));
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-  };
-  function lift(color, ground, floor, dark) {
-    if (contrast(color, ground) >= floor) return { color, moved: 0 };
-    const c = toLch(color);
-    let lo = c.L;
-    let hi = dark ? 1 : 0;
-    let out = color;
-    for (let i = 0; i < 24; i++) {
-      const mid = (lo + hi) / 2;
-      const tried = fromLch({ ...c, L: mid });
-      if (contrast(tried, ground) >= floor) {
-        hi = mid;
-        out = tried;
-      } else lo = mid;
-    }
-    return { color: out, moved: Math.abs(toLch(out).L - c.L) };
-  }
-  function workOutTheme(seed) {
-    const moved = [];
-    const faults = [];
-    const bg = toLch(seed.background);
-    const dark = bg.L < 0.6;
-    const hue = bg.C < 4e-3 ? toLch(seed.accent).H : bg.H;
-    const step = dark ? [0, 0.036, 0.066, 0.102] : [0, 0.023, 0.042, -0.016];
-    const chroma = dark ? [1, 1.45, 2.1, 2.6] : [1, 0.6, 0.15, 1.4];
-    const least = dark ? [0, 0.125, 0.16, 0.195] : [0, 0, 0, 0];
-    const cap = Math.max(0.06, bg.C);
-    const [bg0, bg1, bg2, bg3] = step.map(
-      (d, i) => i === 0 ? seed.background.toLowerCase() : fromLch({
-        L: Math.min(1, Math.max(bg.L + d, least[i])),
-        C: Math.min(cap, bg.C * chroma[i]),
-        H: hue
-      })
-    );
-    const worst = dark ? bg3 : bg0;
-    const text = toLch(seed.text);
-    const textHue = text.C < 4e-3 ? hue : text.H;
-    const hold = (name, color, floor, ground = worst) => {
-      const r = lift(color, ground, floor, dark);
-      if (r.moved > 4e-3) moved.push(`${name} ${color} → ${r.color} to reach ${floor}:1`);
-      return r.color;
-    };
-    const fg1 = hold("text", seed.text, FLOORS.text);
-    const fg2 = hold(
-      // i18n-exempt: a theme author's report, never in the window
-      "quiet text",
-      fromLch({
-        L: dark ? text.L - 0.23 : text.L + 0.243,
-        C: Math.max(text.C, 0.035),
-        H: textHue
-      }),
-      FLOORS.quietText
-    );
-    const fg3 = hold(
-      // i18n-exempt: a theme author's report, never in the window
-      "faint text",
-      fromLch({
-        L: dark ? text.L - 0.328 : text.L + 0.348,
-        C: Math.max(text.C, 0.035),
-        H: textHue
-      }),
-      FLOORS.faintText
-    );
-    const accent = hold("accent", seed.accent, FLOORS.state, bg2);
-    const hot = hold("hot", seed.hot, FLOORS.state, bg2);
-    const danger = hold("danger", seed.danger, FLOORS.state, bg2);
-    const captain = hold("captain", seed.captain, FLOORS.state, bg2);
-    const a = toLch(accent);
-    const accentStrong = fromLch({
-      L: a.L - (dark ? 0.148 : 0.093),
-      C: a.C * (dark ? 1.3 : 0.86),
-      H: a.H + (dark ? 8 : 0)
-    });
-    const onAccent = dark && contrast(bg0, accent) >= contrast("#ffffff", accent) ? bg0 : contrast("#ffffff", accent) >= contrast(SHIPPED_ON_ACCENT, accent) ? "#ffffff" : SHIPPED_ON_ACCENT;
-    if (contrast(onAccent, accent) < FLOORS.onAccent)
-      moved.push(`button words on accent reach only ${contrast(onAccent, accent).toFixed(1)}:1`);
-    const line2 = fromLch(dark ? { L: 0.777, C: 0.113, H: hue } : { L: 0.323, C: 0.076, H: hue });
-    const idle = fromLch({ L: dark ? 0.519 : 0.672, C: 0.04, H: hue });
-    const slotLow = fromLch({ L: dark ? 0.663 : 0.672, C: 0.034, H: hue });
-    const wireDim = fromLch({ L: dark ? 0.5 : 0.744, C: a.C * (dark ? 0.8 : 0.5), H: a.H });
-    if (colorDistance(accent, hot) < APART.accentHot)
-      faults.push(
-        `hot ${hot} is too close to accent ${accent}: a working crewmate would look like an idle one. Give hot a hue well away from accent.`
-      );
-    if (colorDistance(accent, danger) < APART.accentDanger)
-      faults.push(
-        `danger ${danger} is too close to accent ${accent}: an error would look like a link. Give danger a hue well away from accent.`
-      );
-    if (colorDistance(hot, danger) < APART.hotDanger)
-      faults.push(
-        `danger ${danger} is too close to hot ${hot}: an error would look like work in progress.`
-      );
-    if (contrast(fg1, bg0) < FLOORS.text)
-      faults.push(
-        `text cannot reach ${FLOORS.text}:1 on background ${seed.background}: make the background darker or lighter.`
-      );
-    const dim = dark ? 0.14 : 0.1;
-    const tokens = {
-      "--bg-0": bg0,
-      "--material-tint": rgba(bg0, 1),
-      "--bg-1": bg1,
-      "--bg-2": bg2,
-      "--bg-3": bg3,
-      "--line-1": rgba(line2, dark ? 0.2 : 0.18),
-      "--line-2": rgba(line2, dark ? 0.24 : 0.26),
-      "--fg-1": fg1,
-      "--fg-2": fg2,
-      "--fg-3": fg3,
-      "--accent": accent,
-      "--accent-strong": accentStrong,
-      "--accent-dim": rgba(accent, dim),
-      "--accent-glow": rgba(accent, dark ? 0.35 : 0.25),
-      "--ok": accent,
-      "--ok-dim": rgba(accent, dim),
-      "--hot": hot,
-      "--hot-dim": rgba(hot, dark ? 0.14 : 0.12),
-      "--hot-glow": rgba(hot, dark ? 0.35 : 0.28),
-      "--warn": hot,
-      "--warn-dim": rgba(hot, dark ? 0.14 : 0.12),
-      "--danger": danger,
-      "--danger-dim": rgba(danger, dark ? 0.12 : 0.1),
-      "--captain": captain,
-      "--captain-dim": rgba(captain, dark ? 0.14 : 0.12),
-      "--idle": idle,
-      "--slot-premium": danger,
-      "--slot-high": hot,
-      "--slot-medium": accent,
-      "--slot-low": slotLow,
-      "--wire-accent": dark ? accent : accentStrong,
-      "--wire-hot": hot,
-      "--wire-dim": wireDim,
-      "--on-accent": onAccent
-    };
-    return { base: dark ? "dark" : "light", tokens, moved, faults };
-  }
-  const worked = /* @__PURE__ */ new Map();
-  function builtInTheme(id2) {
-    let theme = worked.get(id2);
-    if (!theme) {
-      theme = workOutTheme(BUILT_IN_THEMES[id2].seed);
-      worked.set(id2, theme);
-    }
-    return theme;
-  }
-  const ownWorked = /* @__PURE__ */ new WeakMap();
-  function themeOf(saved, own2 = []) {
-    if (isBuiltInTheme(saved)) return builtInTheme(saved);
-    const mine = own2.find((theme2) => theme2.id === saved);
-    if (!mine) return null;
-    let theme = ownWorked.get(mine.colors);
-    if (!theme) {
-      theme = workOutTheme(mine.colors);
-      ownWorked.set(mine.colors, theme);
-    }
-    return theme;
-  }
-  function shippedTokens(base) {
-    return Object.fromEntries(COLOR_TOKENS.map((token) => [token.name, token[base]]));
-  }
-  function themeRule(tokens) {
-    const declarations = Object.entries(tokens).map(([name, value]) => `${name}: ${value};`).join(" ");
-    return `:root, [data-theme="light"], [data-theme="dark"] { ${declarations} }`;
-  }
-  function frameThemeRule(base, saved, own2 = []) {
-    const theme = themeOf(saved, own2);
-    return themeRule(theme?.base === base ? theme.tokens : shippedTokens(base));
-  }
   const PANEL_DRAFT_MAX = 500;
   const PANEL_CARD_ACTIONS = ["cards.emit", "cards.close", "cards.open"];
   const PANEL_CARD_VIEW_ACTIONS = [...PANEL_CARD_ACTIONS, "card.keep"];
@@ -143837,6 +143396,450 @@ ${autoHeight ? PANEL_AUTO_HEIGHT_STYLE : PANEL_FILL_STYLE}`;
 svg { ${pinned} }
 `;
   }
+  const COLOR_TOKENS = [
+    { name: "--bg-0", dark: "#05070d", light: "#eef1f7" },
+    { name: "--material-tint", dark: "rgba(5, 7, 13, 1)", light: "rgba(238, 241, 247, 1)" },
+    { name: "--bg-1", dark: "#0a0e18", light: "#f7f9fc" },
+    { name: "--bg-2", dark: "#0f1424", light: "#ffffff" },
+    { name: "--bg-3", dark: "#161c30", light: "#e7ecf5" },
+    { name: "--line-1", dark: "rgba(150, 180, 255, 0.2)", light: "rgba(30, 50, 90, 0.18)" },
+    { name: "--line-2", dark: "rgba(150, 180, 255, 0.24)", light: "rgba(30, 50, 90, 0.26)" },
+    { name: "--fg-1", dark: "#e9eef8", light: "#151b2b" },
+    { name: "--fg-2", dark: "#98a4bd", light: "#4d5a75" },
+    { name: "--fg-3", dark: "#7a86a0", light: "#6c7891" },
+    { name: "--accent", dark: "#7fdcff", light: "#0e8fd0" },
+    { name: "--accent-strong", dark: "#38aae6", light: "#0a72a8" },
+    { name: "--accent-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
+    { name: "--accent-glow", dark: "rgba(127, 220, 255, 0.35)", light: "rgba(14, 143, 208, 0.25)" },
+    { name: "--on-accent", dark: "#05070d", light: "#05070d" },
+    { name: "--ok", dark: "#7fdcff", light: "#0e8fd0" },
+    { name: "--ok-dim", dark: "rgba(127, 220, 255, 0.14)", light: "rgba(14, 143, 208, 0.1)" },
+    { name: "--hot", dark: "#ffa257", light: "#d97a1f" },
+    { name: "--hot-dim", dark: "rgba(255, 162, 87, 0.14)", light: "rgba(217, 122, 31, 0.12)" },
+    { name: "--hot-glow", dark: "rgba(255, 148, 66, 0.35)", light: "rgba(217, 122, 31, 0.28)" },
+    { name: "--warn", dark: "#ffa257", light: "#d97a1f" },
+    { name: "--warn-dim", dark: "rgba(255, 162, 87, 0.14)", light: "rgba(217, 122, 31, 0.12)" },
+    { name: "--danger", dark: "#ff6b52", light: "#cf4a2e" },
+    { name: "--danger-dim", dark: "rgba(255, 107, 82, 0.12)", light: "rgba(207, 74, 46, 0.1)" },
+    { name: "--captain", dark: "#b99aff", light: "#7254c9" },
+    { name: "--captain-dim", dark: "rgba(185, 154, 255, 0.14)", light: "rgba(114, 84, 201, 0.12)" },
+    { name: "--idle", dark: "#5d6884", light: "#8b96ad" },
+    { name: "--slot-premium", dark: "#ff6b52", light: "#cf4a2e" },
+    { name: "--slot-high", dark: "#ffa257", light: "#d97a1f" },
+    { name: "--slot-medium", dark: "#7fdcff", light: "#0e8fd0" },
+    { name: "--slot-low", dark: "#8a93a8", light: "#8b96ad" },
+    { name: "--wire-accent", dark: "#7fdcff", light: "#0a72a8" },
+    { name: "--wire-hot", dark: "#ffa257", light: "#e8760a" },
+    { name: "--wire-dim", dark: "#2e6a8c", light: "#82b4cf" }
+  ];
+  const BUILT_IN_THEMES = {
+    "rose-pine": {
+      name: "Rosé Pine",
+      source: "Rosé Pine",
+      seed: {
+        background: "#191724",
+        text: "#e0def4",
+        accent: "#9ccfd8",
+        hot: "#f6c177",
+        danger: "#eb6f92",
+        captain: "#c4a7e7"
+      }
+    },
+    "rose-pine-moon": {
+      name: "Rosé Pine Moon",
+      source: "Rosé Pine",
+      seed: {
+        background: "#232136",
+        text: "#e0def4",
+        accent: "#9ccfd8",
+        hot: "#f6c177",
+        danger: "#eb6f92",
+        captain: "#c4a7e7"
+      }
+    },
+    "rose-pine-dawn": {
+      name: "Rosé Pine Dawn",
+      source: "Rosé Pine",
+      seed: {
+        background: "#faf4ed",
+        text: "#575279",
+        accent: "#56949f",
+        hot: "#ea9d34",
+        danger: "#b4637a",
+        captain: "#907aa9"
+      }
+    },
+    "catppuccin-latte": {
+      name: "Catppuccin Latte",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#eff1f5",
+        text: "#4c4f69",
+        accent: "#8839ef",
+        hot: "#fe640b",
+        danger: "#d20f39",
+        captain: "#1e66f5"
+      }
+    },
+    "catppuccin-frappe": {
+      name: "Catppuccin Frappé",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#303446",
+        text: "#c6d0f5",
+        accent: "#ca9ee6",
+        hot: "#ef9f76",
+        danger: "#e78284",
+        captain: "#8caaee"
+      }
+    },
+    "catppuccin-macchiato": {
+      name: "Catppuccin Macchiato",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#24273a",
+        text: "#cad3f5",
+        accent: "#c6a0f6",
+        hot: "#f5a97f",
+        danger: "#ed8796",
+        captain: "#8aadf4"
+      }
+    },
+    "catppuccin-mocha": {
+      name: "Catppuccin Mocha",
+      source: "Catppuccin for VSCode",
+      seed: {
+        background: "#1e1e2e",
+        text: "#cdd6f4",
+        accent: "#cba6f7",
+        hot: "#fab387",
+        danger: "#f38ba8",
+        captain: "#89b4fa"
+      }
+    },
+    "one-dark": {
+      name: "One Dark",
+      source: "One Dark Pro",
+      seed: {
+        background: "#282c34",
+        text: "#abb2bf",
+        accent: "#61afef",
+        hot: "#d19a66",
+        danger: "#e06c75",
+        captain: "#c678dd"
+      }
+    },
+    "one-light": {
+      name: "One Light",
+      source: "Atom One Light Theme",
+      seed: {
+        background: "#eaeaeb",
+        text: "#383a42",
+        accent: "#4078f2",
+        hot: "#c18401",
+        danger: "#e45649",
+        captain: "#a626a4"
+      }
+    },
+    dracula: {
+      name: "Dracula",
+      source: "Dracula Theme Official",
+      seed: {
+        background: "#282a36",
+        text: "#f8f8f2",
+        accent: "#bd93f9",
+        hot: "#ffb86c",
+        danger: "#ff5555",
+        captain: "#ff79c6"
+      }
+    },
+    "night-owl": {
+      name: "Night Owl",
+      source: "Night Owl",
+      seed: {
+        background: "#011627",
+        text: "#d6deeb",
+        accent: "#82aaff",
+        hot: "#ffcb8b",
+        danger: "#ef5350",
+        captain: "#c792ea"
+      }
+    },
+    "night-owl-light": {
+      name: "Night Owl Light",
+      source: "Night Owl",
+      seed: {
+        background: "#f0f0f0",
+        text: "#403f53",
+        accent: "#2aa298",
+        hot: "#daaa01",
+        danger: "#de3d3b",
+        captain: "#994cc3"
+      }
+    },
+    "tokyo-night": {
+      name: "Tokyo Night",
+      source: "Tokyo Night",
+      seed: {
+        background: "#1a1b26",
+        text: "#c0caf5",
+        accent: "#7aa2f7",
+        hot: "#e0af68",
+        danger: "#f7768e",
+        captain: "#bb9af7"
+      }
+    }
+  };
+  function isBuiltInTheme(id2) {
+    return typeof id2 === "string" && Object.hasOwn(BUILT_IN_THEMES, id2);
+  }
+  string().min(1).max(40).regex(/^[a-z0-9-]+$/);
+  const FLOORS = {
+    text: 7,
+    quietText: 4.5,
+    faintText: 3,
+    /** Accent, hot, danger and captain, on the card surface. */
+    state: 3,
+    onAccent: 4.5
+  };
+  const APART = { accentHot: 0.12, accentDanger: 0.12, hotDanger: 0.06 };
+  const SHIPPED_ON_ACCENT = "#05070d";
+  const hexToRgb = (hex) => {
+    const h = hex.replace("#", "");
+    return [0, 2, 4].map((i) => Number.parseInt(h.slice(i, i + 2), 16) / 255);
+  };
+  const rgbToHex = (rgb) => `#${rgb.map(
+    (v) => Math.round(Math.min(1, Math.max(0, v)) * 255).toString(16).padStart(2, "0")
+  ).join("")}`;
+  const linear = (v) => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+  const gamma = (v) => v <= 31308e-7 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055;
+  function rgbToOklab([r0, g0, b0]) {
+    const r = linear(r0);
+    const g = linear(g0);
+    const b = linear(b0);
+    const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+    const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+    const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+    return [
+      0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+      1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+      0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+    ];
+  }
+  function oklabToRgb([L, a, b]) {
+    const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
+    const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
+    const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
+    return [
+      gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+      gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+      gamma(-0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s)
+    ];
+  }
+  function toLch(hex) {
+    const [L, a, b] = rgbToOklab(hexToRgb(hex));
+    return { L, C: Math.hypot(a, b), H: (Math.atan2(b, a) * 180 / Math.PI + 360) % 360 };
+  }
+  const inGamut = (rgb) => rgb.every((v) => v >= -5e-4 && v <= 1.0005);
+  function fromLch({ L: given, C, H }) {
+    const L = Math.min(1, Math.max(0, given));
+    const at = (c) => oklabToRgb([L, c * Math.cos(H * Math.PI / 180), c * Math.sin(H * Math.PI / 180)]);
+    if (inGamut(at(C))) return rgbToHex(at(C));
+    let lo = 0;
+    let hi = C;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      if (inGamut(at(mid))) lo = mid;
+      else hi = mid;
+    }
+    return rgbToHex(at(lo));
+  }
+  function luminance(hex) {
+    const [r, g, b] = hexToRgb(hex).map(linear);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+  function contrast(a, b) {
+    const [x, y] = [luminance(a), luminance(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  }
+  function colorDistance(a, b) {
+    const p = rgbToOklab(hexToRgb(a));
+    const q = rgbToOklab(hexToRgb(b));
+    return Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
+  }
+  const rgba = (hex, alpha) => {
+    const [r, g, b] = hexToRgb(hex).map((v) => Math.round(v * 255));
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+  function lift(color, ground, floor, dark) {
+    if (contrast(color, ground) >= floor) return { color, moved: 0 };
+    const c = toLch(color);
+    let lo = c.L;
+    let hi = dark ? 1 : 0;
+    let out = color;
+    for (let i = 0; i < 24; i++) {
+      const mid = (lo + hi) / 2;
+      const tried = fromLch({ ...c, L: mid });
+      if (contrast(tried, ground) >= floor) {
+        hi = mid;
+        out = tried;
+      } else lo = mid;
+    }
+    return { color: out, moved: Math.abs(toLch(out).L - c.L) };
+  }
+  function workOutTheme(seed) {
+    const moved = [];
+    const faults = [];
+    const bg = toLch(seed.background);
+    const dark = bg.L < 0.6;
+    const hue = bg.C < 4e-3 ? toLch(seed.accent).H : bg.H;
+    const step = dark ? [0, 0.036, 0.066, 0.102] : [0, 0.023, 0.042, -0.016];
+    const chroma = dark ? [1, 1.45, 2.1, 2.6] : [1, 0.6, 0.15, 1.4];
+    const least = dark ? [0, 0.125, 0.16, 0.195] : [0, 0, 0, 0];
+    const cap = Math.max(0.06, bg.C);
+    const [bg0, bg1, bg2, bg3] = step.map(
+      (d, i) => i === 0 ? seed.background.toLowerCase() : fromLch({
+        L: Math.min(1, Math.max(bg.L + d, least[i])),
+        C: Math.min(cap, bg.C * chroma[i]),
+        H: hue
+      })
+    );
+    const worst = dark ? bg3 : bg0;
+    const text = toLch(seed.text);
+    const textHue = text.C < 4e-3 ? hue : text.H;
+    const hold = (name, color, floor, ground = worst) => {
+      const r = lift(color, ground, floor, dark);
+      if (r.moved > 4e-3) moved.push(`${name} ${color} → ${r.color} to reach ${floor}:1`);
+      return r.color;
+    };
+    const fg1 = hold("text", seed.text, FLOORS.text);
+    const fg2 = hold(
+      // i18n-exempt: a theme author's report, never in the window
+      "quiet text",
+      fromLch({
+        L: dark ? text.L - 0.23 : text.L + 0.243,
+        C: Math.max(text.C, 0.035),
+        H: textHue
+      }),
+      FLOORS.quietText
+    );
+    const fg3 = hold(
+      // i18n-exempt: a theme author's report, never in the window
+      "faint text",
+      fromLch({
+        L: dark ? text.L - 0.328 : text.L + 0.348,
+        C: Math.max(text.C, 0.035),
+        H: textHue
+      }),
+      FLOORS.faintText
+    );
+    const accent = hold("accent", seed.accent, FLOORS.state, bg2);
+    const hot = hold("hot", seed.hot, FLOORS.state, bg2);
+    const danger = hold("danger", seed.danger, FLOORS.state, bg2);
+    const captain = hold("captain", seed.captain, FLOORS.state, bg2);
+    const a = toLch(accent);
+    const accentStrong = fromLch({
+      L: a.L - (dark ? 0.148 : 0.093),
+      C: a.C * (dark ? 1.3 : 0.86),
+      H: a.H + (dark ? 8 : 0)
+    });
+    const onAccent = dark && contrast(bg0, accent) >= contrast("#ffffff", accent) ? bg0 : contrast("#ffffff", accent) >= contrast(SHIPPED_ON_ACCENT, accent) ? "#ffffff" : SHIPPED_ON_ACCENT;
+    if (contrast(onAccent, accent) < FLOORS.onAccent)
+      moved.push(`button words on accent reach only ${contrast(onAccent, accent).toFixed(1)}:1`);
+    const line2 = fromLch(dark ? { L: 0.777, C: 0.113, H: hue } : { L: 0.323, C: 0.076, H: hue });
+    const idle = fromLch({ L: dark ? 0.519 : 0.672, C: 0.04, H: hue });
+    const slotLow = fromLch({ L: dark ? 0.663 : 0.672, C: 0.034, H: hue });
+    const wireDim = fromLch({ L: dark ? 0.5 : 0.744, C: a.C * (dark ? 0.8 : 0.5), H: a.H });
+    if (colorDistance(accent, hot) < APART.accentHot)
+      faults.push(
+        `hot ${hot} is too close to accent ${accent}: a working crewmate would look like an idle one. Give hot a hue well away from accent.`
+      );
+    if (colorDistance(accent, danger) < APART.accentDanger)
+      faults.push(
+        `danger ${danger} is too close to accent ${accent}: an error would look like a link. Give danger a hue well away from accent.`
+      );
+    if (colorDistance(hot, danger) < APART.hotDanger)
+      faults.push(
+        `danger ${danger} is too close to hot ${hot}: an error would look like work in progress.`
+      );
+    if (contrast(fg1, bg0) < FLOORS.text)
+      faults.push(
+        `text cannot reach ${FLOORS.text}:1 on background ${seed.background}: make the background darker or lighter.`
+      );
+    const dim = dark ? 0.14 : 0.1;
+    const tokens = {
+      "--bg-0": bg0,
+      "--material-tint": rgba(bg0, 1),
+      "--bg-1": bg1,
+      "--bg-2": bg2,
+      "--bg-3": bg3,
+      "--line-1": rgba(line2, dark ? 0.2 : 0.18),
+      "--line-2": rgba(line2, dark ? 0.24 : 0.26),
+      "--fg-1": fg1,
+      "--fg-2": fg2,
+      "--fg-3": fg3,
+      "--accent": accent,
+      "--accent-strong": accentStrong,
+      "--accent-dim": rgba(accent, dim),
+      "--accent-glow": rgba(accent, dark ? 0.35 : 0.25),
+      "--ok": accent,
+      "--ok-dim": rgba(accent, dim),
+      "--hot": hot,
+      "--hot-dim": rgba(hot, dark ? 0.14 : 0.12),
+      "--hot-glow": rgba(hot, dark ? 0.35 : 0.28),
+      "--warn": hot,
+      "--warn-dim": rgba(hot, dark ? 0.14 : 0.12),
+      "--danger": danger,
+      "--danger-dim": rgba(danger, dark ? 0.12 : 0.1),
+      "--captain": captain,
+      "--captain-dim": rgba(captain, dark ? 0.14 : 0.12),
+      "--idle": idle,
+      "--slot-premium": danger,
+      "--slot-high": hot,
+      "--slot-medium": accent,
+      "--slot-low": slotLow,
+      "--wire-accent": dark ? accent : accentStrong,
+      "--wire-hot": hot,
+      "--wire-dim": wireDim,
+      "--on-accent": onAccent
+    };
+    return { base: dark ? "dark" : "light", tokens, moved, faults };
+  }
+  const worked = /* @__PURE__ */ new Map();
+  function builtInTheme(id2) {
+    let theme = worked.get(id2);
+    if (!theme) {
+      theme = workOutTheme(BUILT_IN_THEMES[id2].seed);
+      worked.set(id2, theme);
+    }
+    return theme;
+  }
+  const ownWorked = /* @__PURE__ */ new WeakMap();
+  function themeOf(saved, own2 = []) {
+    if (isBuiltInTheme(saved)) return builtInTheme(saved);
+    const mine = own2.find((theme2) => theme2.id === saved);
+    if (!mine) return null;
+    let theme = ownWorked.get(mine.colors);
+    if (!theme) {
+      theme = workOutTheme(mine.colors);
+      ownWorked.set(mine.colors, theme);
+    }
+    return theme;
+  }
+  function shippedTokens(base) {
+    return Object.fromEntries(COLOR_TOKENS.map((token) => [token.name, token[base]]));
+  }
+  function themeRule(tokens) {
+    const declarations = Object.entries(tokens).map(([name, value]) => `${name}: ${value};`).join(" ");
+    return `:root, [data-theme="light"], [data-theme="dark"] { ${declarations} }`;
+  }
+  function frameThemeRule(base, saved, own2 = []) {
+    const theme = themeOf(saved, own2);
+    return themeRule(theme?.base === base ? theme.tokens : shippedTokens(base));
+  }
+  function phoneThemeRule(base, theme) {
+    return theme && typeof theme === "object" ? themeRule(theme) : frameThemeRule(base, theme);
+  }
   function pluginIdOf(panel) {
     if (panel.source === "app") return APP_PLUGIN_ID;
     return `${panel.source === "installed" ? INSTALLED_PLUGIN_PREFIX : PERSONAL_PLUGIN_PREFIX}${panel.id}`;
@@ -144003,7 +144006,7 @@ svg { ${pinned} }
         csp,
         theme: value.theme,
         title: card ? card.title : panel.title,
-        style: `${panelStylesheet(!fill)}${phoneTextRule(scale)}${phonePressRule()}${frameThemeRule(value.theme, value.colorTheme)}`,
+        style: `${panelStylesheet(!fill)}${phoneTextRule(scale)}${phonePressRule()}${phoneThemeRule(value.theme, value.colorTheme)}`,
         importMap,
         config: { ...config2, module: `${panelMountUrl(mount)}${entry2}` },
         bootIntegrity: boot
@@ -144058,14 +144061,14 @@ svg { ${pinned} }
         },
         { post: (message) => frame?.contentWindow?.postMessage(message, "*") }
       );
-      controller.setTheme(value.theme, frameThemeRule(value.theme, value.colorTheme));
+      controller.setTheme(value.theme, phoneThemeRule(value.theme, value.colorTheme));
       controller.expectDocument();
       frame.src = panelMountUrl(mount);
       document.body.replaceChildren(frame);
     },
     theme(value, colorTheme) {
       document.documentElement.style.colorScheme = value;
-      controller?.setTheme(value, frameThemeRule(value, colorTheme));
+      controller?.setTheme(value, phoneThemeRule(value, colorTheme));
     },
     state(value) {
       state = { collapsed: value.collapsed, shown: value.shown, asks: value.asks ?? state.asks };

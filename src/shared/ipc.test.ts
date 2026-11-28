@@ -636,6 +636,7 @@ describe("ipc contract", () => {
       "inf:settings:local-orchestrator:set",
       "inf:settings:notifications:get",
       "inf:settings:notifications:set",
+      "inf:settings:own-themes:get",
       "inf:settings:personal-resources:get",
       "inf:settings:personal-resources:set",
       "inf:settings:routing:get",

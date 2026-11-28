@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { appCostLimitViewSchema, costLimitSchema } from "../costLimit";
 import { dictationSettingsSchema } from "../dictation";
+import { workedOwnThemeSchema } from "../ownColorThemes";
 import { panelSettingNamesSchema } from "../panelSettingNames";
 import {
   appearanceSchema,
@@ -109,6 +110,15 @@ export const settingsChannels = {
     reach: "views",
     request: z.tuple([]),
     response: appearanceSchema,
+  },
+  // The person's own color themes worked out, for a view that holds none of
+  // the math, as the phone draws them under Yours (`own-themes-worked.md`).
+  "inf:settings:own-themes:get": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: z.strictObject({ themes: z.array(workedOwnThemeSchema) }),
   },
   "inf:settings:appearance:set": {
     effect: "change",

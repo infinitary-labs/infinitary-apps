@@ -31,8 +31,8 @@ import SwiftUI
     private var collectionTimeout: Task<Void, Never>?
     private var watch = CardWatchdog()
     private var theme = "light"
-    /// The built-in color theme the body draws on `theme`, or none (docs/themes.md, "On the phone").
-    private var colorTheme: PhoneColorTheme?
+    /// The color theme the body draws on `theme`, or none (docs/themes.md, "On the phone").
+    private var colorTheme: PhoneDrawnTheme?
     /// The device's Text Size as a factor of the Mac's sizes (`PhoneTextSize`), which the page draws the body at.
     private var textScale = 1.0
     private(set) var revealed = false
@@ -138,7 +138,7 @@ import SwiftUI
     }
 
     /// The body's one view: made and loaded the first time, then the same view, already drawn, wherever it shows next.
-    func makeView(theme: String, colorTheme: PhoneColorTheme?) -> WKWebView {
+    func makeView(theme: String, colorTheme: PhoneDrawnTheme?) -> WKWebView {
         if let view { updateTheme(theme, colorTheme: colorTheme); return view }
         self.theme = theme
         self.colorTheme = colorTheme
@@ -248,11 +248,11 @@ import SwiftUI
     }
     private func fail() { failure = PhoneMessages.phoneCardWebStopped(); close() }
 
-    func updateTheme(_ theme: String, colorTheme: PhoneColorTheme?) {
+    func updateTheme(_ theme: String, colorTheme: PhoneDrawnTheme?) {
         guard theme != self.theme || colorTheme != self.colorTheme else { return }
         self.theme = theme
         self.colorTheme = colorTheme
-        view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")', \(colorTheme.map { "'\($0.rawValue)'" } ?? "null"))",
+        view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")', \(PhoneDrawnTheme.script(colorTheme)))",
                                  completionHandler: nil)
     }
 
@@ -408,7 +408,7 @@ import SwiftUI
         }
         // A cover answers nothing (it carries no actions), but its map's own buttons, Fit among them, stay pressable: a
         // read-only body locks every button in it.
-        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "colorTheme": colorTheme.map { .string($0.rawValue) } ?? .null, "textScale": .number(textScale), "language": .string(PhoneWords.language), "readOnly": .bool(part == .facts || (part == .body && card.isPast)),
+        var input: PhoneJSON = .object(["body": .string(card.body), "theme": .string(theme), "colorTheme": colorTheme?.frameValue ?? .null, "textScale": .number(textScale), "language": .string(PhoneWords.language), "readOnly": .bool(part == .facts || (part == .body && card.isPast)),
             "fill": fill, "actions": .array(part != .body ? [] : actions), "width": card.value["width"] == .null ? .string("wide") : card.value["width"],
             "keys": .array(keys.map(PhoneJSON.string))])
         if part == .body, case .object(var fields) = input {
@@ -774,10 +774,10 @@ struct CardWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> CardWebSlot {
         host.updateTextScale(PhoneTextSize.scale(for: typeSize))
         return CardWebSlot(host: host, view: host.makeView(theme: scheme == .dark ? "dark" : "light",
-                                                           colorTheme: PhoneColorTheme.shown(colorTheme, dark: scheme == .dark)))
+                                                           colorTheme: PhoneDrawnTheme.shown(colorTheme, dark: scheme == .dark)))
     }
     func updateUIView(_ slot: CardWebSlot, context: Context) {
-        host.updateTheme(scheme == .dark ? "dark" : "light", colorTheme: PhoneColorTheme.shown(colorTheme, dark: scheme == .dark))
+        host.updateTheme(scheme == .dark ? "dark" : "light", colorTheme: PhoneDrawnTheme.shown(colorTheme, dark: scheme == .dark))
         host.updateTextScale(PhoneTextSize.scale(for: typeSize))
         host.revealIfShown()
     }

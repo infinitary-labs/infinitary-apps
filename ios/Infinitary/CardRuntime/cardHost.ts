@@ -3,7 +3,6 @@ import { cardDataName, cardDataNames, demoSources, isReadableLogSource, logSourc
 import { ACTION_VALUE_MAX_BYTES, frameMessageSchema, frameRequestSchema, type FrameAnswers } from "../../../src/shared/plugins/bridge";
 import { FRAME_SANDBOX, frameCsp } from "../../../src/shared/plugins/containment";
 import { buildFrameDocument, type FrameTheme } from "../../../src/shared/plugins/frameDocument";
-import { frameThemeRule } from "../../../src/shared/colorThemes";
 import { isSafeCardHref } from "../../../src/shared/linkify";
 import { taskKeysIn } from "../../../src/shared/taskKeys";
 import { cardBodyHtml, cardBodyMarkup, cardStylesheet, expandedStamp } from "../../../src/renderer/src/cards/prototypeSrcdoc";
@@ -18,6 +17,7 @@ import { type FrameReadDeclaration, type FrameReadRefusal, FrameSubscriptions } 
 import { phoneReads } from "./phoneReads";
 import { phonePressRule } from "./pressRule";
 import { phoneTextRule, textScale } from "./textSize";
+import { type PhoneColorTheme, phoneThemeRule } from "./themeRule";
 
 /** INF-64 piece 4: trusted WK parent, never the agent-authored frame. Native chrome owns effects. */
 interface NativeHost { postMessage(value: unknown): Promise<unknown> }
@@ -25,7 +25,7 @@ declare global {
   interface Window {
     webkit: { messageHandlers: { cardHost: NativeHost } };
     phoneCard: {
-      mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme, colorTheme?: string | null): void; ping(seq: number): void;
+      mount(input: Input): Promise<void>; collect(): Promise<FrameAnswers>; theme(value: FrameTheme, colorTheme?: PhoneColorTheme): void; ping(seq: number): void;
       annotate(state: Annotation): void; annotateSelection(): void; reveal(note: unknown): Promise<Revealed>;
       question(ask: QuestionAsk): Promise<Questioned>; questionKey(key: string, shift: boolean): void;
       expanded(index: number, state: string): void; textScale(value: number): void; pressMoved(): void;
@@ -42,8 +42,8 @@ type Input = {
   /** The phone's language, which a body the app wrote and a body's saved facts are worded in, as on the Mac. */
   language?: string;
   body: string; theme: FrameTheme;
-  /** The phone's built-in color theme on that base, or none (docs/themes.md, "On the phone"). */
-  colorTheme?: string | null;
+  /** The phone's color theme on that base (`phoneThemeRule`). */
+  colorTheme?: PhoneColorTheme;
   fill: unknown; readOnly: boolean; actions: string[]; width: "regular" | "wide" | "full";
   marks?: number[]; keys?: string[]; card?: Pick<Card, "actions" | "reviewTaskId" | "risk">;
   /**
@@ -293,7 +293,7 @@ window.phoneCard = {
     const scripts = Array.from(parsed.querySelectorAll("script:not([src])"), (script) => script.textContent ?? "");
     const hashes = await native({ type: "hash", scripts }) as string[];
     const document = buildFrameDocument({ csp: `${frameCsp(hashes)}; base-uri 'none'; form-action 'none'`,
-      theme: value.theme, style: `${cardStylesheet()}${phoneTextRule(scale)}${phonePressRule()}${frameThemeRule(value.theme, value.colorTheme)}`, html: body });
+      theme: value.theme, style: `${cardStylesheet()}${phoneTextRule(scale)}${phonePressRule()}${phoneThemeRule(value.theme, value.colorTheme)}`, html: body });
     frame = window.document.createElement("iframe");
     frame.title = "Card body";
     frame.setAttribute("sandbox", FRAME_SANDBOX);
@@ -318,7 +318,7 @@ window.phoneCard = {
       send({ type: "collect", seq, focusUnpicked: true });
     });
   },
-  theme(value, colorTheme) { send({ type: "theme", theme: value, colors: frameThemeRule(value, colorTheme) }); },
+  theme(value, colorTheme) { send({ type: "theme", theme: value, colors: phoneThemeRule(value, colorTheme) }); },
   // The device's Text Size changed while the card shows: the body redraws at it in place, its answers and place kept.
   textScale(value) { scale = textScale(value); send({ type: "text-scale", scale }); },
   ping(seq) { send({ type: "ping", seq }); },

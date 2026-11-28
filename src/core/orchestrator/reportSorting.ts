@@ -230,6 +230,7 @@ export class ReportSorting {
         ...(review ? { review } : {}),
         ...(earlierPass ? { earlierPass } : {}),
         ...(witnesses.proofUnread ? { proofUnread: witnesses.proofUnread } : {}),
+        ...(witnesses.carefulUnreviewed ? { carefulUnreviewed: witnesses.carefulUnreviewed } : {}),
       },
     };
     return { wake, record, witnesses, stall, recoveryWays, waiting, review };

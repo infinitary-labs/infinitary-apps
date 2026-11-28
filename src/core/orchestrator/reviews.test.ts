@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   askedOn,
   completionBody,
+  endTurn,
   fakeCrewmate,
   fakeCrewTimersEachTest,
   intentOf,
@@ -84,10 +85,11 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     action: "no-op" as const,
   };
 
-  // INF-1876: a care name decides nothing in the host, the sort included; a
-  // Careful builder asks for its review with needs_firstmate (the care
-  // guidance), which the sort reads as it reads any report.
-  it("sorts a Careful builder's report like any other; only a review's own report skips the whose-turn sort", async () => {
+  // INF-1876: a Careful builder's report goes through the whose-turn sort,
+  // and asks for its review with needs_firstmate (the care guidance); the
+  // sort's Careful row for committed work with no review open is
+  // carefulReview.test.ts's (INF-7116 fix 3).
+  it("sorts a Careful builder's report through the whose-turn sort; only a review's own report skips it", async () => {
     const repo = gitRepo();
     try {
       const crewmate = fakeCrewmate();
@@ -106,6 +108,67 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await reportTurn(crewmate, taskId, BUILDER_REPORT);
       expect(sorts.map((sort) => sort.taskId)).toEqual([taskId]);
       expect(ops.filter((line) => line.includes(`reported on task ${taskId}`))).toHaveLength(1);
+    } finally {
+      repo.dispose();
+    }
+  });
+
+  // INF-7116 fix 3, the review of it: a pass carries to a rebase of the same
+  // change only at publication or merge, so a Careful builder that brought
+  // its branch up to date after its pass and reported before publishing
+  // would have asked the first mate for a second review of the same change.
+  it("carries a passed review to a rebased Careful version its report reads, so the report asks for no second review", async () => {
+    const repo = gitRepo();
+    try {
+      const builder = fakeCrewmate();
+      const { supervisor, tasks, repos, specs, sorts } = setup(builder, { realWorkspace: true });
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId, started } = await supervisor.intake.commission({
+        title: "Fix the meter test",
+        intent: intentOf("fix it"),
+        repoId: view.id,
+        shape: { rigor_ask: "reviewed" },
+      });
+      await started;
+      await tick();
+      const task = tasks.get(taskId);
+      const worktree = task?.worktreeDir;
+      if (!task || !worktree) throw new Error(`${taskId} has no working copy yet.`);
+      const git = (dir: string, ...args: string[]) =>
+        execFileSync(
+          "git",
+          ["-C", dir, "-c", "user.name=Test", "-c", "user.email=test@localhost", ...args],
+          { encoding: "utf8" },
+        ).trim();
+      writeFileSync(join(worktree, "meter.test.ts"), "await queue.flush();\n");
+      git(worktree, "add", "meter.test.ts");
+      git(worktree, "commit", "-m", "test: await the meter flush");
+      const passed = git(worktree, "rev-parse", "HEAD");
+      const reading = await readChangeReading(task.repoDir, passed);
+      if (!reading) throw new Error("The passed version's change must be readable.");
+      seedDelivery(tasks, taskId, {
+        reviewVerdict: "pass",
+        reviewSha: passed,
+        reviewChange: reading,
+        reviewedAt: Date.now() - 60_000,
+      });
+      writeFileSync(join(repo.dir, "README.md"), "Meter lab.\n");
+      git(repo.dir, "add", "README.md");
+      git(repo.dir, "commit", "-m", "docs: name the project");
+      git(worktree, "rebase", "main");
+      const rebased = git(worktree, "rev-parse", "HEAD");
+      if (rebased === passed) throw new Error("The rebase must make a new version.");
+      const onReport = specs[0]?.onReport;
+      if (!onReport) throw new Error("Missing production report callback");
+      await onReport(BUILDER_REPORT, "Brought up to date after the pass", {});
+      await endTurn(builder, taskId);
+      expect(sorts.filter((sort) => sort.taskId === taskId).at(-1)?.rule).not.toBe(
+        "careful-unreviewed",
+      );
+      expect(supervisor.facts.crewStatus(taskId)[0]?.review).toBe(
+        `review passed at ${passed.slice(0, 7)}`,
+      );
     } finally {
       repo.dispose();
     }

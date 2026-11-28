@@ -482,6 +482,21 @@ export class CrewTurns {
     declared?: ReportDeclaration,
     responseText = text,
   ): string | Promise<string> {
+    // The committed version is read once the report counts, so a refused
+    // report reads nothing and a validation record's own reads come first.
+    const counted = (receipt: string): string | Promise<string> =>
+      this.core.reportIntake.noteCommittedVersion(task)?.then(() => receipt) ?? receipt;
+    const receipt = this.recordReportCounted(task, text, summary, declared, responseText);
+    return typeof receipt === "string" ? counted(receipt) : receipt.then(counted);
+  }
+
+  private recordReportCounted(
+    task: TaskRuntime,
+    text: string,
+    summary: string | undefined,
+    declared: ReportDeclaration | undefined,
+    responseText: string,
+  ): string | Promise<string> {
     if (declared?.validation)
       return this.core.reportIntake
         .recordValidationReport(task, text, summary, declared, responseText)

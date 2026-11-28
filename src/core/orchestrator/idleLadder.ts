@@ -13,6 +13,7 @@ import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardEmit";
+import { type CarefulReviewOwed, type CommittedVersion, carefulReviewOwed } from "./carefulReview";
 import type { CrewTurn } from "./crewTurn";
 import { crewHoldWays, idleStallWays } from "./holds";
 import { DependencySteers, type TaskWait } from "./idleDependencySteers";
@@ -183,9 +184,15 @@ export type IdleLadderHost = {
   inbox: InboxStore;
   /** Guidance on the task's lane a turn will serve, inside its bound (`CrewFacts.servesTurn`). */
   servesTurn(taskId: string, now: number): boolean;
-  runtime(
-    taskId: string,
-  ): { turn: CrewTurn; crewmate: string; answeredAt?: number; failedAt?: number } | undefined;
+  runtime(taskId: string):
+    | {
+        turn: CrewTurn;
+        crewmate: string;
+        answeredAt?: number;
+        failedAt?: number;
+        committed?: CommittedVersion;
+      }
+    | undefined;
   hasRunningJobs?: (taskId: string) => boolean;
   oldestRunningJob?: (taskId: string) => RunningJob | undefined;
   openCards(): Iterable<Card>;
@@ -326,6 +333,7 @@ export class IdleLadder {
     const finished = record?.delivery?.finishedAt !== undefined;
     const finishedCardUp = finished && this.ownCardFor(taskId);
     const proofUnread = record ? this.proofUnread(record) : undefined;
+    const carefulUnreviewed = record ? this.carefulUnreviewed(record) : undefined;
     return {
       threadAwaitingAuthor: this.host.threadsAwaitingAuthor(taskId).length > 0,
       decisionCardOpen: cardUp || gateCardUp || captainWait || browserWithCaptain,
@@ -354,6 +362,7 @@ export class IdleLadder {
       ...(record ? this.waitWitnesses(record) : { waitsOnUnstarted: false }),
       reviewOpen: record ? this.reviewOpen(record) : false,
       ...(proofUnread ? { proofUnread } : {}),
+      ...(carefulUnreviewed ? { carefulUnreviewed } : {}),
       inBacklog: record?.status === "active" && record.backlogSince != null,
       ...(putOff ? { putOff } : {}),
     };
@@ -382,12 +391,39 @@ export class IdleLadder {
    */
   private proofUnread(record: TaskRecord): ProofAwaitingReader | undefined {
     if (record.shape?.kind === "review") return undefined;
-    const reading = this.host.tasks.graph
-      .openChildren(record.id)
-      .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child));
-    return reading
+    return this.reviewReading(record)
       ? undefined
       : proofAwaitingReader(record.delivery?.liveValidation, record.delivery?.validationHead);
+  }
+
+  /** Any review of the task still open, an idle one included. */
+  private reviewReading(record: TaskRecord): boolean {
+    return this.host.tasks.graph
+      .openChildren(record.id)
+      .some((child) => child.shape?.kind === "review" && !TaskService.isClosed(child));
+  }
+
+  /**
+   * Careful work committed at the version its last report read, with no
+   * review open and no pass covering it (INF-7116 fix 3; `carefulReviewOwed`).
+   * The report's sort and the crew status read it.
+   */
+  carefulUnreviewed(record: TaskRecord): CarefulReviewOwed | undefined {
+    return carefulReviewOwed({
+      rigor: this.host.tasks.policiesOf(record)?.rigor.value,
+      kind: record.shape?.kind,
+      committed: this.host.runtime(record.id)?.committed,
+      reviewOpen: this.reviewReading(record),
+      reviewStartedAt: () =>
+        this.host.tasks.graph
+          .children(record.id)
+          .filter((child) => child.shape?.kind === "review")
+          .reduce<number | undefined>(
+            (latest, child) => Math.max(latest ?? 0, child.createdAt),
+            undefined,
+          ),
+      delivery: record.delivery,
+    });
   }
 
   /**

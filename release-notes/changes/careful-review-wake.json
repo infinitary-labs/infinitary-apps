@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "careful-review-wake",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A careful change's review starts once its work is committed",
+      "body": "When a crewmate commits work on a careful change and no review of it is open, your first mate now hears of it and starts the independent review. Before, the work could sit waiting for a review nobody started until you asked about it.",
+      "noPicture": "This changes when an existing review starts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -103,6 +103,12 @@ The captain's two rules:
 
 - **Nothing waits on a read.**
   - A pass starts without being awaited - after the startup liveness sweep, daily, and when an account connects, signs in or is switched on - and each read is bounded.
+  - While the app stays open, the catalog pass (`AccountStore.refreshCatalogs`) runs every `CATALOG_REFRESH_EVERY_MS`, five minutes past Pi's own 4-hour pi.dev window, on this Mac and on every computer that runs work.
+    It asks pi.dev again for every enabled Pi account, then reads each Codex and Grok account's own list again, so a model the provider published since reaches the lists with no restart.
+    The list is read after the catalog lands, so the safety rail judges it against the catalog it narrows.
+    An account checked between passes, as at its sign-in, is still inside Pi's window at the next pass, so a model published just after can take up to two periods, about eight hours, to land.
+    OpenRouter's catalog has no Pi window: Pi narrows it to the account's key, so every pass asks pi.dev and OpenRouter's own model list again.
+    Claude keeps its daily read: its list comes from the installed client, not pi.dev.
   - No user path awaits one: not launch, the first-run gate, opening Settings, starting a crewmate, or routing.
     Until a read lands, the shipped catalog serves.
     Either list carries each model's name, so the Models board names a Claude model ("Claude Opus 5.5") from launch, before the first allowance read builds the quota catalog (`createAccountStore`).
@@ -243,6 +249,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `docs/README.md` lists this page.
   It creates the runtime OFFLINE (bundled catalog plus the store's last overlay) and runs the pi.dev refresh in the background, so start-up never waits on pi.dev (lean model lists, `docs/model-lists.md`).
   Pi fetches a provider's overlay only while it holds a credential for it, and its own post-sign-in refresh is offline, so `PiAccountBackend.login` runs the same unscoped background refresh again once a sign-in lands; the account's runtime was created, and ran its first refresh, before that credential existed (`codexConnectCatalog.test.ts`).
   A refresh that lands calls the backend's `onCatalogRefreshed`, which the app routes to the same path as a settled account-list read.
+  An account that stays connected runs that refresh again on each catalog pass (`PiAccountBackend.refreshCatalog`, above), so a model published while the app stays open lands too; Pi's own 4-hour window still decides whether a request goes out, except for OpenRouter, whose catalog Pi asks for on every refresh.
   The trap it still guards: an aborted refresh cuts the availability pass riding the same signal, which would leave the model picker EMPTY - the factory rebuilds availability offline, and `modelRuntime.test.ts` fails if either the non-blocking create or that rebuild goes away.
   E2E is kept off `pi.dev` by `PI_OFFLINE=1` in `tests/e2e/launch.ts`.
   The factory also serves getModel through `withHonestReasoning`: a live def claiming `reasoning: true` whose thinkingLevelMap pins no effort token comes out non-reasoning, because Pi's openai-responses driver (no `supportsReasoningEffort` gate, unlike openai-completions) otherwise passes the session's thinking level through and the provider 400s every turn (grok-build-0.1, captain dogfood 2026-09-01).

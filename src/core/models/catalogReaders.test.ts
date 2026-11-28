@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { CLAUDE_CLIENT_MISSING_TEXT } from "@shared/claudeClient";
 import { afterEach, describe, expect, it } from "vitest";
 import { acquireSessionLease, resetStoreLeasesForTest } from "../claude/claudeStoreLease";
@@ -156,80 +158,9 @@ describe("the Codex and Grok account lists", () => {
   // keeps and the version floor each row carries. Asked as 0.159.0, the
   // service answered every row except the two whose floor is 0.166.0; the
   // stand-in answers the same way, so an older pin hides GPT-6.2 again.
-  const PRO_ACCOUNT_ROWS = [
-    {
-      slug: "gpt-6.2-sol",
-      display_name: "GPT-6.2-Sol",
-      minimal_client_version: "0.166.0",
-      service_tiers: [{ id: "priority" }, { id: "ultrafast" }],
-    },
-    {
-      slug: "gpt-6.2-astra",
-      display_name: "GPT-6.2-Astra",
-      minimal_client_version: "0.166.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-6.1-terra",
-      display_name: "GPT-6.1 Terra",
-      minimal_client_version: "0.153.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-reserve",
-      display_name: "GPT-Reserve",
-      minimal_client_version: "0.144.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-6.1-sol",
-      display_name: "GPT-6.1-Sol",
-      minimal_client_version: "0.153.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-6-astra",
-      display_name: "GPT-6-Astra",
-      minimal_client_version: "0.153.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-6-sol",
-      display_name: "GPT-6-Sol",
-      minimal_client_version: "0.155.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-6-luna",
-      display_name: "GPT-6-Luna",
-      minimal_client_version: "0.155.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-5.6-sol",
-      display_name: "GPT-5.6-Sol",
-      minimal_client_version: "0.144.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-5.6-terra",
-      display_name: "GPT-5.6-Terra",
-      minimal_client_version: "0.144.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "gpt-5.6-luna",
-      display_name: "GPT-5.6-Luna",
-      minimal_client_version: "0.144.0",
-      service_tiers: [{ id: "priority" }],
-    },
-    {
-      slug: "codex-auto-review",
-      display_name: "Codex Auto Review",
-      minimal_client_version: "0.98.0",
-      service_tiers: [{ id: "priority" }],
-    },
-  ];
+  const PRO_ACCOUNT_ROWS: { slug: string; minimal_client_version: string }[] = JSON.parse(
+    readFileSync(join(__dirname, "fixtures", "codexProAccountList.json"), "utf8"),
+  ).models;
 
   function atOrAbove(version: string, floor: string): boolean {
     const [a, b] = [version, floor].map((value) => value.split(".").map(Number));

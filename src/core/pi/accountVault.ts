@@ -1361,6 +1361,21 @@ export class AccountVault {
     return runtimes;
   }
 
+  /**
+   * Asks pi.dev again for every enabled Pi account's catalog
+   * (`PiAccountBackend.refreshCatalog`), so a model its provider published
+   * since the runtime was created can land. Resolves once each has settled.
+   */
+  refreshPiCatalogs(): Promise<void> {
+    return Promise.all(
+      this.liveAccounts()
+        .filter((account) => account.enabled && backendForProvider(account.providerId) === "pi")
+        .map((account) =>
+          this.pi.refreshCatalog({ accountId: account.id, providerId: account.providerId }),
+        ),
+    ).then(() => undefined);
+  }
+
   rename(accountId: string, label: string): void {
     const trimmed = label.trim();
     if (!trimmed) throw new Error("An account label cannot be empty.");

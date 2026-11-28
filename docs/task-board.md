@@ -207,6 +207,7 @@ Kanban columns keep their existing minimum and expand to the recorded event’s 
 The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
 Dependencies retain their keys and recorded-since dates; a wait with no recorded event shows no time, except background work, which says when it started (`docs/task-record.md`, "What a background-work wait says of time").
-Only recorded events carry clock times: next read, check-back, reset or start time. The one other time is a fact that already happened: when background work started, shown in the task card header and the phone's record, never on a tile and never as an estimate of when it ends.
+Only recorded events carry clock times: next read, check-back, reset or start time.
+The one other time is a fact that already happened: when background work started, shown in the task card header and the phone's record, never on a tile and never as an estimate of when it ends.
 Past events say was due, not resumed; Backlog still requires Start.
 Older homes without the optional projection retain the previous presentation.

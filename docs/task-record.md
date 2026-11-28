@@ -859,6 +859,7 @@ The task card reconciles every structured wait into its existing header, Checks 
 Checks keeps each named watch and its own next read separate from other runs’ results.
 Dependencies say `Waiting on` and their keys, with their recorded-since dates; a wait with no recorded event shows no time at all, except background work, which says when it started ("What a background-work wait says of time", above).
 A lone dependency whose line goes further or ends in a hold names where it stops in the blocker explanation, as its tile does, keeping when the wait was recorded (`waitStopsOf`, INF-5578).
-Only recorded events carry clock times: next read, check-back, reset or start time. The one other time is a fact that already happened: when background work started, shown in the task card header and the phone's record, never on a tile and never as an estimate of when it ends.
+Only recorded events carry clock times: next read, check-back, reset or start time.
+The one other time is a fact that already happened: when background work started, shown in the task card header and the phone's record, never on a tile and never as an estimate of when it ends.
 Past events say was due, not resumed; Backlog still requires Start, and a parent whose parts do its work never waits for a Start of its own (`taskWaitsOf`).
 Older homes without the optional projection retain the previous presentation.

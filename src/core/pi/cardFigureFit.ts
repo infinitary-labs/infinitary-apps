@@ -1,4 +1,5 @@
 // i18n-exempt: served to the agent that wrote the card, stays English
+import { LABEL_FIT_DELIMITER } from "@shared/labelFit";
 import { ElementType, parseDocument } from "htmlparser2";
 import { GLYPH_ADVANCES } from "./cardGlyphWidths.generated";
 import { declaredSize } from "./cardLint";
@@ -16,8 +17,6 @@ import { declaredSize } from "./cardLint";
  * some card widths and fits at others: Chromium sets small type a little
  * differently from one width to the next, by up to about 11 units. */
 export const LABEL_EDGE_ROOM = 8;
-/** Where the facts start in an answer, so a reader of the receipt can cut them off. */
-export const LABEL_FIT_MARK = "Label fit:";
 /** Advance of a character outside U+0020..U+007E, in ems; those are rare in a figure. */
 const OTHER_ADVANCE = 0.6;
 /** The frame's `--text-sm`, the size SVG text draws at when nothing declares one. */
@@ -114,6 +113,15 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
     if (child.type !== ElementType.Tag || child.name?.toLowerCase() !== "tspan") return;
     const own = styleOf(child, inherited);
     const last = lines.at(-1);
+    const rows = child.attribs?.y !== undefined || child.attribs?.dy !== undefined;
+    if (child.attribs?.x === undefined && rows && last && last.glyphs.length === 0) {
+      // The first run names its own row and keeps the text's x: no earlier
+      // words sit in the old row, so the line itself moves.
+      last.y =
+        (child.attribs?.y !== undefined ? number(child.attribs.y) + at.dy : last.y) +
+        number(child.attribs?.dy);
+      last.anchor = own.anchor;
+    }
     if (child.attribs?.x !== undefined) {
       const y = child.attribs.y !== undefined ? number(child.attribs.y) + at.dy : (last?.y ?? 0);
       lines.push({
@@ -193,7 +201,11 @@ function spillsOf(svg: Node): Spill[] {
     for (const child of node.children ?? []) walk(child, own, place);
   };
   // The frame's own SVG type size (docs/card-authoring.md, "Type"), unless the root says otherwise.
-  const root = styleOf(svg, { size: FRAME_SVG_SIZE, weight: 400, anchor: "start" });
+  // The frame's `svg` rule outranks a presentation attribute on the root, so only an inline style moves it.
+  const root = styleOf(
+    { type: ElementType.Tag, attribs: { style: svg.attribs?.style ?? "" } },
+    { size: FRAME_SVG_SIZE, weight: 400, anchor: "start" },
+  );
   for (const child of svg.children ?? []) walk(child, root, { dx: 0, dy: 0 });
 
   const spills: Spill[] = [];
@@ -272,5 +284,5 @@ export function figureLabelFacts(body: string): string {
   const listed = spills.map(spillWords).join("; ");
   const past = spills.filter((spill) => spill.room < 0).length;
   // i18n-exempt: served to the agent, stays English
-  return ` ${LABEL_FIT_MARK} SVG text does not wrap. Measured in the card font, ${past} of ${spills.length} flagged label${spills.length === 1 ? "" : "s"} ${past === 1 ? "runs" : "run"} past its box; the rest sit within ${LABEL_EDGE_ROOM} units of an edge, where the width of the card can tip them over: ${listed}. Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, then revise the card.`;
+  return `${LABEL_FIT_DELIMITER} SVG text does not wrap. Measured in the card font, ${past} of ${spills.length} flagged label${spills.length === 1 ? "" : "s"} ${past === 1 ? "runs" : "run"} past its box; the rest sit within ${LABEL_EDGE_ROOM} units of an edge, where the width of the card can tip them over: ${listed}. Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, then revise the card.`;
 }

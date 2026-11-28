@@ -394,7 +394,9 @@ export function buildFirstmateTools(host: FirstmateToolHost) {
         ref: cardId,
       });
       // The receipt says what the line did, so one answer is never written twice.
-      return written.line ? { shown: cardId, line: ownCardLineWords(written) } : cardId;
+      return written.line
+        ? { shown: cardId, line: ownCardLineWords(written), bodyShown: !inThread }
+        : cardId;
     },
     (card) => {
       // Someone else's card keeps its own rules: the contribution refuses

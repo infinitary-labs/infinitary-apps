@@ -307,7 +307,12 @@ export type EmittedCard = {
  * The first mate's own card shown with a thread line (INF-5202): its id and
  * the words saying what that line did to the captain's question.
  */
-export type ShownWithLine = { shown: string; line: string };
+export type ShownWithLine = {
+  shown: string;
+  line: string;
+  /** False when the write was a reply on the card and its body was not shown. */
+  bodyShown: boolean;
+};
 
 type CardWriteResult = string | CardMutation | ShownWithLine | undefined;
 
@@ -1138,15 +1143,19 @@ async function emitCard(
     ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
   };
   const shown = await options.onCard(card);
+  // The label-fit facts go only where the host took this body as written; a
+  // refusal, a reply alone, an unchanged card and a repeated operation did
+  // not show it.
+  const fit = (took: boolean): string => (took ? figureLabelFacts(card.body) : "");
   // A write on someone else's card answers what the host saved, typed.
   if (typeof shown === "object" && "line" in shown)
-    return `Card shown: ${params.title} (${shown.shown}). ${shown.line}`;
-  if (typeof shown === "object") return cardMutationText(shown);
-  // Facts only for a card the host took as written: a typed answer may mean a
-  // reply, a held display or a reused result, where this body was not shown.
-  const fit = typeof shown === "string" && shown ? figureLabelFacts(card.body) : "";
+    return `Card shown: ${params.title} (${shown.shown}). ${shown.line}${fit(shown.bodyShown)}`;
+  if (typeof shown === "object")
+    return `${cardMutationText(shown)}${fit(
+      (shown.effect === "created" || shown.effect === "revised") && !shown.repeated,
+    )}`;
   return typeof shown === "string" && shown
-    ? `Card shown: ${params.title} (${shown})${fit}`
+    ? `Card shown: ${params.title} (${shown})${fit(true)}`
     : `Card shown: ${params.title}`;
 }
 

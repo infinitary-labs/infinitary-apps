@@ -72,14 +72,13 @@ describe("figureLabelSpills", () => {
     ]);
   });
 
-  it("reports the edge a centred label crosses by most, not the roomier one", () => {
-    // Centred at 100 in a 0-200 box: the 140-unit-wide label's left end is 30
-    // units past the box's left edge and its right end 30 past the right; one
-    // placed off-centre crosses the left edge alone while the right has room.
-    const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="300" height="60"/><text x="40" y="30" text-anchor="middle">A label wider than the room to its left</text></svg>`;
+  it("reports the tighter edge of a centred label when both ends are within the margin", () => {
+    // 25 letters "n" are 191.6 units wide. Centred at 98 in a box from 0 to 200,
+    // the label runs 2.2 units from the left edge and 6.2 from the right.
+    const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="200" height="60"/><text x="98" y="30" text-anchor="middle">${"n".repeat(25)}</text></svg>`;
     const [spill] = figureLabelSpills(body);
     expect(spill?.side).toBe("left");
-    expect(spill?.room).toBeLessThan(0);
+    expect(spill?.room).toBeCloseTo(2.2, 0);
   });
 
   it("draws unsized text at the frame's 12.5 px, and sizes from the root, ems and a style", () => {
@@ -104,23 +103,30 @@ describe("figureLabelSpills", () => {
     ]);
   });
 
-  it("measures a positioned tspan from its own x and trims its indentation", () => {
-    // The second line starts at x=150 in a 0-200 box, so a short label there crosses the edge;
-    // the same line measured from the first line's x=10 would fit.
-    const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="200" height="60"/><text x="10" y="20">Fits<tspan x="150" dy="20">     Eleven chars</tspan></text></svg>`;
-    const [spill] = figureLabelSpills(body);
-    expect(spill?.text).toBe("Eleven chars");
-    expect(spill?.room).toBeLessThan(0);
+  it("trims a positioned tspan's indentation before measuring it", () => {
+    // Ten letters "n" from x=100 end at 176.6 in a box to 200: 23.4 units of room. Counting
+    // the five spaces of indentation (16 units) would leave 7.4, inside the margin.
+    const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="200" height="60"/><text x="10" y="20">Fits<tspan x="100" dy="20">     ${"n".repeat(10)}</tspan></text></svg>`;
+    expect(figureLabelSpills(body)).toEqual([]);
   });
 
-  it("names every spilling label, with more than five", () => {
-    const labels = Array.from(
-      { length: 7 },
-      (_, i) =>
-        `<text x="${10 + i * 4}" y="${20 + i * 20}">A label far too long for its small box ${i}</text>`,
-    ).join("");
-    const body = `<svg viewBox="0 0 400 200"><rect x="0" y="0" width="100" height="200"/>${labels}</svg>`;
-    expect(figureLabelSpills(body)).toHaveLength(7);
+  it("measures a first tspan that names its own row against the box in that row", () => {
+    // The label (about 140 units wide) fits the wide box in the first row but not the 100-unit box below.
+    const body = `<svg viewBox="0 0 400 130"><rect x="0" y="0" width="300" height="50"/><rect x="0" y="60" width="100" height="50"/><text x="10" y="30"><tspan y="90">A label of moderate length</tspan></text></svg>`;
+    expect(figureLabelSpills(body).map((spill) => [spill.text, spill.edgeRight])).toEqual([
+      ["A label of moderate length", 100],
+    ]);
+    const moved = body.replace('y="90"', 'dy="60"');
+    expect(figureLabelSpills(moved).map((spill) => spill.edgeRight)).toEqual([100]);
+  });
+
+  it("takes the root's size from an inline style, not from a presentation attribute the frame overrides", () => {
+    const at = (svgAttrs: string): number | undefined =>
+      figureLabelSpills(
+        `<svg viewBox="0 0 750 60" ${svgAttrs}><rect x="0" y="0" width="154" height="60"/><text x="10" y="30">${"n".repeat(18)}</text></svg>`,
+      )[0]?.room;
+    expect(at('font-size="32"')).toBeCloseTo(6.1, 0);
+    expect(at('style="font-size: 32px"')).toBeLessThan(0);
   });
 });
 
@@ -133,7 +139,7 @@ type Tool = {
 
 async function sendThroughTool(
   body: string,
-  onCard: () => string | { shown: string; line: string },
+  onCard: () => string | { shown: string; line: string; bodyShown: boolean },
 ): Promise<string> {
   const tool = piToolOf(createEmitCardTool(onCard)) as unknown as Tool;
   const result = await tool.execute("t1", { title: "Repotting steps", body });
@@ -144,7 +150,7 @@ describe("emit_card answer", () => {
   it("names every spilling label and every repair after the card is shown", async () => {
     const onCard = vi.fn(() => "card-fm-1-abc");
     const text = await sendThroughTool(stepsBody(), onCard);
-    expect(text.startsWith("Card shown: Repotting steps (card-fm-1-abc) Label fit:")).toBe(true);
+    expect(text.startsWith("Card shown: Repotting steps (card-fm-1-abc)\n\nLabel fit:")).toBe(true);
     for (const label of [
       "The day before you start",
       "2 Loosen the roots (if root-bound)",
@@ -161,6 +167,20 @@ describe("emit_card answer", () => {
     expect(onCard).toHaveBeenCalledTimes(1);
   });
 
+  it("names all seven spilling labels, with none dropped, after a blank line", async () => {
+    const labels = Array.from(
+      { length: 7 },
+      (_, i) =>
+        `<text x="${10 + i * 4}" y="${20 + i * 20}">A label far too long for its small box ${i}</text>`,
+    ).join("");
+    const body = `<svg viewBox="0 0 400 200"><rect x="0" y="0" width="100" height="200"/>${labels}</svg>`;
+    const text = await sendThroughTool(body, () => "card-fm-1-abc");
+    expect(text.split("\n\nLabel fit:")[0]).toBe("Card shown: Repotting steps (card-fm-1-abc)");
+    for (let i = 0; i < 7; i++)
+      expect(text).toContain(`"A label far too long for its small box ${i}"`);
+    expect(text).toContain("7 of 7 flagged labels run past its box");
+  });
+
   it("adds nothing for a card whose labels fit, or that has no figure", async () => {
     const short = STEPS.map(([, lines]): [string, string[]] => [
       "1  Water",
@@ -174,10 +194,20 @@ describe("emit_card answer", () => {
     );
   });
 
+  it("adds the facts when a first mate's revision with a line did show the body", async () => {
+    const text = await sendThroughTool(stepsBody(), () => ({
+      shown: "card-fm-1-abc",
+      line: "Your line is message 4.",
+      bodyShown: true,
+    }));
+    expect(text).toContain("(card-fm-1-abc). Your line is message 4.\n\nLabel fit:");
+  });
+
   it("adds nothing when the host answers with a thread line, which is not this body shown", async () => {
     const text = await sendThroughTool(stepsBody(), () => ({
       shown: "card-fm-1-abc",
       line: "Your reply was written on the card.",
+      bodyShown: false,
     }));
     expect(text).toBe(
       "Card shown: Repotting steps (card-fm-1-abc). Your reply was written on the card.",

@@ -973,6 +973,14 @@ export function requestJobs(selection: RequestSelection, times: PhonePassTimes):
 export const requestStopsEarly = (selection: RequestSelection) =>
   !selection.named && (selection.full || selection.repeats.length > 0);
 
+/** INF-7079's fix 1 (the captain's "When the phone places are full, start phone checks of one or two jobs before bigger
+ * ones"): the most jobs a request may be dealt and still wait in the small phone queue, which the placement service starts
+ * ahead of bigger phone checks. */
+export const SMALL_PHONE_CHECK_JOBS = 2;
+
+/** Whether a request's dealt jobs make a small phone check, which phone.yml sends to MAC_QUEUES's `phone_small` queue. */
+export const smallPhoneCheck = (jobs: readonly RequestJob[]) => jobs.length > 0 && jobs.length <= SMALL_PHONE_CHECK_JOBS;
+
 export function dealtJobLabel(job: PhoneDealtJob, of: number): string {
   const names: Record<PhoneDevice, string> = { ipad: "iPad", duo: "iPhone Duo", iphone: "iPhone" };
   const devices = PHONE_DEVICES.filter((device) => job.passes.some((pass) => pass.device === device));
@@ -1211,6 +1219,7 @@ function main(): void {
   console.log(`jobs=${JSON.stringify(jobs)}`);
   // A request that stops at its first failed pass stops its other jobs too.
   console.log(`stop_early=${requestStopsEarly(selection)}`);
+  console.log(`small=${smallPhoneCheck(jobs)}`);
   if (values.placement) writeFileSync(values.placement, `${JSON.stringify({ run, base: base.base, ...(base.ignored ? { ignoredBase: base.ignored } : {}), ...(onBatch.batch ? { batch: onBatch.batch } : {}), ...(since ? { since: since.commit, ownEdits: since.files } : {}), inputs: decision.reasons, parts: placement, coverage: kept, iphoneOnly, screens, repeats }, null, 2)}\n`);
   const row = (each: Placement) =>
     `- ${each.kept ? "Runs" : "Left"}: ${each.part}, distance ${each.distance}, ${each.minutes === undefined ? "no time" : `${each.minutes.toFixed(1)} minutes`}: ${each.reason}; ${each.why}`;

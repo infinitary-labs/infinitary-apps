@@ -939,7 +939,7 @@ A job may hold several devices, and its name gives its number and devices, such 
 `tests/phone-chooser.test.ts` holds, over generated selections, that the dealt jobs together hold exactly the passes a job of each of the request's devices would run, none lost and none doubled.
 The phone release's call, which names no device, is dealt the same way as a request of every part on every device, so its jobs of at most 20 recorded minutes run side by side on the phone Macs (INF-7079's fix 5).
 A call that names a device, and a wait-clock or tool request, keep one job of the device they name, or of every device, matrix device `every`, whose gate runs every device's lanes from one build (INF-4241 piece 8).
-Each runs the disposable `scripts/test-phone.ts` gate for its devices only on the required `MAC_QUEUES.phone` queue ("Each Mac job's kind and size"), without an override or fallback.
+Each runs the disposable `scripts/test-phone.ts` gate for its devices only on the required `MAC_QUEUES.phone` queue, or on its `phone_small` queue for a request the chooser dealt into one or two jobs ("Each Mac job's kind and size"), without an override or a fallback to another label.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
 Each part's live simulator log lives in `phone-simulator-logs`, never in `phone-logs`, which keeps `phone-logs` within the app's 64 MiB artifact download.
@@ -985,7 +985,7 @@ The job summary names each kept part with its distance and reason, and the `phon
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
 Each native phone job uses a group unique to its run and attempt, with `queue: max` and `cancel-in-progress: false`; the run's own group, which lets a newer same-selection request on a task branch cancel it, is in "What a task branch requests".
-The phone queue is served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike, and each of those places also takes other kinds of Mac work, the merge batch's Mac lanes included, so a phone check waits for any free place and holds one that a batch lane could take (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The phone queue and the small phone queue are served from every phone place the placement service runs, one on each compute Mac, and each of those places also takes other kinds of Mac work, the merge batch's Mac lanes included, so a phone check waits for any free place and holds one that a batch lane could take (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
 The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
@@ -1049,7 +1049,7 @@ An unavailable CI route leaves missing proof, never an automatic complete local 
 Neither route starts a release, TestFlight or App Store step.
 Complete branch selections and requests with edited-part passes stop at the first failed part; other proper-subset requests and main keep full discovery.
 Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
-Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
+Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`, or `MAC_QUEUES.phone_small` once the chooser dealt it into one or two jobs; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
 Do not use local mini borrows for phone proof.
 The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and no device; the `request` job checks out that source and deals every device's parts without repeats into jobs, as a request of every part is dealt, and each job takes its own phone Mac (INF-7079's fix 5, which replaced INF-4241 piece 8's one build on one phone Mac); every job must succeed before host signing starts.
 Each job names its key, a dealt job's number (`job-1`, `job-2` and so on) or a call's device, or every device, in each artifact (`phone-logs-job-2`, `phone-results-every` and so on), and keeps each device's evidence under its device's folder; a gate that ran every part of a device writes that device's `part-times.json` there, and the job of every device one `part-times.json` with every device's times, so a dealt job, which runs only some parts, usually writes none, the phone release's dealt jobs included.
@@ -1787,7 +1787,7 @@ The Mac mini's placement service gives each queue a size in cores and memory and
 GitHub picks which of a queue's waiting jobs a new runner takes, so one queue holds one kind and one size.
 Except for the required `phone` kind, a missing kind or unset variable keeps the label the job asked for before.
 Name a kind only once the placement service serves its queue, so no job waits on a label nothing serves.
-Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old label; phone jobs read only `fromJSON(vars.MAC_QUEUES).phone`.
+Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old label; phone jobs read only `fromJSON(vars.MAC_QUEUES).phone`, after `phone_small` for a small phone check.
 
 | Kind | Jobs | Its queue places it |
 | --- | --- | --- |
@@ -1795,7 +1795,8 @@ Other jobs read `fromJSON(vars.MAC_QUEUES || '{}').<kind>` before their old labe
 | `native` | `verify.yml`'s native tests, replay and package and its parallel journeys, ahead of `split` and of a batch's or release's `release_split` | GitHub's own `macos-15`, not the placement service |
 | `check` | none of its own: the full Mac check's lanes fall back to it after `split` and `journeys` | anywhere |
 | `journeys` | `journeys.yml`'s `affected-journeys` | anywhere |
-| `phone` | `phone.yml`'s `native-phone` | on any Mac place: the rented vBoxx places and the compute Macs alike |
+| `phone` | `phone.yml`'s `native-phone` | on any compute Mac's phone place |
+| `phone_small` | `phone.yml`'s `native-phone` when the request job dealt one or two jobs | as `phone`, ahead of a bigger check's `phone` jobs |
 | `testflight` | `ios-release.yml`'s `testflight`, which signs after the separate unsigned phone job succeeds | on the real Mac |
 | `build` | `mac-installer.yml`'s `build`, which also checks the copies it signed | in a virtual Mac only |
 | `sign` | `release.yml`'s signing job | on the real Mac |
@@ -1815,13 +1816,16 @@ Removing `native` from `MAC_QUEUES` sends them back to `split` in one parallel j
 The full Mac check's lanes ask for `split`, then the `journeys` kind, whose queue already takes journeys-sized jobs, then `check`, then the old label, so until `MAC_QUEUES` names `split` they run where journeys run.
 The placement service starts `release_build` before `release_sign`, so a publishing release's signed installer build starts first; on the Mac mini the build's place and the signing job's cores do not fit together, so signing waits until the build job, with its installed check, ends; until `MAC_QUEUES` names it, the build asks for its `build` kind, as in a dry run.
 `tests/release-workflows-runners.test.ts` ("each Mac job's kind") evaluates every Mac job with the variable set, unset and for a publishing release, and refuses a Mac job without a kind.
-The `phone` mapping remains `mini-mac-phone`, served from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike.
+The `phone` mapping remains `mini-mac-phone`, and `phone_small` maps to `mini-mac-phone-small`; both are served from every phone place the placement service runs, one on each compute Mac.
+The request job prints `small` when it dealt a check into at most `SMALL_PHONE_CHECK_JOBS` jobs, two (`scripts/affected-phone.ts`), and those jobs ask for `phone_small`, then `phone` until `MAC_QUEUES` names it.
+The placement service starts a waiting `phone_small` job before a bigger check's `phone` jobs, after a release's, the merge batch's, a branch's and `main`'s other Mac jobs, so a quick check does not wait behind every job of a bigger one (INF-7079's fix 1, after the captain's "When the phone places are full, start phone checks of one or two jobs before bigger ones").
+The phone release's call, whose own step hands on only the jobs it dealt, and a wait-clock or tool request ask for `phone`.
 Those places also take other queues, such as the merge batch's Mac lanes (`release_split`), so phone checks and batch lanes wait for the same places (INF-3726).
 `tests/phone-pool-isolation.test.ts` evaluates workflow runner expressions, including matrix entries and both release modes, against the configured queues.
-It requires exactly the three native phone-check jobs on the phone queue and rejects secret reads in any job resolving there, including inherited workflow environments.
+It requires exactly the native phone-check job on the two phone queues, each reached, and rejects secret reads in any job resolving there, including inherited workflow environments.
 The ordinary GitHub job token used for checkout and results is not a repository signing or publishing secret.
-Explicit proof-run label overrides remain operator-controlled; do not direct another kind of job to `mini-mac-phone`.
-No change to `VIRTUAL_MAC_RUNNER` is needed: phone jobs ignore it, and when no place serving the phone queue is free, phone work waits rather than falling back to another label.
+Explicit proof-run label overrides remain operator-controlled; do not direct another kind of job to `mini-mac-phone` or `mini-mac-phone-small`.
+No change to `VIRTUAL_MAC_RUNNER` is needed: phone jobs ignore it, and when no place serving the phone queues is free, phone work waits rather than falling back to another label.
 Already-created requests and reruns of older workflows retain their old routing; preserve running jobs and use the current workflow for new phone proof.
 
 Where the placement service names a job's size, it sets `RUNNER_UP_CORES` to the job's cores.

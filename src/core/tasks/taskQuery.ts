@@ -490,6 +490,7 @@ function toRow(
           tasks.graph.blockers(record.id),
           tasks.graph.linksTo(record.id),
           children,
+          tasks.graph.nothingMerged(record) !== undefined,
         )?.line
       : undefined) ??
     (record.gate

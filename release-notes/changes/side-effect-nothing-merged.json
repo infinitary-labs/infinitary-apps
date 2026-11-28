@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "side-effect-nothing-merged",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task that tells an issue how work ended waits for work that actually ships",
+      "body": "A task that replies to an issue or closes it no longer starts when the work it waits on ended without any change merging, such as a plan or a bug check. It stays waiting, follows the work built on that plan, and your first mate hears once when nothing shipped, instead of a crewmate starting only to say there is nothing to tell.",
+      "noPicture": "This changes when an existing task starts, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

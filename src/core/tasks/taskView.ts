@@ -267,6 +267,7 @@ export function viewOf(
   // A gate holds an active row as it holds an open one (TaskService.graph.flagsOf).
   const held = (open || record.status === "active") && record.gate !== null;
   const deadBlocker = open && waiting.some((blocker) => blocker.status === "dropped");
+  const awaitsGo = open && options.tasks.graph.nothingMerged(record) !== undefined;
   // The decision card the captain must answer: one raised on this task,
   // or the card its captain gate names - a decision row's own card, a
   // host card's operation row, or the card holding a crewmate's task.
@@ -330,12 +331,13 @@ export function viewOf(
           blockers,
           graph.linksInto.get(record.id) ?? [],
           graph.parts.get(record.id) ?? [],
+          awaitsGo,
         ),
     flags: {
       blocked,
       held,
       needsYou,
-      ready: open && record.kind === "work" && !blocked && !held,
+      ready: open && record.kind === "work" && !blocked && !held && !awaitsGo,
     },
     blockedBy: holding.map((blocker) => blocker.key || blocker.id),
     ...(Object.keys(blockedSince).length > 0 ? { blockedSince } : {}),

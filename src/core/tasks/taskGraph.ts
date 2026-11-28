@@ -580,7 +580,9 @@ export class TaskGraph {
     const approved = this.writer.store
       .listAwaitingApproval()
       .filter((record) => this.approvedBase(record) !== undefined);
-    const ready = this.writer.store.listReady();
+    const ready = this.writer.store
+      .listReady()
+      .filter((record) => this.nothingMerged(record) === undefined);
     if (approved.length === 0) return ready;
     return [...ready, ...approved].sort(
       (a, b) => a.priority - b.priority || a.createdAt - b.createdAt,
@@ -785,6 +787,109 @@ export class TaskGraph {
     return answered.size ? blockers.filter((task) => !answered.has(task.id)) : blockers;
   }
 
+  /**
+   * Whether a closed task's work merged: it closed done by a merge that spent
+   * its approval, or by a close the record names a merge or a local land,
+   * since a local land revokes its approval and an outside merge has none.
+   */
+  static workMerged(task: Pick<TaskRecord, "status" | "closedReason" | "delivery">): boolean {
+    return (
+      TaskGraph.mergedAt(task) !== undefined ||
+      (task.status === "done" && (task.closedReason === "merged" || task.closedReason === "landed"))
+    );
+  }
+
+  /**
+   * Whether a closed task's work shipped: its own merge (`workMerged`), or
+   * the merge of any part under it, read down its parts, since a parent the
+   * host closes done when its last part merges has no delivery of its own.
+   * The host's own delivery machinery is no part.
+   */
+  workShipped(task: TaskRecord, seen = new Set<string>()): boolean {
+    if (TaskGraph.workMerged(task)) return true;
+    if (task.status !== "done" || seen.has(task.id)) return false;
+    seen.add(task.id);
+    return this.writer.store
+      .listChildren(task.id)
+      .some((part) => !TaskService.isDeliveryChild(part) && this.workShipped(part, seen));
+  }
+
+  /**
+   * The waits of open side-effect work that every closed done with nothing
+   * merged (docs/task-graph.md, "A side-effect task"): there is nothing for
+   * its outside action to tell, so it stays unstarted and the first mate
+   * hears once. Undefined for any other task, one with no waits, or one
+   * still waiting on work that is not done.
+   */
+  nothingMerged(record: TaskRecord): TaskRecord[] | undefined {
+    if (record.status !== "open" || record.kind !== "work" || !record.shape?.side_effect)
+      return undefined;
+    const waits = this.blockers(record.id);
+    if (waits.length === 0) return undefined;
+    if (waits.some((wait) => !TaskService.blockerCleared(wait) || this.workShipped(wait)))
+      return undefined;
+    return waits;
+  }
+
+  /**
+   * Open, unheld, when-ready side-effect work whose every wait closed with
+   * nothing merged, each with those waits: the ready sweep's one wake each.
+   */
+  listNothingMerged(): { record: TaskRecord; waits: TaskRecord[] }[] {
+    return this.writer.store.listReady().flatMap((record) => {
+      const waits = this.nothingMerged(record);
+      return waits ? [{ record, waits }] : [];
+    });
+  }
+
+  /**
+   * A side-effect task's wait whose answer carries on in other work moves to
+   * that work (docs/task-graph.md, "A side-effect task"): each wait that
+   * closed done with nothing shipped, on open, unheld, when-ready side-effect work,
+   * becomes a wait on every task whose basis names it and that is still live
+   * or shipped, as a replaced task's wait moves to its replacement. Work
+   * built on it that closed without a merge, a dropped one, the host's own
+   * delivery machinery and other side-effect work take no wait, so a wait
+   * never moves back and forth. A move that would close a cycle is skipped.
+   * Answers each move made.
+   */
+  carryAnswers(
+    actor: TaskEventActor,
+  ): { waiter: TaskRecord; from: TaskRecord; to: TaskRecord[] }[] {
+    const candidates = [
+      ...this.writer.store.listReady(),
+      ...this.writer.store.listAwaitingApproval(),
+    ].filter((record) => record.shape?.side_effect);
+    if (candidates.length === 0) return [];
+    const at = this.writer.now();
+    const run = this.writer.write(() =>
+      candidates.flatMap((waiter) =>
+        this.blocksIn(waiter.id, ["done"]).flatMap(({ task: from }) => {
+          if (this.workShipped(from)) return [];
+          const carriers = this.builtOn(from.id).filter(
+            (other) =>
+              other.id !== waiter.id &&
+              !other.shape?.side_effect &&
+              (TaskService.blockerHoldsClose(other) || this.workShipped(other)),
+          );
+          const [first, ...rest] = carriers;
+          if (!first || !this.carryWait(from.id, waiter.id, first.id, actor, at)) return [];
+          const to = [first];
+          for (const carrier of rest) {
+            try {
+              this.insertLink(carrier.id, waiter.id, "blocks", actor, at);
+              to.push(carrier);
+            } catch (caught) {
+              if (!(caught instanceof TaskGraphRefusal)) throw caught;
+            }
+          }
+          return [{ waiter, from, to }];
+        }),
+      ),
+    );
+    return run();
+  }
+
   /** Open, unheld work waiting on a dropped task - a wait that cannot end. */
   listDeadBlocked(): TaskRecord[] {
     return this.writer.store.listDeadBlocked();
@@ -818,7 +923,8 @@ export class TaskGraph {
       return {
         blocked,
         held,
-        ready: record.kind === "work" && !blocked && !held,
+        ready:
+          record.kind === "work" && !blocked && !held && this.nothingMerged(record) === undefined,
         deadBlocker: waiting.some((blocker) => blocker.status === "dropped"),
       };
     }

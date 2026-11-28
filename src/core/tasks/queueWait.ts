@@ -38,6 +38,12 @@ export function queueWaitOf(
   blockers: readonly TaskRecord[],
   links: readonly { fromId: string; toId: string; type: string; createdAt: number }[],
   parts: readonly TaskRecord[] = [],
+  /**
+   * The ready sweep leaves it for a start of the first mate's own
+   * (`TaskGraph.nothingMerged`): a side-effect task whose every wait closed
+   * with nothing merged.
+   */
+  awaitsGo = false,
 ): TaskView["queueWait"] {
   if (!hasStartQueueWait(record)) return undefined;
   const dated = (reason: string, since?: number): NonNullable<TaskView["queueWait"]> => ({
@@ -83,7 +89,8 @@ export function queueWaitOf(
     ...blockers.map((task) => task.closedAt ?? record.createdAt),
     ...parts.map((part) => part.closedAt ?? record.createdAt),
   );
-  if (record.startPolicy === "on-request") return dated("Waiting for the first mate’s go", since);
+  if (record.startPolicy === "on-request" || awaitsGo)
+    return dated("Waiting for the first mate’s go", since);
   const placement = record.shape?.placement_wait;
   if (placement)
     return dated(

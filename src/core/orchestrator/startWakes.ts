@@ -12,6 +12,7 @@ import type { DeviceChip, DeviceSystem } from "@shared/devices";
 import { softHoldWords } from "@shared/holds";
 import type { PlacementRequirements, WorkSystem } from "@shared/placement";
 import type { LeftOut, LeftOutReason } from "../routing/placementEngine";
+import type { TaskRecord } from "../storage/taskRecords";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type NamedModel, namedModelWords } from "./namedModel";
 import type { KindWords, TypedWake, WakeFacts, WakeKeyedTask, WakeTask } from "./wakes";
@@ -122,6 +123,17 @@ export type StartFacts =
       blocker: WakeKeyedTask;
       /** How the blocker closed. */
       closed: string;
+    }
+  | {
+      /**
+       * Queued side-effect work whose every wait closed done with nothing
+       * merged (docs/task-graph.md, "A side-effect task"): it stays
+       * unstarted, since its outside action has nothing to tell.
+       */
+      kind: "nothing-merged";
+      task: WakeKeyedTask;
+      /** Each wait, with how it closed (its closed reason, or done). */
+      waits: (WakeKeyedTask & { closed: string })[];
     }
   | {
       /** The ask-first wake: a reasoning class no model can serve now. */
@@ -324,6 +336,11 @@ export const START_WORDS: KindWords<StartFacts> = {
     `[fm-op] the captain filed a Build row from ${facts.reader.key}'s approval card as ${facts.task.key}, ${facts.start ? "and chose Start now" : "kept for later"}: work on issue #${facts.issue}, ${facts.url}, which the app read open where the project lives. That address is the app's own reading, never the reader's words; ${facts.task.key}'s brief does not carry it.`,
   "dead-gate": (facts) =>
     `[fm-op] queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}" waits on ${facts.blocker.key} "${facts.blocker.title}", which was ${facts.closed}, so its wait can never end; the dead edge is blocks ${facts.blocker.key} -> ${facts.task.key}.`,
+  "nothing-merged": (facts) => {
+    const waits = facts.waits.map((wait) => `${wait.key} "${wait.title}" (${wait.closed})`);
+    // i18n-exempt: a wake served to the first mate's model
+    return `[fm-op] queued side-effect task ${facts.task.id} ${facts.task.key} "${facts.task.title}" stays unstarted: every task it waits on closed with nothing merged (${waits.join(", ")}), so nothing has shipped for its outside action to tell.`;
+  },
   "reasoning-wait": (facts) => {
     const wait = facts.empty
       ? `no model is placed at ${facts.requested}, so no quota reset will start it; it waits until one is placed at ${facts.requested} in Settings → Intelligence → Models`
@@ -341,3 +358,30 @@ export const START_WORDS: KindWords<StartFacts> = {
     `[fm-op] queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}" was asked to run on ${facts.model}, and no computer it may run on serves it now, as far as their models could be read, so it waits instead of starting on another model. Ask the captain on a card whether to keep waiting for ${facts.model}, such as until they sign in to it on a computer, or to run it on another model: on their words, update_task override_model_id names the model they choose, or clears it with an empty value so the app picks, with start_now.`,
   "computer-left-out": (facts) => renderComputerLeftOut(facts),
 };
+
+/**
+ * The one wake for queued side-effect work whose every wait closed with
+ * nothing merged: told once for that set of waits, so a wait moved or added
+ * since is new information.
+ */
+export function nothingMergedWake(
+  record: Pick<TaskRecord, "id" | "key" | "title">,
+  waits: readonly Pick<TaskRecord, "id" | "key" | "title" | "closedReason">[],
+): TypedWake & { once: string } {
+  const keyed = (task: Pick<TaskRecord, "id" | "key" | "title">) => ({
+    id: task.id,
+    key: task.key || task.id,
+    title: task.title,
+  });
+  return {
+    facts: {
+      kind: "nothing-merged",
+      task: keyed(record),
+      waits: waits.map((wait) => ({ ...keyed(wait), closed: wait.closedReason ?? "done" })),
+    },
+    once: `nothing-merged:${waits
+      .map((wait) => wait.id)
+      .toSorted()
+      .join(",")}`,
+  };
+}

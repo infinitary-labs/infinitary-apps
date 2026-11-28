@@ -1114,6 +1114,18 @@ export class TaskIntake {
    */
   private turnClosed: { ids: Set<string>; stop: () => void } | null = null;
 
+  /**
+   * Whether the first mate has not finished a turn on this task's close:
+   * a row about it is still on its lane, or it closed in the turn still
+   * running (as `completeContainers` reads a part's close).
+   */
+  closeUnhandled(taskId: string): boolean {
+    return (
+      this.turnClosed?.ids.has(taskId) === true ||
+      this.options.inbox.holdsUnhandled(FIRSTMATE_RECIPIENT, taskId)
+    );
+  }
+
   /** The first mate's turn begins: closes from now on hold their containers. */
   firstmateTurnBegan(): void {
     this.turnClosed?.stop();

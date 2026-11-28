@@ -245,6 +245,24 @@ const CASES: WordsCases<FirstmateStartWakeKind> = {
         '[fm-op] queued task b9299a73 INF-2697 "Restructure the first mate files" waits on INF-2696 "Restructure the wakes file", which was dropped, so its wait can never end; the dead edge is blocks INF-2696 -> INF-2697.',
     },
   ],
+  "nothing-merged": [
+    {
+      // INF-7198's plan, part 3: a side-effect task whose every wait closed with nothing merged.
+      name: "its one wording",
+      wake: {
+        facts: {
+          kind: "nothing-merged",
+          task: { id: "b9299a73", key: "INF-2697", title: "Tell issue #78 how it ended" },
+          waits: [
+            { id: "c1d2e3f4", key: "INF-2695", title: "Reproduce issue #78", closed: "answered" },
+            { ...TASK, key: "INF-2696", closed: "done" },
+          ],
+        },
+      },
+      words:
+        '[fm-op] queued side-effect task b9299a73 INF-2697 "Tell issue #78 how it ended" stays unstarted: every task it waits on closed with nothing merged (INF-2695 "Reproduce issue #78" (answered), INF-2696 "Restructure the wakes file" (done)), so nothing has shipped for its outside action to tell.',
+    },
+  ],
   "reasoning-wait": [
     {
       name: "a class no model sits in",

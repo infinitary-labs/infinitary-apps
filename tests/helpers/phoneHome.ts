@@ -1196,13 +1196,6 @@ export async function startPhoneHome(
           );
           result = { ok: true };
           break;
-        // INF-3454's phone part and INF-7012's plan, piece 1: the stand-in Google (tests/helpers/phoneGoogle.ts).
-        case "POST google-approve":
-        case "GET google-state":
-        case "POST google-agent-refused":
-        case "POST google-agent-marked":
-          result = await google.answer(`${request.method} ${command}`);
-          break;
         // INF-3563: what the computer holds after the phone's Settings pages asked it to change something.
         case "GET settings-state":
           result = await phoneSettingsState(core, settingsRules);
@@ -3493,8 +3486,11 @@ export async function startPhoneHome(
           result = { ok: true, before: { ...readings } };
           await removeEveryDevice(core, await controlBody(request));
           break;
+        // The stand-in Google (tests/helpers/phoneGoogle.ts) and the take-over answer every other request.
         default:
-          result = await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver);
+          result =
+            (await google.answer(`${request.method} ${command}`)) ??
+            (await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver));
           result ??= await projectFilterCommand(core, writes, until, command ?? "");
           if (result === undefined) {
             response.writeHead(404).end();

@@ -11,7 +11,8 @@ extension PhoneJourney {
     /// row names its account, and Sign out removes it there. INF-6342, the captain's choice setup-on-phone ("Bring the
     /// client file setup to the phone itself"): the test home names no client of its own, as a released build, so Set up
     /// comes first; a file Google does not give is refused and nothing is kept, and the pasted client file is kept on the
-    /// computer, which then asks Google as that client.
+    /// computer, which then asks Google as that client. INF-7009: a sign-in that left Drive unticked keeps Gmail and
+    /// Calendar, its row says so quietly with Sign in again, and signing in again with every box ticked clears the line.
     func testGoogleSignInAndOut() async throws {
         try await launchFresh()
         try await join()
@@ -61,6 +62,9 @@ extension PhoneJourney {
         XCTAssertEqual(unasked["pages"] as? Int, 0)
         XCTAssertEqual(unasked["kept"] as? Bool, true)
         picture("google-notice")
+        // INF-7009, the captain's answer 2a ("Keep Gmail and Calendar; Drive waits for a new sign-in"): this first
+        // sign-in leaves Drive unticked on Google's page.
+        _ = try await home("google-without-drive")
         waitForSteadyTarget(accept)
         tapOnPhone(accept, repeatDiscarded: false)
 
@@ -94,6 +98,31 @@ extension PhoneJourney {
         let kept = try await home("google-state", method: "GET")
         let who = try XCTUnwrap(kept["account"] as? String)
         XCTAssertTrue(account.label.contains(who), account.label)
+        // The row keeps the sign-in and says quietly that Drive, Docs and Sheets were left out, with Sign in again.
+        let line = app.staticTexts["google-client-state"]
+        let next = app.buttons["google-client-next"]
+        XCTAssertTrue(line.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertEqual(line.label, "Drive, Docs and Sheets not added")
+        XCTAssertTrue(app.staticTexts["google-client-detail"].label.hasPrefix("Your Google sign-in on Test Mac mini leaves out Drive, Docs and Sheets."),
+                      app.staticTexts["google-client-detail"].label)
+        XCTAssertEqual(next.label, "Sign in again")
+        waitForSteadyTarget(next)
+        picture("google-signed-in-without-drive")
+
+        // Sign in again with every box ticked adds Drive, and the line goes.
+        _ = try await home("google-every-box")
+        tapOnPhone(next, repeatDiscarded: false)
+        XCTAssertTrue(accept.waitForPresence(timeout: 10), app.debugDescription)
+        waitForSteadyTarget(accept)
+        tapOnPhone(accept, repeatDiscarded: false)
+        XCTAssertTrue(paste.waitForPresence(timeout: 20), app.debugDescription)
+        let again = try await home("google-approve")
+        focusForPhoneTyping(paste, in: app)
+        paste.typeText(try XCTUnwrap(again["address"] as? String))
+        tapOnPhone(app.buttons["google-paste-send"], repeatDiscarded: false)
+        XCTAssertTrue(line.waitForAbsence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(account.waitForPresence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(account.label.contains(who), account.label)
         picture("google-signed-in")
 
         // INF-7012's approved plan, piece 1: "a row line with a link appears when Google refuses an unmarked client",
@@ -109,8 +138,6 @@ extension PhoneJourney {
             XCTAssertTrue(account.waitForPresence(timeout: 20), app.debugDescription)
         }
         // The row draws what it last read until Settings' own read answers, so each wait is for the new words.
-        let line = app.staticTexts["google-client-state"]
-        let next = app.buttons["google-client-next"]
         let refused = try await home("google-agent-refused")
         XCTAssertEqual(refused["refused"] as? String, "agent")
         openIntegrationsAgain()

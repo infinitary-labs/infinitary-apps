@@ -267,7 +267,9 @@ describe("the freeze recorder", () => {
         for (let each = 0; each < 3; each += 1)
           steps.run("message:listTasks", () => walkEveryRow(5), { tally: true });
         steps.run("turn-end", () => {
-          walkEveryRow(FREEZE_THRESHOLD_MS);
+          // Twice the line: the walk ends on Date.now's whole milliseconds,
+          // so a walk of exactly the line can time a little under it.
+          walkEveryRow(FREEZE_THRESHOLD_MS * 2);
           steps.run("board-push", () => walkEveryRow(FREEZE_THRESHOLD_MS * 8));
         });
       },
@@ -283,7 +285,7 @@ describe("the freeze recorder", () => {
     expect(ran.map((each) => each.name)).toEqual(["board-push", "turn-end", "message:listTasks"]);
     const [push, turn, messages] = ran;
     expect(push?.ms).toBeGreaterThanOrEqual(FREEZE_THRESHOLD_MS * 8);
-    // Counted with the board push inside it, the turn's end would hold at least nine times the line.
+    // Counted with the board push inside it, the turn's end would hold at least ten times the line.
     expect(turn?.ms).toBeGreaterThanOrEqual(FREEZE_THRESHOLD_MS);
     expect(turn?.ms).toBeLessThan(FREEZE_THRESHOLD_MS * 8);
     expect(messages?.runs).toBe(3);

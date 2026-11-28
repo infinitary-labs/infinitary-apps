@@ -109,6 +109,8 @@
   "commandMoveRightWords": "arrow, right, next",
   "commandMoveUp": "Move up",
   "commandMoveUpWords": "arrow, up, previous",
+  "commandNoticeMacLogUnreadable": "Your first mate could not start. This account cannot read the macOS log that may say why.",
+  "commandNoticeMacReason": "macOS could not start your first mate: {reason}",
   "commandNoticeNotAnsweringRetry": "Your first mate is running but not answering. Wait for it, or start it here to connect to it again.",
   "commandNoticeStopping": "Your first mate is being stopped. This window starts it here once it has stopped.",
   "commandNoticeWindowCrashed": "Your first mate stopped without saying why and has not started again. Start it here to start it again.",

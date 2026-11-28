@@ -98,6 +98,7 @@ export function CommandStopped({
             color: "var(--fg-2)",
             fontSize: "var(--text-sm)",
             lineHeight: "var(--leading-body)",
+            overflowWrap: "anywhere",
           }}
         >
           {COMMAND_NOTICE_WORDS.line(notice)}

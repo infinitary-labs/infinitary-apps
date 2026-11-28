@@ -52,6 +52,12 @@ export const commandNoticeSchema = z.strictObject({
    * to whichever run is there; the line says so.
    */
   retries: z.literal(true).optional(),
+  macStartDiagnostic: z
+    .discriminatedUnion("kind", [
+      z.strictObject({ kind: z.literal("reason"), text: z.string() }),
+      z.strictObject({ kind: z.literal("unreadable") }),
+    ])
+    .optional(),
 });
 export type CommandNotice = z.infer<typeof commandNoticeSchema>;
 
@@ -70,6 +76,10 @@ function byWindowLine(notice: CommandNotice): string {
     case "updated":
       return m.commandNoticeWindowUpdated();
     case "crashed":
+      if (notice.macStartDiagnostic?.kind === "reason")
+        return m.commandNoticeMacReason({ reason: notice.macStartDiagnostic.text });
+      if (notice.macStartDiagnostic?.kind === "unreadable")
+        return m.commandNoticeMacLogUnreadable();
       return m.commandNoticeWindowCrashed();
     case "not-answering":
       return m.commandNoticeWindowNotAnswering();

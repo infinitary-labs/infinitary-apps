@@ -62,6 +62,7 @@ import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budget
 import { claimedPort } from "./claimedPort";
 import { disposableCustody } from "./disposableCustody";
 import { standInDnsSd } from "./dnsSdStandIn";
+import { phoneBackgroundWaits } from "./phoneBackgroundWaits";
 import { phoneCardReadControls } from "./phoneCardReads";
 import { carriedHeard, raiseCarriedCard, showCarriedPast } from "./phoneCarried";
 import { awayTraffic, closeCatchUpBoard, openCatchUpBoard } from "./phoneCatchUp";
@@ -740,6 +741,7 @@ export async function startPhoneHome(
     status: "queued",
     startPolicy: "on-request",
   });
+  const backgroundWaits = phoneBackgroundWaits(core);
   const token = randomBytes(24).toString("hex");
   let changed = 0;
   let boardTasks = 0;
@@ -1188,11 +1190,7 @@ export async function startPhoneHome(
           if (!controls?.biometry)
             throw new Error("Only the owned simulator can change its Face ID");
           await controls.biometry(
-            command === "biometry-enroll"
-              ? "enroll"
-              : command === "face-in-view"
-                ? "face-in-view"
-                : "face-away",
+            command === "biometry-enroll" ? "enroll" : (command as "face-in-view" | "face-away"),
           );
           result = { ok: true };
           break;
@@ -1366,6 +1364,9 @@ export async function startPhoneHome(
           result = { card: await core.dispatch("inf:cards:past", ["card-phone-readiness"]) };
           break;
         }
+        case "POST background-wait-fixture":
+          result = await backgroundWaits.seed(JSON.parse(await controlBody(request)).state);
+          break;
         case "POST answer-note-fixture": {
           const answer = seedTask(core.services.tasks, {
             id: `native-answer-${randomBytes(8).toString("hex")}`,

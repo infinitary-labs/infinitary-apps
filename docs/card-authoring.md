@@ -696,7 +696,10 @@ The design skill states the whole rule (`.claude/skills/infinitary-design/compon
   A 1,000-unit drawing turns 11px into 8.3px there; use a drawing of at most 750 units, or larger type.
   Do not shrink the viewBox to pass the check: a 350-unit drawing at 100 percent is capped at its own units.
   Text does not wrap in SVG: keep labels short, cut a long one to its column, or use `<foreignObject>` for real flowing text.
-  The size check does not guess whether labels spill or interpret arbitrary scripts.
+  The size check does not interpret arbitrary scripts, and it refuses nothing for a spilling label.
+  Instead, once a card is shown, the `emit_card` answer names each SVG label whose measured words end within 8 units of the edge of the box that holds its anchor, or past it (`figureLabelFacts`, `src/core/pi/cardFigureFit.ts`), with the repairs: shorten the label, widen the box, or draw the box as HTML.
+  It measures with the card font's advances, a table the generator `scripts/generate-card-glyph-widths.ts` reads from Chromium (`cardGlyphWidths.generated.ts`), over `rect` and `text` geometry with no transform but `translate`, and leaves `<foreignObject>` and what a script draws alone.
+  The 8 units are room for how Chromium sets small type a little differently from one card width to the next; a label that close to its edge spills at some widths and not others.
 - **Weight.**
   Thin strokes, generous space, no chart junk.
 - **Motion.**

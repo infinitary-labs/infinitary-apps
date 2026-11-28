@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-figure-label-fit-facts",
+      "reason": "When an agent sends a card whose drawing has a label wider than its box, the answer it reads now names the label and the repairs; what a person sees on the card is unchanged until the agent revises it."
+    }
+  ]
+}

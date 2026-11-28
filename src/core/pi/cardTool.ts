@@ -45,6 +45,7 @@ import {
   zodParameter,
 } from "../session/tools";
 import { MAX_CARD_BODY_LENGTH, readCardBodyFile } from "./cardBodyFile";
+import { figureLabelFacts } from "./cardFigureFit";
 import { type CardFileRoot, keepCardFiles } from "./cardFiles";
 import { type CardPictureRoot, cardPictureRoot, verifyCardImages } from "./cardImages";
 
@@ -1137,13 +1138,15 @@ async function emitCard(
     ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
   };
   const shown = await options.onCard(card);
+  // Facts only after the card is up: a refused card throws before this line.
+  const fit = figureLabelFacts(card.body);
   // A write on someone else's card answers what the host saved, typed.
   if (typeof shown === "object" && "line" in shown)
-    return `Card shown: ${params.title} (${shown.shown}). ${shown.line}`;
-  if (typeof shown === "object") return cardMutationText(shown);
+    return `Card shown: ${params.title} (${shown.shown}). ${shown.line}${fit}`;
+  if (typeof shown === "object") return `${cardMutationText(shown)}${fit}`;
   return typeof shown === "string" && shown
-    ? `Card shown: ${params.title} (${shown})`
-    : `Card shown: ${params.title}`;
+    ? `Card shown: ${params.title} (${shown})${fit}`
+    : `Card shown: ${params.title}${fit}`;
 }
 
 function relatedOf(refs: string[] | undefined): string[] {

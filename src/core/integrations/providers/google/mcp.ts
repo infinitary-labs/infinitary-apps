@@ -87,7 +87,8 @@ export type GoogleChoice = { value: string; label: string };
  * Google's question about one tool call, for the captain: its words, its
  * question line, its choices, and the call to retry. `asker` is the service
  * the call went to, in the words its card names it by (Gmail, Google
- * Calendar, Google Drive), never read from Google's words.
+ * Calendar, Google Drive, Google Docs, Google Sheets), never read from
+ * Google's words.
  */
 export type GoogleConfirm = {
   message: string;

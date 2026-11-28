@@ -16,10 +16,11 @@
  * - Sheets answers its Sheets API resource under `content`, except
  *   get_values, whose `range` and `values` stand at the top, as its list
  *   says. Values come back as shown: every cell as text.
- * - update_formulas reads values as a person types them (a number, `TRUE`,
- *   and a sum of numbers after `=` are worked out), update_values keeps
- *   them exactly, and append_values enters them as typed, which its list
- *   leaves open.
+ * - update_formulas, update_values and append_values all read values as a
+ *   person types them: a number, `TRUE` and a sum of numbers after `=` are
+ *   worked out, and a leading `'` keeps the rest as text, unshown. Google's
+ *   list names no input option; a call to Google's own servers showed
+ *   update_values and append_values turning `0012` into 12 and `=1+1` into 2.
  * A Doc's text is its file's `text`; a Sheet's cells are its file's `tabs`.
  * Each tool answers a key granted none of Drive's, Docs' or Sheets'
  * permissions Google's insufficient-scopes refusal.
@@ -108,6 +109,7 @@ const a1Of = (tab: StandInTab, top: number, left: number, bottom: number, right:
 /** A value as a person typing it into Sheets would leave it. */
 function typed(value: Cell): Cell {
   if (typeof value !== "string") return value;
+  if (value.startsWith("'")) return value.slice(1);
   if (/^-?\d+(\.\d+)?$/.test(value)) return Number(value);
   if (/^true$/i.test(value)) return true;
   if (/^false$/i.test(value)) return false;
@@ -318,13 +320,7 @@ export function sheetsMcpServer(world: DocsSheetsWorld): McpServer {
         const at = rangeOf(file, input.range);
         if (!at) return refused(`Unable to parse range: ${input.range}`);
         const rows = input.values ?? input.formulas ?? [];
-        const done = write(
-          at.tab,
-          at.top,
-          at.left,
-          rows,
-          name === "update_values" ? (cell) => cell : typed,
-        );
+        const done = write(at.tab, at.top, at.left, rows, typed);
         return text({
           content: {
             spreadsheetId: input.spreadsheetId,

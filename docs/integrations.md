@@ -337,7 +337,9 @@ Docs' actions (`docs.ts`) and Sheets' (`sheets.ts`), INF-7010, make and change f
 `create_document` is Drive's `create_file` with the text as Markdown, which Drive imports into a Doc's own headings, lists, bold and links; `append_to_document` is Docs' `update_doc` inserting plain text at the body's end, and `replace_in_document` its `replaceAllText`, answering how many places changed.
 `read_sheet` reads Sheets' `get_spreadsheet` for the tabs and their sizes when no range is named, and `get_values` for a range in A1 notation, as the sheet shows the values, cut after 100,000 characters.
 `create_spreadsheet` is Drive's `create_file` for an empty Sheet, then Sheets' `update_spreadsheet` naming its tabs and `update_formulas` entering its first rows; once Drive made the file, a later step that fails is answered with the new sheet and `incomplete`, so the crew never makes a second.
-`update_cells` sets a range with `update_formulas`, read as typed, or with `update_values` when `entered` is `exact`; `append_rows` is `append_values` after the last filled row of a tab's or range's table.
+`update_cells` sets a range with `update_formulas`, read as typed.
+Google's Sheets setters take no input option and both read every value as typed, so `entered: exact` gives each text cell Sheets' leading `'`, which keeps it as text unshown.
+`append_rows` is `append_values` after the last filled row of a tab's or range's table, read as typed.
 Every service shares one renewal and backoff boundary; a Calendar rate limit holds Gmail, Drive, Docs and Sheets too.
 
 `googleSetup` names a client only for an unpackaged run that sets `INFINITARY_GOOGLE_CLIENT_ID`; a packaged build names none.

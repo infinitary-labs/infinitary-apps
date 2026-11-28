@@ -343,7 +343,6 @@ describe("Sheets on the Google row", () => {
       rows: [["=1+1", "0012"]],
       entered: "exact",
     });
-    expect(world.google.calls("sheets").at(-1)?.tool).toBe("update_values");
     expect(fileOf(world, "1ShEeTbUdGeT")?.tabs?.[0]?.rows[3]).toEqual(["=1+1", "0012"]);
   });
 

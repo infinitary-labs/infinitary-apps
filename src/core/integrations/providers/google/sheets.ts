@@ -84,7 +84,7 @@ export const SHEETS_ACTIONS: readonly IntegrationActionSpec[] = [
     scope: googleFileScope("spreadsheet"),
     // i18n-exempt: served to the crew, which stays English
     description:
-      "Add rows to a Google Sheet by its id, right after the last filled row of the table found in tab (a tab's name) or range (A1 notation); name one. Nothing already there is overwritten. A cell is text, a number, true or false, or null to leave it empty. The answer names the range the rows went into. Its approval state controls whether the host asks, for each spreadsheet.",
+      "Add rows to a Google Sheet by its id, right after the last filled row of the table found in tab (a tab's name) or range (A1 notation); name one. Nothing already there is overwritten. Each value is entered as if typed, so numbers, dates and formulas starting with = are read as such; update_cells with entered exact sets text such as 0012 after. A cell is text, a number, true or false, or null to leave it empty. The answer names the range the rows went into. Its approval state controls whether the host asks, for each spreadsheet.",
     input: z
       .strictObject({
         id: fileIdSchema,
@@ -112,9 +112,12 @@ const contentOf = (body: Record<string, unknown>) =>
   (body.content && typeof body.content === "object" ? body.content : {}) as Record<string, unknown>;
 
 /**
- * Values entered by Sheets' own reading of what a person types
- * (`update_formulas`), or kept exactly as given (`update_values`), as
- * Google's two tools for one range divide them.
+ * Set a range's cells. Both of Google's Sheets MCP setters take no input
+ * option and enter every value as a person types it (a live call turned
+ * `0012` into 12 and `=1+1` into 2 through `update_values` too), so exact
+ * entry gives each text cell Sheets' leading `'`, which keeps the rest as
+ * text and is not shown. An empty text cell stays empty, since `'` alone
+ * would enter nothing either.
  */
 async function setCells(
   sheets: GoogleTool,
@@ -123,9 +126,13 @@ async function setCells(
   rows: Rows,
   entered: "typed" | "exact",
 ): Promise<Record<string, unknown>> {
-  return entered === "typed"
-    ? sheets("update_formulas", { spreadsheetId: id, range, formulas: rows }, true)
-    : sheets("update_values", { spreadsheetId: id, range, values: rows }, true);
+  const formulas =
+    entered === "typed"
+      ? rows
+      : rows.map((row) =>
+          row.map((cell) => (typeof cell === "string" && cell !== "" ? `'${cell}` : cell)),
+        );
+  return sheets("update_formulas", { spreadsheetId: id, range, formulas }, true);
 }
 
 /** The rows that fit in the answer's characters, and whether any were left out. */

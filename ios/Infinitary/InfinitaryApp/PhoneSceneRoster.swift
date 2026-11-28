@@ -37,10 +37,18 @@ struct PhoneSceneRoster {
                 }
             }
             retained.merge(live) { _, now in now }
+            // A project group the plan does not have now (its project is the middle, or its crew finished) draws nothing,
+            // as the desktop lists only the plan's groups: a program remembered there is not drawn in a group of its own,
+            // and is kept in memory for when the group comes back, as the desktop keeps where it last drew.
+            var drawn = retained
+            if let plan = grouped?.plan {
+                let groups = Set(plan.groups.map(\.id))
+                drawn = retained.mapValues { $0.filter { !$0.hasPrefix(PhoneCrewGroups.prefix) || groups.contains($0) } }
+            }
             // Seats are remembered from the last read of a real board, as the desktop remembers them; a new scene seats everyone afresh.
             let books = key?.generation == generation && key?.grouping == grouping && (value?.sequence ?? -1) >= 0 ? value?.books : nil
             var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation,
-                                          retainedPrograms: retained, seats: books, grouping: grouping, focus: focus)
+                                          retainedPrograms: drawn, seats: books, grouping: grouping, focus: focus)
             if let previous = value, key?.generation == generation {
                 // Keep the panned extent while work departs; a removal must not clip its flight or move the viewport.
                 let left = max(roster.homeX, previous.homeX), right = max(roster.width - roster.homeX, previous.width - previous.homeX)

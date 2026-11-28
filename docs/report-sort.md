@@ -468,10 +468,11 @@ A part left last behind other stopped parts is not its parent's only open part, 
 
 INF-6664 piece 1: the waiting work that no wake reports to the first mate, read from typed facts the record already holds.
 INF-6853 adds every hold and every wait on work nobody has started, so the first mate can judge whether to check with the captain: a hold's reason is words no code reads, and a wait on work the captain stopped wakes no one ("A wait on work the captain stopped is the captain's turn" above).
+INF-7116 adds idle work nothing runs or watches: a leftover row in a task's inbox can make every watcher read idle work as moving, so no wake reports it.
 The next-move check wakes no one about a part the captain stopped and asks the captain only once it is its parent's last open part ("The last part the captain stopped" above), and the first mate's context counts unstarted work per project without listing it, so a part parked half way through begun work stood with nobody reading it again.
 `standingWork(host, now)` (`src/core/orchestrator/standingWork.ts`) only reads; the heartbeat serves it (`docs/automation.md`, "The heartbeat").
 
-It has four kinds of row, one per task, read in this order for a started task:
+It has five kinds of row, one per task, read in this order for a started task:
 
 - **A parked part** (`parked-part`): live work the captain stopped (`TaskStarts.stoppedByCaptain`) whose parent is begun: live, not a task that delivers an answer, and it or another part started building work, as the next-move check reads it (a part that delivers an answer, a dropped part and a part the captain stopped do not count).
   Its fields are its key and title, its parent's key, since when it stood (its newest line that stopped or started it, `TaskStarts.latestStopAt`), its parent's other open parts, and whether every task it waits on has closed (`TaskGraph.waitingOn`).
@@ -486,6 +487,10 @@ It has four kinds of row, one per task, read in this order for a started task:
   Its fields are its key and title, the report's time and the wait's observation as its reason.
   A turn that failed after that report ends the wait, as the idle ladder reads a declared wait.
   A gate is a typed end: a hold has its time and may also end on an event or an app update, an allowance has its reset and a captain gate has its card, so a gated task is never this row; a long hold is a held row instead.
+- **An idle task** (`idle`): a started, idle task out of the backlog with no gate, idle for at least two hours (`IDLE_ROW_MS`, from `idleSince`), that is none of the rows above and that nothing runs, watches or ends.
+  It reads the idle ladder's witnesses (`IdleLadder.witnesses`) but never `deliverable`, the one a leftover inbox row can hold up: a job inside its bound, an open review, watched checks, a merge in line, a card or saved answer for the captain, a put-off, a wait on work underway, unstarted or stopped, a held account, a computer out of reach, a pending settle, or a work wait its newest report declared (unless a later turn failed) once the idle ladder has acted on this idle stay (its rung past 0) each make it no row; at rung 0 a declared wait has no owner, and the ladder may be the watcher misreading the task.
+  A request to the first mate, finished work with no card and a captain reply waiting on its crewmate leave it a row: each is a move nobody made.
+  Its fields are its key and title, with when it went idle as its since.
 
 Rows marked new go first and the rest oldest first, at most 12 (`STANDING_ROW_CAP`), then the count of the rest, so a row the cap would cut still reaches the reader at each milestone.
 Everything else that waits is counted, never listed: open work on request that is no row, by how long since it was filed (under 3 days, 3 to 14, over 14), and saved plans not built (open work on request whose basis is a closed task that delivers an answer), with the oldest one's filing time.

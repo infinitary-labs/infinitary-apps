@@ -1382,8 +1382,8 @@ export class CrewSupervisor {
     });
   }
 
-  /** The work a task waits on, as the idle ladder reads it, for the Heartbeat's standing list. */
-  get waits(): Pick<IdleLadder, "unstartedWaits" | "underwayWaits"> {
+  /** The work a task waits on and what holds it, as the idle ladder reads them, for the Heartbeat's standing list. */
+  get waits(): Pick<IdleLadder, "unstartedWaits" | "underwayWaits" | "witnesses"> {
     return this.ladder;
   }
 

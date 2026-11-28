@@ -115,7 +115,7 @@ No shape is prescribed.
 Give each SVG a `viewBox`, 750 units wide with `width="100%"` when it is full width, or its pixel width when it is smaller so the card only shrinks it; use theme tokens so it follows light and dark, `--accent` for the single most-current or lit element within each figure - one accent per figure, not one per card - non-accent tokens for everything else it draws, and `--ok`, `--warn`, or `--danger` only for real state.
 A picture never reaches past the body's width; one that would stand taller than 360 px shrinks to fit 360 px, whole, letterboxed on `--bg-1` - never cropped.
 Several in a `figure.inf-pictures` are a group, lead and strip: the first leads, the rest are 88 x 60 thumbnails cropped to their top, five shown and a mono `+N` tile for the rest, the `figcaption` under them; the frame stylesheet draws all of it, so a group of the body's own `data:` pictures looks the same.
-A click on any picture, or on a group's `+N` tile, opens the picture viewer over the window, paging within that group (`PictureViewer.prompt.md`).
+A click on any picture, or on a group's `+N` tile, opens the picture viewer over the window, paging every picture of the card (`PictureViewer.prompt.md`).
 
 **A demo.**
 A `figure[data-inf-demo]` is a recording of the app being used, where the motion is the point: a body shows only its poster, a still from the recording, sized like any picture, with its `figcaption` under it.

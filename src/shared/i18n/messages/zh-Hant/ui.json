@@ -59,6 +59,7 @@
   "uiPictureViewerShownAtOwnSize": "以原始大小顯示",
   "uiPictureViewerStop": "停止",
   "uiPictureViewerThumb": "圖片 {number}：{alt}",
+  "uiPictureViewerThumbWhere": "圖片 {number}，{where}：{alt}",
   "uiPictureViewerUnplayable": "無法播放這段錄製內容。",
   "uiQuotaLow": "偏低",
   "uiQuotaMeterNameLeft": "{label} 剩餘 {percent}%",

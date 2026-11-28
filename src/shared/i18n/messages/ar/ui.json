@@ -64,6 +64,7 @@
   "uiPictureViewerShownAtOwnSize": "معروضة بحجمها الأصلي",
   "uiPictureViewerStop": "إيقاف",
   "uiPictureViewerThumb": "الصورة {number}: {alt}",
+  "uiPictureViewerThumbWhere": "الصورة {number}، {where}: {alt}",
   "uiPictureViewerUnplayable": "تعذّر تشغيل هذا التسجيل.",
   "uiQuotaLow": "منخفض",
   "uiQuotaMeterNameLeft": "{label}، متبقٍّ {percent}%",

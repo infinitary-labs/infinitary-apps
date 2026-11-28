@@ -13,7 +13,9 @@ import {
   DRAWING_WORDS_LOOK,
   FRAME_DEMO_CAPTION_MAX,
   FRAME_DEMO_SOURCE,
+  FRAME_MAX_PICTURES,
   FRAME_PICTURE_ALT_MAX,
+  FRAME_PICTURE_WHERE_MAX,
   PICTURE_STRIP_SHOWN,
 } from "./bridge";
 
@@ -49,25 +51,84 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
     }
     return picture;
   }
-  // The pictures a press on this one opens, and which of them it is: its group's,
-  // or the picture alone. A demo's poster opens its recording, never a set.
+  // The pictures a press on this one opens, and which of them it is: every
+  // picture of the body a press opens, in reading order (INF-7148), so a
+  // story's Before and After, each alone in its cell, are neighbours. A
+  // picture inside a control and a demo's poster are never in it: a press
+  // there does something else. Nor is the other theme's copy of a picture,
+  // which the frame stylesheet hides (data-inf-theme). Past the most one
+  // message carries, the set is the window around the pressed picture.
+  var MAX_PICTURES = ${FRAME_MAX_PICTURES};
+  function bodyPictures() {
+    var found = document.querySelectorAll("img");
+    var shownTheme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    var pictures = [];
+    for (var i = 0; i < found.length; i++) {
+      var picture = found[i];
+      if (picture.closest(PICTURE_CONTROL)) continue;
+      var themed = picture.closest("[data-inf-theme]");
+      if (themed && themed.getAttribute("data-inf-theme") !== shownTheme) continue;
+      var demo = demoOf(picture.closest("figure[data-inf-demo]"));
+      if (demo && demo.poster === picture) continue;
+      pictures.push(picture);
+    }
+    return pictures;
+  }
   function pictureSet(picture) {
-    var group = picture.closest(".inf-pictures");
-    var members = group ? groupPictures(group) : [];
+    var members = bodyPictures();
     var index = members.indexOf(picture);
     if (index < 0) {
       members = [picture];
       index = 0;
     }
+    if (members.length > MAX_PICTURES) {
+      var start = Math.min(Math.max(index - Math.floor(MAX_PICTURES / 2), 0), members.length - MAX_PICTURES);
+      members = members.slice(start, start + MAX_PICTURES);
+      index -= start;
+    }
     return { index: index, pictures: members.map(describePicture) };
   }
+  var WHERE_MAX = ${FRAME_PICTURE_WHERE_MAX};
+  function wordsOf(element) {
+    return (element.textContent || "").replace(/\\s+/g, " ").trim();
+  }
+  // What the card calls a picture's place, so the viewer can say which of two
+  // near-identical pictures is After: the header cell above its table column,
+  // counting spanned columns, else the nearest heading before it.
+  function whereOf(picture) {
+    var cell = picture.closest("td, th");
+    var table = cell ? cell.closest("table") : null;
+    var head = table ? table.querySelector("thead tr") || table.rows[0] : null;
+    if (head && head !== cell.parentElement) {
+      var column = 0;
+      for (var before = cell.previousElementSibling; before; before = before.previousElementSibling) column += before.colSpan || 1;
+      var at = 0;
+      for (var header = head.firstElementChild; header; header = header.nextElementSibling) {
+        at += header.colSpan || 1;
+        if (column >= at) continue;
+        var named = header.tagName === "TH" ? wordsOf(header) : "";
+        if (named) return named.slice(0, WHERE_MAX);
+        break;
+      }
+    }
+    var headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    var nearest = "";
+    for (var i = 0; i < headings.length; i++) {
+      if (!(headings[i].compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_FOLLOWING)) break;
+      nearest = wordsOf(headings[i]);
+    }
+    return nearest.slice(0, WHERE_MAX);
+  }
   function describePicture(picture) {
-    return withPart(picture, {
+    var described = {
       src: picture.currentSrc || picture.src,
       alt: picture.getAttribute("alt") || "",
       width: picture.naturalWidth || 0,
       height: picture.naturalHeight || 0
-    });
+    };
+    var where = whereOf(picture);
+    if (where) described.where = where;
+    return withPart(picture, described);
   }
   // The set a note's mark is shown in: the picture its place names in its part.
   function partPictureSet(holder, of) {
@@ -81,9 +142,6 @@ export const FRAME_PICTURE_SCRIPT = `  var STRIP_SHOWN = ${PICTURE_STRIP_SHOWN};
       return { index: 0, pictures: [drawingPicture(picture)] };
     }
     return null;
-  }
-  function showPictures(pictures, index) {
-    post({ type: "image", index: index, pictures: pictures.map(describePicture) });
   }
   function openPicture(picture) {
     var demo = demoOf(picture.closest("figure[data-inf-demo]"));

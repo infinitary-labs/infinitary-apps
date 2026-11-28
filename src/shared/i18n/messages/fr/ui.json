@@ -61,6 +61,7 @@
   "uiPictureViewerShownAtOwnSize": "Affichée à sa propre taille",
   "uiPictureViewerStop": "Arrêter",
   "uiPictureViewerThumb": "Image {number} : {alt}",
+  "uiPictureViewerThumbWhere": "Image {number}, {where} : {alt}",
   "uiPictureViewerUnplayable": "Cet enregistrement n’a pas pu être lu.",
   "uiQuotaLow": "bas",
   "uiQuotaMeterNameLeft": "{label} {percent} % restant",

@@ -453,7 +453,7 @@ export function isViewablePictureSource(src: string): boolean {
 }
 
 /**
- * The set the viewer opens from a frame's `image` message: the group's
+ * The set the viewer opens from a frame's `image` message: the card's
  * viewable pictures in body order, and where the clicked one now stands.
  * `undefined` when the clicked picture is not one the viewer may show - a
  * click on it opens nothing, whatever its siblings are.

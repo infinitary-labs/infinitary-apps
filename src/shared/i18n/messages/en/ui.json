@@ -60,6 +60,7 @@
   "uiPictureViewerShownAtOwnSize": "Shown at its own size",
   "uiPictureViewerStop": "Stop",
   "uiPictureViewerThumb": "Picture {number}: {alt}",
+  "uiPictureViewerThumbWhere": "Picture {number}, {where}: {alt}",
   "uiPictureViewerUnplayable": "This recording could not be played.",
   "uiQuotaLow": "low",
   "uiQuotaMeterNameLeft": "{label} {percent}% left",

@@ -4583,6 +4583,7 @@
 "uiPictureViewerShownAtOwnSize" = "元のサイズで表示";
 "uiPictureViewerStop" = "停止";
 "uiPictureViewerThumb" = "画像 %2$@：%1$@";
+"uiPictureViewerThumbWhere" = "画像 %2$@、%3$@：%1$@";
 "uiPictureViewerUnplayable" = "この録画は再生できませんでした。";
 "uiQuotaLow" = "残りわずか";
 "uiQuotaMeterNameLeft" = "%1$@ 残り%2$@%%";

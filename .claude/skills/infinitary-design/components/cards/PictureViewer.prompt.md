@@ -5,10 +5,11 @@ Held between two docked rails it would leave a picture less than half the window
 
 **What opens it.**
 A click on any picture in any card body.
-The viewer pages within that picture's group: the `figure.inf-pictures` it sits in (its direct `<img>` children, in body order), else the picture alone as a group of one.
-A click on a group's mono `+N` tile opens it at the first picture the strip does not show.
+The viewer pages every picture in the body, in reading order, opening at the one pressed, so a merge card's Before and After, each in a cell of its own, are one arrow key apart.
+Pictures past a group's thumbnails and in a closed section are in the set; a picture in a control, a demo's poster and the other theme's hidden copy (`data-inf-theme`) are not.
+A click on a group's mono `+N` tile opens the set at the first picture the strip does not show.
 A picture inside a link, a button, a `summary`, a `label` or a `data-inf-action` element belongs to that control and opens nothing, and a body's own script that handles the click first keeps it.
-A click on a diagram opens it the same way, alone, as a set of one: the outermost inline drawing in a figure, or one drawn the width of what holds it.
+A click on a diagram opens it the same way, alone, as a set of one, never in the pictures' set: the outermost inline drawing in a figure, or one drawn the width of what holds it.
 A small mark beside words, a drawing in a control or a `figcaption`, and a playable preview's drawings open nothing.
 The diagram opens as it stands at the press, in the card's colors and type, with no script; its caption is the figure's `figcaption`, else its label.
 In the body a picture or a diagram that opens the viewer shows the `zoom-in` cursor, and so does the `+N` tile.
@@ -21,19 +22,19 @@ The design system's modal-level surface, which command search shares (`component
 
 **Three rows, top to bottom.**
 
-- **Header**, 52 px (the top bar's height, which it covers): the card's title in `--fg-1` at `--text-base`, one line with an ellipsis; then the count in mono `--text-xs` / `--fg-3`, `2 / 6`, as the card pager counts - a group of one shows the picture's size instead (`2800 × 520`); then, where the picture takes a mark, Point at ("Pointing at a place" below); then an `IconButton` "Close the viewer".
+- **Header**, 52 px (the top bar's height, which it covers): the card's title in `--fg-1` at `--text-base`, one line with an ellipsis; then the count in mono `--text-xs` / `--fg-3`, `2 / 6`, as the card pager counts, followed by the picture's place where the card names one - the header cell above its table column, else the nearest heading before it, at most 60 characters - as `2 / 6 · After`; a set of one shows the picture's size instead (`2800 × 520`); then, where the picture takes a mark, Point at ("Pointing at a place" below); then an `IconButton` "Close the viewer".
   The header drags the window like the top bar, and clears the window controls as it does, the Mac's at its left and Linux's at its right; its controls do not drag.
 - **The picture**, the rest of the height: contained in the row minus `--space-8` at each side, never cropped, never upscaled past 1:1 (one picture pixel per CSS pixel, as the browser draws a picture of its own size), `--radius-s`, `--shadow-2`.
-  A group puts previous and next `IconButton`s (36 px, `--fg-1`, a `--line-2` ring) in the row's side gutters, `--space-3` from its edges and centred on its height, disabled at the ends.
+  A set of more than one puts previous and next `IconButton`s (36 px, `--fg-1`, a `--line-2` ring) in the row's side gutters, `--space-3` from its edges and centred on its height, disabled at the ends.
   The picture itself is the zoom control (a button, `aria-pressed`): a click, `Z`, `Enter` or `Space` toggles 1:1.
   At 1:1 the picture fills the row, clipped to it, opening centred; dragging or the wheel moves it, and it stops where an edge meets the row's edge; an axis narrower than the row stays centred.
   A picture that already fits at 1:1 does not zoom and keeps the default cursor.
-  Another picture always opens fitted.
+  Paging to a picture of the same natural size keeps 1:1 and its place, so a flip shows only what changed; a picture of another size, and every picture the viewer opens on, opens fitted.
   A diagram is a drawing, sharp at any size, so fitted it fills the row, larger than its own size where there is room; a click, `Z`, `Enter` or `Space` toggles its own size, one unit to a pixel, wherever the two differ.
   It is drawn on `--bg-1` with `--radius-s`, as a picture is in the card.
-- **Foot**: the picture's `alt` as its caption, `--text-sm` / `--fg-2`, centred, at most 70ch; under it one hint in mono `--text-xs` / `--fg-3` - `2800 × 520 · fitted · click or Z for 1:1`, `2800 × 520 · 1:1 · drag or scroll to move`, or `640 × 400 · shown at its own size`; under that, for a group, its thumbnails: 64 × 44 buttons, each picture cropped to its top on `--bg-1`, a `--line-1` border, `--radius-s`, at 70% opacity, each labelled "Picture N: <alt>".
+- **Foot**: the picture's `alt` as its caption, `--text-sm` / `--fg-2`, centred, at most 70ch; under it one hint in mono `--text-xs` / `--fg-3` - `2800 × 520 · fitted · click or Z for 1:1`, `2800 × 520 · 1:1 · drag or scroll to move`, or `640 × 400 · shown at its own size`; under that, for a set of more than one, its thumbnails: 64 × 44 buttons, each picture cropped to its top on `--bg-1`, a `--line-1` border, `--radius-s`, at 70% opacity, each labelled "Picture N: <alt>", or "Picture N, <place>: <alt>" where the card names its place.
   The current one is at full opacity with an `--accent` border - the viewer's only accent at rest; the marks of "Pointing at a place" are the other.
-  When a group outgrows the row, the row scrolls sideways and keeps the current thumbnail in view.
+  When a set outgrows the row, the row scrolls sideways and keeps the current thumbnail in view.
 
 **Keys**, while it is open: `←` `→` previous and next, `Home` `End` first and last, `Z` `Enter` `Space` toggle 1:1 (`Enter` and `Space` on a focused control press that control instead), `⌘C` copies the picture and `⌘S` saves it ("The picture's menu" below), `Shift+F10` or the menu key opens its menu, `Esc` closes.
 They never reach the card stack: the stack's own paging stays a click.

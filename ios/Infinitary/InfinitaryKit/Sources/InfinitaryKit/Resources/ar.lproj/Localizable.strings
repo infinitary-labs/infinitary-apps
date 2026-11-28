@@ -4583,6 +4583,7 @@
 "uiPictureViewerShownAtOwnSize" = "معروضة بحجمها الأصلي";
 "uiPictureViewerStop" = "إيقاف";
 "uiPictureViewerThumb" = "الصورة %2$@: %1$@";
+"uiPictureViewerThumbWhere" = "الصورة %2$@، %3$@: %1$@";
 "uiPictureViewerUnplayable" = "تعذّر تشغيل هذا التسجيل.";
 "uiQuotaLow" = "منخفض";
 "uiQuotaMeterNameLeft" = "%1$@، متبقٍّ %2$@%%";

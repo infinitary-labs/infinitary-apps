@@ -4583,6 +4583,7 @@
 "uiPictureViewerShownAtOwnSize" = "Affichée à sa propre taille";
 "uiPictureViewerStop" = "Arrêter";
 "uiPictureViewerThumb" = "Image %2$@ : %1$@";
+"uiPictureViewerThumbWhere" = "Image %2$@, %3$@ : %1$@";
 "uiPictureViewerUnplayable" = "Cet enregistrement n’a pas pu être lu.";
 "uiQuotaLow" = "bas";
 "uiQuotaMeterNameLeft" = "%1$@ %2$@ %% restant";

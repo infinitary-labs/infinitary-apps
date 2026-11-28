@@ -4583,6 +4583,7 @@
 "uiPictureViewerShownAtOwnSize" = "Shown at its own size";
 "uiPictureViewerStop" = "Stop";
 "uiPictureViewerThumb" = "Picture %2$@: %1$@";
+"uiPictureViewerThumbWhere" = "Picture %2$@, %3$@: %1$@";
 "uiPictureViewerUnplayable" = "This recording could not be played.";
 "uiQuotaLow" = "low";
 "uiQuotaMeterNameLeft" = "%1$@ %2$@%% left";

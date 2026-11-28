@@ -1,9 +1,12 @@
+import { TIERED_STORY_HEADINGS } from "../../../src/shared/cardHeadings";
 import type { ScriptedCall } from "../../helpers/scriptedCalls";
 import { shellJobsRunning } from "../browserScript";
-import { writeFilesCalls } from "../crewCards";
+import { writeChangePicturesCalls, writeFilesCalls } from "../crewCards";
 import type { Scenario } from "../mockProvider";
 import {
   bytesOf,
+  CHANGE_AFTER_PICTURES,
+  CHANGE_BEFORE_PICTURES,
   dataUrl,
   FIRST_GROUP,
   INLINE_PICTURE,
@@ -121,5 +124,66 @@ export const cardPictures: Scenario =
     // its turn and attaches the pictures once every write's job has exited.
     if (shellJobsRunning(body)) return { text: PICTURES_STILL_WRITING };
     if (!calledTool(body, "emit_card")) return { calls: pictureCardToolCalls() };
+    return undefined;
+  };
+
+/**
+ * Marker prompt: the mock crewmate writes a change's Before and After pictures
+ * and shows them the way a merge card's saved story does
+ * (`tieredPresentationCardBody`): one boxed table per view, Before and After
+ * only in its header, one picture per cell, and a new view under one New
+ * header, after the crewmate's own picture-first What changed. INF-7148's approved plan pages a press through every picture of
+ * such a card in reading order, so each view's Before and After are neighbours.
+ */
+export const STORY_PICTURES_PROMPT_MARKER = "show a change story's pictures";
+export const STORY_PICTURES_TITLE = "The meter row and transcript, before and after";
+/**
+ * The story's pictures in reading order, each with what names its place: the
+ * heading before it, or the header cell above its column.
+ */
+export const STORY_PICTURES: { picture: PictureFixture; where: string }[] = [
+  { picture: CHANGE_AFTER_PICTURES[2] as PictureFixture, where: TIERED_STORY_HEADINGS[1] },
+  { picture: CHANGE_BEFORE_PICTURES[0] as PictureFixture, where: "Before" },
+  { picture: CHANGE_AFTER_PICTURES[0] as PictureFixture, where: "After" },
+  { picture: CHANGE_BEFORE_PICTURES[1] as PictureFixture, where: "Before" },
+  { picture: CHANGE_AFTER_PICTURES[1] as PictureFixture, where: "After" },
+  { picture: CHANGE_AFTER_PICTURES[2] as PictureFixture, where: "New" },
+];
+
+function storyCardBody(): string {
+  const cell = (picture: PictureFixture) =>
+    `<td style="vertical-align:top"><figure style="margin:0"><img src="${picture.path}" alt="${picture.alt}" width="${picture.width}" height="${picture.height}"></figure></td>`;
+  const pair = (before: PictureFixture, after: PictureFixture) =>
+    `<table style="table-layout:fixed"><thead><tr><th scope="col">Before</th><th scope="col">After</th></tr></thead><tbody><tr>${cell(before)}${cell(after)}</tr></tbody></table>`;
+  const [meters, transcript] = CHANGE_BEFORE_PICTURES as [PictureFixture, PictureFixture];
+  const [metersAfter, transcriptAfter, history] = CHANGE_AFTER_PICTURES as [
+    PictureFixture,
+    PictureFixture,
+    PictureFixture,
+  ];
+  return [
+    `<h3>${TIERED_STORY_HEADINGS[0]}</h3><p>The meter row wrapped at narrow widths.</p>`,
+    `<h3>${TIERED_STORY_HEADINGS[1]}</h3><figure><img src="${history.path}" alt="${history.alt}"></figure><p>A history list joins the transcript.</p>`,
+    `<h3>${TIERED_STORY_HEADINGS[2]}</h3>`,
+    `<section><p>The meter row</p>${pair(meters, metersAfter)}</section>`,
+    `<section><p>The transcript</p>${pair(transcript, transcriptAfter)}</section>`,
+    `<section><p>The history list</p><table style="table-layout:fixed"><thead><tr><th scope="colgroup" colspan="1"><span>New</span></th></tr></thead><tbody><tr>${cell(history)}</tr></tbody></table></section>`,
+  ].join("\n");
+}
+
+/** The story crewmate: write the change's pictures, then show its story card. */
+export const storyPictures: Scenario =
+  () =>
+  ({ body, isFirstmate, wantsStream }) => {
+    if (isFirstmate || !wantsStream || !body.includes(STORY_PICTURES_PROMPT_MARKER))
+      return undefined;
+    if (!calledTool(body, "bash")) return { calls: writeChangePicturesCalls() };
+    if (shellJobsRunning(body)) return { text: PICTURES_STILL_WRITING };
+    if (!calledTool(body, "emit_card"))
+      return {
+        calls: [
+          { name: "emit_card", args: { title: STORY_PICTURES_TITLE, body: storyCardBody() } },
+        ],
+      };
     return undefined;
   };

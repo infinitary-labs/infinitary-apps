@@ -59,6 +59,7 @@
   "uiPictureViewerShownAtOwnSize": "원래 크기로 표시",
   "uiPictureViewerStop": "정지",
   "uiPictureViewerThumb": "사진 {number}: {alt}",
+  "uiPictureViewerThumbWhere": "사진 {number}, {where}: {alt}",
   "uiPictureViewerUnplayable": "이 녹화본을 재생할 수 없어요.",
   "uiQuotaLow": "부족",
   "uiQuotaMeterNameLeft": "{label} {percent}% 남음",

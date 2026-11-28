@@ -114069,6 +114069,36 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Picture ${number2}: ${alt}`;
   }
+  function uiPictureViewerThumbWhere(input2) {
+    const alt = input2.alt;
+    const number2 = input2.number;
+    const where = input2.where;
+    switch (currentLanguage()) {
+      case "ar":
+        return `الصورة ${number2}، ${where}: ${alt}`;
+      case "de":
+        return `Bild ${number2}, ${where}: ${alt}`;
+      case "es":
+        return `Imagen ${number2}, ${where}: ${alt}`;
+      case "fr":
+        return `Image ${number2}, ${where} : ${alt}`;
+      case "ja":
+        return `画像 ${number2}、${where}：${alt}`;
+      case "ko":
+        return `사진 ${number2}, ${where}: ${alt}`;
+      case "pt-BR":
+        return `Imagem ${number2}, ${where}: ${alt}`;
+      case "zh-Hans":
+        return `图片 ${number2}，${where}：${alt}`;
+      case "zh-Hant":
+        return `圖片 ${number2}，${where}：${alt}`;
+      case "en-XA":
+        return `[Þîçţûŕé ${number2}, ${where}: ${alt} ~~~~]`;
+      case "ar-XB":
+        return `‮Picture ‬${number2}‮, ‬${where}‮: ‬${alt}`;
+    }
+    return `Picture ${number2}, ${where}: ${alt}`;
+  }
   function uiPictureViewerUnplayable() {
     switch (currentLanguage()) {
       case "ar":
@@ -122110,6 +122140,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     uiPictureViewerShownAtOwnSize,
     uiPictureViewerStop,
     uiPictureViewerThumb,
+    uiPictureViewerThumbWhere,
     uiPictureViewerUnplayable,
     uiQuotaLow,
     uiQuotaMeterNameLeft,
@@ -125908,6 +125939,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "uiPictureViewerShownAtOwnSize": [],
     "uiPictureViewerStop": [],
     "uiPictureViewerThumb": ["alt", "number"],
+    "uiPictureViewerThumbWhere": ["alt", "number", "where"],
     "uiPictureViewerUnplayable": [],
     "uiQuotaLow": [],
     "uiQuotaMeterNameLeft": ["label", "percent"],
@@ -127935,6 +127967,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   const FRAME_PICTURE_SRC_MAX = 16 * 1024 * 1024;
   const FRAME_FIND_TEXT_MAX = 16 * 1024 * 1024;
   const FRAME_PICTURE_ALT_MAX = 4096;
+  const FRAME_PICTURE_WHERE_MAX = 60;
   const FRAME_EXPAND_STATE_MAX = 4096;
   const FRAME_DEMO_SOURCE = "app-frame://media/";
   const FRAME_DEMO_SRC_MAX = 256;
@@ -128065,7 +128098,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
      */
     part: number().int().nonnegative().optional(),
     /** Which of that part's pictures this is, counted from 1; absent when the picture is the part. */
-    of: number().int().positive().optional()
+    of: number().int().positive().optional(),
+    /**
+     * What the card calls the picture's place: the header cell above its table column, else the
+     * nearest heading before it (INF-7148). Absent when the card names neither.
+     */
+    where: string().min(1).max(FRAME_PICTURE_WHERE_MAX).optional()
   });
   const answerCount = number().int().nonnegative().max(CARD_MAX_ANSWERS);
   const frameAnswerSchema = cardAnswerSchema.extend({
@@ -129923,25 +129961,84 @@ ${FRAME_TAG_SCRIPT}
     }
     return picture;
   }
-  // The pictures a press on this one opens, and which of them it is: its group's,
-  // or the picture alone. A demo's poster opens its recording, never a set.
+  // The pictures a press on this one opens, and which of them it is: every
+  // picture of the body a press opens, in reading order (INF-7148), so a
+  // story's Before and After, each alone in its cell, are neighbours. A
+  // picture inside a control and a demo's poster are never in it: a press
+  // there does something else. Nor is the other theme's copy of a picture,
+  // which the frame stylesheet hides (data-inf-theme). Past the most one
+  // message carries, the set is the window around the pressed picture.
+  var MAX_PICTURES = ${FRAME_MAX_PICTURES};
+  function bodyPictures() {
+    var found = document.querySelectorAll("img");
+    var shownTheme = document.documentElement.getAttribute("data-theme") === "light" ? "light" : "dark";
+    var pictures = [];
+    for (var i = 0; i < found.length; i++) {
+      var picture = found[i];
+      if (picture.closest(PICTURE_CONTROL)) continue;
+      var themed = picture.closest("[data-inf-theme]");
+      if (themed && themed.getAttribute("data-inf-theme") !== shownTheme) continue;
+      var demo = demoOf(picture.closest("figure[data-inf-demo]"));
+      if (demo && demo.poster === picture) continue;
+      pictures.push(picture);
+    }
+    return pictures;
+  }
   function pictureSet(picture) {
-    var group = picture.closest(".inf-pictures");
-    var members = group ? groupPictures(group) : [];
+    var members = bodyPictures();
     var index = members.indexOf(picture);
     if (index < 0) {
       members = [picture];
       index = 0;
     }
+    if (members.length > MAX_PICTURES) {
+      var start = Math.min(Math.max(index - Math.floor(MAX_PICTURES / 2), 0), members.length - MAX_PICTURES);
+      members = members.slice(start, start + MAX_PICTURES);
+      index -= start;
+    }
     return { index: index, pictures: members.map(describePicture) };
   }
+  var WHERE_MAX = ${FRAME_PICTURE_WHERE_MAX};
+  function wordsOf(element) {
+    return (element.textContent || "").replace(/\\s+/g, " ").trim();
+  }
+  // What the card calls a picture's place, so the viewer can say which of two
+  // near-identical pictures is After: the header cell above its table column,
+  // counting spanned columns, else the nearest heading before it.
+  function whereOf(picture) {
+    var cell = picture.closest("td, th");
+    var table = cell ? cell.closest("table") : null;
+    var head = table ? table.querySelector("thead tr") || table.rows[0] : null;
+    if (head && head !== cell.parentElement) {
+      var column = 0;
+      for (var before = cell.previousElementSibling; before; before = before.previousElementSibling) column += before.colSpan || 1;
+      var at = 0;
+      for (var header = head.firstElementChild; header; header = header.nextElementSibling) {
+        at += header.colSpan || 1;
+        if (column >= at) continue;
+        var named = header.tagName === "TH" ? wordsOf(header) : "";
+        if (named) return named.slice(0, WHERE_MAX);
+        break;
+      }
+    }
+    var headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
+    var nearest = "";
+    for (var i = 0; i < headings.length; i++) {
+      if (!(headings[i].compareDocumentPosition(picture) & Node.DOCUMENT_POSITION_FOLLOWING)) break;
+      nearest = wordsOf(headings[i]);
+    }
+    return nearest.slice(0, WHERE_MAX);
+  }
   function describePicture(picture) {
-    return withPart(picture, {
+    var described = {
       src: picture.currentSrc || picture.src,
       alt: picture.getAttribute("alt") || "",
       width: picture.naturalWidth || 0,
       height: picture.naturalHeight || 0
-    });
+    };
+    var where = whereOf(picture);
+    if (where) described.where = where;
+    return withPart(picture, described);
   }
   // The set a note's mark is shown in: the picture its place names in its part.
   function partPictureSet(holder, of) {
@@ -129955,9 +130052,6 @@ ${FRAME_TAG_SCRIPT}
       return { index: 0, pictures: [drawingPicture(picture)] };
     }
     return null;
-  }
-  function showPictures(pictures, index) {
-    post({ type: "image", index: index, pictures: pictures.map(describePicture) });
   }
   function openPicture(picture) {
     var demo = demoOf(picture.closest("figure[data-inf-demo]"));
@@ -130899,7 +130993,7 @@ ${FRAME_PRESS_SCRIPT}
     }
     if (target.classList.contains("inf-pictures")) {
       var more = moreTileIndex(target, event.clientX, event.clientY);
-      if (more >= 0) showPictures(groupPictures(target), more);
+      if (more >= 0) openPicture(groupPictures(target)[more]);
     }
   });
 ${FRAME_FORM_SCRIPT}
@@ -130994,7 +131088,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   }, true);
   post({ type: "ready", reuseReads: true });
 })();`;
-  const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";
+  const FRAME_BRIDGE_SHA256 = "sha256-+mDEnM1Yjg8Z6LQ4+E0QuBXWrN6UkHJN4FsaVIZHCEI=";
   const APP_FRAME_SCHEME = "app-frame";
   const CARD_PICTURE_HOST = "images";
   const CARD_MEDIA_HOST = "media";

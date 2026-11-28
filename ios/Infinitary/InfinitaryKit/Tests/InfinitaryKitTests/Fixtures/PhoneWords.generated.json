@@ -3995,6 +3995,7 @@
   {"said":{"m":"uiPictureViewerShownAtOwnSize"},"words":"Shown at its own size"},
   {"said":{"m":"uiPictureViewerStop"},"words":"Stop"},
   {"said":{"m":"uiPictureViewerThumb","a":{"alt":"‹alt›","number":"‹number›"}},"words":"Picture ‹number›: ‹alt›"},
+  {"said":{"m":"uiPictureViewerThumbWhere","a":{"alt":"‹alt›","number":"‹number›","where":"‹where›"}},"words":"Picture ‹number›, ‹where›: ‹alt›"},
   {"said":{"m":"uiPictureViewerUnplayable"},"words":"This recording could not be played."},
   {"said":{"m":"uiQuotaLow"},"words":"low"},
   {"said":{"m":"uiQuotaMeterNameLeft","a":{"label":"‹label›","percent":"‹percent›"}},"words":"‹label› ‹percent›% left"},

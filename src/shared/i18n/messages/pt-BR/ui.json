@@ -61,6 +61,7 @@
   "uiPictureViewerShownAtOwnSize": "Exibida no próprio tamanho",
   "uiPictureViewerStop": "Parar",
   "uiPictureViewerThumb": "Imagem {number}: {alt}",
+  "uiPictureViewerThumbWhere": "Imagem {number}, {where}: {alt}",
   "uiPictureViewerUnplayable": "Não foi possível reproduzir esta gravação.",
   "uiQuotaLow": "baixa",
   "uiQuotaMeterNameLeft": "{label} {percent}% restante",

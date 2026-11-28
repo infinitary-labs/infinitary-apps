@@ -147,7 +147,7 @@ Inside the frame it exposes `window.inf` and nothing more:
 Every verb is request/response with a correlation id (`FrameRequest` / `HostMessage`), so a later verb is an addition to the same envelope.
 `resize` and `link` stay as one-way notifications, and `data-inf-action` clicks plus `window.infAction` stay for agent-authored card bodies.
 `draft` is the link's sibling for the message box (FI3-1164): a click on a `data-inf-draft` control posts its words, one line, which a card's host puts at the start of the message box only from the card on screen whose frame holds the window's focus (`FrameMountSpec.onDraft`, `docs/card-authoring.md` "Style"); a mount that takes none ignores it, and adding it moved `FRAME_BRIDGE_SHA256`.
-`image` is their sibling (card pictures, phase 3): a click on any `<img>` - or on a `figure.inf-pictures` group's `+N` tile - posts the clicked index and the pictures of its group, and a card body's host opens the picture viewer on the ones it may show (`docs/card-authoring.md`, "The viewer").
+`image` is their sibling (card pictures, phase 3): a click on any `<img>` - or on a `figure.inf-pictures` group's `+N` tile - posts the clicked index and every picture of the body in reading order, and a card body's host opens the picture viewer on the ones it may show (`docs/card-authoring.md`, "The viewer").
 
 Every hook reads in either spelling of the app's code names (the Infinitary rename; `src/shared/codeNames.ts`), so a card or panel written before the rename works here.
 The bridge is `window.inf` as well as `window.fm`, and `window.infAction` as well as `window.fmAction`.

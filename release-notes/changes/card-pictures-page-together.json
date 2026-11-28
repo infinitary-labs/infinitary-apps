@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "card-pictures-page-together",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "The picture viewer pages through every picture on a card",
+      "body": "Click any picture on a card and the arrow keys, the arrows at the sides and the thumbnails now reach every other picture on that card, in reading order, in the app and on your iPhone or iPad. A merge card's Before and After are one key apart, and the viewer's header names each picture's column, such as 2 / 4 · After. At actual size, flipping to a picture of the same size keeps the same place, so only what changed moves.",
+      "picture": {
+        "dark": "card-pictures-page-together-dark.webp",
+        "light": "card-pictures-page-together-light.webp",
+        "alt": "The picture viewer on a merge card's After picture, its header reading 3 / 6 · After, with arrows at both sides and six thumbnails"
+      },
+      "docsSite": ["cards-and-decisions"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

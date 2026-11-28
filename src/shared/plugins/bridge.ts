@@ -50,6 +50,8 @@ export const FRAME_PICTURE_SRC_MAX = 16 * 1024 * 1024;
 export const FRAME_FIND_TEXT_MAX = 16 * 1024 * 1024;
 /** A picture's alt in an `image` message. */
 export const FRAME_PICTURE_ALT_MAX = 4_096;
+/** A picture's `where` in an `image` message: a column's header or a heading, never a passage. */
+export const FRAME_PICTURE_WHERE_MAX = 60;
 /**
  * How much state one part of a body hands over when it opens full screen
  * (`inf.expand`), as JSON in UTF-8 bytes: a place and a choice, never data.
@@ -244,6 +246,11 @@ export const framePictureSchema = z.object({
   part: z.number().int().nonnegative().optional(),
   /** Which of that part's pictures this is, counted from 1; absent when the picture is the part. */
   of: z.number().int().positive().optional(),
+  /**
+   * What the card calls the picture's place: the header cell above its table column, else the
+   * nearest heading before it (INF-7148). Absent when the card names neither.
+   */
+  where: z.string().min(1).max(FRAME_PICTURE_WHERE_MAX).optional(),
 });
 export type FramePicture = z.infer<typeof framePictureSchema>;
 

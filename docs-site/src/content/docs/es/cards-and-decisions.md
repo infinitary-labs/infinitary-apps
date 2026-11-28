@@ -1,5 +1,5 @@
 ---
-source: fddef151ac47ef10
+source: 8b70a675730a25eb
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -139,6 +139,7 @@ Cuenta la historia del cambio: por qué, qué cambió y qué se comprobó.
 Cada pantalla que toca el cambio muestra cómo se veía antes y cómo se ve después, una junto a otra.
 Una pantalla nueva solo muestra Después.
 Haz clic en una imagen para verla más grande y para [señalar un lugar en ella](#pointing-at-a-picture).
+En la vista grande, las teclas de flecha o las flechas a sus lados recorren todas las imágenes de la tarjeta, así que el Antes y el Después de una pantalla están a una tecla de distancia.
 Una grabación de demo tiene un botón de reproducir.
 
 **El dibujo del riesgo.**

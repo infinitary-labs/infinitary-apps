@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "firstmate-turn-split",
+      "reason": "Internal: first mate turn state and failure classification move to their own module without changing behavior."
+    }
+  ]
+}

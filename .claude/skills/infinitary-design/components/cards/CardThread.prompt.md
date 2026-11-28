@@ -51,6 +51,7 @@ Collapsed panel headers stay visible but reserve no card clearance, except one t
 The create-your-own-panel slot reserves it as an expanded panel does, so a wide card never covers it.
 A maximized card (`ResponseCard.prompt.md`, "Maximize") keeps its open thread as the right column at the same width rule, on a stage that is the whole window, and the card takes the rest; there are no edge tabs while it is maximized.
 Only if the pair still does not fit does the thread go **in place** - a segmented control in the card's head (`card` · `thread · N`) swaps the body for the message list - which needs a stage under 720px: out of reach at the window's 960px minimum, and always the case in the card overlay's narrow panel.
+A line that arrives after the thread's first read, the captain's own reply or its author's answer, turns the control to `thread`.
 
 The thread column, top to bottom: a mono micro-label head (`THREAD` alone, `--text-xs`, `.08em` tracking, uppercase, level with the card's head), the message list, the reply row, and the card's choices at its foot.
 The head never repeats the card's author, model or corner: the card beside it already carries them (the captain: "this thread panel should not repeat the task title and model name and the close button, because the attached card already has all of that"), and the card's own minus puts the card and its thread away.

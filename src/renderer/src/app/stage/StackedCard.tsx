@@ -263,6 +263,17 @@ export function StackedCard({
   const threadLoaded = useShellStore((s) => s.threadsLoaded[card.id] === true);
   const bodyPending = cardTakesReplies(card) && !threadLoaded;
   const showThread = inPlaceThread && showing === "thread";
+  // A line that arrives after the thread's first read - the captain's own
+  // reply, or its author's answer - turns an in-place thread into view, as
+  // it opens a collapsed one beside the card (`applyThread`): left on the
+  // body, the overlay's reply showed nowhere (the captain, INF-7222).
+  const readCount = useRef<number | null>(null);
+  useEffect(() => {
+    if (!threadLoaded) return;
+    const before = readCount.current;
+    readCount.current = messages.length;
+    if (inPlaceThread && before !== null && messages.length > before) setShowing("thread");
+  }, [threadLoaded, messages.length, inPlaceThread]);
   useLayoutEffect(() => {
     if (!bodyPending && showThread) {
       bodyEntrance.onDrawn();

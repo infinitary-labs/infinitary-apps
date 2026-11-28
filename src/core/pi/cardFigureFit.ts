@@ -43,6 +43,8 @@ type Label = {
   y: number;
   width: number;
   anchor: Style["anchor"];
+  /** Where the box holding the label is looked up: the chunk's anchor point. */
+  at: number;
 };
 type Spill = {
   text: string;
@@ -109,6 +111,8 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
     y: number;
     anchor: Style["anchor"];
     glyphs: Glyph[];
+    /** The line whose text chunk this one continues: a `dy` alone starts no new chunk. */
+    head?: Line;
   };
   const attrs = node.attribs ?? {};
   const lines: Line[] = [
@@ -151,6 +155,7 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
       const before = collapsed(last.glyphs).reduce((sum, glyph) => sum + glyphWidth(glyph), 0);
       const end = last.anchor === "middle" ? before / 2 : last.anchor === "end" ? 0 : before;
       lines.push({
+        head: child.attribs?.y === undefined ? (last.head ?? last) : undefined,
         x: last.x + end,
         y:
           (child.attribs?.y !== undefined ? number(child.attribs.y) + at.dy : last.y) +
@@ -171,16 +176,45 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
     for (const grandchild of child.children ?? []) add(grandchild, own);
   };
   for (const child of node.children ?? []) add(child, style);
-  return lines.flatMap(({ x, y, anchor, glyphs }) => {
-    const kept = collapsed(glyphs);
+  const width = (line: Line): number =>
+    collapsed(line.glyphs).reduce((sum, glyph) => sum + glyphWidth(glyph), 0);
+  // A chunk anchors as one: its rows share the horizontal anchor, so the
+  // whole chunk's width, not each row's, decides where each row starts.
+  const chunkOf = (line: Line): Line[] => {
+    const head = line.head ?? line;
+    return lines.filter((other) => (other.head ?? other) === head);
+  };
+  return lines.flatMap((line) => {
+    const kept = collapsed(line.glyphs);
     if (kept.length === 0) return [];
+    const chunk = chunkOf(line);
+    const own = width(line);
+    if (chunk.length === 1)
+      return [
+        {
+          text: kept.map((glyph) => glyph.char).join(""),
+          x: line.x,
+          at: line.x,
+          y: line.y,
+          width: own,
+          anchor: line.anchor,
+        },
+      ];
+    const head = chunk[0] as Line;
+    const total = chunk.reduce((sum, other) => sum + width(other), 0);
+    const before = chunk
+      .slice(0, chunk.indexOf(line))
+      .reduce((sum, other) => sum + width(other), 0);
+    const shift = head.anchor === "middle" ? total / 2 : head.anchor === "end" ? total : 0;
     return [
       {
         text: kept.map((glyph) => glyph.char).join(""),
-        x,
-        y,
-        width: kept.reduce((sum, glyph) => sum + glyphWidth(glyph), 0),
-        anchor,
+        // Centred on its own span, so the left clearance is checked too.
+        x: head.x - shift + before + own / 2,
+        at: head.x,
+        y: line.y,
+        width: own,
+        anchor: "middle" as const,
       },
     ];
   });
@@ -252,8 +286,8 @@ function spillsOf(svg: Node): Spill[] {
     const holding = boxes
       .filter(
         (box) =>
-          box.left <= label.x &&
-          label.x <= box.right &&
+          box.left <= label.at &&
+          label.at <= box.right &&
           box.top <= label.y &&
           label.y <= box.bottom,
       )

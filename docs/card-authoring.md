@@ -702,7 +702,7 @@ The design skill states the whole rule (`.claude/skills/infinitary-design/compon
   They ride on every write the host accepted the body of, whenever the captain sees it: a plain send, a first mate's revision with a thread line, and a created or revised shared card.
   A refusal, a reply alone, an unchanged or repeated typed outcome get none; an ordinary resend of the host's own card is a write and gets them.
   A root `<svg>`'s own `font-size` attribute is not read, since the frame's `svg` rule outranks it; its inline style is.
-  The measure uses the card font's advances, a table the generator `scripts/generate-card-glyph-widths.ts` reads from Chromium (`cardGlyphWidths.generated.ts`); the frame's 12.5px unless the figure declares a size; `rect` and `text` geometry with no transform but `translate`; each `tspan` that names its own `x` as its own line, and a `tspan` that names only `y` or `dy` after words as a new row from where those words end.
+  The measure uses the card font's advances, a table the generator `scripts/generate-card-glyph-widths.ts` reads from Chromium (`cardGlyphWidths.generated.ts`); the frame's 12.5px unless the figure declares a size; `rect` and `text` geometry with no transform but `translate`; each `tspan` that names its own `x` as its own line, and a `tspan` that names only `y` or `dy` after words as a new row from where those words end, with a `dy` alone sharing its chunk's horizontal anchor.
   It leaves `<foreignObject>` and what a script draws alone.
   A label past its box is a spill the measure saw; a label inside the 8 units is a precaution, since Chromium sets small type a little differently from one card width to the next.
 - **Weight.**

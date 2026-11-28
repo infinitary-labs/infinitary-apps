@@ -132,6 +132,25 @@ describe("figureLabelSpills", () => {
     ).toEqual([100]);
   });
 
+  it("starts a row-moving tspan where the words before it end, not at the text's x", () => {
+    // Ten "n" at 12.5px are 66.6 units: from x=10 they would end well inside the 100-unit box,
+    // so only a run that continues after "Step one" passes it.
+    const run = "n".repeat(10);
+    const body = (move: string) =>
+      `<svg viewBox="0 0 400 130"><rect x="0" y="0" width="300" height="50"/><rect x="0" y="60" width="100" height="50"/><text x="10" y="30">Step one<tspan ${move}>${run}</tspan></text></svg>`;
+    expect(figureLabelSpills(body('y="90"')).map((spill) => spill.text)).toEqual([run]);
+    expect(figureLabelSpills(body('dy="60"')).map((spill) => spill.text)).toEqual([run]);
+  });
+
+  it("anchors a dy-only row with the words before it as one chunk, so a long row pushes the first row's left edge out", () => {
+    // Centred at 200, "Step one" plus thirty "n" (about 255 units) starts near 72: past the left edge (130)
+    // of the first row's box. Centring each row on its own would keep "Step one" inside it.
+    const body = `<svg viewBox="0 0 400 130"><rect x="130" y="0" width="170" height="50"/><rect x="0" y="60" width="400" height="50"/><text x="200" y="30" text-anchor="middle">Step one<tspan dy="60">${"n".repeat(30)}</tspan></text></svg>`;
+    expect(figureLabelSpills(body).map((spill) => [spill.text, spill.side])).toEqual([
+      ["Step one", "left"],
+    ]);
+  });
+
   it("takes the root's size from an inline style, not from a presentation attribute the frame overrides", () => {
     const at = (svgAttrs: string): number | undefined =>
       figureLabelSpills(

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-overlay-picture",
+      "reason": "Editorial: updates the existing card overlay note's hero pictures."
+    }
+  ]
+}

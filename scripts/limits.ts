@@ -624,6 +624,14 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/shared/feed.ts": {
     FEED_REPORT_LIMIT: physical("clipped; the whole report stays on the task's record"),
   },
+  "src/shared/integrations.ts": {
+    INTEGRATION_NAME_MAX: physical(
+      "Settings' MCP form names the field and holds Connect; a caller's request is refused naming the field and 64",
+    ),
+    MCP_RUNS_MAX: physical(
+      "Settings' MCP form names the field and holds Connect; a caller's request is refused naming the field and 2048",
+    ),
+  },
   "src/shared/ipc.ts": {
     VIEW_FLOOR: record(
       "a view below it reads only and is told which side to update; only a major whose file says views break moves it",

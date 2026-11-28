@@ -754,6 +754,8 @@ ${FRAME_PRESS_SCRIPT}
     if (caps.pictures && !target.closest(DRAWING_CONTROL)) {
       var drawing = outermostDrawing(target);
       if (drawing && isDiagram(drawing)) {
+        // The browser sends a drag's release to the drawing both ends sit in as a click; words it selected stay, and nothing opens.
+        if (!getSelection().isCollapsed) return;
         openDrawing(drawing);
         return;
       }
@@ -861,4 +863,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-+mDEnM1Yjg8Z6LQ4+E0QuBXWrN6UkHJN4FsaVIZHCEI=";
+export const FRAME_BRIDGE_SHA256 = "sha256-pRVCK/EJnIw2WDHfVkRIoYphC6XvLWRjrVpab+i8SU8=";

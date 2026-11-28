@@ -30,6 +30,7 @@ const BODY = `
       <script>window.ranInViewer = true;</script>
       <rect id="piece" x="25" y="30" width="200" height="60" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"/>
       <text id="label" x="125" y="66" text-anchor="middle" fill="var(--fg-1)" font-size="14">Frame</text>
+      <text id="command" x="400" y="66" fill="var(--fg-1)" font-size="14">git pull --ff-only</text>
       <svg id="inner" x="300" y="30" width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="var(--accent)"/></svg>
     </svg>
     <figcaption>${FIGURE_CAPTION} <svg id="caption-mark" width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="10"/></svg></figcaption>
@@ -69,6 +70,7 @@ async function mounted(annotations = false): Promise<Heard[]> {
   const heard: Heard[] = [];
   const frame = document.createElement("iframe");
   frame.name = FRAME;
+  frame.title = FRAME;
   frame.setAttribute("sandbox", "allow-scripts");
   frame.style.cssText = "width:800px;height:700px;border:0";
   addEventListener("message", (event) => {
@@ -229,4 +231,24 @@ test("a still the stage drew over shows in the opened picture", async () => {
   await press("label");
   const picture = drawn(opened(heard)[0]?.pictures?.[0] as Picture);
   expect(picture.getElementById("still")?.getAttribute("style")).not.toContain("display:none");
+});
+
+/**
+ * Intent: the captain's report that dragging to select words in a drawing
+ * opened the larger view. The browser's own mouse selects, because a script's
+ * synthetic click never meets the release that ends a selection.
+ */
+test("a drag that selects words in a diagram keeps them and opens nothing, while a click still opens it", async () => {
+  const COMMAND = "git pull --ff-only";
+  for (const annotations of [false, true]) {
+    const heard = await mounted(annotations);
+    await commands.dragAcrossWordsInFrame(FRAME, "#command", COMMAND);
+    expect(await inFrame(() => String(getSelection()), null)).toBe(COMMAND);
+    await inFrame(() => new Promise((done) => requestAnimationFrame(done)), null);
+    expect(opened(heard)).toEqual([]);
+
+    // A plain click opens it at once, though words elsewhere in the card are still selected.
+    await commands.clickWordsInFrame(FRAME, "#label", "Frame");
+    await expect.poll(() => opened(heard).length).toBe(1);
+  }
 });

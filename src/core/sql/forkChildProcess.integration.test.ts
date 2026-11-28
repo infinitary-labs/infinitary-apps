@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, it } from "vitest";
+import { waitCap } from "../../../tests/helpers/budgets";
 import { deferred } from "../../../tests/helpers/deferred";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../hostEnv";
@@ -35,7 +36,7 @@ it("survives a reply after the peer closes IPC but before the parent sees it", a
           "require('node:net').connect(+process.argv[1], '127.0.0.1').pipe(process.stdout)",
           String(port),
         ],
-        { env: hostEnv(), encoding: "utf8", timeout: 3_000 },
+        { env: hostEnv(), encoding: "utf8", timeout: waitCap(5_000) },
       );
       child.postMessage({ type: "result", id: 1, reply: { kind: "ok" } });
       ready.resolve(marker);
@@ -60,4 +61,4 @@ it("survives a reply after the peer closes IPC but before the parent sees it", a
     child.kill();
     await exit.promise;
   }
-}, 10_000);
+});

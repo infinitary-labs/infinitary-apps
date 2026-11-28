@@ -72,8 +72,11 @@ export type GoogleMcpOptions = {
    * renewed so recently that renewing again cannot help, then undefined.
    */
   renewed: (refused: string) => Promise<string | undefined>;
-  /** Google asked the app to slow down, with its Retry-After: how many milliseconds it said, if it did. */
-  slowed: (retryAfter: string | null) => number | undefined;
+  /**
+   * Google answered 429, with its Retry-After and its body: the words the
+   * refusal carries to the crew, once the service's wait is kept.
+   */
+  slowed: (retryAfter: string | null, body: unknown) => string;
   heard: (service: GoogleService, heard: GoogleHeard) => void;
 };
 
@@ -353,12 +356,8 @@ export function googleMcp(options: GoogleMcpOptions): {
       }
     }
     if (response.status === 429) {
-      const after = options.slowed(response.headers.get("retry-after"));
-      // i18n-exempt: words served to the crew, which stay English
-      throw new GoogleStopped(
-        `${options.label} asked the app to slow down${after !== undefined ? ` for ${Math.ceil(after / 1000)} seconds` : ""}.`,
-        false,
-      );
+      const body = jsonOf(await response.clone().text());
+      throw new GoogleStopped(options.slowed(response.headers.get("retry-after"), body), false);
     }
     if (response.status >= 500) {
       options.heard(options.service, { kind: "unavailable" });

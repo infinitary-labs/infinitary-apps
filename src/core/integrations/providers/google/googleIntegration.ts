@@ -53,6 +53,7 @@ import {
   signInOnLoopback,
 } from "./signIn";
 import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from "./store";
+import { googleWaits } from "./waits";
 
 /**
  * Google as an integration (docs/integrations.md, "Google"): one row that
@@ -84,9 +85,10 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
  * to use a client marked for one, so that refusal is read as the missing
  * mark, the sign-in stays and the row says what to tick (`client().mcp`), as
  * it does for a service whose MCP server is off.
- * When Google asks the app to slow down and says for how long (Retry-After),
- * every request waits that long, and a rule's look tries again on its next
- * minute.
+ * When Google asks a service to slow down, that service's requests wait
+ * (`./waits`): as long as Retry-After says, until midnight Pacific time for
+ * a daily limit, or a doubling wait otherwise; a rule's look meanwhile fails
+ * with the wait's words and tries again on its next look.
  */
 
 const GOOGLE_ID = "google";
@@ -165,15 +167,6 @@ function errorOf(body: Record<string, unknown>): { message?: string; reasons: st
   };
 }
 
-/** Retry-After in milliseconds: seconds, or a date. */
-function retryAfter(value: string | null, now: number): number | undefined {
-  if (!value) return undefined;
-  const seconds = Number(value);
-  if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
-  const at = Date.parse(value);
-  return Number.isNaN(at) ? undefined : Math.max(0, at - now);
-}
-
 /** The person's own Desktop app client, as they give it: its id and its secret. */
 export type GoogleOwnClient = { id: string; secret: Buffer };
 
@@ -213,8 +206,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const forgetting = new Map<string, RenewingClient>();
   /** Code exchanges of sign-ins in progress with the person's own client, by a one-use id. */
   const exchanges = new Map<string, { own: GoogleClientRecord; form: Record<string, string> }>();
-  /** Until when Google asked the app to wait, on the app's clock. */
-  let waitUntil = 0;
+  /** Until when Google asked each service to wait, on the app's clock. */
+  const waits = googleWaits(options.now);
   /** What Google's MCP servers last refused, by service, in memory only: the next answer clears it. */
   const refusals = new Map<
     GoogleService,
@@ -447,9 +440,9 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const accessToken = (): string | undefined => access?.token;
 
   /** The access key for the next request, renewed first when it is about to end. */
-  const key = async (label: string): Promise<string> => {
-    const wait = Math.ceil((waitUntil - options.now()) / 1000);
-    if (wait > 0) throw new Error(`${label} asked the app to wait ${wait} more seconds.`);
+  const key = async (service: GoogleService, label: string): Promise<string> => {
+    const held = waits.holds(service, label);
+    if (held) throw new Error(held);
     if (!store.read()) throw new Error(SIGN_IN_AGAIN);
     if (!access || access.expiresAt - options.now() < GOOGLE_REQUEST_TIMEOUT_MS) await renew();
     const token = accessToken();
@@ -473,6 +466,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     }
     const before = JSON.stringify(refusals.get(service) ?? null);
     if (said.kind === "answered") {
+      waits.answered(service);
       refusals.delete(service);
       agentRefused = undefined;
     } else {
@@ -492,13 +486,9 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       version: options.version ?? "0.0.0",
       fetch: fetchImpl,
       timeoutMs: GOOGLE_REQUEST_TIMEOUT_MS,
-      key: () => key(label),
+      key: () => key(service, label),
       renewed,
-      slowed: (header) => {
-        const after = retryAfter(header, options.now());
-        if (after !== undefined) waitUntil = options.now() + after;
-        return after;
-      },
+      slowed: (header, body) => waits.slowed(service, label, header, body),
       heard,
     });
   // i18n-exempt: a product name
@@ -538,7 +528,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
           throw new Error("Could not reach Gmail.");
         }
       };
-      const token = await key("Gmail");
+      const token = await key("gmail", "Gmail");
       let response = await fetchWith(token);
       if (response.status === 401) {
         const fresh = await renewed(token);
@@ -546,13 +536,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       }
       const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       if (response.ok && typeof body.data === "string") return Buffer.from(body.data, "base64url");
-      if (response.status === 429) {
-        const after = retryAfter(response.headers.get("retry-after"), options.now());
-        if (after !== undefined) waitUntil = options.now() + after;
-        throw new Error(
-          `Gmail asked the app to slow down${after !== undefined ? ` for ${Math.ceil(after / 1000)} seconds` : ""}.`,
-        );
-      }
+      if (response.status === 429)
+        throw new Error(waits.slowed("gmail", "Gmail", response.headers.get("retry-after"), body));
       // i18n-exempt: words served to the crew, which stay English
       const said = errorOf(body).message ?? `status ${response.status}`;
       // i18n-exempt: words served to the crew, which stay English
@@ -672,7 +657,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     store.remove();
     if (withClient) clients.remove();
     access = undefined;
-    waitUntil = 0;
+    waits.clear();
     void letGo();
     const earlier = moved.present() ? moved.lastingKey() : undefined;
     return (async () => {
@@ -887,7 +872,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
             profile ? ` (${errorOf(profile.body).message ?? `status ${profile.status}`})` : ""
           }. Try again.`,
         );
-      waitUntil = 0;
+      waits.clear();
       await letGo();
       access = { token: issued.accessToken, expiresAt: issued.expiresAt };
       store.write({

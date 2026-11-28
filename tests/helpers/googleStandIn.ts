@@ -106,6 +106,44 @@ const UNAUTHENTICATED = googleError(
 const NOT_FOUND = googleError(404, "Requested entity was not found.", "notFound", "NOT_FOUND");
 
 /**
+ * Google's refusal once a service's daily requests ran out, with no Retry-After.
+ * Google's Gmail MCP quota page names no body for it, so this is Google Cloud's
+ * own quota error (cloud.google.com/apis/design/errors, RESOURCE_EXHAUSTED with an
+ * ErrorInfo naming the limit), for the 5,000 requests a day of the Standard Tier.
+ */
+function dailyLimitReached(service: StandInService) {
+  const name = `${service}mcp.googleapis.com`;
+  return {
+    error: {
+      code: 429,
+      message: `Quota exceeded for quota metric 'Requests' and limit 'Requests per day' of service '${name}' for consumer 'project_number:${STAND_IN_PROJECT}'.`,
+      status: "RESOURCE_EXHAUSTED",
+      details: [
+        {
+          "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+          reason: "RATE_LIMIT_EXCEEDED",
+          domain: "googleapis.com",
+          metadata: {
+            service: name,
+            consumer: `projects/${STAND_IN_PROJECT}`,
+            quota_metric: `${name}/requests`,
+            quota_limit: "RequestsPerDayPerProject",
+            quota_limit_value: "5000",
+          },
+        },
+      ],
+    },
+  };
+}
+
+/**
+ * One 429 the stand-in answers: a string is its Retry-After in seconds; an
+ * object answers Google Cloud's daily-limit body when `daily`, and a 429 with
+ * no Retry-After otherwise, to `service`'s next request or any service's.
+ */
+export type StandInLimit = string | { daily?: true; service?: StandInService };
+
+/**
  * Google's refusal of a tool call to an MCP service the person's project has
  * not turned on, as Google's Calendar server gave it live: status 403 with a
  * finished tool result whose only words name the page that turns it on.
@@ -180,8 +218,8 @@ export async function startGoogleStandIn() {
   const knobs = {
     /** What the person does on the consent page. */
     consent: { grant: [...SCOPES], deny: false },
-    /** The next MCP requests answered 429, with this Retry-After. */
-    limited: [] as string[],
+    /** The next requests answered 429 (`StandInLimit`). */
+    limited: [] as StandInLimit[],
     /**
      * What Google does after each of the next calls that changed something:
      * the connection drops before it answers, or it answers 500.
@@ -220,6 +258,29 @@ export async function startGoogleStandIn() {
     listsCancelled: false,
     /** The stand-in's clock, for Calendar's default window and an event's `updated`. */
     now: () => Date.now(),
+  };
+  /** The first 429 waiting for `service`'s next request, taken off the list. */
+  const takeLimit = (service: StandInService): StandInLimit | undefined => {
+    const at = knobs.limited.findIndex(
+      (limit) => typeof limit === "string" || !limit.service || limit.service === service,
+    );
+    return at < 0 ? undefined : knobs.limited.splice(at, 1)[0];
+  };
+  const limited = (response: ServerResponse, service: StandInService, limit: StandInLimit) => {
+    if (typeof limit === "string")
+      return json(
+        response,
+        429,
+        googleError(429, "Quota exceeded.", "rateLimitExceeded", "RESOURCE_EXHAUSTED"),
+        { "retry-after": limit },
+      );
+    return json(
+      response,
+      429,
+      limit.daily
+        ? dailyLimitReached(service)
+        : googleError(429, "Quota exceeded.", "rateLimitExceeded", "RESOURCE_EXHAUSTED"),
+    );
   };
   const calendar = calendarStandIn(() => knobs.now());
   /** The person's Drive, by file id. */
@@ -311,14 +372,8 @@ export async function startGoogleStandIn() {
     // Google's server still answers the handshake and its list with the service off.
     if (knobs.off.has(service) && rpc?.method === "tools/call")
       return json(response, 403, serviceDisabled(service, rpc.id));
-    const wait = knobs.limited.shift();
-    if (wait !== undefined)
-      return json(
-        response,
-        429,
-        googleError(429, "Quota exceeded.", "rateLimitExceeded", "RESOURCE_EXHAUSTED"),
-        { "retry-after": wait },
-      );
+    const limit = takeLimit(service);
+    if (limit !== undefined) return limited(response, service, limit);
     const before = taken;
     const answer = await handlers[service].fetch(
       new Request(`http://127.0.0.1${request.url ?? "/"}`, {
@@ -386,14 +441,8 @@ export async function startGoogleStandIn() {
       });
       const bearer = request.headers.authorization?.replace(/^Bearer /, "") ?? "";
       if (!live.has(bearer)) return json(response, 401, UNAUTHENTICATED);
-      const wait = knobs.limited.shift();
-      if (wait !== undefined)
-        return json(
-          response,
-          429,
-          googleError(429, "Quota exceeded.", "rateLimitExceeded", "RESOURCE_EXHAUSTED"),
-          { "retry-after": wait },
-        );
+      const limit = takeLimit("gmail");
+      if (limit !== undefined) return limited(response, "gmail", limit);
       const [, messageId, attachmentId] = attachment;
       const file = mail.get(messageId ?? "")?.attachment;
       if (!file || attachmentId !== attachmentIdOf(messageId ?? ""))

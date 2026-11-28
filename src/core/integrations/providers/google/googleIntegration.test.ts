@@ -1553,52 +1553,69 @@ describe("Calendar on the shared Google row", () => {
     ]);
   });
 
-  it("renews the shared access for Calendar and honors Calendar backoff without claiming the person signed out", async () => {
+  // INF-7264's spec: "Keep the wait per service", since Calendar has its own 5,000 a day.
+  it("renews the shared access for Calendar and holds only Calendar on its backoff, without claiming the person signed out", async () => {
     const { google, integrations, clock } = await signedIn();
     google.lapse();
     await integrations
       .forTask("task-1")
       .call("Google", "list_calendars", {}, undefined, "To perform the task’s requested action.");
     expect(google.tokens.filter((t) => t.grant_type === "refresh_token")).toHaveLength(1);
-    google.knobs.limited.push("60");
+    google.knobs.limited.push({ service: "calendar" });
     const crew = integrations.forTask("task-1");
-    expect(
-      (
-        await crew.call(
-          "Google",
-          "list_calendars",
-          {},
-          undefined,
-          "To perform the task’s requested action.",
-        )
-      ).text,
-    ).toContain("slow down");
+    const listCalendars = () =>
+      crew.call("Google", "list_calendars", {}, undefined, "To perform the task’s requested action.");
+    expect((await listCalendars()).text).toContain(
+      "Google Calendar asked the app to slow down without saying for how long, so the app waits 60 seconds.",
+    );
     const count = google.seen.length;
-    expect(
-      (
-        await crew.call(
-          "Google",
-          "search_mail",
-          { max: 10 },
-          undefined,
-          "To perform the task’s requested action.",
-        )
-      ).text,
-    ).toContain("wait");
+    expect((await listCalendars()).text).toContain(
+      "Google Calendar asked the app to wait 60 more seconds.",
+    );
     expect(google.seen).toHaveLength(count);
+    const mail = await crew.call(
+      "Google",
+      "search_mail",
+      { max: 10 },
+      undefined,
+      "To perform the task’s requested action.",
+    );
+    expect(mail.refused).toBeUndefined();
+    expect(google.seen.length).toBeGreaterThan(count);
     expect(integrations.view().integrations[0]?.health).toBe("ok");
     clock.now += 60_000;
-    expect(
-      (
-        await crew.call(
-          "Google",
-          "list_calendars",
-          {},
-          undefined,
-          "To perform the task’s requested action.",
-        )
-      ).refused,
-    ).toBeUndefined();
+    expect((await listCalendars()).refused).toBeUndefined();
+  });
+
+  // INF-7264's spec: "when Google names the daily limit, wait until the next midnight Pacific".
+  it("holds Gmail's looks until midnight Pacific when Gmail's daily limit is reached, and looks again then", async () => {
+    const { google, clock, integrations } = await signedIn();
+    const start = await integrations.look("google", "message_received", null);
+    const id = google.deliver(ARRIVING);
+    clock.now += 61_000;
+    google.knobs.limited.push({ daily: true, service: "gmail" });
+
+    await expect(integrations.look("google", "message_received", start.cursor)).rejects.toThrow(
+      "Gmail reached its daily request limit at Google, so the app waits until midnight Pacific time, when Google resets it.",
+    );
+    const asked = google.seen.length;
+    // The clock stands at 9:01 AM Pacific on October 22, 2026; Google resets at midnight there, 07:00 UTC.
+    const midnight = Date.UTC(2026, 9, 23, 7);
+    clock.now = midnight - 60_000;
+    await expect(integrations.look("google", "message_received", start.cursor)).rejects.toThrow(
+      "Gmail reached its daily request limit at Google, so the app waits until midnight Pacific time to ask again.",
+    );
+    expect(google.seen).toHaveLength(asked);
+    const calendars = await integrations
+      .forTask("task-1")
+      .call("Google", "list_calendars", {}, undefined, "To perform the task’s requested action.");
+    expect(calendars.refused).toBeUndefined();
+
+    clock.now = midnight;
+    const found = await integrations.look("google", "message_received", start.cursor);
+    expect(found.items.map((item) => outside(item.summary))).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(id)?.threadId}`,
+    ]);
   });
 
   it("keeps no sign-in when Calendar permission was unchecked", async () => {

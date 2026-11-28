@@ -3,6 +3,7 @@ import { NOTICE_ACCEPTED } from "@shared/integrations";
 import { fencedSpans } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import { STAND_IN_ACCOUNT } from "../../../../../tests/helpers/googleStandIn";
+import { GMAIL_MESSAGE_EVENT } from "./gmail";
 import {
   type GoogleWorld,
   type GoogleWorldOptions,
@@ -265,10 +266,13 @@ describe("Gmail through its MCP server", () => {
     })
       .find((tool) => tool.name === "schedule_prompt")
       ?.run({ on_event: "google/message_received", prompt: "Tell me: {{events}}" });
+    // The scheduler ticks each minute and a rule looks once every `every` ticks.
     const tick = async () => {
-      clock.now += 60_000;
-      scheduler.tick(clock.now);
-      await scheduler.settled();
+      for (let minute = 0; minute < GMAIL_MESSAGE_EVENT.every; minute += 1) {
+        clock.now += 60_000;
+        scheduler.tick(clock.now);
+        await scheduler.settled();
+      }
     };
     await tick();
     const first = google.deliver(ARRIVING);
@@ -300,6 +304,44 @@ describe("Gmail through its MCP server", () => {
     const delivered = inbox.allFor(FIRSTMATE_RECIPIENT);
     expect(delivered).toHaveLength(2);
     for (const wake of delivered) expect(renderWake(wake)).toContain(thread);
+  });
+
+  // INF-7264: looking each minute spent Gmail's 5,000 requests a day before 8 AM, and the
+  // captain chose "Every 5 minutes, like Calendar".
+  it("looks for new mail once every five minutes through the scheduler", async () => {
+    const { google, integrations, clock, db } = await signedIn();
+    const store = new ScheduleStore(db);
+    const inbox = new InboxStore(db);
+    const scheduler = new Scheduler({
+      store,
+      inbox,
+      notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
+      broadcastEvent: () => {},
+      now: () => clock.now,
+      events: {
+        find: (integration, event) => integrations.listenable(integration, event),
+        look: (integration, event, cursor, filter) =>
+          integrations.look(integration, event, cursor, filter),
+      },
+    });
+    await scheduler.create(
+      { kind: "event", integration: "google", event: "message_received" },
+      "Tell me: {{events}}",
+      true,
+    );
+    const searches = () =>
+      google.calls("gmail").filter((call) => call.tool === "search_threads").length;
+    const lookedAt: number[] = [];
+    for (let minute = 1; minute <= 11; minute += 1) {
+      clock.now += 60_000;
+      const was = searches();
+      scheduler.tick(clock.now);
+      await scheduler.settled();
+      if (searches() > was) lookedAt.push(minute);
+    }
+    // Eleven minutes hold two looks five minutes apart, wherever the rule's first look fell.
+    expect(lookedAt).toHaveLength(2);
+    expect((lookedAt[1] ?? 0) - (lookedAt[0] ?? 0)).toBe(5);
   });
 
   // The captain's pick B on INF-7017's plan-mismatch card: a rule names only the conversation, and

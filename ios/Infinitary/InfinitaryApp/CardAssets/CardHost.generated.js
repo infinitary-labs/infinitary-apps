@@ -127833,14 +127833,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return { url, trailing };
   }
-  function isHttpUrl(value) {
-    try {
-      const parsed = new URL(value);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
-    } catch {
-      return false;
-    }
-  }
   function isSafeCardHref(value) {
     try {
       const url = new URL(value);
@@ -127860,7 +127852,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     for (const match of body.matchAll(URL_RE)) {
       const start = match.index ?? 0;
       const { url } = trimTrailingUrlPunctuation(match[0]);
-      if (!url || !isHttpUrl(url)) continue;
+      if (!url || !isSafeCardHref(url)) continue;
       if (start > cursor) {
         parts.push({ type: "text", value: body.slice(cursor, start) });
       }
@@ -136693,7 +136685,7 @@ ${FRAME_KEYBOARD_SCRIPT}
   function plainTextBody(text) {
     const linked2 = splitCardBodyUrls(text).map((part) => {
       const escaped = escapeHtml$1(part.value);
-      return part.type === "url" && isSafeCardHref(part.value) ? `<a href="${escaped}">${escaped}</a>` : escaped;
+      return part.type === "url" ? `<a href="${escaped}">${escaped}</a>` : escaped;
     }).join("");
     return linked2.split(/\n{2,}/).map((paragraph) => `<p>${paragraph.replaceAll("\n", "<br>")}</p>`).join("");
   }

@@ -1,5 +1,5 @@
 ---
-source: 86bf487dacd685ea
+source: fddef151ac47ef10
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -128,6 +128,7 @@ Um endereço da web em um cartão abre no seu navegador padrão quando você cli
 Isso inclui um endereço que um tripulante escreveu como texto comum, como um passo que diz para abrir uma página de login, no seu computador e no seu iPhone ou iPad.
 Vale para endereços que começam com https:// e para endereços http:// do seu próprio computador.
 Um endereço longo quebra a linha dentro do cartão.
+Um endereço na conversa de um cartão, nas suas respostas e nas da tripulação, abre do mesmo jeito.
 
 ## Cartões de mesclagem {#merge-cards}
 

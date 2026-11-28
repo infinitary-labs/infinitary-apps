@@ -568,6 +568,7 @@
         "!tests/phone-scene-projection.test.ts",
         "!tests/phone-reading-note.test.ts",
         "!tests/phone-card-readiness.test.ts",
+        "!tests/phone-background-waits.test.ts",
         "!tests/phone-settings-pages.test.ts",
         "!tests/virtual-mac-phone.test.ts",
         "!tests/phone-release-process.test.ts",

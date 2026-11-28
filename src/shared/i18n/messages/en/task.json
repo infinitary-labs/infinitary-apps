@@ -46,6 +46,7 @@
   "taskTagsRemovedByFirstMate": "Your first mate took {tags} off this task.",
   "taskTagsRemovedByYou": "You took {tags} off this task.",
   "taskTagsTagRemoved": "The tag {tag} was removed from this project, so this task no longer carries it.",
+  "taskWaitBackgroundRunningSince": "Background work · running since {time}",
   "taskWaitChainUntil": "Waiting on {on} · {end} waits until {time}",
   "taskWaitChainUpdate": "Waiting on {on} · {end} waits for an app update",
   "taskWaitChainVia": "Waiting on {on} · which waits on {end}",

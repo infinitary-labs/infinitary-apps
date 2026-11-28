@@ -4528,6 +4528,7 @@
 "taskTagsRemovedByFirstMate" = "Votre second a retiré %1$@ de cette tâche.";
 "taskTagsRemovedByYou" = "Vous avez retiré %1$@ de cette tâche.";
 "taskTagsTagRemoved" = "L’étiquette %1$@ a été retirée de ce projet, donc cette tâche ne la porte plus.";
+"taskWaitBackgroundRunningSince" = "Travail en arrière-plan · en cours depuis %1$@";
 "taskWaitChainUntil" = "Attend %2$@ · %1$@ attend jusqu’à %3$@";
 "taskWaitChainUpdate" = "Attend %2$@ · %1$@ attend une mise à jour de l’app";
 "taskWaitChainVia" = "Attend %2$@ · qui attend %1$@";

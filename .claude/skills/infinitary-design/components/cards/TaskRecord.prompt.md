@@ -223,5 +223,5 @@ Checks owns every named watch schedule; Blocked by or the existing hold explanat
 A lone dependency whose line goes further or ends in a hold names where it stops there, in the tile's words, before its recorded date (INF-5578).
 Remaining check-backs and holds replace the existing header reason; no generic Wait section or extra badge repeats them.
 Suppress a generic reason only when its typed source has another owner in that view; keep failure, interruption and access guidance.
-A wait with no recorded event shows no time, never a guessed or unknown one, and a past event says was due rather than resumed.
+A wait with no recorded event shows no time, never a guessed or unknown one, except background work, whose task record and phone record say `running since` when it started - only when that start is known and no check-back owns the line, and never an estimate of its end; a past event says was due rather than resumed.
 The Tasks list and board list rows retain their existing status, words, density and behavior.

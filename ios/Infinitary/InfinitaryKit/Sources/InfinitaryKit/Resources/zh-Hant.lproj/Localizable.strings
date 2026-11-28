@@ -4528,6 +4528,7 @@
 "taskTagsRemovedByFirstMate" = "你的大副從這項任務上拿掉了 %1$@。";
 "taskTagsRemovedByYou" = "你從這項任務上拿掉了 %1$@。";
 "taskTagsTagRemoved" = "標籤 %1$@ 已從這個專案移除，所以這項任務不再帶有它。";
+"taskWaitBackgroundRunningSince" = "背景工作 · 自 %1$@ 起執行中";
 "taskWaitChainUntil" = "正在等待 %2$@ · %1$@ 等到 %3$@";
 "taskWaitChainUpdate" = "正在等待 %2$@ · %1$@ 在等待應用程式更新";
 "taskWaitChainVia" = "正在等待 %2$@ · 它在等待 %1$@";

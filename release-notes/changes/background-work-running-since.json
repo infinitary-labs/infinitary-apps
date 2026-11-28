@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "background-work-running-since",
+      "kind": "fix",
+      "area": "tasks",
+      "picture": {
+        "dark": "background-work-running-since-dark.webp",
+        "light": "background-work-running-since-light.webp",
+        "alt": "A task's record with the header reading Background work, running since a time of day, above the task's title"
+      },
+      "title": "A task's background work says when it started",
+      "body": "When a crewmate's work runs in the background with no check-back set for it, and the app knows when it began, the task's record now says \"Background work · running since\" and that time, on your computer and on your phone. It tells you when the work started, not when it will finish. Before, the line gave no time at all.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

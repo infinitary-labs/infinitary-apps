@@ -4528,6 +4528,7 @@
 "taskTagsRemovedByFirstMate" = "Your first mate took %1$@ off this task.";
 "taskTagsRemovedByYou" = "You took %1$@ off this task.";
 "taskTagsTagRemoved" = "The tag %1$@ was removed from this project, so this task no longer carries it.";
+"taskWaitBackgroundRunningSince" = "Background work · running since %1$@";
 "taskWaitChainUntil" = "Waiting on %2$@ · %1$@ waits until %3$@";
 "taskWaitChainUpdate" = "Waiting on %2$@ · %1$@ waits for an app update";
 "taskWaitChainVia" = "Waiting on %2$@ · which waits on %1$@";

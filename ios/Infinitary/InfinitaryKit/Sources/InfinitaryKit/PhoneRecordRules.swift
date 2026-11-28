@@ -155,11 +155,16 @@ public enum PhoneRecord {
     }
 
     /// `taskWaitText`: the wait's name, its next event at the local clock, and when the wait was recorded. A wait with
-    /// no next event says nothing of time, and a task wait's bare key reads Waiting on it.
+    /// no next event says nothing of time, except background work, which says when it started, and a task wait's bare key reads Waiting on it.
     public static func waitText(_ wait: PhoneTask.Wait, now: Double, zone: TimeZone = .current) -> String {
         let label = wait.kind == "dependency" ? PhoneMessages.taskWaitOn(on: wait.label) : wait.label
         guard let next = wait.next else {
-            return wait.since.map { PhoneMessages.phoneRecordWaitLabelRecorded(label: label, time: clock($0, now: now, zone: zone)) } ?? label
+            guard let since = wait.since else { return label }
+            let time = clock(since, now: now, zone: zone)
+            // A known start, never a future event: background work has no end to name.
+            return wait.kind == "job"
+                ? PhoneMessages.taskWaitBackgroundRunningSince(time: time)
+                : PhoneMessages.phoneRecordWaitLabelRecorded(label: label, time: time)
         }
         let time = clock(next.at, now: now, zone: zone)
         let event = next.at <= now ? waitDue(next.kind, time: time) : waitNext(next.kind, time: time)

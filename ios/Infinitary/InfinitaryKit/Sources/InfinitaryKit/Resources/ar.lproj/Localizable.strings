@@ -4528,6 +4528,7 @@
 "taskTagsRemovedByFirstMate" = "أزال نائب القبطان %1$@ عن هذه المهمة.";
 "taskTagsRemovedByYou" = "أزلتَ %1$@ عن هذه المهمة.";
 "taskTagsTagRemoved" = "أُزيل الوسم %1$@ من هذا المشروع، فلم تعد هذه المهمة تحمله.";
+"taskWaitBackgroundRunningSince" = "العمل في الخلفية · قيد التشغيل منذ %1$@";
 "taskWaitChainUntil" = "بانتظار %2$@ · %1$@ ينتظر حتى %3$@";
 "taskWaitChainUpdate" = "بانتظار %2$@ · %1$@ ينتظر تحديث التطبيق";
 "taskWaitChainVia" = "بانتظار %2$@ · الذي ينتظر %1$@";

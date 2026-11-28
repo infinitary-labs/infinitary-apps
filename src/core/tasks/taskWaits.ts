@@ -4,7 +4,17 @@ import type { AccountHold, WorkPosture } from "@shared/workPosture";
 import type { TaskRecord } from "../storage/taskRecords";
 
 /** The posture owner supplies these from the same snapshot, including simultaneous jobs and holds. */
-export type TaskWaitFacts = { job: boolean; timerOwned: boolean; hold?: AccountHold };
+export type TaskWaitFacts = {
+  job: boolean;
+  timerOwned: boolean;
+  hold?: AccountHold;
+  /**
+   * When its oldest running job started: the host's own, or the client's reported work.
+   * A time that already happened, so it is the wait's `since`, never a `next` event;
+   * background work has no scheduled end.
+   */
+  jobSince?: number;
+};
 
 /** Pure projection of owner-held facts. No reads, command parsing or scheduling. */
 export function taskWaitsOf(input: {
@@ -63,7 +73,9 @@ export function taskWaitsOf(input: {
       label: ownsBack && back ? back.waitingFor : "Background work",
       ...(ownsBack && back
         ? { since: back.at, next: { kind: "check-back" as const, at: back.until } }
-        : {}),
+        : facts?.jobSince !== undefined
+          ? { since: facts.jobSince }
+          : {}),
     });
   const hold = facts?.hold ?? posture?.hold;
   if (hold?.class === "no_headroom")

@@ -112440,6 +112440,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `The tag ${tag} was removed from this project, so this task no longer carries it.`;
   }
+  function taskWaitBackgroundRunningSince(input2) {
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `العمل في الخلفية · قيد التشغيل منذ ${time2}`;
+      case "de":
+        return `Hintergrundarbeit · läuft seit ${time2}`;
+      case "es":
+        return `Trabajo en segundo plano · en ejecución desde ${time2}`;
+      case "fr":
+        return `Travail en arrière-plan · en cours depuis ${time2}`;
+      case "ja":
+        return `バックグラウンド処理 · ${time2} から実行中`;
+      case "ko":
+        return `백그라운드 작업 · ${time2}부터 실행 중`;
+      case "pt-BR":
+        return `Trabalho em segundo plano · em execução desde ${time2}`;
+      case "zh-Hans":
+        return `后台工作 · 自 ${time2} 起运行`;
+      case "zh-Hant":
+        return `背景工作 · 自 ${time2} 起執行中`;
+      case "en-XA":
+        return `[Ɓáçķĝŕöûñð ŵöŕķ · ŕûññîñĝ šîñçé ${time2} ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Background work · running since ‬${time2}`;
+    }
+    return `Background work · running since ${time2}`;
+  }
   function taskWaitChainUntil(input2) {
     const end = input2.end;
     const on = input2.on;
@@ -122301,6 +122329,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskTagsRemovedByFirstMate,
     taskTagsRemovedByYou,
     taskTagsTagRemoved,
+    taskWaitBackgroundRunningSince,
     taskWaitChainUntil,
     taskWaitChainUpdate,
     taskWaitChainVia,
@@ -126108,6 +126137,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskTagsRemovedByFirstMate": ["tags"],
     "taskTagsRemovedByYou": ["tags"],
     "taskTagsTagRemoved": ["tag"],
+    "taskWaitBackgroundRunningSince": ["time"],
     "taskWaitChainUntil": ["end", "on", "time"],
     "taskWaitChainUpdate": ["end", "on"],
     "taskWaitChainVia": ["end", "on"],

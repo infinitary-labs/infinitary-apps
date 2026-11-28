@@ -118,8 +118,15 @@ export class WorkPostures {
   workWaitFacts(record: TaskRecord) {
     if (record.status !== "active") return { job: false, timerOwned: false };
     const facts = this.workPostureInputs(record);
+    const job = facts.liveJobs || (facts.clientJobs ?? 0) > 0;
+    // The first mate's "running since" line reads the same two starts.
+    const starts = [
+      facts.liveJobs ? this.options.oldestRunningJob?.(record.id)?.startedAt : undefined,
+      (facts.clientJobs ?? 0) > 0 ? this.host.runtime(record.id)?.clientJobsSince : undefined,
+    ].filter((at): at is number => at !== undefined);
     return {
-      job: facts.liveJobs || (facts.clientJobs ?? 0) > 0,
+      job,
+      ...(job && starts.length ? { jobSince: Math.min(...starts) } : {}),
       timerOwned: facts.timedWait,
       ...(facts.hold ? { hold: facts.hold } : {}),
     };

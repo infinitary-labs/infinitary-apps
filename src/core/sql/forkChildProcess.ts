@@ -14,24 +14,32 @@ export function forkChildProcess(entryPath: string): HostChildSpawner {
         execArgv: [],
         stdio: ["ignore", "inherit", "inherit", "ipc"],
       });
-      let exited = false;
+      let stopped = false;
+      const stop = (): void => {
+        if (stopped) return;
+        stopped = true;
+        child.kill("SIGKILL");
+      };
       const exitListeners: ((code: number | null) => void)[] = [];
       child.once("exit", (code) => {
-        exited = true;
+        stopped = true;
         for (const listener of exitListeners) listener(code);
       });
       return {
         pid: child.pid,
         postMessage: (message) => {
-          if (!exited && child.connected) child.send(message as never);
+          if (stopped || !child.connected) return;
+          // The peer can close before Node updates `connected`. Retire the child
+          // on a failed write so its owner gets the same exit as any interruption.
+          child.send(message as never, (error) => {
+            if (error) stop();
+          });
         },
         onMessage: (listener) => child.on("message", listener),
         onExit: (listener) => {
           exitListeners.push(listener);
         },
-        kill: () => {
-          if (!exited) child.kill("SIGKILL");
-        },
+        kill: stop,
       };
     },
   };

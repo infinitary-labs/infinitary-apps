@@ -1,4 +1,3 @@
-import { PANEL_FILES_WORDS } from "@shared/personal/panelFiles";
 import { expect, test } from "vitest";
 import { fakeBridge } from "./bridge";
 import { freshHome, subscribed } from "./freshHome";
@@ -22,9 +21,7 @@ test("a refused panel mounts again once the link to the first mate comes back", 
   const bridge = fakeBridge(home);
   const mountAnswer = home["inf:frames:mount"];
   // The first mate is on another version: the window refuses its panels.
-  bridge.answer("inf:frames:mount", () => {
-    throw new Error(PANEL_FILES_WORDS.otherVersion);
-  });
+  bridge.answer("inf:frames:mount", () => ({ refused: "other-version" }));
   await openSize();
   await openWindow(bridge);
   await expect.poll(refused).toBeGreaterThan(0);

@@ -7,6 +7,7 @@ import type {
   FrameMount as Mount,
   PanelFrameConfig,
   PanelModule,
+  PanelMountRefusal,
 } from "@shared/plugins/frameDocument";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { themeFrameStyle, useThemeColorsDrawn } from "../../app/colorTheme";
@@ -71,6 +72,41 @@ export function frameWatchPaused(frame: HTMLIFrameElement | null): boolean {
   if (!panel) return false;
   return panel.hasAttribute("hidden") || panel.hasAttribute("data-side-panel-collapsed");
 }
+
+/** Why a mount drew nothing: a reason the host typed, or a rejection it did not. */
+type MountFailure = PanelMountRefusal | "unexpected";
+
+/** What the panel's place says for each failure, worded when it is shown. */
+function mountFailureWords(failure: MountFailure): string {
+  switch (failure) {
+    case "other-version":
+      return m.panelMountOtherVersion();
+    case "first-mate-out-of-reach":
+      return m.panelMountOutOfReach();
+    case "not-served-now":
+      return m.panelMountNotServed();
+    case "too-large":
+      return m.panelMountTooLarge();
+    case "no-entry":
+      return m.panelMountNoEntry();
+    case "too-many-open":
+      return m.panelMountTooMany();
+    case "unexpected":
+      return m.panelMountFailed();
+  }
+}
+
+/**
+ * The failures asking again may clear with nothing else changing; the rest
+ * wait for another version or other files, which a returning link or a new
+ * panel list mounts anew.
+ */
+const RETRIED: ReadonlySet<MountFailure> = new Set([
+  "unexpected",
+  "first-mate-out-of-reach",
+  "not-served-now",
+  "too-many-open",
+]);
 
 export type FrameMountProps = MountSource & {
   title: string;
@@ -313,7 +349,7 @@ export function FrameMount({
   const [mount, setMount] = useState<Mount | null>(null);
   const mountRef = useRef<Mount | null>(null);
   mountRef.current = mount;
-  const [failure, setFailure] = useState<string | null>(null);
+  const [failure, setFailure] = useState<MountFailure | null>(null);
   const [height, setHeight] = useState(minAutoHeight);
   const [drawnDocument, setDrawnDocument] = useState<string | null>(null);
   // A watchdog-armed mount that stopped answering, and the retry that
@@ -366,6 +402,13 @@ export function FrameMount({
     void window.infinitary.plugins
       .mountFrame(request)
       .then((result) => {
+        if ("refused" in result) {
+          if (active) {
+            setFailure(result.refused);
+            onMountErrorRef.current?.();
+          }
+          return;
+        }
         if (!active) {
           void window.infinitary.plugins.unmountFrame(result.mountId).catch(() => {});
           return;
@@ -374,8 +417,11 @@ export function FrameMount({
         setMount(result);
       })
       .catch((caught: unknown) => {
+        // The rejection's text is the transport's and the main process's
+        // English: the log keeps it, and the panel's place says one line.
+        console.warn(`"${title}" could not be mounted:`, caught);
         if (active) {
-          setFailure(caught instanceof Error ? caught.message : String(caught));
+          setFailure("unexpected");
           onMountErrorRef.current?.();
         }
       });
@@ -479,10 +525,23 @@ export function FrameMount({
   if (failure) {
     return (
       <div
-        data-frame-mount-failed=""
-        style={{ color: "var(--fg-3)", fontSize: "var(--text-sm)", padding: "var(--space-3)" }}
+        data-frame-mount-failed={failure}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "var(--space-3)",
+          padding: "var(--space-3)",
+        }}
       >
-        {m.panelCouldNotOpen({ failure })}
+        <p style={{ margin: 0, color: "var(--fg-3)", fontSize: "var(--text-sm)" }}>
+          {mountFailureWords(failure)}
+        </p>
+        {RETRIED.has(failure) ? (
+          <Button variant="secondary" size="sm" onClick={() => setAttempt((n) => n + 1)}>
+            {m.panelRetry()}
+          </Button>
+        ) : null}
       </div>
     );
   }

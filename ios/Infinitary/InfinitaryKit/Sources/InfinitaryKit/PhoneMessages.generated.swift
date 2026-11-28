@@ -1935,6 +1935,13 @@ public enum PhoneMessages {
     public static func `panelMarkFailing`(`time`: String) -> String { PhoneWords.format("panelMarkFailing", [`time`]) }
     public static func `panelMarkPaused`() -> String { PhoneWords.format("panelMarkPaused", []) }
     public static func `panelMarkStopped`() -> String { PhoneWords.format("panelMarkStopped", []) }
+    public static func `panelMountFailed`() -> String { PhoneWords.format("panelMountFailed", []) }
+    public static func `panelMountNoEntry`() -> String { PhoneWords.format("panelMountNoEntry", []) }
+    public static func `panelMountNotServed`() -> String { PhoneWords.format("panelMountNotServed", []) }
+    public static func `panelMountOtherVersion`() -> String { PhoneWords.format("panelMountOtherVersion", []) }
+    public static func `panelMountOutOfReach`() -> String { PhoneWords.format("panelMountOutOfReach", []) }
+    public static func `panelMountTooLarge`() -> String { PhoneWords.format("panelMountTooLarge", []) }
+    public static func `panelMountTooMany`() -> String { PhoneWords.format("panelMountTooMany", []) }
     public static func `panelMoveNotAsked`() -> String { PhoneWords.format("panelMoveNotAsked", []) }
     public static func `panelRailFolded`() -> String { PhoneWords.format("panelRailFolded", []) }
     public static func `panelRailMore`(`count`: String) -> String { PhoneWords.format("panelRailMore", [`count`]) }
@@ -6841,6 +6848,13 @@ extension PhoneWords {
         "panelMarkFailing": ["time"],
         "panelMarkPaused": [],
         "panelMarkStopped": [],
+        "panelMountFailed": [],
+        "panelMountNoEntry": [],
+        "panelMountNotServed": [],
+        "panelMountOtherVersion": [],
+        "panelMountOutOfReach": [],
+        "panelMountTooLarge": [],
+        "panelMountTooMany": [],
         "panelMoveNotAsked": [],
         "panelRailFolded": [],
         "panelRailMore": ["count"],

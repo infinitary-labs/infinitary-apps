@@ -22,7 +22,7 @@ import {
   panelLibrarySchema,
 } from "../personal/panelFiles";
 import { mediatedFetchCallSchema, mediatedFetchResultSchema } from "../plugins/fetch";
-import { frameMountRequestSchema, frameMountSchema } from "../plugins/frameDocument";
+import { frameMountAnswerSchema, frameMountRequestSchema } from "../plugins/frameDocument";
 import { actionNameSchema } from "../plugins/manifest";
 import { sqlAnswerSchema, sqlRequestSchema } from "../sql";
 import { type ChannelDeclaration, okSchema } from "./common";
@@ -205,13 +205,14 @@ export const panelChannels = {
     response: z.boolean(),
   },
   // The frame vehicle (phase 1): the shell serves a template document over
-  // its own scheme and hands back where the iframe loads it from. A host
+  // its own scheme and hands back where the iframe loads it from, or why it
+  // refused a panel (`PANEL_MOUNT_REFUSALS`). A host
   // without a desktop frame would answer with its own vehicle.
   "inf:frames:mount": {
     effect: "change",
     surface: "host",
     request: z.tuple([frameMountRequestSchema]),
-    response: frameMountSchema,
+    response: frameMountAnswerSchema,
   },
   "inf:frames:unmount": {
     effect: "change",

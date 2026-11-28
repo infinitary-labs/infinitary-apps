@@ -31,10 +31,9 @@ test("the test home seeds the three background-work wait states the phone's reco
     const owned = await seed("check-back");
     const own = owned.wait;
     expect(own).toMatchObject({ label: "Website build", next: { kind: "check-back" } });
-    // The check-back keeps its own recorded time and its scheduled time, 30 minutes on; the job's
-    // earlier start does not replace either.
-    expect(own?.since).toBeDefined();
-    expect(own?.since).not.toBe(owned.jobSince);
+    expect(typeof owned.jobSince).toBe("number");
+    expect(typeof own?.since).toBe("number");
+    expect(owned.jobSince as number).toBeLessThan(own?.since as number);
     expect((own?.next?.at ?? 0) - (own?.since ?? 0)).toBe(30 * 60_000);
 
     const unknown = await seed("unknown");

@@ -1118,6 +1118,26 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       expect(reportWakes(ops)[1]).toContain("The plan card now names the builder.");
     });
 
+    // INF-7157: a relay made 20 seconds before its crewmate's card woke the
+    // first mate, which put the crewmate's finding on its own card first.
+    // The mid-turn wake says the card is still coming; the turn's end, when
+    // any card is shown, does not.
+    it("says a mid-turn relay's card is still coming, and drops that at the turn's end", async () => {
+      const crewmate = fakeCrewmate();
+      const { ops, specs, taskId } = await reportedTask(crewmate);
+      const CARD_COMING =
+        "Its crewmate's turn goes on after this report and it has shown no card yet: its card is still coming.";
+      specs[0]?.onReport?.(RELAY, undefined, { needsFirstmate: ASK });
+      expect(reportWakes(ops)).toHaveLength(1);
+      expect(reportWakes(ops)[0]).toContain(CARD_COMING);
+      specs[0]?.onReport?.(`${RELAY} The answer card is up.`, undefined, {
+        needsFirstmate: ASK,
+      });
+      await endTurn(crewmate, taskId);
+      expect(reportWakes(ops)).toHaveLength(2);
+      expect(reportWakes(ops)[1]).not.toContain("Its crewmate's turn goes on");
+    });
+
     // INF-4497's finding 5: a blocker report with its wait details reached
     // the first mate twice - the relay at the call without them, the turn's
     // end with them - and the second turn had nothing new to do. The relay

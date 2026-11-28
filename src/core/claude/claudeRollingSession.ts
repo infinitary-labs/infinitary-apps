@@ -879,6 +879,7 @@ export class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implemen
       error: failure.outputCapped && cap !== undefined ? outputCapErrorMessage(cap) : failure.error,
       ...(failure.cutOff ? { cutOff: failure.cutOff } : {}),
       ...(failure.contextOverflow ? { contextOverflow: true } : {}),
+      ...(failure.refused ? { refused: failure.refused } : {}),
     });
     this.closeTurn(result, undefined);
   }

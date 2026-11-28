@@ -137282,6 +137282,12 @@ ${FRAME_KEYBOARD_SCRIPT}
       /** The backend exhausted its own context-length recovery. */
       contextOverflow: literal(true).optional(),
       /**
+       * The model refused the conversation (the API's `stop_reason`
+       * `refusal`), with the provider's category when it named one. Absent
+       * from a backend that reports prose only, and on an older side.
+       */
+      refused: object({ category: string().optional() }).optional(),
+      /**
        * The Firstmate's seat paused on this cut-off: its pause line and card
        * speak for the failure. Absent when the cut-off paused nothing (a
        * spent allowance with no known reset), which is an ordinary failure.

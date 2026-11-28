@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "safety-refusal-counts-as-stuck",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate its model's safety filter refuses stops retrying after three tries",
+      "body": "When a Claude model's safety filter refuses a crewmate's conversation three times in a row, the app now stops sending it again, the task reads Stuck at its provider, and your first mate can continue it in a fresh conversation or on another model. Before, the app kept sending the same refused message every 15 minutes with no end, and the first mate's restart was turned down.",
+      "noPicture": "This changes when the existing Stuck at its provider status appears, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

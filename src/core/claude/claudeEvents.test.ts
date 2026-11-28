@@ -259,6 +259,60 @@ describe("fmEventsFromClaudeMessage, a turn's outcome", () => {
   });
 });
 
+/**
+ * The model's safety filter refusing a conversation (INF-7250's finding 1),
+ * in the shape a Claude Code 2.1.332 crewmate's session recorded it on
+ * INF-6971: an assistant message with `stop_reason` `refusal`, its
+ * `stop_details` category, and words that name a fresh request and message
+ * id each time.
+ */
+function safetyRefusal(n: number, fields: Record<string, unknown> = {}) {
+  const words = `API Error: Opus 5.5's safeguards flagged this message (https://www.anthropic.com/legal/aup). This sometimes happens with safe, normal conversations. Claude Code can't respond to this message with Opus 5.5.\n\nTry rephrasing the request in a new session or change your model.\n\nDetails: \`[reasoning_extraction]\`\n\nRequest ID: req_011ChUxbPbKQy3Pva5Rv2${n}\n\nMessage ID: msg_011ChUxbQKivYZGMiX4Fk${n}`;
+  return {
+    words,
+    message: {
+      type: "assistant",
+      message: {
+        role: "assistant",
+        model: "<synthetic>",
+        stop_reason: "refusal",
+        stop_details: { type: "refusal", category: "reasoning_extraction", explanation: null },
+        content: [{ type: "text", text: words }],
+      },
+      parent_tool_use_id: null,
+      error: "invalid_request",
+      ...fields,
+    },
+  };
+}
+
+describe("a turn the model's safety filter refused", () => {
+  it("fails the turn with the typed refusal and its category, beside the session's words", () => {
+    const { words, message } = safetyRefusal(1);
+    expect(turn(message, successResult({ is_error: true, result: words })).failure).toEqual({
+      error: words,
+      refused: { category: "reasoning_extraction" },
+    });
+  });
+
+  it("reads no refusal from a subagent's refused answer, nor carries one into the next turn", () => {
+    const { message } = safetyRefusal(2, { parent_tool_use_id: "toolu_1" });
+    expect(
+      turn(message, successResult({ is_error: true, result: "API Error: 500" })).failure,
+    ).toEqual({ error: "API Error: 500" });
+    const state = createNormalizerState();
+    fmEventsFromClaudeMessage(safetyRefusal(3).message, "task-1", state);
+    fmEventsFromClaudeMessage(successResult(), "task-1", state);
+    expect(
+      fmEventsFromClaudeMessage(
+        successResult({ is_error: true, result: "API Error: 500" }),
+        "task-1",
+        state,
+      ).failure,
+    ).toEqual({ error: "API Error: 500" });
+  });
+});
+
 describe("extra usage in the pushed reading", () => {
   const fixture = (name: string) =>
     JSON.parse(

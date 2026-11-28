@@ -98420,6 +98420,14 @@
                                   "type": "boolean",
                                   "const": true
                                 },
+                                "refused": {
+                                  "type": "object",
+                                  "properties": {
+                                    "category": {
+                                      "type": "string"
+                                    }
+                                  }
+                                },
                                 "paused": {
                                   "type": "boolean"
                                 },
@@ -103107,6 +103115,14 @@
               "contextOverflow": {
                 "type": "boolean",
                 "const": true
+              },
+              "refused": {
+                "type": "object",
+                "properties": {
+                  "category": {
+                    "type": "string"
+                  }
+                }
               },
               "paused": {
                 "type": "boolean"

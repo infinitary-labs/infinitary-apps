@@ -276,6 +276,8 @@ export type TaskRuntime = {
   lastTurnCutOff?: CutOff;
   /** `lastTurnError` is the model's context limit, as the backend typed it. */
   lastTurnContextOverflow?: true;
+  /** `lastTurnError` is the model refusing the conversation, as the backend typed it. */
+  lastTurnRefused?: { category?: string };
   /**
    * This conversation is the one fresh conversation a context-limit failure
    * opened (`CrewTurns.recoverContext`), and no turn in it has ended clean

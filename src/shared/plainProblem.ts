@@ -320,6 +320,15 @@ export function refusalWords(error: string): string {
 }
 
 /**
+ * A model's typed refusal of the conversation (the API's `stop_reason`
+ * `refusal`) as the stuck count compares it: by the fact and the provider's
+ * category, never by its words, which name a fresh message each time.
+ */
+export function modelRefusalWords(refused: { category?: string }): string {
+  return `stop_reason:refusal:${refused.category ?? ""}`;
+}
+
+/**
  * The typed failure a timeline event recorded (`TaskService.turns.recordTurnFailure`),
  * or undefined for a failure recorded as prose.
  */

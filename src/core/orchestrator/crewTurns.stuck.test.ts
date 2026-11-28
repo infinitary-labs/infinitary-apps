@@ -160,6 +160,67 @@ describe("a crewmate stuck at its provider", () => {
     expect(statusOf(harness)).toBe(AT_PROVIDER_WORDS.stuck);
   });
 
+  // INF-7250's finding 1, started by the captain: a refusal by the model's
+  // safety filter is a refusal, read from the typed fact the Claude client
+  // attaches. Its words, as INF-6971's session recorded them, name a fresh
+  // request and message id each time.
+  const safetyRefusal = (n: number) =>
+    `API Error: Opus 5.5's safeguards flagged this message (https://www.anthropic.com/legal/aup). This sometimes happens with safe, normal conversations. Claude Code can't respond to this message with Opus 5.5.\n\nTry rephrasing the request in a new session or change your model.\n\nRequest ID: req_011ChUxbPbKQy3Pva5Rv2${n}\n\nMessage ID: msg_011ChUxbQKivYZGMiX4Fk${n}`;
+  const refused = { refused: { category: "reasoning_extraction" } };
+
+  it("stops at the third safety-filter refusal by its typed fact, whatever message each names, and restarts on the answer", async () => {
+    const harness = await stopped();
+    const { supervisor, crewmate, taskId, tasks, inbox, ops, specs } = harness;
+    await supervisor.steer.steerCrewmate(taskId, "carry on with the handoff");
+    await settle();
+    for (let refusal = 1; refusal <= STUCK_REFUSAL_LIMIT; refusal++) {
+      if (refusal > 1) await sweepWhenDue(harness, taskId);
+      expect(inbox.stuck(taskId)).toBeUndefined();
+      await failTurn(crewmate, taskId, safetyRefusal(refusal), refused);
+    }
+    expect(inbox.stuck(taskId)).toMatchObject({ refusals: STUCK_REFUSAL_LIMIT });
+    expect(statusOf(harness)).toBe(AT_PROVIDER_WORDS.stuck);
+    // The first mate hears once, with the refusal's own words, which name
+    // the two ways out, and both answers that take them.
+    expect(stuckWakes(ops)).toHaveLength(1);
+    expect(stuckWakes(ops)[0]).toContain("in a new session or change your model");
+    expect(stuckWakes(ops)[0]).toContain(
+      `update_task task ${tasks.get(taskId)?.key} unstick restart`,
+    );
+
+    const sessions = specs.length;
+    expect(await supervisor.turns.unstick(taskId, "restart")).toMatchObject({ ok: true });
+    await settle();
+    expect(specs.length).toBe(sessions + 1);
+    expect(specs.at(-1)?.resumeToken).toBeUndefined();
+    expect(crewmate.promptCalls.at(-1)).toContain("carry on with the handoff");
+  });
+
+  it("keeps the honest retry for the same words without the typed fact, and for one refusal a turn answers after", async () => {
+    const harness = await stopped();
+    const { supervisor, crewmate, taskId, inbox, ops } = harness;
+    await supervisor.steer.steerCrewmate(taskId, "carry on with the handoff");
+    await settle();
+    // The words alone never make a refusal: a prose backend's failure in
+    // them stays an outage, however often it repeats.
+    for (let outage = 1; outage <= STUCK_REFUSAL_LIMIT + 1; outage++) {
+      if (outage > 1) await sweepWhenDue(harness, taskId);
+      await failTurn(crewmate, taskId, safetyRefusal(1));
+    }
+    expect(inbox.stuck(taskId)).toBeUndefined();
+    expect(statusOf(harness)).toBe(AT_PROVIDER_WORDS.retrying);
+
+    // One refusal, then a turn that goes through: nothing stays stuck or held.
+    await sweepWhenDue(harness, taskId);
+    await failTurn(crewmate, taskId, safetyRefusal(2), refused);
+    await sweepWhenDue(harness, taskId);
+    await endTurn(crewmate, taskId, "Finished the handoff.");
+    expect(inbox.stuck(taskId)).toBeUndefined();
+    expect(inbox.allFor(taskId)).toEqual([]);
+    expect(stuckWakes(ops)).toEqual([]);
+    expect(statusOf(harness)).not.toMatch(/at its provider/);
+  });
+
   it("takes a steer as the answer, and tells the first mate at once when it meets the same refusal", async () => {
     const harness = await stopped();
     const { supervisor, crewmate, taskId, inbox, ops } = harness;

@@ -710,6 +710,7 @@ export class CrewToolHooks {
         task.lastTurnError = event.error;
         task.lastTurnCutOff = event.cutOff;
         task.lastTurnContextOverflow = event.contextOverflow;
+        task.lastTurnRefused = event.refused;
         break;
       }
       case "tool_start": {

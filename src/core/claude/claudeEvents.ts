@@ -48,6 +48,8 @@ export type ClaudeNormalizerState = {
     ClaudeSignal,
     "assistantError" | "rateLimitStatus" | "resetsAt" | "overageStatus"
   >;
+  /** The turn's own assistant message stopped on a model refusal since the last result. */
+  turnRefusal?: ModelRefusal;
 };
 
 export function createNormalizerState(): ClaudeNormalizerState {
@@ -81,7 +83,17 @@ export type ClaudeTurnFailure = {
   cutOff?: CutOff;
   outputCapped?: true;
   contextOverflow?: true;
+  /**
+   * The model's safety filter refused the conversation: the turn's own
+   * assistant message stopped with `stop_reason` `refusal`. Its words carry
+   * a fresh message id each time, so only this typed fact says two such
+   * failures are the same refusal.
+   */
+  refused?: ModelRefusal;
 };
+
+/** A model's refusal of a conversation, with the provider's category when it named one. */
+export type ModelRefusal = { category?: string };
 
 /**
  * Claude Code's refusal fallback (`model_refusal_fallback`): the model the
@@ -190,6 +202,8 @@ export function fmEventsFromClaudeMessage(
       if (mainThread && typeof message.error === "string") {
         state.turnSignal.assistantError = message.error;
       }
+      const refusal = mainThread ? modelRefusalOf(message.message) : undefined;
+      if (refusal) state.turnRefusal = refusal;
       return { events: toolStartEvents(message.message, taskId, state) };
     }
     case "user":
@@ -244,7 +258,9 @@ function turnFailure(
       ? { terminalReason: message.terminal_reason }
       : {}),
   });
+  const refused = state.turnRefusal;
   state.turnSignal = {};
+  state.turnRefusal = undefined;
   if (outcome.kind === "ok") return undefined;
   const errors = Array.isArray(message.errors)
     ? message.errors.filter(
@@ -261,7 +277,19 @@ function turnFailure(
       : STOPPED_EARLY_TEXT);
   if (outcome.kind === "cut-off") return { error, cutOff: outcome.cutOff };
   if (message.terminal_reason === "prompt_too_long") return { error, contextOverflow: true };
-  return outputCapped ? { error, outputCapped: true } : { error };
+  if (outputCapped) return { error, outputCapped: true };
+  return refused ? { error, refused } : { error };
+}
+
+/**
+ * The refusal an assistant message stopped on: the API's `stop_reason`
+ * `refusal`, with `stop_details.category` when the provider named one.
+ */
+function modelRefusalOf(body: unknown): ModelRefusal | undefined {
+  if (!isRecord(body) || body.stop_reason !== "refusal") return undefined;
+  const details = body.stop_details;
+  const category = isRecord(details) ? details.category : undefined;
+  return typeof category === "string" && category ? { category } : {};
 }
 
 function deltaEvents(event: unknown, taskId: string): FmEvent[] {

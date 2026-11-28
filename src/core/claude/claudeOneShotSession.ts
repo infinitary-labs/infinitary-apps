@@ -228,6 +228,7 @@ export class ClaudeOneShotSession extends ClaudeQueryCore<SessionEvent> implemen
       error: failure.error,
       ...(failure.cutOff ? { cutOff: failure.cutOff } : {}),
       ...(failure.contextOverflow ? { contextOverflow: true } : {}),
+      ...(failure.refused ? { refused: failure.refused } : {}),
     });
     this.answer(result, undefined);
   }

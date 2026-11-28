@@ -8,7 +8,12 @@ import { isCustomApiProvider } from "@shared/customApi";
 import type { FmEvent } from "@shared/events";
 import { reportSummary } from "@shared/feed";
 import { offeringKey } from "@shared/modelSlots";
-import { isProviderRefusal, refusalWords, type TypedFailure } from "@shared/plainProblem";
+import {
+  isProviderRefusal,
+  modelRefusalWords,
+  refusalWords,
+  type TypedFailure,
+} from "@shared/plainProblem";
 import { PROVIDER_CATALOG } from "@shared/providers";
 import type { HandoverFile } from "@shared/work";
 import { ComputerBehindError } from "../connection/contractChanges";
@@ -355,6 +360,7 @@ export class CrewTurns {
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
     task.lastTurnContextOverflow = undefined;
+    task.lastTurnRefused = undefined;
     task.lastEventAt = this.core.now();
     task.turnStartedAt = this.core.now();
     task.quietLevel = 0;
@@ -685,9 +691,21 @@ export class CrewTurns {
     // one fresh conversation, as the first mate's does; a second one, in
     // that fresh conversation, is the first mate's to act on.
     const overflowed = providerError !== undefined && task.lastTurnContextOverflow === true;
+    // The words the stuck count compares a refusal by: the backend's typed
+    // refusal of the conversation, whose words name a fresh message each
+    // time, else a request refused as malformed, read from its words.
+    const refusal =
+      providerError === undefined
+        ? undefined
+        : task.lastTurnRefused
+          ? modelRefusalWords(task.lastTurnRefused)
+          : isProviderRefusal(providerError)
+            ? refusalWords(providerError)
+            : undefined;
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
     task.lastTurnContextOverflow = undefined;
+    task.lastTurnRefused = undefined;
     const recoverContext = overflowed && !task.contextRecovered;
     if (!providerError && !paused) task.contextRecovered = undefined;
     // A cut-off is a fact about the account, not only this turn: it stands
@@ -788,8 +806,8 @@ export class CrewTurns {
             ? { notBefore: cutOff.resetsAt }
             : cutOff
               ? {}
-              : isProviderRefusal(providerError)
-                ? { refusal: refusalWords(providerError) }
+              : refusal !== undefined
+                ? { refusal }
                 : {},
         );
       } else if (providerError) {
@@ -833,7 +851,7 @@ export class CrewTurns {
     // same refusal on one account"); a turn that went through ends that.
     const account = this.core.ladder.accountOf(task.id);
     if (account && !providerError && !paused) this.accountRefusals.answered(account);
-    const refusal =
+    const accountRefusal =
       account &&
       providerError !== undefined &&
       !signInFailure &&
@@ -843,13 +861,13 @@ export class CrewTurns {
         ? this.accountRefusals.tell(account, refusalWords(providerError), task.id)
         : undefined;
     const sameAccount =
-      account && refusal?.first
+      account && accountRefusal?.first
         ? this.core.ladder.tasksOnAccount(account).filter((other) => other.id !== task.id)
         : undefined;
     // Another task on the account already woke the first mate in these words.
-    const toldForAccount = refusal !== undefined && !refusal.first;
+    const toldForAccount = accountRefusal !== undefined && !accountRefusal.first;
     // A lane stuck in those words is not told either: that task's wake named it.
-    const stuckToldElsewhere = toldForAccount && refusal.teller !== task.id;
+    const stuckToldElsewhere = toldForAccount && accountRefusal.teller !== task.id;
     // A paused turn that reported needs no carrying on: its report stands.
     // Nor does one its model never took: its own rows carry it.
     if (paused?.row !== undefined && (report || paused.unstarted))

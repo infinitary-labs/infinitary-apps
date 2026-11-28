@@ -53,8 +53,13 @@ export function wakesThroughInbox<
   return harness;
 }
 
-export async function failTurn(crewmate: FakeCrewmate, taskId: string, error = "upstream 529") {
-  crewmate.emit({ type: "turn_failed", taskId, error });
+export async function failTurn(
+  crewmate: FakeCrewmate,
+  taskId: string,
+  error = "upstream 529",
+  typed: { refused?: { category?: string } } = {},
+) {
+  crewmate.emit({ type: "turn_failed", taskId, error, ...typed });
   crewmate.emit({ type: "turn_end", taskId });
   crewmate.finishPrompt();
   await settle();

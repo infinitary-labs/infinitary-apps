@@ -378,7 +378,8 @@ export type ReportSortFacts = Witnesses & {
   programPart?: boolean;
   /**
    * The task is the host's own release check (`in_place.release`,
-   * docs/task-record.md "A release check"): the host closes it on its report.
+   * docs/task-record.md "A release check") and its report hands nothing on
+   * (`releaseCheckReported`), so the host closes it.
    */
   hostCheck?: boolean;
 };

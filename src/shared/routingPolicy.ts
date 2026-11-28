@@ -419,8 +419,9 @@ export const workShapeSchema = z.object({
    *
    * A release check carries the merged tasks it was filed for (`release`):
    * work a release-moment side-effect task waits on with no recorded first
-   * release (docs/task-record.md, "A release check"). The host closes it once
-   * its crewmate reported.
+   * release (docs/task-record.md, "A release check"). The host closes it only
+   * on a report that hands nothing on (`releaseCheckReported`); a blocked
+   * report keeps it open.
    *
    * The host renders the brief from each at each start.
    *

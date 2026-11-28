@@ -68,7 +68,7 @@ export type ReleaseCheckTask = {
  * the way the project ships and declares it through `report.first_release`.
  * The host knows nothing of how a project releases; a tag at origin is only a
  * hint to look sooner, never a release. The minute's read in `InPlaceWork`
- * closes a check once its crewmate reported.
+ * closes a check once its crewmate's report handed nothing on.
  */
 export class ReleaseChecks {
   /**

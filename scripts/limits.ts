@@ -833,7 +833,7 @@ export const BASELINE: Record<string, Record<string, string>> = {
   },
   // INF-7222's plan: the card overlay opens with the window's unsent message, waiting no longer than a key press should.
   "src/main/overlayDraft.ts": {
-    LEND_LIMIT_MS: "the overlay's message box opens empty; the window keeps its words",
+    LEND_LIMIT_MS: "the overlay's message box opens with kept words or empty, and the window keeps its own; what the overlay holds as it goes is kept for the next opening or an empty window",
   },
   "src/shared/accounts.ts": {
     ACCOUNT_LABEL_MAX: "the rename field stops typing at 64; IPC refuses a longer label",

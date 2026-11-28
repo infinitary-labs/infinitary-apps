@@ -6,7 +6,7 @@ import { MAIN_COMMAND_IDS, type MainCommandId } from "../keyboard";
 import { offeredKeySchema } from "../keyboardOffer";
 import { keymapSnapshotSchema, panelCommandsSchema, savedKeymapSchema } from "../keymap";
 import { keyRemindersSchema } from "../keyReminders";
-import { lentDraftSchema } from "../overlayDraft";
+import { keptDraftSchema, lentDraftSchema } from "../overlayDraft";
 import { resetAnswerSchema } from "../reset";
 import {
   micAccessSchema,
@@ -192,6 +192,13 @@ export const shellChannels = {
     surface: "host",
     request: z.tuple([lentDraftSchema]),
     response: okSchema,
+  },
+  // A window whose box is empty takes the words the overlay handed back with no window to take them.
+  "inf:composer:take-kept": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([]),
+    response: keptDraftSchema,
   },
   // The window answers the overlay's ask for its unsent message (`inf:composer:lend-ask`).
   "inf:composer:lent": {

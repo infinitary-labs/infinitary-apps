@@ -435,6 +435,8 @@ export const pushContract = {
   "inf:composer:lend-ask": { payload: lendAskSchema, surface: "host" },
   // The overlay went: the message it was lent comes back, taken only while the window's box is as it lent it.
   "inf:composer:hand-back": { payload: lentDraftSchema, surface: "host" },
+  // The overlay went with words no window lent for: a window with an empty box takes them (`inf:composer:take-kept`).
+  "inf:composer:kept": { payload: z.object({}), surface: "host" },
   // The window filled the screen or stopped filling it.
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
   // Someone came back to this computer or left it (src/main/presence.ts).

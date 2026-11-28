@@ -469,6 +469,10 @@ export type FirstmateApi = {
     lend: (lent: import("./overlayDraft").LentDraft) => Promise<{ ok: true }>;
     /** The window: the overlay handed back the message it was lent. */
     onHandBack: (listener: (lent: import("./overlayDraft").LentDraft) => void) => () => void;
+    /** The window: the overlay went with words no window lent for; take them into an empty box with `takeKept`. */
+    onKept: (listener: () => void) => () => void;
+    /** The window: takes the kept words, once, or null when none are kept. */
+    takeKept: () => Promise<import("./overlayDraft").MainDraft | null>;
   };
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {

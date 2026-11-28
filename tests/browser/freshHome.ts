@@ -89,6 +89,8 @@ function homeAnswers({ plain, asked }: FreshHomeAnswers): Answers {
     // A Mac that never turned the card overlay on (src/main/cardOverlay.ts): the switch off,
     // the default key, and nothing wrong with it.
     "inf:overlay:settings": { ...DEFAULT_CARD_OVERLAY, problem: null },
+    // No card overlay went with words no window took (src/main/overlayDraft.ts): none kept.
+    "inf:composer:take-kept": null,
     "inf:devices:this-mac": { role: "home", left: null },
     // A Mac's first launch reads itself for Set up from your first mate's computer
     // (src/core/devices/setUpHere.ts): a Mac on a private network with Remote Login on.

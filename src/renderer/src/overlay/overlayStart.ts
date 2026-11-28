@@ -47,7 +47,7 @@ export function startOverlayStore(): Promise<void> {
   return readCardsAgain(get, () => set({ cardsSnapshotLoaded: true }));
 }
 
-/** The window's message lent for this opening, handed back as the overlay goes. */
+/** This opening's message - the window's, kept words or an empty one - handed back as the overlay goes. */
 let lent: number | null = null;
 
 /** The message box opens with the window's unsent message. */
@@ -57,7 +57,7 @@ export function takeLentDraft(draft: LentDraft | null | undefined): void {
   useShellStore.setState({ ...composerOf(draft.draft), inputCaret: draft.draft.text.length });
 }
 
-/** Sends the words not yet sent before the overlay's page goes, and gives the window its message back. */
+/** Sends the words not yet sent before the overlay's page goes, and hands its message back to the window or to be kept. */
 export function settleOverlayDrafts(): Promise<void> {
   const back =
     lent === null

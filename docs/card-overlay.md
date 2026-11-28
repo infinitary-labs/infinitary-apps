@@ -126,7 +126,9 @@ One message lives in two places, in memory only, as the window's composer does.
 As the panel opens, `inf:overlay:start` asks the main window for its unsent message (`inf:composer:lend-ask`, answered on `inf:composer:lent`) and waits at most `LEND_LIMIT_MS` for it, so the box opens with the window's words.
 As the panel goes, the page hands the message back once, to the window that lent it (`inf:overlay:hand-back`, then `inf:composer:hand-back`); the window takes it only while its own box still holds what it lent, so words typed in the window meanwhile are never replaced.
 A message sent from the box becomes the one Up recalls in the window, unless the window sent one since.
-With no main window open, the box opens empty and its unsent words go with the panel.
+When no window lends - none is open, or it answers after `LEND_LIMIT_MS` - the box opens with the words an earlier overlay kept, or empty, and as it goes the main process keeps the words it holds, in memory only (the captain's choice on the change's review: "Keep them for the next overlay opening or window").
+Kept words go once: to the next overlay opening, when no window lends or the window lends an empty box, or to a window whose box holds nothing, which takes them as it opens or when the main process says words are kept (`inf:composer:kept`, then `inf:composer:take-kept`).
+A window whose box holds words of its own leaves them kept.
 
 A send carries the shown card's id as the window's does (`visibleCardId`), as a hint, not the topic.
 After a send from the box in this opening, the newest round - the message, the first mate's mark, its working words and its reply line - shows above the field on the same surface; it is not a button and opens nothing, since the conversation stays in the window.

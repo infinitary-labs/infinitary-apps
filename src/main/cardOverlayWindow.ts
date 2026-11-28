@@ -238,6 +238,10 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
     handBack: (contents, lent) => {
       if (!contents.isDestroyed()) contents.send("inf:composer:hand-back", lent);
     },
+    kept: () => {
+      for (const win of openMainWindows())
+        if (!win.webContents.isDestroyed()) win.webContents.send("inf:composer:kept", {});
+    },
     later: (run, ms) => setTimeout(run, ms),
     cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
   });

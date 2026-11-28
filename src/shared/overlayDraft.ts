@@ -37,6 +37,11 @@ export const mainDraftSchema = z.strictObject({
 });
 export type MainDraft = z.infer<typeof mainDraftSchema>;
 
+/** Whether a message holds anything not sent: words or a chip. */
+export function holdsWords(draft: Pick<MainDraft, "text" | "pastes" | "attachments">): boolean {
+  return draft.text.trim() !== "" || draft.pastes.length > 0 || draft.attachments.length > 0;
+}
+
 /**
  * A draft lent for one opening of the overlay: `ask` names the lending, so
  * the hand-back reaches the window that lent it and only while that window's
@@ -50,3 +55,9 @@ export type LentDraft = z.infer<typeof lentDraftSchema>;
 
 /** The window was asked for its draft (`ask`): it answers with `inf:composer:lent`. */
 export const lendAskSchema = z.strictObject({ ask: z.number().int().positive() });
+
+/**
+ * Words the overlay handed back with no window to take them are kept in
+ * memory: a window whose box is empty takes them with `inf:composer:take-kept`.
+ */
+export const keptDraftSchema = mainDraftSchema.nullable();

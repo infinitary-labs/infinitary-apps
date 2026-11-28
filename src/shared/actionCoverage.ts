@@ -634,6 +634,10 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
     "window",
     "The card overlay's message box handing the window's unsent message back as it goes",
   ],
+  "inf:composer:take-kept": [
+    "window",
+    "The window taking into its empty box the words the card overlay kept when no window lent its message",
+  ],
   "inf:composer:lent": [
     "window",
     "The window lending its unsent message to the card overlay as it opens",

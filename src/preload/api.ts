@@ -286,6 +286,8 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       onLendAsk: (listener) => subscribe("inf:composer:lend-ask", ({ ask }) => listener(ask)),
       lend: (lent) => invoke("inf:composer:lent", lent),
       onHandBack: (listener) => subscribe("inf:composer:hand-back", listener),
+      onKept: (listener) => subscribe("inf:composer:kept", () => listener()),
+      takeKept: () => invoke("inf:composer:take-kept"),
     },
     devices: {
       shown: () => invoke("inf:devices:shown"),

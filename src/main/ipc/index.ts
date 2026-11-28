@@ -211,13 +211,17 @@ export function registerIpc(options: IpcOptions): void {
     const panel = cardOverlay.panelOf(event.sender);
     if (!panel) return { cardId: null, lent: null };
     await cardOverlay.controller.pressed(panel);
-    // Lent at the key, so the box opens with the words the window holds as it is pressed.
+    // Lent at the key, so the box opens with the words the window holds as it is pressed, or those kept.
     return { cardId: noticedCard(), lent: await cardOverlay.drafts.lend() };
   });
   handleInvoke("inf:overlay:hand-back", rendererSource, (event, lent) => {
     if (cardOverlay.panelOf(event.sender)) cardOverlay.drafts.handBack(lent);
     return { ok: true as const };
   });
+  // Kept words go to one window, once (`DraftRelay.takeKept`); the overlay's own page takes none.
+  handleInvoke("inf:composer:take-kept", rendererSource, (event) =>
+    cardOverlay.panelOf(event.sender) ? null : cardOverlay.drafts.takeKept(),
+  );
   // Taken only from the window the overlay asked (`DraftRelay.lent`).
   handleInvoke("inf:composer:lent", rendererSource, (event, lent) => {
     cardOverlay.drafts.lent(event.sender, lent);

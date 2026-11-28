@@ -1,9 +1,11 @@
 import * as m from "@shared/i18n/messages.generated";
+import { holdsWords } from "@shared/overlayDraft";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cardStage } from "../app/cardStage";
 import { focusLanding } from "../app/focusLanding";
 import { guardLostFocus } from "../app/focusRecovery";
 import { guardHeldPresses } from "../app/heldKeys";
+import { mainDraftOf } from "../app/lendDraft";
 import { followNotTypingKeys } from "../app/notTypingKeys";
 import { followShellCommands } from "../app/shellCommands";
 import { shownEntry, stackOf } from "../app/stack";
@@ -27,11 +29,6 @@ const CLEAR =
  * the word that the first reads failed, so nothing can be shown.
  */
 type Phase = "starting" | "cards" | "nothing";
-
-/** Whether the main message holds anything not sent: words or a chip. */
-function holdsWords(s: { inputText: string; pastes: unknown[]; attachments: unknown[] }): boolean {
-  return s.inputText.trim() !== "" || s.pastes.length > 0 || s.attachments.length > 0;
-}
 
 /**
  * The card overlay's page (docs/card-overlay.md): the card stack and the
@@ -130,7 +127,7 @@ export function CardOverlay() {
       useShellStore.subscribe((state, before) => {
         if (phase !== "cards" || !state.cardsSnapshotLoaded) return;
         const emptied = stackOf(state).length === 0 && stackOf(before).length > 0;
-        if (emptied && !holdsWords(state)) leave();
+        if (emptied && !holdsWords(mainDraftOf(state))) leave();
       }),
     [phase, leave],
   );

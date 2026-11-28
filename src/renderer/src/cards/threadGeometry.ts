@@ -18,8 +18,8 @@
  *     one click away.
  *  3. **In place.** The card's body becomes the thread, behind a segmented
  *     control in its head. It needs a stage under 720px, which the
- *     window's 960px minimum never gives; the card overlay's narrow panel
- *     (docs/card-overlay.md) always does, so a thread opens in place there.
+ *     window's 960px minimum never gives; the card overlay's panel
+ *     (docs/card-overlay.md) does on a narrow display or a large Size.
  *
  * Tweak 3 - the reply box under the action row while there is no thread yet
  * - is the card's own footer and needs no arithmetic.

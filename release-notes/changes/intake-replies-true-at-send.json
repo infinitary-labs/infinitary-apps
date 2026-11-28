@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "intake-replies-true-at-send",
+      "reason": "Changes only the outside intake method this project's own maintainers' crew follows (docs/outside-intake.md), with no app behavior change."
+    }
+  ]
+}

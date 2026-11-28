@@ -64,7 +64,7 @@ An item is listed when one of these holds:
 
 - it has no crew reply yet;
 - after the clock, its author or another account that cannot write commented, answered on the change or pushed a new version;
-- it is an issue whose linked task finished with a result the crew's last reply does not yet answer ("What a round knows of its builds");
+- it is an issue whose linked task finished with a result the crew's last reply does not yet answer ("What a round knows of its builds"), unless a linked fix already has a first release, which its waiting task answers ("After the reproduce step");
 - it is an open issue the crew promised work on, labeled `accepted` or answered with a bug's first reply, that has neither a waiting task nor a linked task ("When the work ends");
 - it is an outside pull request labeled `accepted` whose newest version has runs waiting for approval, or on which every check passed and the crew's review has not yet published its story comment there ("The review");
 - it is an outside pull request labeled `accepted` and not `edits checks` whose newest version waits on `main`, once `main` passes ("Once main passes");
@@ -176,11 +176,18 @@ A step that did not reproduce reports the maintainer's choice as its result's `n
 
 | The reproduce step | The reply | Mark |
 | --- | --- | --- |
-| reproduced it | names the version it reproduced on, and says a fix is under way | `accepted` |
+| reproduced it, and no linked fix has a first release | names the version it reproduced on, and says a fix is under way | `accepted` |
+| reproduced it, and a linked fix has a first release | nothing: the waiting task's thank-you says both | none |
 | did not, and the maintainer chose to ask | the step's question for the reporter | `needs-info` |
 | did not, and the maintainer chose to close | the version and the steps it tried | `declined` |
 
 While the step has no result, or the maintainer kept it for later, the round sends nothing more.
+
+A reply says only what the step's typed result says: the version from its version, and where or how the step ran only in the result's own words, never a platform, computer or install the result does not name.
+Before drafting a reproduced bug's reply, the round reads where its fix stands on the same list: the fix built on the step carries the issue's link, with its state, closing reason and first release.
+Once a linked fix has a first release, the round drafts no reply for the step, and the issue's waiting task thanks the reporter for a bug the crew both reproduced and fixed ("When the work ends").
+A fix that merged with no first release may already be in a published release, since the record learns a release late (`docs/task-record.md`, "First release of merged work"); the round's brief carries no merge commit, so it still drafts the reply, and the send task checks it against the project's published releases ("The send task").
+The reply's entry names the step and each linked fix by key.
 On reproduced, the first mate starts the fix built on the reproduction and adds it to the issue's waiting task's waits, and that task thanks the reporter and closes the issue at the fix's first release ("When the work ends").
 
 ## Which pull requests reach the tick
@@ -274,7 +281,7 @@ Run approvals for an author's own new versions stay on the intake round's card (
 ## The send task
 
 A round puts every reply and run approval that plainly follows this method, with nothing odd about it ("What is odd"), into one follow-up it files with `file_followup`, titled "Outside intake drafts to send", with neither `issue` nor `start_as`, so it is filed at once (`docs/agents-reach.md`, "A reader's Build rows").
-Its goal lists each draft as one numbered entry: the item's number, the write's method and path, its body exactly as it is to be sent, and one line on why it plainly follows this method.
+Its goal lists each draft as one numbered entry: the item's number, the write's method and path, its body exactly as it is to be sent, one line on why it plainly follows this method, and, for a reply that says what the crew found or did, the key of each linked task whose report the reply rests on, from the brief's list ("What a round knows of its builds").
 A round files at most one such follow-up, and only when it drafted something for it.
 
 The first mate never starts that follow-up as filed: the kind classifier would sort it, and nothing would mark it as an outside action.
@@ -287,12 +294,23 @@ It never reads an item's body, comments or description, and never opens a link a
 Through `github_read` it reads only the facts a write rests on: the item's state, labels and author, the authors and times of its comments, a pull request's newest version, its file list, and runs.
 It checks each draft:
 
-- **Every write**: the item is open, or is the closed item a round listed, or the draft is a waiting task's thank-you, and no crew reply came after its author's newest act, so each new outside act gets one crew reply.
+- **Every write**: the item is open, or is the closed item a round listed, or the draft is a waiting task's thank-you.
+  Each new outside act gets one crew reply, so no crew reply came after its author's newest act, with two exceptions that answer the crew's own work rather than an outside act.
+  A waiting task's thank-you is exempt from that test.
+  A bug's reply after its reproduce step passes when the issue still carries `needs triage` and the one crew reply after its author's newest act is the bug's first reply, which carries no mark and so leaves that label on.
+  The next check holds both to the record instead.
+- **What a reply says the crew found or did**: every such claim, such as whether, where and on which version a bug reproduced and where its fix stands, matches the reports in the task record at send time of the tasks its entry names, each read with `tasks` and linked to the draft's issue.
+  A task's summary, the draft's own line on why it follows this method, and an earlier reply are no evidence; a claim the send task cannot match to a report is cannot tell, and so is one resting on no named task.
+  A reply saying a fix is under way passes only while no published release holds the fix's merge commit, the record's `merge_commit`: for each published release, not a draft, created after the fix merged, `/repos/{owner}/{repo}/compare/{tag}...{merge_commit}` answers `behind` or `identical` when that release holds it.
+  A thank-you's release passes only when it holds every merged fix's merge commit and the release published before it does not; a fix with no recorded merge commit is cannot tell.
+  The record's `first_release` is null until a release is verified, so a null never shows the fix unreleased; the published releases decide.
 - **A reply**: it opens with the crewmate line and ends with a mark this method names, or is a bug's first reply; it links only to this project's own pages on GitHub and its docs site, mentions no account but the item's author, and holds no image, no HTML but the mark's comment, no secret and no promise of a date, merge or release.
 - **A run approval**: the run is waiting for approval on the newest version of a pull request from another copy of the project, labeled `accepted` and not `edits checks`; its file list, read whole, changes no check file (`docs/public-ci.md`, "Outside contributors"); GitHub ran its author's checks here before, so `/repos/{owner}/{repo}/actions/runs?actor={login}&status=completed` lists a run of theirs whose `conclusion` is not `action_required`; and no batch or alpha run is queued or in progress ("Check starts").
 
 It sends each draft that passes every check and that the intake direction's words cover once with `github_write`, naming the direction by its `d:` id as `allowance` ("The intake direction").
 It sends each other draft with no allowance, so it waits on the send task's approval card for the maintainer's tick, and its report says why each waits; it sends nothing the follow-up does not list.
+A reply that fails the facts check, or cannot tell, waits that way with the mismatch named on a card of its own and a corrected line drawn from the reports offered beside it; it never sends a reply it rewrote without the maintainer's click.
+A reproduced bug's reply whose fix is already in a published release waits the same way, saying the waiting task's thank-you will cover both.
 The 8 places a round and the one pull request's check starts a round are this method's numbers, not the app's, and the follow-up holds no more.
 It reports what it sent under which direction, what waits for the click and why, and what GitHub refused, which comes back next round since nothing reached GitHub.
 
@@ -323,6 +341,8 @@ A plain thank-you with the `released` mark goes to a send task the way a round's
 - **The work shipped.**
   Once at least one wait shipped a change, and every wait that ships a change merged and is in a release, it drafts the thank-you with the `released` mark.
   It names the newest of those first releases, the first one that holds all of the work, and says when that release is an alpha, adding that an alpha release is usually promoted to stable within a day.
+  When the issue does not carry `accepted`, because the fix shipped before a round replied after the reproduce step ("After the reproduce step"), it also says the crew reproduced the bug and on which version, in the step's result's own words.
+  Its entry for the send task names the reproduce step and each fix by key ("The send task").
   The mark closes the issue as completed if it is still open, so the reporter is thanked and the issue closed once, whether or not a change closed it before.
   While a merged wait is in no release yet, the first mate holds the task until the work ships in a release (`docs/task-graph.md`, "A side-effect task").
 - **The work stopped.**

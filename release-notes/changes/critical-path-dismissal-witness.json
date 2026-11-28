@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "critical-path-dismissal-witness",
+      "reason": "Record first-crewmate note dismissal evidence in the critical-path test only; no app behavior changes."
+    }
+  ]
+}

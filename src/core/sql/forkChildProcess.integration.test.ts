@@ -41,7 +41,7 @@ it("survives a reply after the peer closes IPC but before the parent sees it", a
       child.postMessage({ type: "result", id: 1, reply: { kind: "ok" } });
       ready.resolve(marker);
     } catch (error) {
-      ready.reject(error);
+      ready.reject(error instanceof Error ? error : new Error(String(error)));
     }
   });
   try {

@@ -24,7 +24,7 @@ const FIGURE_CAPTION = "Three pieces in merge order";
 const WIDE_LABEL = "The phone and the Mac read one viewer";
 
 const BODY = `
-  <p>The plan has three pieces. <svg id="mark" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="var(--ok)"/></svg> Ready.</p>
+  <p id="lead">The plan has three pieces. <svg id="mark" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="var(--ok)"/></svg> Ready.</p>
   <figure id="figure">
     <svg id="diagram" viewBox="0 0 750 120" width="100%" role="img" aria-label="Pieces" onclick="window.clicked = true">
       <script>window.ranInViewer = true;</script>
@@ -234,21 +234,61 @@ test("a still the stage drew over shows in the opened picture", async () => {
 });
 
 /**
- * Intent: the captain's report that dragging to select words in a drawing
- * opened the larger view. The browser's own mouse selects, because a script's
- * synthetic click never meets the release that ends a selection.
+ * The frame's messages reach the page in the order it posts them, so one
+ * posted after a gesture is heard only once every message that gesture made
+ * has been.
  */
-test("a drag that selects words in a diagram keeps them and opens nothing, while a click still opens it", async () => {
+async function settled(heard: Heard[]): Promise<void> {
+  const before = heard.filter((message) => message.type === "settled").length;
+  await inFrame(() => {
+    parent.postMessage({ type: "settled" }, "*");
+  }, null);
+  await expect.poll(() => heard.filter((message) => message.type === "settled").length).toBe(before + 1);
+}
+
+/** Selects words in the paragraph as a drag across them leaves them. */
+const selectParagraphWords = (words: string) =>
+  inFrame((words: string) => {
+    const node = document.getElementById("lead")?.firstChild;
+    if (!node) throw new Error("missing paragraph");
+    const start = (node.textContent ?? "").indexOf(words);
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, start + words.length);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+    return String(getSelection());
+  }, words);
+
+/**
+ * Intent: the captain's report that dragging to select words in a drawing
+ * opened the larger view, and the approved answer that one click opens it at
+ * once. The browser's own mouse drags, because a script's synthetic click
+ * never meets the release that ends a selection.
+ */
+test("a drag that selects words in a diagram keeps them and opens nothing; a click opens it at once", async () => {
   const COMMAND = "git pull --ff-only";
+  const WORDS = "three pieces";
   for (const annotations of [false, true]) {
     const heard = await mounted(annotations);
     await commands.dragAcrossWordsInFrame(FRAME, "#command", COMMAND);
+    await settled(heard);
     expect(await inFrame(() => String(getSelection()), null)).toBe(COMMAND);
-    await inFrame(() => new Promise((done) => requestAnimationFrame(done)), null);
     expect(opened(heard)).toEqual([]);
 
-    // A plain click opens it at once, though words elsewhere in the card are still selected.
+    // The next click's press clears the words, and it opens the diagram.
     await commands.clickWordsInFrame(FRAME, "#label", "Frame");
-    await expect.poll(() => opened(heard).length).toBe(1);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(1);
+
+    // A held touch sends its click before the browser clears words selected elsewhere.
+    expect(await selectParagraphWords(WORDS)).toBe(WORDS);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+      label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
   }
 });

@@ -695,6 +695,11 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
   ).join(" ")}
 ${FRAME_PICTURE_SCRIPT}
 ${FRAME_PRESS_SCRIPT}
+  // A mouse press replaces any selection, so the words it leaves are its own; a touch keeps what was selected until after its click.
+  var pressedWords = "";
+  document.addEventListener("pointerdown", function (event) {
+    pressedWords = event.pointerType === "mouse" ? "" : String(getSelection());
+  }, true);
   document.addEventListener("click", function (event) {
     var target = event.target;
     var action = target && target.closest ? target.closest("[data-inf-action]") : null;
@@ -754,8 +759,10 @@ ${FRAME_PRESS_SCRIPT}
     if (caps.pictures && !target.closest(DRAWING_CONTROL)) {
       var drawing = outermostDrawing(target);
       if (drawing && isDiagram(drawing)) {
-        // The browser sends a drag's release to the drawing both ends sit in as a click; words it selected stay, and nothing opens.
-        if (!getSelection().isCollapsed) return;
+        // The browser sends a drag's release to the drawing both ends sit in as a click: words that press selected stay, and nothing opens.
+        // Words selected before it do not count; a held touch sends its click before the browser clears them.
+        var words = String(getSelection());
+        if (words && words !== pressedWords) return;
         openDrawing(drawing);
         return;
       }
@@ -863,4 +870,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-pRVCK/EJnIw2WDHfVkRIoYphC6XvLWRjrVpab+i8SU8=";
+export const FRAME_BRIDGE_SHA256 = "sha256-Jr4X28wiSQzU+79XFp+yqcl0395AUzm1JKPNrAPhqJQ=";

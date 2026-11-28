@@ -1335,32 +1335,30 @@ export async function startPhoneHome(
           result = { held: "Keep the harbour entrance clear", ready: "The tide reading is ready" };
           break;
         }
-        case "POST release-held-card": {
-          const card = core.services.supervisor.cards
-            .snapshot()
-            .find((card) => card.id === "card-phone-readiness");
-          if (!card) throw new Error("The readiness fixture has no held card");
-          const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...released } = card;
-          core.services.supervisor.cards.hostCards.raiseHostCard({
-            ...released,
-            body: "<p>The harbour survey is ready for your choice.</p>",
-          });
-          core.services.supervisor.cards.flushBroadcast();
-          result = { ok: true };
-          break;
-        }
+        // A host revision keeps the card's hold (`CardService.put`), so the hold comes and goes as in the app: the
+        // captain's reply holds the card, written to its thread without waking the first mate, and the first mate's
+        // answer to that reply and its turn's end release it (docs/card-threads.md, "When a card reaches the stage").
+        case "POST release-held-card":
         case "POST replied-under-card": {
-          const card = core.services.supervisor.cards
-            .snapshot()
-            .find((card) => card.id === "card-phone-readiness");
-          if (!card) throw new Error("The readiness fixture has no released card");
-          core.services.supervisor.cards.hostCards.raiseHostCard({
-            ...card,
-            awaiting: "answer",
-            sentBackAt: Date.now(),
-            body: "<p>The surveyor is answering your harbour question.</p>",
-          });
-          core.services.supervisor.cards.flushBroadcast();
+          const cards = core.services.supervisor.cards;
+          const card = cards.snapshot().find((card) => card.id === "card-phone-readiness");
+          if (!card) throw new Error("The readiness fixture has no card");
+          const replied = command === "replied-under-card";
+          const body = replied
+            ? "The surveyor is answering your harbour question."
+            : "The harbour survey is ready for your choice.";
+          cards.hostCards.raiseHostCard({ ...card, body: `<p>${body}</p>` });
+          const asked = cards.thread(card.id).messages.findLast((line) => line.who === "captain");
+          if (replied) cards.addMessage(card.id, "captain", "When is the harbour survey done?");
+          else if (asked) {
+            const answer = cards.replyAs(
+              { actor: "firstmate" },
+              { cardId: card.id, text: "It is done.", answersMessage: asked.id },
+            );
+            if (answer.answered !== asked.id) throw new Error(JSON.stringify(answer));
+          }
+          if (!replied) cards.closeOut({ kind: "firstmate" }, "turn-end");
+          cards.flushBroadcast();
           result = { ok: true };
           break;
         }

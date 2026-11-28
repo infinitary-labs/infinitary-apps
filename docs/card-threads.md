@@ -416,6 +416,7 @@ The create-your-own-panel slot reserves it as an expanded panel does, so a wide 
 The rails keep their panels while folded, which is why `--rail-docked-*` (what they ask for) is a different variable from `--occupied-rail-*` (what they take): reading the effective one would make the ladder circular and the pair would oscillate.
 
 In place is the last rung - a segmented control in the card's head swaps the body for the message list - and needs a stage under 720px: the window's 960px minimum never gives one, and the card overlay's narrow panel always does (`docs/card-overlay.md`).
+A line that arrives after the thread's first read - the captain's own reply, or its author's answer - turns the control to the thread, as it opens a collapsed thread beside the card.
 
 A message's words link every recorded task's key (`KeyedText`) and every address the safe opener takes, an https address anywhere or an http one to this computer, written as words (INF-7045's plan, part 2; `LinkedText`).
 The split is `splitCardBodyUrls` in `src/shared/linkify.ts`, so trailing punctuation and an unmatched closing bracket stay outside the link, and a key inside an address stays part of it.

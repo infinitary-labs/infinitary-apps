@@ -1,0 +1,24 @@
+{
+  "entries": [
+    {
+      "id": "card-overlay-stack-stays",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Cards over other apps stay up until the last one closes",
+      "body": "When you answer a card with Show cards over other apps, the next waiting card now comes up in its place instead of the cards going away. They go away once the last card closes, or when you press the key again, press Escape or click the app behind them.",
+      "noPicture": "It changes when the cards go away, not how a card looks.",
+      "noDocsSite": "The Keyboard page, which a script writes from the site's own words, now says the cards stay up after a choice, and no hand-written page covers them.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "card-overlay-reply-shows",
+      "kind": "fix",
+      "area": "cards",
+      "title": "A reply sent from cards over other apps shows in the card's chat",
+      "body": "When you reply under a card shown over another app, the card now turns to its chat, with your message and then the answer to it. Before, the card kept showing its own text and the chat stayed hidden behind the switch in its corner.",
+      "noPicture": "The chat looks as it does in the window; only when it comes into view changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

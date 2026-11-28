@@ -1,6 +1,8 @@
 import * as m from "@shared/i18n/messages.generated";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cardStage } from "../app/cardStage";
+import { focusLanding } from "../app/focusLanding";
+import { guardLostFocus } from "../app/focusRecovery";
 import { guardHeldPresses } from "../app/heldKeys";
 import { followNotTypingKeys } from "../app/notTypingKeys";
 import { followShellCommands } from "../app/shellCommands";
@@ -10,7 +12,7 @@ import { useShellStore } from "../app/store";
 import { closeCardFind, useCardFind } from "../cards/cardFind";
 import { focusWithRing } from "../design/focus";
 import { guardFrameActivation } from "../plugins/frames/frameActivation";
-import { guardFrameFocus } from "../plugins/frames/frameFocus";
+import { giveHandedFocusBack, guardFrameFocus } from "../plugins/frames/frameFocus";
 import { settleOverlayDrafts, startOverlayStore } from "./overlayStart";
 import { overlayTarget } from "./overlayTarget";
 import "./overlay.css";
@@ -25,10 +27,19 @@ type Phase = "starting" | "cards" | "nothing";
 /**
  * The card overlay's page (docs/card-overlay.md): the card stack alone, in
  * a panel over the app in front. It shows the card the newest notification
- * was about, gives the keys back once a choice is made or Escape leaves, and
- * sends its unsent words before it goes.
+ * was about, stays while cards wait, gives the keys back once the last card
+ * closes or Escape leaves, and sends its unsent words before it goes.
  */
 export function CardOverlay() {
+  // A card that closes here takes focus with it: it lands on the next card, as in the window.
+  useEffect(() => {
+    const landing = focusLanding();
+    const stopGuard = guardLostFocus(giveHandedFocusBack, landing);
+    return () => {
+      stopGuard();
+      landing.stop();
+    };
+  }, []);
   useEffect(() => guardFrameFocus(), []);
   useEffect(() => guardFrameActivation(), []);
   useEffect(() => guardHeldPresses(), []);
@@ -95,18 +106,13 @@ export function CardOverlay() {
     };
   }, [phase]);
 
-  // A choice made here, or a stack with nothing left, gives the keys back.
+  // Only a stack with nothing left gives the keys back: a card that closes
+  // here brings up the next by the stack's own rule (the captain, INF-7222).
   useEffect(
     () =>
-      useShellStore.subscribe((state, previous) => {
+      useShellStore.subscribe((state) => {
         if (phase !== "cards") return;
-        const answered = Object.keys(previous.pendingCardActions).some(
-          (id) =>
-            !state.pendingCardActions[id] &&
-            !state.cardActionErrors[id] &&
-            !state.cards.some((card) => card.id === id),
-        );
-        if (answered || (state.cardsSnapshotLoaded && stackOf(state).length === 0)) leave();
+        if (state.cardsSnapshotLoaded && stackOf(state).length === 0) leave();
       }),
     [phase, leave],
   );

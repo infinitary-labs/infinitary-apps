@@ -1,4 +1,5 @@
 import type { KeyPress } from "@shared/keyboard";
+import { isCardOverlayPage } from "../overlay/overlayPage";
 import { available, type Landing } from "./focusRecovery";
 import { typingTarget } from "./notTypingKeys";
 import { enterCard } from "./regions";
@@ -84,15 +85,18 @@ export function typingWhereFocusRested(): boolean {
 }
 
 export function landLostFocus(): void {
+  // The card overlay's page has no main message: focus lands on the shown
+  // card, typing or not, and the panel goes once no card is left.
+  const overlay = isCardOverlayPage();
   const prompt = document.querySelector<HTMLElement>('[aria-label="Task prompt"]');
   // Settings and the first-launch gate have no available main message: nothing to land on.
-  if (!prompt || !available(prompt)) {
+  if (!overlay && (!prompt || !available(prompt))) {
     waitingForCard = false;
     return;
   }
-  if (restedTyping) {
+  if (restedTyping && !overlay) {
     waitingForCard = false;
-    prompt.focus({ preventScroll: true });
+    prompt?.focus({ preventScroll: true });
     return;
   }
   const area = stage();
@@ -112,7 +116,7 @@ export function landLostFocus(): void {
   // No card left, as when a key closed the last one: the main message, so
   // the words typed next reach it.
   waitingForCard = false;
-  prompt.focus({ preventScroll: true });
+  prompt?.focus({ preventScroll: true });
 }
 
 export function focusLanding(): Landing & { stop: () => void } {

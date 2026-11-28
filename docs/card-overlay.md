@@ -42,6 +42,7 @@ The panel reads the cards as the window draws them: put-aside cards and the card
 
 With no card at all the panel says that none waits, for a moment, without taking the keys or raising the window.
 A card that arrives while one is shown waits behind it as in the window; it never replaces the card being read.
+A card that closes in the panel - a choice, putting it aside, its author closing it - leaves the panel up on the next card, which the stack picks by its own rule as in the window (the captain, after using the overlay: "the card stack should stay after closing a card").
 
 ## The panel
 
@@ -69,6 +70,7 @@ So the tallest card gives up a lane above it for the hide button and one under i
 A choice that opens Infinitary's window - Settings, a browser, a sign-in - is refused on the card with the words that it opens the window, so it is made there and never runs out of sight.
 The system's file and folder pickers are refused the same way (`pickFiles`, `pickProjectFolder`): a picker would take the keys and send the panel away under it.
 Files dropped on the thread still attach.
+The panel's narrow width holds a card's thread in place, behind the `card` · `thread · N` control in the card's head (`docs/card-threads.md`); a line that arrives after the thread's first read, the person's own reply or its author's answer, turns the card to its thread.
 
 The page tells the main process it is ready once the shown card is drawn and live, or at the stack's own hold limit (`HOLD_LIMIT_MS`), past which the stack shows the card as it is; only then does the panel show, with the keys when there is a card (`show()`) and without them when none waits (`showInactive()`).
 As a nonactivating panel it takes the keys while the game stays the front app.
@@ -76,6 +78,7 @@ As a nonactivating panel it takes the keys while the game stays the front app.
 ## Keys and pointer
 
 The shown card takes focus as a card the window points at does (`focusCard`), so the first key reads or acts on that card.
+When a card closes in the panel, focus lands on the next one whole by the window's lost-focus fallback (`docs/keyboard.md`, "Where focus lands").
 In the panel the card's own installed keys run as in the window (`overlayRunsCommand`); every other window key does nothing.
 The menu's ⌘Q and ⌘W send the overlay away, and ⌘H, ⌘M and ⌘, do nothing, so no key quits, hides or opens the app from the panel.
 
@@ -93,7 +96,7 @@ Each way out sends the panel away without answering, keeping what was typed:
 - the key again;
 - Escape, which first closes card search, then shrinks a card made large, then leaves a control inside the card for the card, and only then leaves;
 - the hide button just above the card;
-- a choice made on the card, and a stack with no cards left;
+- a stack with no cards left, such as after the choice on the last card;
 - a click on the game, another app, another Space (the panel loses the keys);
 - the screen locking, the computer sleeping, or a display going away.
 

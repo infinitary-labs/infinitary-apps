@@ -4507,6 +4507,7 @@
 "taskOverrideDirectionVersion" = "Your direction d:%1$@ passes %2$@ for this version, until it is revised or retired: “%3$@”";
 "taskPinPin" = "Pin";
 "taskPinUnpin" = "Unpin";
+"taskQueueWaitRelease" = "Waiting for %1$@ to ship in a release";
 "taskStatusComputerUpdating" = "%1$@ is updating";
 "taskTabActivity" = "Activity";
 "taskTabCards" = "Cards";

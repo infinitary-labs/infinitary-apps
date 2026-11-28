@@ -93,6 +93,14 @@ Whether words ask for such an action is the first mate's judgment (HANDOFF); wor
 Every wait of a side-effect task needs the merge, a wait added later too: `TaskGraph.approvedPrerequisite` answers nothing for it, so no approval starts it, carries a wait for it, or releases its close ("A part that starts at approval" above).
 A `start_at_approval` on it is refused, on filing and on `update_task`, and nothing is filed or changed.
 It starts as any task does once each wait closed done and at least one of them merged; dropped work never clears its wait, and the first mate hears of that dead wait once (`listDeadBlocked`), so it points the action at the work that carries on, or drops it.
+
+Its moment, `side_effect_moment` on its shape, says when the action happens: `release` or `merge`, set by the first mate on `create_task`'s or `update_task`'s `moment` before it starts, and refused, with nothing filed or changed, on work that is not a side-effect task; clearing the mark clears it, and the tasks reader shows it.
+The first mate picks it from how the project ships: `release` where the project publishes releases of any kind, `merge` where it publishes none (HANDOFF).
+A task with no moment starts at the merge, as one marked `merge` does.
+A release-moment task stays unstarted while any merged wait has no recorded first release (`TaskGraph.awaitingRelease`): `waitingOn` names each such wait, so it is blocked and never ready, and `TaskGraph.listReady` leaves it out.
+A wait closed done without a merge, such as an answer, holds nothing; a merge is the record's own fact (`TaskGraph.workMerged`): a merge that spent its approval, or a done close the record calls `merged` or `landed`, the same closes a first release is recorded on.
+Its queue line reads "Waiting for X to ship in a release" once nothing else it waits on is unfinished (`queueWaitOf`).
+The first release is the one a crewmate verifies and declares through `report.first_release` (`docs/task-record.md`), and the next start sweep starts the task once every merged wait has one.
 A replaced piece's wait moves to its replacement (`TaskService.moveWaits`), as every wait does.
 
 When every wait closed done and none merged, such as a plan never built or a reproduce step that did not reproduce, nothing shipped for the action to tell, so the task stays unstarted instead of starting only to say so (INF-7198's plan, part 3).
@@ -108,7 +116,8 @@ A wait also clears when work closes done without a merge, so the task's brief na
 Under each finished wait it adds the summary of that wait's newest report and the typed result its reports last carried (`TaskService.latestResult`), so its crewmate can say what a reproduce step found without reading tasks; an open wait's report is progress and is left out.
 Under an unsafe data reader's wait it serves that reader's report itself, kept between reader-data marks with their reminders since it was saved, since its saved summary is the host's own line and its report takes no result.
 The same section tells its crewmate to act only once every wait that ships a change merged, through the item's tracker's integration or where the project lives, and to do nothing outside when a wait was dropped or its change closed without merging.
-When its words name a release as the moment and a merged wait is in no release yet, the crewmate reports it, and the first mate holds the task on "Work ships in a release" naming that work (`docs/automation.md`).
+The same section names the task's moment.
+On a merge-moment task whose words still name a release, when a merged wait is in no release yet, the crewmate reports it, and the first mate holds the task on "Work ships in a release" naming that work (`docs/automation.md`).
 
 ## Following the part under it
 

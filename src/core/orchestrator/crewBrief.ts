@@ -288,6 +288,7 @@ export class CrewBrief {
             const result = this.options.tasks.latestResult(wait.id)?.value;
             return result ? { ...wait, result } : wait;
           }),
+          record.shape.side_effect_moment,
         ),
       ]);
     // A typed hand-off (INF-799): the result shape the report must fit, and

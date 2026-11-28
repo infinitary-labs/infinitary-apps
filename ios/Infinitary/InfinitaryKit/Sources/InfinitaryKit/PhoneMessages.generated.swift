@@ -4687,6 +4687,7 @@ public enum PhoneMessages {
     public static func `taskOverrideDirectionVersion`(`direction`: String, `holds`: String, `words`: String) -> String { PhoneWords.format("taskOverrideDirectionVersion", [`direction`, `holds`, `words`]) }
     public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
     public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
+    public static func `taskQueueWaitRelease`(`tasks`: String) -> String { PhoneWords.format("taskQueueWaitRelease", [`tasks`]) }
     public static func `taskStatusComputerUpdating`(`computer`: String) -> String { PhoneWords.format("taskStatusComputerUpdating", [`computer`]) }
     public static func `taskTabActivity`() -> String { PhoneWords.format("taskTabActivity", []) }
     public static func `taskTabCards`() -> String { PhoneWords.format("taskTabCards", []) }
@@ -9598,6 +9599,7 @@ extension PhoneWords {
         "taskOverrideDirectionVersion": ["direction", "holds", "words"],
         "taskPinPin": [],
         "taskPinUnpin": [],
+        "taskQueueWaitRelease": ["tasks"],
         "taskStatusComputerUpdating": ["computer"],
         "taskTabActivity": [],
         "taskTabCards": [],

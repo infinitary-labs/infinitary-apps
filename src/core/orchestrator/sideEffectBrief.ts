@@ -42,7 +42,10 @@ function closedWords(wait: SideEffectWait): string {
  * crewmate acts on that. Served only to such a task, so no other crewmate
  * reads the rule. Model-facing words stay English.
  */
-export function renderSideEffectSection(waits: readonly SideEffectWait[]): string {
+export function renderSideEffectSection(
+  waits: readonly SideEffectWait[],
+  moment: "release" | "merge" = "merge",
+): string {
   const lines = waits.flatMap((wait) => {
     const line = `- ${wait.key || wait.id} "${wait.title}": ${closedWords(wait)}`;
     // Only a finished wait's report says what the work found; an open
@@ -69,6 +72,9 @@ export function renderSideEffectSection(waits: readonly SideEffectWait[]): strin
   return [
     "This is a side-effect task: its only job is the outside action its words name, such as closing a work item, sending a message or posting an update, once the work it waits on is done. Each task it waits on, and how the record says it closed, with a finished wait's reported summary and typed result, which say what that work found:",
     ...(lines.length ? lines : ["- none"]),
-    "Act only when every wait that ships a change merged; a wait done with no change, such as an answer, counts as done. When the words name a release as the moment and a merged wait is in no release yet, report with needs_firstmate naming those tasks, so the first mate holds you until the work ships in a release, and end your turn. Do the action through the integration for the item's tracker, or where the project lives, and say in your report what you did and where. When a wait was dropped, or its change closed with no merge, do nothing outside: report which wait and how it closed.",
+    moment === "release"
+      ? "Its moment is the release: the app started it only once every merged wait had a recorded first release, named above."
+      : "Its moment is the merge. When the words name a release as the moment and a merged wait is in no release yet, report with needs_firstmate naming those tasks, so the first mate holds you until the work ships in a release, and end your turn.",
+    "Act only when every wait that ships a change merged; a wait done with no change, such as an answer, counts as done. Do the action through the integration for the item's tracker, or where the project lives, and say in your report what you did and where. When a wait was dropped, or its change closed with no merge, do nothing outside: report which wait and how it closed.",
   ].join("\n");
 }

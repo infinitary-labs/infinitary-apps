@@ -312,7 +312,8 @@ The round leaves these on its card, and the send task, if a draft reaches it any
 ## When the work ends
 
 An issue the crew promised work on always ends with one more reply, and its own waiting task sends it, never a round.
-When the captain files an issue's Build row, the app's notice gives the first mate the issue's address, and the first mate files the issue's waiting task as the Outside work items runbook says ("The rules"): a read-only side-effect task, started as an unsafe data reader since strangers write issues, whose goal names the issue's address, the first release that ships the work as its moment, and this section as how it replies and closes.
+When the captain files an issue's Build row, the app's notice gives the first mate the issue's address, and the first mate files the issue's waiting task as the Outside work items runbook says ("The rules"): a read-only side-effect task, started as an unsafe data reader since strangers write issues, with `moment` release, whose goal names the issue's address and this section as how it replies and closes.
+It stays unstarted until every merged wait has a recorded first release (`docs/task-graph.md`, "A side-effect task").
 It waits on the filed reproduce or plan step.
 Its wait on that step moves to the fix, or the plan's build pieces, once their basis names the step, and the first mate adds work filed on any other basis to its waits itself (`docs/task-graph.md`, "A side-effect task").
 When the step ends with nothing built on it, the waiting task stays unstarted and the first mate hears once that nothing merged; it drops the waiting task only when the step did not reproduce, since the maintainer's ask, close or keep then has its own reply or silence ("After the reproduce step"); a reproduced bug whose fix never starts, and a plan never built, are stopped work (below).
@@ -324,7 +325,7 @@ A plain thank-you with the `released` mark goes to a send task the way a round's
   Once at least one wait shipped a change, and every wait that ships a change merged and is in a release, it drafts the thank-you with the `released` mark.
   It names the newest of those first releases, the first one that holds all of the work, and says when that release is an alpha, adding that an alpha release is usually promoted to stable within a day.
   The mark closes the issue as completed if it is still open, so the reporter is thanked and the issue closed once, whether or not a change closed it before.
-  While a merged wait is in no release yet, the first mate holds the task until the work ships in a release (`docs/task-graph.md`, "A side-effect task").
+  A merged wait in no release yet keeps the task unstarted, so it never starts only to wait (`docs/task-graph.md`, "A side-effect task").
 - **The work stopped.**
   Work stopped when a wait was dropped, its change closed without merging, or its step ended with nothing built on it, such as an idea whose plan is never built or a reproduced bug whose fix never starts.
   A dropped wait never clears, so the waiting task does not start, and the first mate hears that its wait can never end (`docs/task-graph.md`, "A side-effect task"); a change closed without merging, or a step that ended with nothing built on it, clears its wait, and when no wait merged the waiting task stays unstarted and the first mate hears once that nothing merged.

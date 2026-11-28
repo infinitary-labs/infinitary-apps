@@ -4507,6 +4507,7 @@
 "taskOverrideDirectionVersion" = "Sua diretriz d:%1$@ libera %2$@ para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “%3$@”";
 "taskPinPin" = "Fixar";
 "taskPinUnpin" = "Desafixar";
+"taskQueueWaitRelease" = "Aguardando %1$@ sair em uma versão";
 "taskStatusComputerUpdating" = "%1$@ está atualizando";
 "taskTabActivity" = "Atividade";
 "taskTabCards" = "Cartões";

@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "يتجاوز توجيهك d:{direction} {holds} في هذه النسخة، إلى أن يُعدَّل أو يُستبعَد: «{words}»",
   "taskPinPin": "تثبيت",
   "taskPinUnpin": "إلغاء التثبيت",
+  "taskQueueWaitRelease": "بانتظار صدور {tasks} في إصدار",
   "taskStatusComputerUpdating": "{computer} قيد التحديث",
   "taskTabActivity": "النشاط",
   "taskTabCards": "البطاقات",

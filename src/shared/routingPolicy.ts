@@ -311,6 +311,14 @@ export const workShapeSchema = z.object({
    */
   side_effect: z.boolean().optional(),
   /**
+   * When a side-effect task's outside action may happen, set by the first
+   * mate from how the project ships (docs/task-graph.md, "A side-effect
+   * task"): `release` keeps it unstarted while any merged wait has no
+   * recorded first release; `merge`, or none, starts it once every wait
+   * closed done. Only on a task marked `side_effect`.
+   */
+  side_effect_moment: z.enum(["release", "merge"]).optional(),
+  /**
    * The approved version of an earlier part this task's working copy
    * started on (`start_at_approval`): that task, its pushed branch and the
    * approved commit, written by the host at the start. The brief, the
@@ -504,6 +512,7 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "start_at_approval",
   "needs_merge",
   "side_effect",
+  "side_effect_moment",
   "branch",
   "program",
 ] as const satisfies readonly (keyof WorkShape)[];
@@ -592,6 +601,7 @@ export const workShapeAskSchema = workShapeSchema
     start_at_approval: true,
     needs_merge: true,
     side_effect: true,
+    side_effect_moment: true,
     branch: true,
     program: true,
   })

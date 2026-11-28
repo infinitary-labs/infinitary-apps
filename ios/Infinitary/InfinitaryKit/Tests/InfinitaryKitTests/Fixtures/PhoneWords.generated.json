@@ -3915,6 +3915,7 @@
   {"said":{"m":"taskOverrideDirectionVersion","a":{"direction":"‹direction›","holds":"‹holds›","words":"‹words›"}},"words":"Your direction d:‹direction› passes ‹holds› for this version, until it is revised or retired: “‹words›”"},
   {"said":{"m":"taskPinPin"},"words":"Pin"},
   {"said":{"m":"taskPinUnpin"},"words":"Unpin"},
+  {"said":{"m":"taskQueueWaitRelease","a":{"tasks":"‹tasks›"}},"words":"Waiting for ‹tasks› to ship in a release"},
   {"said":{"m":"taskStatusComputerUpdating","a":{"computer":"‹computer›"}},"words":"‹computer› is updating"},
   {"said":{"m":"taskTabActivity"},"words":"Activity"},
   {"said":{"m":"taskTabCards"},"words":"Cards"},

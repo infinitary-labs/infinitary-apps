@@ -86,6 +86,8 @@ export type TaskToolsDelegate = {
     needsMerge?: string[];
     /** Whether it is a side-effect task, every wait needing the merge, before it starts. */
     sideEffect?: boolean;
+    /** A side-effect task's moment, release or merge, before it starts. */
+    moment?: "release" | "merge";
     /** Whether the work is the first mate's own, not the captain's ask (INF-1467). */
     internalStep?: boolean;
     /** A program's new bound on its task() calls (INF-799), on the captain's words. */
@@ -265,6 +267,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "True when its only job is an outside action that waits on work, such as closing a work item: each blocked_by, added later too, holds until merged, never at approval, and its brief says how each closed. A wait on an answer moves to the work whose basis names it. When every wait closes with nothing merged it stays unstarted and you hear once: link the work that ships it, drop it, or start_now on the captain's word.",
         }),
       ),
+      moment: Type.Optional(
+        stringEnum(["release", "merge"], {
+          description:
+            "A side_effect task's moment, from how the project ships: release keeps it unstarted until every merged blocked_by has a recorded first release; merge, the default, starts it once each closed done.",
+        }),
+      ),
       unsafe_data_reader: Type.Optional(
         Type.Boolean({ description: "As spawn_crewmate's shape.unsafe_data_reader." }),
       ),
@@ -294,6 +302,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           : {}),
         ...(params.needs_merge?.length ? { needs_merge: params.needs_merge } : {}),
         ...(params.side_effect ? { side_effect: true } : {}),
+        ...(params.moment ? { side_effect_moment: params.moment } : {}),
         ...(params.unsafe_data_reader ? { unsafe_data_reader: true } : {}),
         ...(params.branch?.trim() ? { branch: params.branch.trim() } : {}),
       };
@@ -398,6 +407,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       side_effect: Type.Optional(
         Type.Boolean({ description: "As create_task's side_effect, before start." }),
+      ),
+      moment: Type.Optional(
+        stringEnum(["release", "merge"], { description: "As create_task's moment, before start." }),
       ),
       program_bound: Type.Optional(Type.Integer()),
       crew_speed: Type.Optional(
@@ -740,6 +752,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           : {}),
         ...(params.needs_merge !== undefined ? { needsMerge: params.needs_merge } : {}),
         ...(params.side_effect !== undefined ? { sideEffect: params.side_effect } : {}),
+        ...(params.moment !== undefined ? { moment: params.moment } : {}),
         ...(params.internal_step !== undefined ? { internalStep: params.internal_step } : {}),
         ...(params.program_bound !== undefined ? { programBound: params.program_bound } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),

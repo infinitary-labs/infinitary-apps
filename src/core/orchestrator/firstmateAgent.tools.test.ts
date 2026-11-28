@@ -1008,6 +1008,50 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(await read()).toMatchObject({ side_effect: true });
   });
 
+  // INF-7198 part 1, the captain's "Approve and build": the first mate sets a side-effect
+  // task's moment, release or merge, before it starts; the reader shows it, and a moment
+  // on other work is refused with nothing written.
+  it("files, shows and changes a side-effect task's moment, refusing it on other work", async () => {
+    const { agent, specs, tasks } = setup();
+    await agent.converse("reply on the issue once the fix is in a release");
+    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
+    const text = async (name: string, params: Record<string, unknown>) =>
+      (
+        await tools
+          .find((tool) => tool.name === name)!
+          .execute("c", params, undefined, undefined, {})
+      ).content[0]?.text ?? "";
+    await text("create_task", { title: "Fix", goal: "Fix", user_words: "fix it" });
+    const fix = tasks.byKey("SCR-1")!;
+    const reply = {
+      title: "Reply on the issue",
+      goal: "Reply on the issue once the fix is in a release",
+      user_words: "reply on the issue once the fix is in a release",
+      blocked_by: [fix.key],
+    };
+    expect(await text("create_task", { ...reply, moment: "release" })).toBe(
+      "Nothing was filed. moment applies only to a side-effect task: set side_effect too, or leave moment out.",
+    );
+    expect(tasks.list().map((record) => record.title)).toEqual(["Fix"]);
+
+    await text("create_task", { ...reply, side_effect: true, moment: "release" });
+    const filed = tasks.byKey("SCR-2")!;
+    const read = async () => readTaskQueryText(await text("tasks", { key: filed.key }))[0];
+    expect(await read()).toMatchObject({ side_effect: true, moment: "release" });
+    expect(await text("update_task", { task: filed.key, moment: "merge" })).toBe(
+      `Updated ${filed.key}: starts at the merge.`,
+    );
+    expect(await read()).toMatchObject({ moment: "merge" });
+    expect(await text("update_task", { task: filed.key, side_effect: false })).toBe(
+      `Updated ${filed.key}: side_effect cleared.`,
+    );
+    expect(tasks.get(filed.id)?.shape?.side_effect_moment).toBeUndefined();
+    expect(await text("update_task", { task: filed.key, moment: "release" })).toContain(
+      "moment applies only to a side-effect task",
+    );
+    expect(tasks.get(filed.id)?.shape?.side_effect_moment).toBeUndefined();
+  });
+
   // INF-6845's piece 1: the first mate files, in one call, a waiting task that starts as a fenced
   // reader, and create_task refuses the mark on anything but an answer, as spawn_crewmate does.
   it("files a waiting task that starts as a reader in one call, refusing the mark on work that is not an answer", async () => {

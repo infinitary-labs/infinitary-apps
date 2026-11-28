@@ -209,6 +209,8 @@ export type TaskQueryRow = {
   needs_merge?: string[];
   /** A side-effect task: every wait needs the merge (docs/task-graph.md, "A side-effect task"). */
   side_effect?: true;
+  /** A side-effect task's moment, when the first mate set one; merge when absent. */
+  moment?: "release" | "merge";
   /** The branch name the first mate wrote, which the app adds a code to when it starts. */
   branch?: string;
   /** The JSON Schema its report's result must fit (INF-799). By-key only. */
@@ -574,6 +576,9 @@ function toRow(
       : {}),
     ...(record.shape?.needs_merge?.length ? { needs_merge: record.shape.needs_merge } : {}),
     ...(record.shape?.side_effect ? { side_effect: true as const } : {}),
+    ...(record.shape?.side_effect && record.shape.side_effect_moment
+      ? { moment: record.shape.side_effect_moment }
+      : {}),
     ...(record.shape?.branch ? { branch: record.shape.branch } : {}),
     ...(cardBody && record.shape?.result_schema
       ? { result_schema: record.shape.result_schema }

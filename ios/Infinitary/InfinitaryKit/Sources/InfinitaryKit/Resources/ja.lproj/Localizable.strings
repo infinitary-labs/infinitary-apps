@@ -4507,6 +4507,7 @@
 "taskOverrideDirectionVersion" = "あなたの方針 d:%1$@ により、このバージョンは%2$@の保留を越えて進めます。改訂または廃止されるまで有効です：「%3$@」";
 "taskPinPin" = "固定";
 "taskPinUnpin" = "固定を解除";
+"taskQueueWaitRelease" = "%1$@ のリリース待ち";
 "taskStatusComputerUpdating" = "%1$@ は更新中";
 "taskTabActivity" = "アクティビティ";
 "taskTabCards" = "カード";

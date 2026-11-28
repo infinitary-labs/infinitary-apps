@@ -580,9 +580,14 @@ export class TaskGraph {
     const approved = this.writer.store
       .listAwaitingApproval()
       .filter((record) => this.approvedBase(record) !== undefined);
+    // A release-moment task's merged wait with no first release still holds
+    // its start ("A side-effect task"); the store's query reads only status.
     const ready = this.writer.store
       .listReady()
-      .filter((record) => this.nothingMerged(record) === undefined);
+      .filter(
+        (record) =>
+          this.nothingMerged(record) === undefined && this.awaitingRelease(record).length === 0,
+      );
     if (approved.length === 0) return ready;
     return [...ready, ...approved].sort(
       (a, b) => a.priority - b.priority || a.createdAt - b.createdAt,
@@ -895,13 +900,56 @@ export class TaskGraph {
     return this.writer.store.listDeadBlocked();
   }
 
+  /**
+   * What holds an open task's start: each wait not closed done, less the
+   * ones an approval answers, and, on a release-moment side-effect task,
+   * each merged wait with no recorded first release (`awaitingRelease`).
+   */
   waitingOn(id: string): TaskRecord[] {
-    return this.unanswered(
+    const waiting = this.unanswered(
       id,
       this.blocksIn(
         id,
         statusesWhere((blocker) => !TaskService.blockerCleared(blocker)),
       ).map(({ task }) => task),
+    );
+    const record = this.writer.store.get(id);
+    return record ? [...waiting, ...this.awaitingRelease(record)] : waiting;
+  }
+
+  /**
+   * The merged waits a release-moment side-effect task still waits on to
+   * ship (docs/task-graph.md, "A side-effect task"): each wait that merged
+   * and has no recorded first release, in edge order, while the task is
+   * open. Empty for any other task.
+   */
+  awaitingRelease(record: Pick<TaskRecord, "id" | "status" | "shape">): TaskRecord[] {
+    if (!TaskGraph.startsAtRelease(record)) return [];
+    return TaskGraph.unreleasedAmong(
+      record,
+      this.blocksIn(record.id, ["done"]).map(({ task }) => task),
+    );
+  }
+
+  /**
+   * `awaitingRelease` over waits a caller already holds, such as a board
+   * projection's blockers: the merged ones with no recorded first release,
+   * when the task is an open release-moment side-effect task.
+   */
+  static unreleasedAmong(
+    record: Pick<TaskRecord, "status" | "shape">,
+    waits: readonly TaskRecord[],
+  ): TaskRecord[] {
+    if (!TaskGraph.startsAtRelease(record)) return [];
+    return waits.filter((wait) => TaskGraph.workMerged(wait) && !wait.delivery?.firstRelease);
+  }
+
+  /** Whether an open side-effect task's moment is the release ("A side-effect task"). */
+  static startsAtRelease(record: Pick<TaskRecord, "status" | "shape">): boolean {
+    return (
+      record.status === "open" &&
+      record.shape?.side_effect === true &&
+      record.shape.side_effect_moment === "release"
     );
   }
 

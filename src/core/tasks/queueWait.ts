@@ -1,8 +1,10 @@
 import { regionalLocale } from "@shared/i18n/current";
-import { dateTimeFormat } from "@shared/i18n/format";
+import { dateTimeFormat, formatList } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 import { providerLabel } from "@shared/modelSlots";
 import type { TaskView } from "@shared/tasks";
 import type { TaskRecord } from "../storage/taskRecords";
+import { TaskGraph } from "./taskGraph";
 
 /** Only unstarted work reads a start wait; callers can avoid fetching its unused inputs. */
 export function hasStartQueueWait(
@@ -62,6 +64,16 @@ export function queueWaitOf(
     return dated(
       `Waiting for ${holding.map((task) => `${task.key || task.id}${task.status === "dropped" ? " (dropped)" : ""}`).join(", ")}`,
       dates.every((at) => at !== undefined) ? Math.min(...(dates as number[])) : undefined,
+    );
+  }
+  // Only once nothing else it waits on is unfinished: a release-moment task's
+  // merged waits that have not shipped (docs/task-graph.md, "A side-effect task").
+  const unreleased = TaskGraph.unreleasedAmong(record, blockers);
+  if (unreleased.length) {
+    const merged = unreleased.map((task) => task.closedAt);
+    return dated(
+      m.taskQueueWaitRelease({ tasks: formatList(unreleased.map((task) => task.key || task.id)) }),
+      merged.every((at) => at != null) ? Math.max(...(merged as number[])) : undefined,
     );
   }
   const holdingParts = parts.filter((part) => part.status === "open" || part.status === "active");

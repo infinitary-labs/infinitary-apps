@@ -50,6 +50,15 @@ export const SIDE_EFFECT_START_AT_APPROVAL =
   "A side-effect task starts only once all its work merged, so it takes no start_at_approval: clear one or the other.";
 
 /**
+ * The refusal when a moment is named on work that is not a side-effect task
+ * (docs/task-graph.md, "A side-effect task"): filing and editing refuse it
+ * in the same words.
+ */
+// i18n-exempt: served to the first mate, never shown to a person
+export const MOMENT_WITHOUT_SIDE_EFFECT =
+  "moment applies only to a side-effect task: set side_effect too, or leave moment out.";
+
+/**
  * The refusal when needs_merge names a task that is not one of the task's
  * own blocked_by, or the one its start_at_approval names: filing and
  * editing refuse it in the same words.
@@ -195,6 +204,10 @@ export function updateTaskFields(
       // i18n-exempt: served to the first mate's tool, never shown to a person
       throw new TaskGraphRefusal("side_effect can only change on open work that has not started.");
     }
+    if (patch.moment !== undefined && !unstarted) {
+      // i18n-exempt: served to the first mate's tool, never shown to a person
+      throw new TaskGraphRefusal("moment can only change on open work that has not started.");
+    }
 
     if (
       patch.programBound !== undefined &&
@@ -323,6 +336,18 @@ export function updateTaskFields(
         update.shape = withShapeKey(current, "side_effect", mark);
         // i18n-exempt: served to the first mate's tool, never shown to a person
         changes.push(mark ? "side-effect task" : "side_effect cleared");
+      }
+      // A moment belongs to the mark, so clearing the mark clears it.
+      if (!mark && patch.moment === undefined && update.shape?.side_effect_moment)
+        update.shape = withShapeKey(update.shape, "side_effect_moment", undefined);
+    }
+    if (patch.moment !== undefined) {
+      const current = update.shape ?? record.shape;
+      if (!current?.side_effect) throw new TaskGraphRefusal(MOMENT_WITHOUT_SIDE_EFFECT);
+      if (patch.moment !== (current.side_effect_moment ?? "merge")) {
+        update.shape = withShapeKey(current, "side_effect_moment", patch.moment);
+        // i18n-exempt: served to the first mate's tool, never shown to a person
+        changes.push(`starts at the ${patch.moment}`);
       }
     }
     if (patch.needsMerge !== undefined || patch.startAtApproval !== undefined) {

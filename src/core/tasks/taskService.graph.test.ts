@@ -474,6 +474,58 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.listReady().map((r) => r.id)).toContain(tell.id);
     });
 
+    // INF-7198 part 1, the captain's "Approve and build": a release-moment side-effect task
+    // starts only once each merged wait has a recorded first release, never at the merge,
+    // and says on its queue line which work it waits for to ship.
+    it("starts a release-moment side-effect task only once each merged wait has a first release", () => {
+      const { tasks, work } = setup();
+      const inProject = { repoId: "r1", startPolicy: "on-request" } as const;
+      const fix = work("fix", inProject);
+      const answer = work("answer", {
+        ...inProject,
+        shape: { kind: "research", deliverable: "answer" },
+      });
+      const waits = { repoId: "r1", blockedBy: ["fix", "answer"] };
+      work("reply", {
+        ...waits,
+        shape: { kind: "implement", side_effect: true, side_effect_moment: "release" },
+      });
+      work("at-merge", {
+        ...waits,
+        shape: { kind: "implement", side_effect: true, side_effect_moment: "merge" },
+      });
+      work("unset", { ...waits, shape: { kind: "implement", side_effect: true } });
+      tasks.close(fix.id, { status: "done", reason: "merged", actor: "host" });
+      tasks.close(answer.id, { status: "done", reason: "answered", actor: "captain" });
+
+      const ready = () =>
+        tasks.graph
+          .listReady()
+          .map((r) => r.id)
+          .sort();
+      expect(ready()).toEqual(["at-merge", "unset"]);
+      expect(tasks.graph.waitingOn("reply").map((r) => r.id)).toEqual(["fix"]);
+      expect(tasks.graph.flagsOf(tasks.get("reply")!)).toMatchObject({
+        blocked: true,
+        ready: false,
+        deadBlocker: false,
+      });
+      const reply = tasks.get("reply")!;
+      expect(queryTasks(tasks, { key: reply.key }).rows[0]?.waiting).toMatch(
+        new RegExp(`^Waiting for ${fix.key} to ship in a release · since `),
+      );
+
+      const check = work("release-check", { repoId: "r1", startPolicy: "on-request" });
+      tasks.delivery.recordFirstRelease(check.id, {
+        version: "1.4.0",
+        url: "https://example.com/releases/1.4.0",
+        evidence: "The 1.4.0 tag holds the fix's merge commit.",
+        tasks: [fix.key],
+      });
+      expect(ready()).toEqual(["at-merge", "reply", "unset"]);
+      expect(tasks.graph.waitingOn("reply")).toEqual([]);
+    });
+
     it("keeps a part waiting on the part under its base when it needs that part merged", () => {
       const { tasks, work } = setup();
       const first = work("first", { startPolicy: "on-request" });

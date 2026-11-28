@@ -108,6 +108,7 @@
   "settingsAutomationEventTaskClosed": "Uma tarefa é fechada",
   "settingsAutomationEventTaskReleased": "O trabalho sai em uma versão publicada",
   "settingsAutomationEventsPreview": "- (um resumo de cada evento que chegou)",
+  "settingsAutomationFilterGmailSearch": "Palavras de busca (no formato do Gmail, como from:ada@example.com; vazio para toda mensagem)",
   "settingsAutomationFirstMateGets": "Seu imediato recebe",
   "settingsAutomationFri": "Sex",
   "settingsAutomationFriday": "Sexta-feira",

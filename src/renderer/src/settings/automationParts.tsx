@@ -92,7 +92,10 @@ export function useListenable(): Listenable[] {
         integration: integration.name,
       }),
       every: event.every,
-      filters: event.filters,
+      filters: event.filters?.map((field) => ({
+        ...field,
+        label: FILTER_LABELS[`${integration.id}/${event.name}/${field.name}`]?.() ?? field.label,
+      })),
     })),
   );
 }
@@ -104,6 +107,14 @@ export function useListenable(): Listenable[] {
 const APP_EVENT_LABELS: Record<string, (() => string) | undefined> = {
   "tasks/task_closed": m.settingsAutomationEventTaskClosed,
   "tasks/task_released": m.settingsAutomationEventTaskReleased,
+};
+
+/**
+ * An integration's filter fields in the person's language, where the catalog
+ * holds them; the core keeps each label in English for the agents.
+ */
+const FILTER_LABELS: Record<string, (() => string) | undefined> = {
+  "google/message_received/search": m.settingsAutomationFilterGmailSearch,
 };
 
 /** The prompt exactly as Firstmate gets it. */

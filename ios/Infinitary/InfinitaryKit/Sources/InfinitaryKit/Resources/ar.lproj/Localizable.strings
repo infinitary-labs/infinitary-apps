@@ -2924,6 +2924,7 @@
 "settingsAutomationEventTaskClosed" = "تُغلق مهمة";
 "settingsAutomationEventTaskReleased" = "يصدر العمل في إصدار";
 "settingsAutomationEventsPreview" = "- (ملخص لكل حدث وصل)";
+"settingsAutomationFilterGmailSearch" = "كلمات البحث (بصيغة Gmail، مثل from:ada@example.com؛ اتركها فارغة لكل رسالة)";
 "settingsAutomationFirstMateGets" = "ما يتلقاه نائب القبطان";
 "settingsAutomationFri" = "جمعة";
 "settingsAutomationFriday" = "الجمعة";

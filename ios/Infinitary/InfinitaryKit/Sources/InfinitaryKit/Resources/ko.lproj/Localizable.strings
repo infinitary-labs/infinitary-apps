@@ -2924,6 +2924,7 @@
 "settingsAutomationEventTaskClosed" = "작업이 닫힘";
 "settingsAutomationEventTaskReleased" = "작업이 릴리스에 포함됨";
 "settingsAutomationEventsPreview" = "- (도착한 각 이벤트의 요약)";
+"settingsAutomationFilterGmailSearch" = "검색어(Gmail 형식, 예: from:ada@example.com. 비워 두면 모든 메시지)";
 "settingsAutomationFirstMateGets" = "일등항해사가 받는 것";
 "settingsAutomationFri" = "금";
 "settingsAutomationFriday" = "금요일";

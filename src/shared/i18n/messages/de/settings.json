@@ -106,6 +106,7 @@
   "settingsAutomationEventTaskClosed": "Eine Aufgabe wird geschlossen",
   "settingsAutomationEventTaskReleased": "Arbeit erscheint in einem Release",
   "settingsAutomationEventsPreview": "- (eine Zusammenfassung jedes eingetroffenen Ereignisses)",
+  "settingsAutomationFilterGmailSearch": "Suchbegriffe (in Gmails Form, etwa from:ada@example.com; leer für jede Nachricht)",
   "settingsAutomationFirstMateGets": "Dein erster Offizier bekommt",
   "settingsAutomationFri": "Fr",
   "settingsAutomationFriday": "Freitag",

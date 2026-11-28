@@ -2924,6 +2924,7 @@
 "settingsAutomationEventTaskClosed" = "A task closes";
 "settingsAutomationEventTaskReleased" = "Work ships in a release";
 "settingsAutomationEventsPreview" = "- (a summary of each event that arrived)";
+"settingsAutomationFilterGmailSearch" = "Search words (Gmail's own, such as from:ada@example.com; empty for every message)";
 "settingsAutomationFirstMateGets" = "Your first mate gets";
 "settingsAutomationFri" = "Fri";
 "settingsAutomationFriday" = "Friday";

@@ -3067,6 +3067,7 @@ public enum PhoneMessages {
     public static func `settingsAutomationEventTaskClosed`() -> String { PhoneWords.format("settingsAutomationEventTaskClosed", []) }
     public static func `settingsAutomationEventTaskReleased`() -> String { PhoneWords.format("settingsAutomationEventTaskReleased", []) }
     public static func `settingsAutomationEventsPreview`() -> String { PhoneWords.format("settingsAutomationEventsPreview", []) }
+    public static func `settingsAutomationFilterGmailSearch`() -> String { PhoneWords.format("settingsAutomationFilterGmailSearch", []) }
     public static func `settingsAutomationFirstMateGets`() -> String { PhoneWords.format("settingsAutomationFirstMateGets", []) }
     public static func `settingsAutomationFri`() -> String { PhoneWords.format("settingsAutomationFri", []) }
     public static func `settingsAutomationFriday`() -> String { PhoneWords.format("settingsAutomationFriday", []) }
@@ -7986,6 +7987,7 @@ extension PhoneWords {
         "settingsAutomationEventTaskClosed": [],
         "settingsAutomationEventTaskReleased": [],
         "settingsAutomationEventsPreview": [],
+        "settingsAutomationFilterGmailSearch": [],
         "settingsAutomationFirstMateGets": [],
         "settingsAutomationFri": [],
         "settingsAutomationFriday": [],

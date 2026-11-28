@@ -2924,6 +2924,7 @@
 "settingsAutomationEventTaskClosed" = "任务关闭";
 "settingsAutomationEventTaskReleased" = "工作随版本发布";
 "settingsAutomationEventsPreview" = "- （每个到达事件的摘要）";
+"settingsAutomationFilterGmailSearch" = "搜索词（Gmail 自己的格式，例如 from:ada@example.com；留空则接收每封邮件）";
 "settingsAutomationFirstMateGets" = "你的大副会收到";
 "settingsAutomationFri" = "周五";
 "settingsAutomationFriday" = "星期五";

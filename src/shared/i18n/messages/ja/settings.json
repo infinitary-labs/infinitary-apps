@@ -104,6 +104,7 @@
   "settingsAutomationEventTaskClosed": "タスクが終了する",
   "settingsAutomationEventTaskReleased": "作業がリリースに含まれる",
   "settingsAutomationEventsPreview": "-（届いた各イベントの要約）",
+  "settingsAutomationFilterGmailSearch": "検索語（Gmail の形式。例：from:ada@example.com。空欄ならすべてのメッセージ）",
   "settingsAutomationFirstMateGets": "一等航海士が受け取る内容",
   "settingsAutomationFri": "金",
   "settingsAutomationFriday": "金曜日",

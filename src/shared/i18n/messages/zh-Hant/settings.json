@@ -104,6 +104,7 @@
   "settingsAutomationEventTaskClosed": "任務關閉",
   "settingsAutomationEventTaskReleased": "工作隨版本發布",
   "settingsAutomationEventsPreview": "- （每個到達事件的摘要）",
+  "settingsAutomationFilterGmailSearch": "搜尋字詞（Gmail 自己的格式，例如 from:ada@example.com；留空則接收每封郵件）",
   "settingsAutomationFirstMateGets": "你的大副會收到",
   "settingsAutomationFri": "週五",
   "settingsAutomationFriday": "星期五",

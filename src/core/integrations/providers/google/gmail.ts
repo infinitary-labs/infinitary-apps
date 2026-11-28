@@ -33,14 +33,12 @@ export const GMAIL_MESSAGE_EVENT: IntegrationEventSpec = {
   filters: [
     {
       name: "search",
+      // i18n-exempt: the agents' name for the field; Settings shows the catalog's words
       label: "Search words (Gmail's own, such as from:ada@example.com; empty for every message)",
     },
   ],
   checkFilter: (filter) => searchWordsProblem(filter?.search ?? ""),
 };
-
-/** The longest search words a rule keeps: Gmail's query holds them beside the look's own. */
-const SEARCH_WORDS_MAX = 512;
 
 /**
  * Why a rule's search words cannot go inside the look's search, or undefined.
@@ -50,21 +48,19 @@ const SEARCH_WORDS_MAX = 512;
  * joins only their own words, never the inbox or the window.
  */
 export function searchWordsProblem(words: string): string | undefined {
-  if (words.length > SEARCH_WORDS_MAX)
-    return `Gmail search words for a rule are at most ${SEARCH_WORDS_MAX} characters.`;
-  if (/[\r\n]/.test(words)) return "Gmail search words for a rule are one line.";
   const open: string[] = [];
   let quoted = false;
+  let fits = !/[\r\n]/.test(words);
   for (const char of words) {
     if (char === '"') quoted = !quoted;
     else if (quoted) continue;
-    else if (char === "(" || char === "{") open.push(char === "(" ? ")" : "}");
-    else if ((char === ")" || char === "}") && open.pop() !== char)
-      return `The search words close a ${char} they never opened.`;
+    else if (char === "(") open.push(")");
+    else if (char === "{") open.push("}");
+    else if ((char === ")" || char === "}") && open.pop() !== char) fits = false;
   }
-  if (quoted) return "The search words open a quote they never close.";
-  if (open.length > 0) return `The search words never close a ${open.at(-1) === ")" ? "(" : "{"}.`;
-  return undefined;
+  if (fits && !quoted && open.length === 0) return undefined;
+  // i18n-exempt: a save refusal served to the first mate's schedule tool, as the scheduler's others are
+  return "Gmail search words for a rule are one line, with every quote, parenthesis and brace closed in order.";
 }
 
 const messageIdSchema = z

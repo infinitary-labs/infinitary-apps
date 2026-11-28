@@ -257,6 +257,9 @@ describe("Gmail through its MCP server", () => {
     expect(google.answers).toEqual([]);
   });
 
+  const REFUSED =
+    "Gmail search words for a rule are one line, with every quote, parenthesis and brace closed in order.";
+
   // The care points on INF-7250's finding 2: the words travel inside the look's own search, so
   // words that would close its group or leave a quote open are refused when the rule is saved.
   it("refuses saving a rule whose search words would leave the look's group, and saves one that stays inside", async () => {
@@ -280,14 +283,10 @@ describe("Gmail through its MCP server", () => {
         event: "message_received",
         filter: { search },
       });
-    expect(() => listen("from:ada) OR (in:sent")).toThrow(
-      "The search words close a ) they never opened.",
-    );
-    expect(() => listen('subject:"identity check')).toThrow(
-      "The search words open a quote they never close.",
-    );
-    expect(() => listen("{from:ada from:lena")).toThrow("The search words never close a {.");
-    expect(() => listen("from:ada\nin:sent")).toThrow("Gmail search words for a rule are one line.");
+    expect(() => listen("from:ada) OR (in:sent")).toThrow(REFUSED);
+    expect(() => listen('subject:"identity check')).toThrow(REFUSED);
+    expect(() => listen("{from:ada from:lena")).toThrow(REFUSED);
+    expect(() => listen("from:ada\nin:sent")).toThrow(REFUSED);
     expect(listen('{from:ada from:lena} subject:"(draft)"').spec).toMatchObject({
       filter: { search: '{from:ada from:lena} subject:"(draft)"' },
     });

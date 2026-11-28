@@ -51,10 +51,15 @@ export async function raiseReaderCard(core: Core): Promise<{ title: string; line
  * INF-7092's approved plan: Gmail's question about a send, raised for the
  * first mate, its four choices in Google's own labels as footer buttons, to
  * check at phone width. The choices and question line are the Google
- * stand-in's. Answers the card's title and its buttons' ids.
+ * stand-in's. Answers the card's title, Google's question line and its buttons' ids.
  */
-export function raiseGoogleQuestionCard(core: Core): { title: string; actions: string[] } {
+export function raiseGoogleQuestionCard(core: Core): {
+  title: string;
+  question: string;
+  actions: string[];
+} {
   const supervisor = core.services.supervisor;
+  const question = approvalQuestion("send_message");
   const cardId = supervisor.integrationAsks.askIntegrationForFirstmate({
     id: "ia-phone-google",
     kind: "integration",
@@ -70,7 +75,7 @@ export function raiseGoogleQuestionCard(core: Core): { title: string; actions: s
     at: Date.now(),
     confirm: {
       message: "**Send an email** to lena@ortiz-studio.com?\n\nSubject: Invoice 2214",
-      question: approvalQuestion("send_message"),
+      question,
       options: APPROVAL_CHOICES.map(([value, label]) => ({ value, label })),
       state: '{"tool":"send_message"}',
       asker: "Gmail",
@@ -78,5 +83,9 @@ export function raiseGoogleQuestionCard(core: Core): { title: string; actions: s
   });
   supervisor.cards.flushBroadcast();
   const card = supervisor.cards.get(cardId);
-  return { title: card?.title ?? "", actions: card?.actions.map((action) => action.id) ?? [] };
+  return {
+    title: card?.title ?? "",
+    question,
+    actions: card?.actions.map((action) => action.id) ?? [],
+  };
 }

@@ -69,15 +69,20 @@ extension PhoneJourney {
         // over another.
         let google = try await home("google-question-card")
         let googleTitle = try XCTUnwrap(google["title"] as? String)
+        let googleQuestion = try XCTUnwrap(google["question"] as? String)
         let choices = try XCTUnwrap(google["actions"] as? [String])
         XCTAssertEqual(choices.count, 4, "Gmail's question offers four choices")
         XCTAssertTrue(cardHeading(googleTitle).waitForPresence(timeout: 10), app.debugDescription)
-        waitForShownBodyRevealed()
+        // The footer's buttons stay disabled until the body is drawn, and the body view may not exist yet when the
+        // heading shows, so the step waits for Google's question line in the body itself.
+        XCTAssertTrue(app.webViews.staticTexts[googleQuestion].firstMatch.waitForPresence(timeout: 10), app.debugDescription)
         let screen = app.windows.firstMatch.frame
         let buttons = choices.map { app.buttons["card-action-\($0)"].firstMatch }
         for (id, button) in zip(choices, buttons) {
             XCTAssertTrue(button.waitForPresence(timeout: 10), "No button for \(id)\n\(app.debugDescription)")
-            XCTAssertTrue(button.isHittable, "\(button.label) cannot be tapped")
+            let tappable = NSPredicate { _, _ in button.isEnabled && button.isHittable }
+            XCTAssertEqual(waitForPhonePredicate(tappable, object: nil, timeout: 10), .completed,
+                           "\(button.label) cannot be tapped")
             XCTAssertTrue(screen.insetBy(dx: -0.5, dy: -0.5).contains(button.frame),
                           "\(button.label) at \(button.frame) runs past the screen \(screen)")
         }

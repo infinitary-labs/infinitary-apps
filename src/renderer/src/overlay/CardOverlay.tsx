@@ -25,8 +25,8 @@ type Phase = "starting" | "cards" | "nothing";
 /**
  * The card overlay's page (docs/card-overlay.md): the card stack alone, in
  * a panel over the app in front. It shows the card the newest notification
- * was about, gives the keys back once a choice is made or Escape leaves, and
- * sends its unsent words before it goes.
+ * was about, stays while cards wait, gives the keys back once the last card
+ * closes or Escape leaves, and sends its unsent words before it goes.
  */
 export function CardOverlay() {
   useEffect(() => guardFrameFocus(), []);
@@ -95,18 +95,13 @@ export function CardOverlay() {
     };
   }, [phase]);
 
-  // A choice made here, or a stack with nothing left, gives the keys back.
+  // Only a stack with nothing left gives the keys back: a card that closes
+  // here brings up the next by the stack's own rule (the captain, INF-7222).
   useEffect(
     () =>
-      useShellStore.subscribe((state, previous) => {
+      useShellStore.subscribe((state) => {
         if (phase !== "cards") return;
-        const answered = Object.keys(previous.pendingCardActions).some(
-          (id) =>
-            !state.pendingCardActions[id] &&
-            !state.cardActionErrors[id] &&
-            !state.cards.some((card) => card.id === id),
-        );
-        if (answered || (state.cardsSnapshotLoaded && stackOf(state).length === 0)) leave();
+        if (state.cardsSnapshotLoaded && stackOf(state).length === 0) leave();
       }),
     [phase, leave],
   );

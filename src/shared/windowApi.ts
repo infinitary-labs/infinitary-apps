@@ -432,6 +432,30 @@ export type FirstmateApi = {
       listener: (next: readonly import("./keyboard").NextKey[] | null) => void,
     ) => () => void;
   };
+  /**
+   * The card overlay (docs/card-overlay.md): its switch and key, this
+   * computer's own, and the calls only the overlay's own page makes.
+   */
+  cardOverlay: {
+    settings: () => Promise<import("./cardOverlay").CardOverlay>;
+    onSettings: (listener: (value: import("./cardOverlay").CardOverlay) => void) => () => void;
+    /** Saves the switch and key, or refuses the change whole with the reason. */
+    set: (
+      next: import("./cardOverlay").SavedCardOverlay,
+    ) => Promise<import("./cardOverlay").CardOverlaySet>;
+    /** The card the newest notification on this computer was about, which the overlay shows first. */
+    start: () => Promise<{ cardId: string | null }>;
+    /** The overlay drew its card, or found none waiting. */
+    ready: (cards: boolean) => Promise<{ ok: true }>;
+    /** The overlay let go: its panel goes. */
+    hide: () => Promise<{ ok: true }>;
+    /** Whether the pointer is over the card; elsewhere the panel's clicks reach the app behind it. */
+    pointer: (over: boolean) => Promise<{ ok: true }>;
+    /** A card made large: the panel takes the display's whole width while it is. */
+    wide: (wide: boolean) => Promise<{ ok: true }>;
+    /** The panel is going: settle unsent words, then `hide`. */
+    onLeave: (listener: () => void) => () => void;
+  };
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {
     /**

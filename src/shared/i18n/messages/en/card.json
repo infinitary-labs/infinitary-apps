@@ -257,6 +257,9 @@
   "cardNoteToolBox": "Box or spot",
   "cardNoteToolLine": "Freehand line",
   "cardNoteUnavailable": "This part cannot be shown in this view",
+  "cardOverlayHide": "Hide the cards",
+  "cardOverlayNothing": "No cards waiting",
+  "cardOverlayOpensWindow": "This choice opens Infinitary’s window, so make it there.",
   "cardPastMark": "Past",
   "cardPastMeta": "past card",
   "cardPastPictures": {

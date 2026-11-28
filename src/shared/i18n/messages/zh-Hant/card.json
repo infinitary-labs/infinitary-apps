@@ -239,6 +239,9 @@
   "cardNoteToolBox": "框或點",
   "cardNoteToolLine": "手繪線",
   "cardNoteUnavailable": "這個檢視無法顯示這個部分",
+  "cardOverlayHide": "隱藏卡片",
+  "cardOverlayNothing": "沒有等待中的卡片",
+  "cardOverlayOpensWindow": "這個選項會打開 Infinitary 的視窗，請在那裡選擇。",
   "cardPastMark": "過去",
   "cardPastMeta": "過去的卡片",
   "cardPastPictures": {

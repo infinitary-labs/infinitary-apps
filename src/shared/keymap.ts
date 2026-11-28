@@ -451,7 +451,7 @@ const CTRL_SYSTEM_KEYS: readonly ReservedKey[] = [
   })),
 ];
 
-function reservedKeys(system: KeySystem): readonly ReservedKey[] {
+export function reservedKeys(system: KeySystem): readonly ReservedKey[] {
   return system === "mac" ? PLATFORM_KEYS : CTRL_SYSTEM_KEYS;
 }
 

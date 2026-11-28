@@ -102,8 +102,29 @@ export function mainWindowOpen(): boolean {
  */
 export function confirmationWindow(): Buffer | undefined {
   const focused = BrowserWindow.getFocusedWindow();
-  const own = appWindows();
+  const own = frontWindows();
   const win =
     focused && own.includes(focused) ? focused : own.find((candidate) => candidate.isVisible());
   return win?.getNativeWindowHandle();
+}
+
+const overlayWindows = new WeakSet<BrowserWindow>();
+
+/**
+ * Marks the card overlay's panel (./cardOverlayWindow.ts, docs/card-overlay.md):
+ * an app window that hears the card pushes, but never the one a click, a
+ * dialog or a menu command brings forward, since it floats over another
+ * app and gives the keys back when it goes.
+ */
+export function markOverlayWindow(win: BrowserWindow): void {
+  overlayWindows.add(win);
+}
+
+export function isOverlayWindow(win: BrowserWindow): boolean {
+  return overlayWindows.has(win);
+}
+
+/** The app windows a notification's click, a dialog or a menu command may use: every one but the card overlay. */
+export function frontWindows(): BrowserWindow[] {
+  return appWindows().filter((win) => !overlayWindows.has(win));
 }

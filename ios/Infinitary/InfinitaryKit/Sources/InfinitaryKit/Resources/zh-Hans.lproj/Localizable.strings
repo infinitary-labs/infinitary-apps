@@ -538,6 +538,9 @@
 "cardNoteToolBox" = "框或点";
 "cardNoteToolLine" = "手绘线";
 "cardNoteUnavailable" = "此视图无法显示这个部分";
+"cardOverlayHide" = "隐藏卡片";
+"cardOverlayNothing" = "没有等待中的卡片";
+"cardOverlayOpensWindow" = "这个选项会打开 Infinitary 的窗口，请在那里选择。";
 "cardPastMark" = "过往";
 "cardPastMeta" = "过往卡片";
 "cardPastSentLead" = "已随你的选择发送：";
@@ -3450,6 +3453,17 @@
 "settingsKeyboardAddBeside" = "添加到其他按键旁";
 "settingsKeyboardAnywhere" = "任何地方";
 "settingsKeyboardCancel" = "取消";
+"settingsKeyboardCardOverlay" = "在其他应用上方显示卡片";
+"settingsKeyboardCardOverlayChange" = "更改按键";
+"settingsKeyboardCardOverlayChangeLabel" = "更改在其他应用上方显示卡片的按键";
+"settingsKeyboardCardOverlayDescription" = "在任何应用中，即使是全屏游戏，按 %1$@ 即可在屏幕边缘回答等待中的卡片。再按一次或按 Esc 返回。";
+"settingsKeyboardCardOverlayKept" = "macOS 未接受 %2$@。卡片仍使用 %1$@。";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ 无法显示卡片：请选择带 Control、Option 或 Command 的按键，且不是 Esc、Tab、Return、空格或 Delete。";
+"settingsKeyboardCardOverlayPress" = "按下带 Control、Option 或 Command 的按键。按 Esc 取消。";
+"settingsKeyboardCardOverlayRecording" = "正在录制在其他应用上方显示卡片的按键";
+"settingsKeyboardCardOverlaySystem" = "macOS 自身的快捷键已使用 %1$@。请选择其他按键。";
+"settingsKeyboardCardOverlaySystemKept" = "macOS 自身的快捷键已使用 %2$@。卡片仍使用 %1$@。";
+"settingsKeyboardCardOverlayTaken" = "macOS 未接受 %1$@，所以它现在不起作用。请选择其他按键。";
 "settingsKeyboardChanged" = "已更改";
 "settingsKeyboardClashMovesKeeps" = "%1$@。保存后它会移到这里，“%2$@”会保留它的其他按键。";
 "settingsKeyboardClashMovesNoKey" = "%1$@。保存后它会移到这里，“%2$@”将没有按键。";

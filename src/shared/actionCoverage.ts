@@ -624,6 +624,20 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
   ],
   "inf:keyboard:record": ["window", "Keyboard settings recording the person's own presses"],
   "inf:window:control": ["window", "The window's own minimize, maximize and close buttons"],
+  "inf:overlay:settings:set": [
+    "window",
+    "This computer's system-wide key for the card overlay, held by this computer's keyboard and set where the person presses it",
+  ],
+  "inf:overlay:ready": ["window", "The card overlay's page drew its card, so its panel shows"],
+  "inf:overlay:hide": ["window", "The card overlay's page let go, so its panel goes"],
+  "inf:overlay:wide": [
+    "window",
+    "The card overlay's panel widening to the display while its card is made large, and back",
+  ],
+  "inf:overlay:pointer": [
+    "window",
+    "Whether the pointer is over the overlay's card, so clicks elsewhere reach the app behind it",
+  ],
   "inf:app:choose-folder": [
     "window",
     "The system's folder picker on the computer the person is at",

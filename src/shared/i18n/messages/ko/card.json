@@ -239,6 +239,9 @@
   "cardNoteToolBox": "상자 또는 한 곳",
   "cardNoteToolLine": "자유 곡선",
   "cardNoteUnavailable": "이 보기에서는 이 부분을 보여 줄 수 없어요",
+  "cardOverlayHide": "카드 숨기기",
+  "cardOverlayNothing": "기다리는 카드가 없어요",
+  "cardOverlayOpensWindow": "이 선택은 Infinitary 창을 여니 거기서 골라 주세요.",
   "cardPastMark": "지난 카드",
   "cardPastMeta": "지난 카드",
   "cardPastPictures": {

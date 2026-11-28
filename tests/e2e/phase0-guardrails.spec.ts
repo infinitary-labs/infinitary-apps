@@ -153,6 +153,7 @@ test("keeps node globals out of the page and exposes a tamper-proof bridge", asy
     "auth",
     "automation",
     "browser",
+    "cardOverlay",
     "cards",
     "conversation",
     "crew",

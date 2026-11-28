@@ -17,9 +17,9 @@
  *     headers reserve no card clearance. An edge tab says the panels are
  *     one click away.
  *  3. **In place.** The card's body becomes the thread, behind a segmented
- *     control in its head. It needs a stage under 720px, which the app's
- *     own 960px window minimum puts out of reach - it exists because the
- *     ladder must end somewhere, not because the app can get there.
+ *     control in its head. It needs a stage under 720px, which the
+ *     window's 960px minimum never gives; the card overlay's narrow panel
+ *     (docs/card-overlay.md) always does, so a thread opens in place there.
  *
  * Tweak 3 - the reply box under the action row while there is no thread yet
  * - is the card's own footer and needs no arithmetic.

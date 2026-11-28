@@ -52,7 +52,11 @@ That page reads the stack but picks no card until the key: `inf:overlay:start` a
 A page whose first reads fail before the key says so then; the controller keeps that word and, at the key, says that no card waits, as an open with no notification does.
 Unpressed, it is destroyed five minutes after the newest notification (`WARM_LIMIT_MS`), and a lock, sleep or lost display destroys it at once.
 With no notification waiting, no overlay page, timer or poll runs while it is hidden.
-It is frameless, clear, shadowless and floating above full-screen apps on every Space, at the trailing edge of the display the pointer is on (a game holds the pointer on its own display): one 560-point card 24 points from the edge, centred in the display's height and no taller than it (`overlayBounds`).
+It is frameless, clear, shadowless and floating above full-screen apps on every Space, at the trailing edge of the display the pointer is on (a game holds the pointer on its own display), the full height of its work area (`overlayBounds`).
+The panel is half the display's width, never narrower than a regular 560-point card and its air at the Size setting, nor wider than the display.
+Inside it every width rule of the window holds unchanged - the width the host decided, the saved Default card size, a drag, the thread beside the card where the panel has room - so a card opens at its window width up to that half.
+The card hugs the panel's trailing edge, 24 points from the display's edge, centred in the display's height and no taller than it, and the panel's spare width on its leading side is clear area (`overlay.css`).
+The panel's page follows the Size setting as the window does (`followWindowSize`), and the panel grows with it, so a card keeps its own pixel width at every Size.
 In a right-to-left language it sits at the left edge.
 A card made large takes the display's whole work area while it stays large, and the panel returns to its place when it shrinks: the page tells the main process (`inf:overlay:wide`), which resizes the panel, and the clear area around the large card still lets the pointer through.
 There is no glass, dimmer, sound or badge; the card moves in once from the edge, and under Reduce Motion it is there at once.
@@ -70,7 +74,7 @@ So the tallest card gives up a lane above it for the hide button and one under i
 A choice that opens Infinitary's window - Settings, a browser, a sign-in - is refused on the card with the words that it opens the window, so it is made there and never runs out of sight.
 The system's file and folder pickers are refused the same way (`pickFiles`, `pickProjectFolder`): a picker would take the keys and send the panel away under it.
 Files dropped on the thread still attach.
-The panel's narrow width holds a card's thread in place, behind the `card` · `thread · N` control in the card's head (`docs/card-threads.md`); a line that arrives after the thread's first read, the person's own reply or its author's answer, turns the card to its thread.
+Where the panel has no room for the thread beside the card - a narrow display or a large Size - the card holds its thread in place, behind the `card` · `thread · N` control in the card's head (`docs/card-threads.md`); a line that arrives after the thread's first read, the person's own reply or its author's answer, turns the card to its thread.
 
 The page tells the main process it is ready once the shown card is drawn and live, or at the stack's own hold limit (`HOLD_LIMIT_MS`), past which the stack shows the card as it is; only then does the panel show, with the keys when there is a card (`show()`) and without them when none waits (`showInactive()`).
 As a nonactivating panel it takes the keys while the game stays the front app.

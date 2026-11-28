@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-overlay-window-width",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Cards over other apps open as wide as in the window",
+      "body": "A card opened over another app, such as a full-screen game, now has the same width it has in Infinitary's window, up to half the screen, so charts, drawings and tables fit without squeezing or scrolling. It sits at the edge of the screen and leaves the rest of the game clear for clicks. A larger Size setting now makes the card larger there too, as it does in the window, instead of narrowing it.",
+      "picture": {
+        "dark": "card-overlay-window-width-dark.webp",
+        "light": "card-overlay-window-width-light.webp",
+        "alt": "A card over another app at its full window width, its three option charts side by side in one row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

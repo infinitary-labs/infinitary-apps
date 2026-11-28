@@ -78,25 +78,36 @@ export function overlayAccelerator(chord: KeyChord): string {
 
 /** The air between the panel's card and the display's trailing edge, in points. */
 export const OVERLAY_EDGE = 24;
-/** The stage's air on each side of its card: half of its 32-point margin (`cardWidth`). */
+/** The stage's air on each side of its card at a 100% Size setting: half of its 32-point margin (`cardWidth`). */
 const STAGE_AIR = 16;
-/** The panel's width: a regular card and the stage's own air on both sides of it. */
+/** The panel's least width at a 100% Size setting: a regular card and the stage's own air on both sides of it. */
 export const OVERLAY_WIDTH = 560 + 2 * STAGE_AIR;
+/** The share of the display's width the panel may take: half, the captain's pick on INF-7215's plan. */
+export const OVERLAY_SHARE = 1 / 2;
 
 export type Rect = { x: number; y: number; width: number; height: number };
 
 /**
  * Where the panel goes on a display: the full height of its work area, at
- * its trailing edge, so the card's own right edge sits `OVERLAY_EDGE` from
- * it. The stage's air is half on each side of the card. A display narrower
- * than the panel gets the whole width, and so does a card made large
- * (`wide`), the plan's deliberate expansion of wide content.
+ * its trailing edge. It is half the work area's width, never narrower than
+ * a regular card and its air at the Size setting (`zoom`, the page's zoom
+ * factor), nor wider than the work area, so each card keeps the width it
+ * has in the window up to that half. The page puts the card at the
+ * panel's trailing side (overlay.css), its own right edge `OVERLAY_EDGE`
+ * from the display's while the stage's air allows. A card made large
+ * (`wide`) gets the whole work area, the plan's deliberate expansion of
+ * wide content.
  */
-export function overlayBounds(workArea: Rect, rightToLeft = false, wide = false): Rect {
+export function overlayBounds(workArea: Rect, rightToLeft = false, wide = false, zoom = 1): Rect {
   // A card made large takes the whole work area; its clear air still lets clicks through.
   if (wide) return { ...workArea };
-  const width = Math.min(OVERLAY_WIDTH, workArea.width);
-  const inset = Math.max(0, Math.min(OVERLAY_EDGE - STAGE_AIR, workArea.width - width));
+  // Electron places a window on whole points.
+  const width = Math.round(
+    Math.min(workArea.width, Math.max(OVERLAY_WIDTH * zoom, workArea.width * OVERLAY_SHARE)),
+  );
+  const inset = Math.round(
+    Math.max(0, Math.min(OVERLAY_EDGE - STAGE_AIR * zoom, workArea.width - width)),
+  );
   const x = rightToLeft ? workArea.x + inset : workArea.x + workArea.width - width - inset;
   return { x, y: workArea.y, width, height: workArea.height };
 }

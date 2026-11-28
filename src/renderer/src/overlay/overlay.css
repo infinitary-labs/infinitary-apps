@@ -26,6 +26,20 @@ html[data-card-overlay] [data-card-layer-leaving] {
   /* biome-ignore lint/complexity/noImportantStyles: the stack sets its top inline (STAGE_TOP), which only !important outranks */
   top: 50% !important;
 }
+/* The card hugs the panel's trailing edge, the stage's 16 px air from it
+   (half of THREAD_STAGE_MARGIN), so the panel's spare width lies on the
+   card's leading side, clear for clicks. The logical sides outrank the
+   stack's inline left: 50% in either direction. A card made large stays
+   centred in the display, as in the window. */
+html[data-card-overlay]:not([data-card-maximized]) [data-card-layer],
+html[data-card-overlay] [data-card-layer-leaving] {
+  /* biome-ignore lint/complexity/noImportantStyles: the stack centres its layer inline (left and transform), which only !important outranks */
+  inset-inline-start: auto !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  inset-inline-end: 16px !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  transform: translateY(-50%) !important;
+}
 html[data-card-overlay] [data-card-slot] {
   anchor-name: --overlay-card;
 }

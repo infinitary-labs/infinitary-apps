@@ -98,7 +98,7 @@ Its moment, `side_effect_moment` on its shape, says when the action happens: `re
 The first mate picks it from how the project ships: `release` where the project publishes releases of any kind, `merge` where it publishes none (HANDOFF).
 A task with no moment starts at the merge, as one marked `merge` does.
 A release-moment task stays unstarted while any merged wait has no recorded first release (`TaskGraph.awaitingRelease`): `waitingOn` names each such wait, so it is blocked and never ready, and `TaskGraph.listReady` leaves it out.
-A wait closed done without a merge, such as an answer, holds nothing; a merge is the record's own fact (`TaskGraph.workMerged`): a merge that spent its approval, or a done close the record calls `merged` or `landed`, the same closes a first release is recorded on.
+A wait closed done without a merge, such as an answer, waits for no release; a merge is the record's own fact (`TaskGraph.workMerged`): a merge that spent its approval, or a done close the record calls `merged` or `landed`, the same closes a first release is recorded on.
 Its queue line reads "Waiting for X to ship in a release" once nothing else it waits on is unfinished (`queueWaitOf`).
 The first release is the one a crewmate verifies and declares through `report.first_release` (`docs/task-record.md`), and the next start sweep starts the task once every merged wait has one.
 A replaced piece's wait moves to its replacement (`TaskService.moveWaits`), as every wait does.

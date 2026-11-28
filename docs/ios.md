@@ -40,6 +40,7 @@ An App Store submission or external TestFlight build must give Apple a written r
 Pairing has short request deadlines; the socket uses a separate configuration with no request deadline of its own, since that timer also cut a message still arriving after 60 seconds, so the session's silence watch and dial limit own a connection's deadlines.
 The home paces what it sends and pings after every piece (`docs/connection.md`, "Pacing and liveness"), so it keeps a phone on a slow link while a long catch-up arrives, and answers the phone's own pings during it.
 The phone cannot see a message still arriving, so its hello lists `frame-parts` and the home sends it any frame longer than one piece as parts, each a whole message the phone hears as it arrives (`PhoneParts`; `docs/connection.md`, "Pacing and liveness"): an answer that takes minutes to arrive, such as a grown card list read whole at 1 KB/s, keeps its connection.
+The parts of a connection's welcome are not heard, since a welcome is heard only once it names this phone's home: a refused home is never heard, whether its welcome comes whole or in parts.
 A join sends the invitation's kind and `system: "ios"`; the Mac returns HTTP 201 and kind `view` regardless of that invitation's computer kind.
 Before spending the invitation, a pinned, non-mutating `GET /connection` must return 426 from a reachable candidate.
 Private IPv4 candidates in `100.64.0.0/10` come first, followed by local names and addresses; an unavailable preflight, including a timeout, may try the next candidate.
@@ -177,7 +178,7 @@ Leave is available in reach and asks for confirmation, sends the connection's Le
 Out of reach, **Forget this computer** asks for confirmation and clears that computer and its pin locally without claiming it removed the phone; either way another kept computer shows next ("Several computers").
 Both choices live on Settings' Your computer page, opened from Settings, Command-I or the reach line; neither is an always-visible destructive toolbar action.
 Out of reach, Your computer also offers Take over with each computer that keeps a copy of the record, as the welcome lists them, which asks one to take over after Face ID or the passcode (`PhoneTakeOverSection.swift`, `PhoneTakeOver.swift`; `docs/devices.md`, "Taking over from a phone").
-The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number.
+The phone then follows the home to the computer that took over by its higher number, and refuses the old home's lower number and a second home with the same number; a refused home is never heard, so the words leave Live once the computer has been quiet for 20 seconds.
 A removal close, or the removal frame before it (`removal-notice`, `docs/connection.md` "Closing"), or repeated authenticated refusal clears cards and feed and forgets that computer; with no other computer kept it offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.

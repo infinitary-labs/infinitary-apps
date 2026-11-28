@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-refused-home-leaves-live",
+      "kind": "fix",
+      "title": "After a takeover, iPhone and iPad no longer say Live while turning the old computer away",
+      "body": "When another computer has taken over and the old one starts again, your iPhone or iPad turns the old one away, as before. It now says the computer is out of reach within about 20 seconds. Before, it could keep saying Live the whole time, while nothing new reached it.",
+      "area": "devices",
+      "noPicture": "The phone shows the same reach words as before; only a computer it turns away no longer keeps them at Live.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

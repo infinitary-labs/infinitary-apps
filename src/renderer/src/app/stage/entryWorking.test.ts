@@ -19,4 +19,15 @@ describe("entryWorking", () => {
     );
     expect(entryWorking({ author: "firstmate", taskId: "t2" }, true, { t2: "idle" })).toBe(true);
   });
+
+  /**
+   * INF-7111, the captain: "this card thread was not showing the "working"
+   * state, while i think first mate was the one working on it". The app's
+   * own card the first mate answers reads the first mate, not its task.
+   */
+  it("reads an app card the first mate answers from the first mate", () => {
+    const approval = { author: "host" as const, taskId: "t3", answeredBy: "firstmate" as const };
+    expect(entryWorking(approval, true, { t3: "idle" })).toBe(true);
+    expect(entryWorking(approval, false, { t3: "running" })).toBe(false);
+  });
 });

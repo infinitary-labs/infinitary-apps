@@ -94,12 +94,12 @@ The host does not judge which kind a refusal is: it compares the account that se
 ## A steer no turn took in
 
 One rule for every rolling session, on both backends (the session contract's `takeUndeliveredSteers`, `src/core/session/session.ts`): a steer the session accepted but no turn took in - it landed after Pi's run made its last look at its queue, or no turn of the Claude client acknowledged it - comes back at the turn's end instead of being lost.
-Sessions deliver steers oldest first, so what comes back is the newest.
+What comes back is not always the newest: a conversation on another computer refuses a steer that arrives before its turn starts there, and takes the later ones.
 
 - **The first mate's lane.**
   `FirstmateAgent.redeliverUndeliveredSteers` parks the captain's words the session gave back on the lane as theirs, and the drain serves them as the next turn.
 - **A crewmate's lane.**
-  The runtime's `CrewTurn` owns its phase and the inbox batch each turn carries, including the rows of each live steer, and maps the count the session gave back to the newest pushes, which assumes a session gives back a suffix of what it was sent.
+  The runtime's `CrewTurn` owns its phase and the inbox batch each turn carries, including the rows and words of each live steer, and finds each steer the session gave back by its words (`CrewTurn.takeUnheard`); of two with the same words the newer is taken, and words that match none fall back to the newest steers still unmatched.
   Those rows are re-parked, not acked (`InboxStore.reparkUndelivered`): due at once with the attempt given back, so the next turn reads them.
   A task that finishes re-parks them before it lists anything as never delivered.
 - **Known tail race.**

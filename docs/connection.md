@@ -49,7 +49,7 @@ Every refusal happens on the upgrade, before the device can send a frame:
 
 The pairing seam is `any()`, `subscribe(listener)`, `identity()` (the home's TLS key and certificate), `admit(request)` (the paired device the upgrade request's TLS socket proves to be, or null), `holds(deviceId)` and `claim(body, request)` (a device using its link at `/pair`).
 Pairing decides how a device proves itself; the connection never reads a secret from an address.
-A change to what is paired reaches the connection before the change returns: every connected device whose `holds` no longer answers true is closed in that same call (`unpaired`), and a frame from a device no longer held is dropped and the device closed.
+A change to what is paired reaches the connection before the change returns: every connected device whose `holds` no longer answers true is closed in that same call (`unpaired`), or, when its hello lists `removal-notice`, told so in that call and closed once it closes itself or the grace passes ("Closing"), and a frame from a device no longer held is dropped and the device closed.
 
 Beside `/connection` and `/pair`, the listener answers two plain requests from a computer that runs work, admitted by the same seam: `/firstmate`, this app (`docs/devices.md`, "Getting Infinitary by its own key"), and `/infinitary-source`, the committed tree of the commit a home run from source runs (`FETCH_SOURCE_PATH`, `docs/devices.md`, "Matching the home's build").
 
@@ -174,7 +174,7 @@ An empty argument before a given one still goes as null, so a request that can h
 - A device whose `access` is `read` is answered its reads and sent every push; a channel whose `effect` is `change` is refused, until the device is updated, and does not reach the core.
   The one exception is `READ_ONLY_ASKS` (`src/shared/contractFeatures.ts`): a view's `inf:converse` with a single non-blank string, the captain's plain words, is forwarded as above, which a home on major 16 or later does by its version and an older home announces by listing `messages-while-reading` (`docs/view.md`, "Read only").
   So are a view's `inf:home-update:install` and `inf:home-update:later` with no arguments, the home's own update (`home-update`, `docs/view.md` "Updating the first mate's computer").
-- A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired` (`docs/devices.md`, "Leave").
+- A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired`, telling it first when its hello lists `removal-notice` ("Closing"; `docs/devices.md`, "Leave").
 
 The home asks a computer that runs work the same way, with `invoke` and one `result` per `id` (`HomeConnection.ask`): only a connected `work` device whose welcome said it takes work, and only the orders in `src/shared/work.ts`, `src/shared/workBrowsers.ts`, `src/shared/signIns.ts` and `src/shared/resources.ts`.
 In the core it reaches them through `WorkDevices` (`src/core/placed/workDevices.ts`), to which the shell attaches the connection once it starts it and from which it takes it back before it closes it.
@@ -224,6 +224,13 @@ A device whose hello does not list the change is sent none; the phone lists it (
 | 4401 | `unpaired` | The device's pairing went - Remove, or the device's own `leave` - or the last one did |
 | 4408 | `behind` | More than 32 MiB waits to be sent to it; it comes back with its cursor |
 | 1001 | `closing` | The home is quitting |
+
+A device whose hello lists `removal-notice` (`REMOVAL_NOTICE`, `src/shared/connection.ts`) hears `unpaired` as a frame, `{"t":"unpaired"}`, before any close.
+The outbox writes it right after the frame it is writing, which still ends whole, drops every frame not yet begun, and writes nothing after it.
+The device closes the connection itself on reading it; the home closes it as `unpaired` once the device answered for the frame and one second more passed (`removalGraceMs`), if it has not.
+A phone's socket loses a close that arrives while one of its own sends is still going, such as a read answering the frame before the removal, and reads that as a lost connection; a frame ahead of the close it always reads.
+A computer's link to its home (`src/core/devices/homeLink.ts`) lists every change its build knows, this one too, so it reads the frame as it reads the `unpaired` close: it closes the connection, and that close, however it ends, reads as `unpaired`, a removal or a Leave the home heard.
+Waiting for the home's close instead would read the removal a second late, or as a lost home when the home cuts the connection as it stops listening.
 
 Stopping a listening run stops accepting connections and forwarding pushes at once, then waits for every device socket to close before resolving.
 The close handshakes run concurrently, with one two-second grace for the whole run; any sockets still open at its end are terminated.

@@ -103,7 +103,12 @@ afterEach(async () => {
  * its dial past every wait for the home to read out of reach.
  */
 async function home(
-  options: { speaks?: Spelling; changes?: readonly string[]; startedByCommand?: boolean } = {},
+  options: {
+    speaks?: Spelling;
+    changes?: readonly string[];
+    startedByCommand?: boolean;
+    removalGraceMs?: number;
+  } = {},
 ) {
   const core = standInCore();
   const left: DeviceView[] = [];
@@ -128,6 +133,7 @@ async function home(
       ...(options.speaks ? { speaks: options.speaks } : {}),
       ...(options.changes ? { changes: options.changes } : {}),
       ...(options.startedByCommand ? { startedByCommand: true } : {}),
+      ...(options.removalGraceMs ? { removalGraceMs: options.removalGraceMs } : {}),
     });
     await connection.settled();
   };
@@ -581,6 +587,20 @@ describe("the device's side of the connection", () => {
     );
   });
 
+  // docs/connection.md, "Closing": this device lists every change its build knows, `removal-notice` too, so
+  // it reads its removal from the home's frame and never waits for the close the home sends a grace later.
+  it("hears its removal from the home's word, without the close that follows it", async () => {
+    const at = await home({ removalGraceMs: 60_000 });
+    // Another Mac keeps the home listening once this one is gone.
+    await at.join("Mac mini");
+    const grant = await at.join();
+    const air = follow(grant);
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    at.pairing.remove(grant.deviceId);
+    await air.until(() => air.link.state().removed);
+  });
+
   it("learns it was removed while it was away from the home refusing it twice", async () => {
     const at = await home();
     // Another Mac keeps the home listening once this one is gone.
@@ -605,6 +625,19 @@ describe("the device's side of the connection", () => {
     await expect(air.link.leave()).resolves.toBe(true);
     expect(at.pairing.list()).toEqual([]);
     expect(at.left.map((device) => device.name)).toEqual(["MacBook Air"]);
+    expect(air.link.state().removed).toBe(false);
+  });
+
+  // docs/connection.md, "Closing": a Leave the home heard reads the same way.
+  it("hears the home take it off its list from the home's word, without the close that follows it", async () => {
+    const at = await home({ removalGraceMs: 60_000 });
+    await at.join("Mac mini");
+    const grant = await at.join();
+    const air = follow(grant);
+    air.link.start();
+    await air.until(() => air.link.state().contact === "in-reach");
+    await expect(air.link.leave(4_000)).resolves.toBe(true);
+    expect(at.pairing.list().map((device) => device.name)).toEqual(["Mac mini"]);
     expect(air.link.state().removed).toBe(false);
   });
 

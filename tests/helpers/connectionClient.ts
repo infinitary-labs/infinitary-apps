@@ -55,6 +55,8 @@ export type ConnectionClient = {
   /** How many frames came in parts (`frame-parts`), each joined once its last part arrived. */
   readonly joined: number;
   sendRaw: (text: string) => void;
+  /** Resolves once the home says this device was removed, in a frame (`removal-notice`). */
+  unpaired: Promise<void>;
   /** Resolves with the close code once the home closes the connection. */
   closed: Promise<number>;
   close: () => Promise<number>;
@@ -138,6 +140,10 @@ export async function connectClient(
   });
   let nextId = 0;
   const closed = new Promise<number>((resolve) => socket.once("close", (code) => resolve(code)));
+  let heardUnpaired: () => void = () => {};
+  const unpaired = new Promise<void>((resolve) => {
+    heardUnpaired = resolve;
+  });
   const parts = new FramePartsReader();
   socket.on("message", (raw) => {
     const text = parts.read(Buffer.isBuffer(raw) ? raw : String(raw));
@@ -176,7 +182,7 @@ export async function connectClient(
     } else if (frame.t === "result" && typeof frame.id === "number") {
       answers.get(frame.id)?.(frame);
       answers.delete(frame.id);
-    }
+    } else if (frame.t === "unpaired") heardUnpaired();
   });
   await new Promise<void>((resolve, reject) => {
     socket.once("open", () => resolve());
@@ -254,6 +260,7 @@ export async function connectClient(
       return parts.joined;
     },
     sendRaw: (text) => socket.send(text),
+    unpaired,
     closed,
     close: () => {
       socket.close();

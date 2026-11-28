@@ -205,6 +205,12 @@ export type ConnectionOptions = {
    */
   heartbeatMs?: number;
   /**
+   * How long the home waits, once a removed device answered for its
+   * `unpaired` frame (`removal-notice`), for the device to close the
+   * connection itself before the home closes it. Defaults to one second.
+   */
+  removalGraceMs?: number;
+  /**
    * The smallest piece the home writes a frame in, and the least it sends
    * ahead of a device's answer. Defaults to 4 KiB: at 1 KB/s a ping or pong
    * then waits behind about 8 s of data, inside the 10 s a Mac's link and

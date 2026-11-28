@@ -1,9 +1,10 @@
 import Foundation
 
 /// INF-2820 piece 2, the captain's approved plan: the phone's own project focus, picked from the Filter button, which
-/// narrows Tasks, the tag row, Activity, the crew's light, Panels and messages to one project, as a Mac window's focus
-/// does (docs/project-focus.md). A port of the desktop's src/shared/projectFocus.ts (`projectPillsOf`, `pillShown`,
-/// `heldFocus`, `waitingElsewhere`) and src/panels/activity/feedRows.ts (`linesInFocus`), so both read one rule.
+/// narrows Tasks, the tag row, Activity, the crew's light, Panels, messages and Home's cards to one project, as a Mac
+/// window's focus does (docs/project-focus.md). A port of the desktop's src/shared/projectFocus.ts (`projectPillsOf`,
+/// `pillShown`, `heldFocus`, `waitingElsewhere`, `holdsBack`) and src/panels/activity/feedRows.ts (`linesInFocus`), so
+/// both read one rule.
 public enum PhoneProjectFocus {
     /// One project the Filter sheet offers, and how many of its tasks wait on the captain and work.
     public struct Pill: Equatable, Sendable, Identifiable {

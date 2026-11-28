@@ -68,7 +68,7 @@ The focus is saved on the phone for each kept computer and never written to the 
 It narrows the phone's Tasks, its tag row and Activity, lights its project in the crew scene, reaches a panel that reads the board as `view.focusedProjectId`, and rides the phone's messages and card replies as `focusedProjectId`.
 Home holds back the cards about other projects' tasks by the stack's rules below (INF-2820's plan, piece 3, the captain's answer "cards: hold"): they leave Home's row, the pager's count and its NEW count, and nothing is closed, put aside or written, so every Mac sees them as before.
 Picking their project or All projects brings them back in their place, one that arrived while held still new and one already seen still seen, since a card's seen mark is written only when the phone draws it.
-A card the captain points at comes forward without moving the focus and stays until the focus changes (`pointAt`): a notification's or the in-app notice's tap, a task key, a Tasks row, a record's Cards row, a panel or the first mate showing it.
+A card the captain points at comes forward without moving the focus and stays until the focus changes (`pointAt`): a notification's or the in-app notice's tap, a Tasks row, a record's Cards row, a Conversation tile, a panel or the first mate showing it.
 The in-app notice still shows a held card's arrival, as a notification would, and every project still notifies.
 
 ## The card stack

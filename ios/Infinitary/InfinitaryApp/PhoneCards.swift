@@ -122,7 +122,8 @@ struct PhoneCards<Content: View>: View {
         // A card that arrives while the focus holds it stirs nothing here, and is kept among the held ones.
         .onChange(of: session.openStack.map(\.id)) { _, open in heldIDs = Set(open).subtracting(stack.map(\.id)) }
         .onChange(of: messageContext.restoring) { _, id in
-            // A Tasks row or a record's Cards row points at its card, which a project focus then lets through.
+            // A Tasks row, a record's Cards row or a Conversation tile points at its card, which a project focus then lets
+            // through.
             if let id { session.pointAt(id) }
             showRestored(stack.map(\.id))
         }

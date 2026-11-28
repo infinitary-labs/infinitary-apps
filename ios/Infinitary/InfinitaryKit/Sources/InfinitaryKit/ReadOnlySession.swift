@@ -183,8 +183,8 @@ public struct PhoneNotice: Equatable, Sendable {
     }
 
     /// A card the captain pointed at comes forward on Home without moving the focus, until the focus changes: a
-    /// notification's or the in-app notice's tap, a task key, a Tasks row, a record's Cards row, a panel or the first
-    /// mate showing it. Called before the card is looked for on the stack, so a held one is there to show.
+    /// notification's or the in-app notice's tap, a Tasks row, a record's Cards row, a Conversation tile, a panel or the
+    /// first mate showing it. Called before the card is looked for on the stack, so a held one is there to show.
     public func pointAt(_ card: String) { letThrough.point(at: card, under: projectFocus) }
     public var unreadCards: Int { stack.filter { !hasSeen($0) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }

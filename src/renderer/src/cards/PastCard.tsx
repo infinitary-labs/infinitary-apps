@@ -311,7 +311,12 @@ export function PastCardColumn({
       <div data-past-card={past.id}>
         <HtmlCardBody
           body={past.body}
-          lead={afterMergeStrip(past.requiredActions, past.afterMerge)}
+          lead={afterMergeStrip(
+            past.requiredActions,
+            past.afterMerge,
+            // A past card keeps no action's effect; a merge card always carried its risk.
+            past.risk !== undefined,
+          )}
           theme={theme}
           title={past.title}
           // Nothing a past body raises is declared, so the bridge refuses it.

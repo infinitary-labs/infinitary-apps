@@ -1261,6 +1261,46 @@ export class CardService {
     return closedAnswer;
   }
 
+  /**
+   * A shown step's card names the work waiting on it, and a plan's later
+   * parts are filed after its card went up (docs/required-actions.md, "A
+   * plan's steps"), so each sweep redraws the body once that work changes.
+   * Only the body moves: its thread, title and choices stay.
+   */
+  refreshRequiredActionWaiters(taskId: string): void {
+    const action = this.host.tasks.get(taskId)?.delivery?.captainAction;
+    const shown = action ? this.cards.get(action.cardId) : undefined;
+    if (!action || !shown || action.presentedGeneration !== action.generation) return;
+    const next = requiredActionCard(
+      taskId,
+      action,
+      shown.createdAt,
+      requiredActionProvenance(this.host.tasks),
+    );
+    if (next.body === shown.body) return;
+    this.host.tasks.atomic(
+      () => {
+        const stamped = this.evidence.stamp({
+          ...shown,
+          body: next.body,
+          width: decidedCardWidth({ body: next.body }),
+        });
+        this.evidence.write(stamped, {
+          revise: true,
+          basis: "put",
+          source: "host",
+          cause: "revise",
+        });
+        return stamped.card;
+      },
+      (card) => {
+        this.cards.set(card.id, card);
+        this.placed(card);
+        this.scheduleBroadcast();
+      },
+    );
+  }
+
   /** Presentation state and the card commit together, so a crash cannot lose its first offer. */
   presentRequiredAction(taskId: string): boolean {
     if (!this.host.tasks.delivery.captainActionReady(taskId)) return false;

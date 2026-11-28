@@ -17700,6 +17700,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `File tasks from ${place} issues?`;
   }
+  function cardCaptainStepsLead() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `خطوات لا يقوم بها غيرك`;
+      case "de":
+        return `Schritte, die nur du erledigen kannst`;
+      case "es":
+        return `Pasos que solo tú puedes hacer`;
+      case "fr":
+        return `Étapes que vous seul pouvez faire`;
+      case "ja":
+        return `あなたにしかできないステップ`;
+      case "ko":
+        return `직접 해야 할 단계`;
+      case "pt-BR":
+        return `Etapas que só você pode fazer`;
+      case "zh-Hans":
+        return `只有你能完成的步骤`;
+      case "zh-Hant":
+        return `只有你能完成的步驟`;
+      case "en-XA":
+        return `[Šţéþš öñļý ýöû çáñ ðö ~~~~~~~]`;
+      case "ar-XB":
+        return `‮Steps only you can do‬`;
+    }
+    return `Steps only you can do`;
+  }
   function cardCarriedNotes(input2) {
     const count = formatNumber(input2.count);
     switch (currentLanguage()) {
@@ -23417,6 +23444,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮anything to add?‬`;
     }
     return `anything to add?`;
+  }
+  function cardRequiredActionWaits(input2) {
+    const task = input2.task;
+    switch (currentLanguage()) {
+      case "ar":
+        return `تنتظر ${task} هذه الخطوة.`;
+      case "de":
+        return `${task} wartet auf diesen Schritt.`;
+      case "es":
+        return `${task} espera este paso.`;
+      case "fr":
+        return `${task} attend cette étape.`;
+      case "ja":
+        return `${task} はこのステップを待っています。`;
+      case "ko":
+        return `${task} 작업이 이 단계를 기다리고 있어요.`;
+      case "pt-BR":
+        return `${task} espera por esta etapa.`;
+      case "zh-Hans":
+        return `${task} 正在等待此步骤。`;
+      case "zh-Hant":
+        return `${task} 正在等待此步驟。`;
+      case "en-XA":
+        return `[${task} ŵáîţš öñ ţĥîš šţéþ. ~~~~~~~]`;
+      case "ar-XB":
+        return `${task}‮ waits on this step.‬`;
+    }
+    return `${task} waits on this step.`;
   }
   function cardRequiredActionsLead() {
     switch (currentLanguage()) {
@@ -119066,6 +119121,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardBuildRowsHow,
     cardBuildRowsLead,
     cardBuildRowsTitle,
+    cardCaptainStepsLead,
     cardCarriedNotes,
     cardCarriedPictures,
     cardCarriedWithChoice,
@@ -119236,6 +119292,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     cardRecordWhy,
     cardRecordYouSaid,
     cardReplyHint,
+    cardRequiredActionWaits,
     cardRequiredActionsLead,
     cardReviewFinding,
     cardRevisedPartsNew,
@@ -122872,6 +122929,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardBuildRowsHow": [],
     "cardBuildRowsLead": ["task"],
     "cardBuildRowsTitle": ["place"],
+    "cardCaptainStepsLead": [],
     "cardCarriedNotes": ["count"],
     "cardCarriedPictures": ["count"],
     "cardCarriedWithChoice": ["count", "items"],
@@ -123042,6 +123100,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "cardRecordWhy": [],
     "cardRecordYouSaid": [],
     "cardReplyHint": [],
+    "cardRequiredActionWaits": ["task"],
     "cardRequiredActionsLead": [],
     "cardReviewFinding": [],
     "cardRevisedPartsNew": ["count"],

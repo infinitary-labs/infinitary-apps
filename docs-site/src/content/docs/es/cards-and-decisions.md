@@ -1,5 +1,5 @@
 ---
-source: cf25805d32836d90
+source: 14bfa295581f637a
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -156,8 +156,10 @@ Consulta [Tu primera tarea](/es/your-first-task/) para saber qué hace cada bot�
 
 A veces un cambio necesita, después de fusionarse, algo que solo tú puedes hacer, como actualizar una app en otra computadora.
 La tarjeta de fusión lo enumera entonces en su parte superior, bajo «Después de fusionar, necesitas…», con lo que pasa si esperas.
+Un plan también puede necesitar un paso así, como una compra o una solicitud a tu nombre.
+Su tarjeta lo enumera en su parte superior, bajo «Pasos que solo tú puedes hacer», y cuando apruebas el plan, las partes que necesitan el paso lo esperan.
 
-Después de fusionar, cada una de estas cosas vuelve como una tarjeta propia.
+Después de fusionar el cambio o aprobar el plan, cada una de estas cosas vuelve como una tarjeta propia.
 Haz lo que dice y luego presiona su botón para confirmarlo.
 Si no funcionó, pega lo que viste en su campo y elige **Falló**, y tu primer oficial organiza una corrección.
 **Ahora no** la deja en Esperándote, en Tareas.

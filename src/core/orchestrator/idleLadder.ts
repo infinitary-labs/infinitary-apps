@@ -461,9 +461,15 @@ export class IdleLadder {
   ): Pick<Witnesses, "waitsOnUnstarted" | "waitsOnUnderway" | "waitsOnStopped"> {
     const waits = this.awaited(record);
     const unstarted = this.unstartedWaits(record);
+    // A step only the captain can do (docs/required-actions.md) is theirs
+    // too: its own card asks them, and no start of the first mate's moves it.
     const stopped =
       unstarted.length > 0 &&
-      unstarted.every((task) => this.host.tasks.starts.stoppedByCaptain(task));
+      unstarted.every(
+        (task) =>
+          this.host.tasks.starts.stoppedByCaptain(task) ||
+          task.delivery?.captainAction !== undefined,
+      );
     return {
       waitsOnUnstarted: unstarted.length > 0 && !stopped,
       waitsOnUnderway: unstarted.length === 0 && waits.length > 0,

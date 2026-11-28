@@ -111,16 +111,18 @@ private struct PhoneRiskSheet: View {
 /// INF-3149, the captain's direction C, as the Mac's AfterMergeStrip: what happens after the merge, at the top of the
 /// card's body where it scrolls away. The captain's own actions come first under a lead in the warning color, then the
 /// steps the crew starts on its own, each with its goal, what it waits for and who does it. A card with neither draws
-/// nothing.
+/// nothing. A card that merges nothing, such as a plan, leads its steps for the captain with the words that say no
+/// merge comes first (docs/required-actions.md, "A plan's steps").
 struct PhoneAfterMerge: View {
     let actions: [PhoneJSON]
     let steps: [PhoneJSON]
+    var merges = true
 
     var body: some View {
         if !actions.isEmpty || !steps.isEmpty {
             VStack(alignment: .leading, spacing: PhoneTheme.space3) {
                 if !actions.isEmpty {
-                    group(PhoneCardWords.requiredActionsLead, color: PhoneTheme.warning, id: "card-required-actions") {
+                    group(merges ? PhoneCardWords.requiredActionsLead : PhoneCardWords.captainStepsLead, color: PhoneTheme.warning, id: "card-required-actions") {
                         ForEach(Array(actions.enumerated()), id: \.offset) { _, action in
                             entry("\(action["title"].text ?? "") · \(action["target"].text ?? "")", [action["consequence"].text ?? ""])
                         }

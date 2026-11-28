@@ -870,6 +870,7 @@ export class CrewWatch {
         (action.presentedGeneration < action.generation || action.state === "blocked")
       )
         this.core.cards.presentRequiredAction(record.id);
+      else if (action) this.core.cards.refreshRequiredActionWaiters(record.id);
     }
     await this.core.ladder.sweepGates(now);
   }

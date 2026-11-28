@@ -94,6 +94,7 @@
   "cardBuildRowsHow": "A Build row files its task only when you approve this card. Start now files and starts it, Keep for later files it without starting, and Don't file drops it.",
   "cardBuildRowsLead": "The crewmate on “{task}” reads words anyone can write, so each task it proposes waits for you. Each Build row shows the brief its crewmate would get.",
   "cardBuildRowsTitle": "File tasks from {place} issues?",
+  "cardCaptainStepsLead": "Steps only you can do",
   "cardCarriedNotes": {
     "plural": "count",
     "one": "{count} note",
@@ -328,6 +329,7 @@
   "cardRecordWhy": "Why",
   "cardRecordYouSaid": "You said",
   "cardReplyHint": "anything to add?",
+  "cardRequiredActionWaits": "{task} waits on this step.",
   "cardRequiredActionsLead": "After merging, you need to…",
   "cardReviewFinding": "Review finding",
   "cardRevisedPartsNew": {

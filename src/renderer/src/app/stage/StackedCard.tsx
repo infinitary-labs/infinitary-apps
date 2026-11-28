@@ -12,6 +12,7 @@ import {
   firstmateOwnCard,
   isPlayableBody,
   MERGE_CLOSES_MARK,
+  mergeEffectOf,
   splitMergeClosesLine,
 } from "@shared/cards";
 import { carriedWithChoiceWords } from "@shared/choiceCarried";
@@ -731,7 +732,11 @@ export function StackedCard({
           <HtmlCardBody
             cardId={cardTakesReplies(card) ? card.id : undefined}
             // What happens after the merge leads the body and scrolls away with it (INF-3149).
-            lead={afterMergeStrip(card.requiredActions, card.afterMerge)}
+            lead={afterMergeStrip(
+              card.requiredActions,
+              card.afterMerge,
+              card.actions.some((action) => mergeEffectOf(action)),
+            )}
             body={body}
             reveal={bodyEntrance.reveal}
             onDrawn={() => {

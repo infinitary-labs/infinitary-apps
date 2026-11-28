@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "只有在你核准這張卡片時，Build 列才會建立任務。立即開始會建立並開始它，留待以後會把它排入，不排入會放棄它。";
 "cardBuildRowsLead" = "「%1$@」上的船員會讀取任何人都能寫的內容，所以它提議的每個任務都要等你決定。每個 Build 列顯示其船員將收到的說明。";
 "cardBuildRowsTitle" = "根據 %1$@ 上的議題建立任務嗎？";
+"cardCaptainStepsLead" = "只有你能完成的步驟";
 "cardConsentChanges" = "更改";
 "cardConsentChangesDetail" = "這些設定，每次僅在你於面板中點按或按鍵時更改。它從不刪除任何內容。";
 "cardConsentChangesLine" = "在你點按時可更改設定：%1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "原因";
 "cardRecordYouSaid" = "你說了";
 "cardReplyHint" = "還有要補充的嗎？";
+"cardRequiredActionWaits" = "%1$@ 正在等待此步驟。";
 "cardRequiredActionsLead" = "合併之後，你需要…";
 "cardReviewFinding" = "審查發現";
 "cardRevisedRemoved" = "移除 %1$@ 項";

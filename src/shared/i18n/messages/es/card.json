@@ -98,6 +98,7 @@
   "cardBuildRowsHow": "Una fila de Build anota su tarea solo si apruebas esta tarjeta. Empezar ahora la anota y la empieza, Guardar para después la anota sin empezarla y No anotar la descarta.",
   "cardBuildRowsLead": "El tripulante de «{task}» lee palabras que cualquiera puede escribir, así que cada tarea que propone espera tu decisión. Cada fila de Build muestra el encargo que recibiría su tripulante.",
   "cardBuildRowsTitle": "¿Anotar tareas a partir de incidencias de {place}?",
+  "cardCaptainStepsLead": "Pasos que solo tú puedes hacer",
   "cardCarriedNotes": {
     "plural": "count",
     "one": "{count} nota",
@@ -348,6 +349,7 @@
   "cardRecordWhy": "Por qué",
   "cardRecordYouSaid": "Dijiste",
   "cardReplyHint": "¿algo que agregar?",
+  "cardRequiredActionWaits": "{task} espera este paso.",
   "cardRequiredActionsLead": "Después de fusionar, tienes que…",
   "cardReviewFinding": "Hallazgo de la revisión",
   "cardRevisedPartsNew": {

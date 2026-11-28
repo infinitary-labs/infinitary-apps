@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "A Build row files its task only when you approve this card. Start now files and starts it, Keep for later files it without starting, and Don't file drops it.";
 "cardBuildRowsLead" = "The crewmate on “%1$@” reads words anyone can write, so each task it proposes waits for you. Each Build row shows the brief its crewmate would get.";
 "cardBuildRowsTitle" = "File tasks from %1$@ issues?";
+"cardCaptainStepsLead" = "Steps only you can do";
 "cardConsentChanges" = "Changes";
 "cardConsentChangesDetail" = "These settings, each only when you click or press a key in the panel. It never deletes anything.";
 "cardConsentChangesLine" = "Can change a setting when you click: %1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "Why";
 "cardRecordYouSaid" = "You said";
 "cardReplyHint" = "anything to add?";
+"cardRequiredActionWaits" = "%1$@ waits on this step.";
 "cardRequiredActionsLead" = "After merging, you need to…";
 "cardReviewFinding" = "Review finding";
 "cardRevisedRemoved" = "%1$@ removed";

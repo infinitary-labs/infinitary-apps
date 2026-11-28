@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "لا يُنشئ صف Build مهمته إلا عندما توافق على هذه البطاقة. «ابدأ الآن» يُنشئها ويبدؤها، و«احتفظ به لاحقًا» يُدرجها دون بدء، و«لا تُدرج» يتركها.";
 "cardBuildRowsLead" = "يقرأ فرد الطاقم في «%1$@» كلامًا يمكن لأي أحد كتابته، لذا تنتظر كل مهمة يقترحها قرارك. يعرض كل صف Build التكليف الذي سيتلقاه فرد طاقمه.";
 "cardBuildRowsTitle" = "هل تُنشئ مهامّ من بلاغات %1$@؟";
+"cardCaptainStepsLead" = "خطوات لا يقوم بها غيرك";
 "cardConsentChanges" = "يغيّر";
 "cardConsentChangesDetail" = "هذه الإعدادات، كلٌّ منها فقط عند نقرك أو ضغطك مفتاحًا داخل اللوحة. لا يحذف أي شيء أبدًا.";
 "cardConsentChangesLine" = "يمكنه تغيير إعداد عند نقرك: %1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "السبب";
 "cardRecordYouSaid" = "قلت";
 "cardReplyHint" = "هل من إضافة؟";
+"cardRequiredActionWaits" = "تنتظر %1$@ هذه الخطوة.";
 "cardRequiredActionsLead" = "بعد الدمج، عليك أن…";
 "cardReviewFinding" = "نتيجة المراجعة";
 "cardRevisedRemoved" = "حُذف %1$@";

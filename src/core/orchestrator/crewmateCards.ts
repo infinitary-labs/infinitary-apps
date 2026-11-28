@@ -67,6 +67,7 @@ import { currentChange } from "../storage/changeProjection";
 import type { CardRefusal, CompletionOffer, TaskRecord } from "../storage/taskRecords";
 import { keptYeses } from "../tasks/alreadyAllowed";
 import { recordValidation as checkValidationTransition } from "../tasks/liveValidation";
+import { keepPlanSteps } from "../tasks/planSteps";
 import { TaskService } from "../tasks/taskService";
 import { followBase } from "./baseFollow";
 import { CardBrowserActions } from "./cardBrowserActions";
@@ -1051,6 +1052,9 @@ export class CrewmateCards {
         const shownCard = this.host.cards.get(id);
         if (appMerges && shownCard && this.mergeFromCard(task.id, id, declaredMerge))
           this.showMerging(task.id, shownCard);
+      } else if (card.requiredActions !== undefined && this.isAnswerTask(task.id)) {
+        // Kept, never started here (docs/required-actions.md, "A plan's steps").
+        keepPlanSteps(this.options.tasks, task.id, this.host.cards.get(id), card.requiredActions);
       }
       const since =
         ownMerge || sinceSeen

@@ -110,6 +110,7 @@
   "cardBuildRowsHow": "لا يُنشئ صف Build مهمته إلا عندما توافق على هذه البطاقة. «ابدأ الآن» يُنشئها ويبدؤها، و«احتفظ به لاحقًا» يُدرجها دون بدء، و«لا تُدرج» يتركها.",
   "cardBuildRowsLead": "يقرأ فرد الطاقم في «{task}» كلامًا يمكن لأي أحد كتابته، لذا تنتظر كل مهمة يقترحها قرارك. يعرض كل صف Build التكليف الذي سيتلقاه فرد طاقمه.",
   "cardBuildRowsTitle": "هل تُنشئ مهامّ من بلاغات {place}؟",
+  "cardCaptainStepsLead": "خطوات لا يقوم بها غيرك",
   "cardCarriedNotes": {
     "plural": "count",
     "zero": "{count} ملاحظة",
@@ -408,6 +409,7 @@
   "cardRecordWhy": "السبب",
   "cardRecordYouSaid": "قلت",
   "cardReplyHint": "هل من إضافة؟",
+  "cardRequiredActionWaits": "تنتظر {task} هذه الخطوة.",
   "cardRequiredActionsLead": "بعد الدمج، عليك أن…",
   "cardReviewFinding": "نتيجة المراجعة",
   "cardRevisedPartsNew": {

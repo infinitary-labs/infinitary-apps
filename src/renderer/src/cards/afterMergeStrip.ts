@@ -18,15 +18,19 @@ import { escapeHtml } from "./prototypeSrcdoc";
  * starts on its own (INF-2796), each naming who does it: a crewmate, or the
  * first mate for a change in the app itself, which files no task (INF-3060's
  * finding 4). A card with neither has no strip: the empty string.
+ * A card that merges nothing, such as a plan, declares steps only the
+ * captain can do that wait for no merge, so its lead says that instead
+ * (docs/required-actions.md, "A plan's steps").
  * Its look is `AFTER_MERGE_STYLE` in the card's stylesheet.
  */
 export function afterMergeStrip(
   actions: readonly RequiredAction[] = [],
   steps: readonly AfterMergeShown[] = [],
+  merges = true,
 ): string {
   if (!actions.length && !steps.length) return "";
   const text = (words: string) => escapeHtml(words);
-  const requiredLead = m.cardRequiredActionsLead();
+  const requiredLead = merges ? m.cardRequiredActionsLead() : m.cardCaptainStepsLead();
   const lead = (who: "captain" | "crew", words: string) =>
     `<p data-inf-after-merge-lead="${who}">${text(words)}</p>`;
   const yours = actions.length

@@ -22,6 +22,7 @@ enum PhoneCardWords {
     static let putAside = PhoneMessages.`cardLeaveAside`()
     static let putAsideRest = PhoneMessages.`cardLeaveAsideRest`()
     static let requiredActionsLead = PhoneMessages.`cardRequiredActionsLead`()
+    static let captainStepsLead = PhoneMessages.`cardCaptainStepsLead`()
     static let afterMergeLead = PhoneMessages.`cardAfterMergeLead`()
     static let afterMergeDoer = ["crewmate": PhoneMessages.`cardAfterMergeDoerCrewmate`(), "firstmate": PhoneMessages.`cardAfterMergeDoerFirstmate`()]
     static let threadWho = ["captain": PhoneMessages.`cardThreadWhoCaptain`(), "crewmate": PhoneMessages.`cardThreadWhoCrewmate`(), "firstmate": PhoneMessages.`cardThreadWhoFirstmate`(), "host": PhoneMessages.`cardThreadWhoHost`()]

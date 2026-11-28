@@ -34,6 +34,21 @@ An otherwise revised offer with identical requirements preserves its deferred st
 Prerequisites use existing blocks links; dropped prerequisites never clear a wait.
 The blocked action stays visible in its record, but its card appears only when prerequisites finish successfully.
 
+## A plan's steps
+
+A plan can hold a step only the captain can do, such as a purchase, a new account or a request in their name; INF-7250's finding 3 found one kept only as a line in the first mate's chat, with no card asking for it.
+A plan card declares such steps in `required_actions`, the same shape a merge card uses, and only the steps the captain alone can give: the plan's author names each one, and the app never judges whose a step is.
+The crewmate's card on an answer task keeps the declaration on the plan as its `requiredActionOffer` and starts nothing (`keepPlanSteps`); a revision's declaration replaces it.
+The card's strip leads them with "Steps only you can do", on the phone too, since no merge comes first.
+
+Whether the captain's choice approved the plan is the first mate's reading (`docs/orchestrator-contract.md`), so its `update_task start_steps` on the plan's key starts them (`startPlanSteps` in `src/core/tasks/planSteps.ts`, which activates the kept declaration as `activateRequiredActions` does a merged one).
+Each step becomes its own `operation` task with its own card, as a merge's required action does; a second call answers the same tasks and files nothing new, and a `sharedId` the first mate's own required action names joins the same task, so a step never goes up twice.
+The answer names each step's key, and the first mate files every piece that waits on a step blocked by it, by the usual `blocks` links.
+A plan saved for later starts its steps only when its build starts, and an abandoned one never does; only a plan, an answer task, takes the call, and a change's required actions still wait for its merge.
+
+A step's card names the open work that waits on it, one catalog line each (`cardRequiredActionWaits`), and the gate sweep redraws the shown card's body when that work changes, since the pieces are filed after the step's card went up.
+Work that waits only on a step reads as waiting on the captain, as work they stopped does (`waitsOnStopped`, `docs/report-sort.md`), so the first mate is not woken to start it.
+
 ## Confirmation and deferral
 
 `CardService` presents the first confirmation card and records its presented generation in one transaction.

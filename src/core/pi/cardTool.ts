@@ -479,7 +479,7 @@ function crewActionParam<Effect extends TSchema>(effect: Effect) {
  * tool's own description (`CARD_PARAMS`).
  */
 const REQUIRED_ACTIONS_DESCRIPTION =
-  "Required on merge cards, [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merge never performs them; only the captain can. The first mate may declare immediately required actions on a non-merge card.";
+  "Required on merge cards, [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merge never performs them; only the captain can. A plan card declares its steps only the captain can give the same way, which wait for approval, not a merge. The first mate may declare immediately required actions on a non-merge card.";
 
 const sharedCardParams = {
   required_actions: Type.Optional(

@@ -125,6 +125,8 @@ export type TaskToolsDelegate = {
   tags?(input: { task: string; names: string[] }): string;
   /** Correct a required action's words, keeping its filing (docs/required-actions.md). */
   reviseRequiredAction?(input: RequiredActionRevisionInput): string;
+  /** Make an approved plan's steps for the captain their own tasks (docs/required-actions.md, "A plan's steps"). */
+  startPlanSteps?(input: { task: string }): string;
   /**
    * Record the captain's override (docs/delivery-rigor.md, "The holds"):
    * his words from this turn, or from the message `from` cites - his reply
@@ -466,6 +468,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "Captain reports a mistaken confirmation: reopen its durable operation, keeping history. Cancel unneeded actions with drop and reason; never confirm them.",
         }),
       ),
+      start_steps: Type.Optional(
+        Type.Boolean({
+          description:
+            "On an approved plan's key: each step its card declared for the captain becomes its own task with its own card. Answers their keys for the pieces' blocked_by; a second call files nothing new.",
+        }),
+      ),
       revise_required_action: Type.Optional(
         Type.Object(
           {
@@ -661,6 +669,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           }),
         };
       }
+      if (params.start_steps)
+        return {
+          text: delegate.startPlanSteps
+            ? delegate.startPlanSteps({ task: params.task })
+            : "A plan's steps cannot be started here.",
+        };
       if (params.revise_required_action) {
         const revision = params.revise_required_action;
         if (!delegate.reviseRequiredAction)

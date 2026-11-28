@@ -6,3 +6,6 @@ import * as m from "@shared/i18n/messages.generated";
  * when shown (`m.cardRequiredActionsLead`).
  */
 export const REQUIRED_ACTIONS_LEAD = m.cardRequiredActionsLead();
+
+/** What leads a card's steps only the captain can do when the card merges nothing, such as a plan (`m.cardCaptainStepsLead`). */
+export const CAPTAIN_STEPS_LEAD = m.cardCaptainStepsLead();

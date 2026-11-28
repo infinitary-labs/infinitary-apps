@@ -231,7 +231,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   ),
   readBy(
     ["firstmate", "basis"],
-    "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it. Backlog (on-request) waits for the captain's word; do not requeue a piece they moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
+    "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, permission change, merge, or repair outside the approved work; fixing the approved work's own failures is part of building it. Backlog (on-request) waits for the captain's word; do not requeue a piece they moved there without fresh authorization. At a captain-only action, its crewmate asks on a card, unless it is a plan's step already its own task; design-only limits even a filed build.",
   ),
   readBy(
     ["firstmate", "answer"],
@@ -247,6 +247,13 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   readBy(
     ["answer"],
     "A plan card with more than one part asks one optional checkbox question listing each part for careful review, its fieldset data-inf-options-only: none ticked means none. Write each part you recommend, with a reason, checked and marked data-inf-recommended: the one exception to choices arriving unpicked.",
+  ),
+  readBy(
+    ["answer"],
+    "A plan card names each step only the captain alone can give, such as a purchase, an account or a request in their name, in required_actions as a merge card does, never a step the crew can do; approval makes each its own task with its own card, so put up no card of your own for one.",
+  ),
+  firstmateOnly(
+    "In the approval's turn, before filing its pieces, the first mate calls update_task start_steps on a plan whose card declared steps for the captain, and files each piece waiting on a step blocked by that step's key. A saved plan starts its steps only when its build starts; Abandon starts none. Put up no other card for a declared step.",
   ),
   readBy(
     ["answer"],

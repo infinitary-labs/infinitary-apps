@@ -1290,7 +1290,14 @@ struct PhoneCardPane: View {
                 Text(ending).font(PhoneFont.caption).foregroundStyle(PhoneTheme.secondary).accessibilityIdentifier("past-ending")
             }
             // INF-3149, the captain's direction C: what happens after the merge leads the body and scrolls away with it.
-            PhoneAfterMerge(actions: card.value["requiredActions"].list, steps: card.value["afterMerge"].list)
+            PhoneAfterMerge(
+                actions: card.value["requiredActions"].list, steps: card.value["afterMerge"].list,
+                merges: card.actions.contains { action in
+                    // The Mac's mergeEffectOf, older cards' merge shapes included.
+                    let effect = action["effect"]
+                    return effect["kind"].text == "merge" || effect["kind"].text == "request_merge"
+                        || (effect["kind"].text == "settle" && effect["mode"].text == "merge")
+                })
             if let failure = host.failure {
                 Text(failure).foregroundStyle(PhoneTheme.secondary)
                 if host.reading["of"].numeric != nil {

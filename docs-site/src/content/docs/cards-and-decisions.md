@@ -155,8 +155,10 @@ See [Your first task](/your-first-task/) for what each button does while the che
 
 Sometimes a change needs something after it merges that only you can do, such as updating an app on another computer.
 The merge card then lists it at the top, under "After merging, you need to…", with what happens if you wait.
+A plan can need such a step too, such as a purchase or a request in your name.
+Its card lists it at the top, under "Steps only you can do", and once you approve the plan, the parts that need the step wait for it.
 
-After you merge, each of these comes back as a card of its own.
+After you merge the change or approve the plan, each of these comes back as a card of its own.
 Do what it says, then press its button to confirm.
 If it did not work, paste what you saw into its field and choose **It failed**, and your first mate arranges a fix.
 **Not now** leaves it under Waiting on you in Tasks.

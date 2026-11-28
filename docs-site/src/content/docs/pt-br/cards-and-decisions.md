@@ -1,5 +1,5 @@
 ---
-source: cf25805d32836d90
+source: 14bfa295581f637a
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -156,8 +156,10 @@ Veja [Sua primeira tarefa](/pt-br/your-first-task/) para saber o que cada botão
 
 Às vezes uma mudança precisa, depois de mesclada, de algo que só você pode fazer, como atualizar um app em outro computador.
 O cartão de mesclagem então lista isso no topo, em “Depois da mesclagem, você precisa…”, com o que acontece se você esperar.
+Um plano também pode precisar de uma etapa assim, como uma compra ou um pedido em seu nome.
+O cartão dele lista isso no topo, em “Etapas que só você pode fazer”, e depois que você aprova o plano, as partes que precisam da etapa esperam por ela.
 
-Depois que você mescla, cada um desses itens volta como um cartão próprio.
+Depois que você mescla a mudança ou aprova o plano, cada um desses itens volta como um cartão próprio.
 Faça o que ele diz e depois pressione o botão dele para confirmar.
 Se não deu certo, cole o que você viu no campo dele e escolha **Falhou**, e o seu imediato providencia uma correção.
 **Agora não** deixa o cartão em Aguardando você, em Tarefas.

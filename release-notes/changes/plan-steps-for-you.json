@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "plan-steps-for-you",
+      "kind": "feature",
+      "area": "cards",
+      "title": "A plan's steps only you can do each get their own card",
+      "body": "When a plan needs something only you can do, such as a purchase or a request in your name, its card now lists that step under Steps only you can do. Once you approve the plan, each step becomes its own task with its own card under Waiting on you, and the parts that need it wait for it. Before, such a step was only mentioned in your first mate's chat, and no card asked you for it.",
+      "picture": {
+        "dark": "plan-steps-for-you-dark.webp",
+        "light": "plan-steps-for-you-light.webp",
+        "alt": "A plan card whose top lists a request to Google under Steps only you can do, above Approve and build"
+      },
+      "docsSite": ["cards-and-decisions"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

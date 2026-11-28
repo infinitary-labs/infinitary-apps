@@ -1,5 +1,5 @@
 ---
-source: cf25805d32836d90
+source: 14bfa295581f637a
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -156,8 +156,10 @@ Unter [Deine erste Aufgabe](/de/your-first-task/) steht, was jede Schaltfläche 
 
 Manchmal braucht eine Änderung nach dem Zusammenführen etwas, das nur du tun kannst, etwa eine App auf einem anderen Computer zu aktualisieren.
 Die Karte zum Zusammenführen listet es dann ganz oben auf, unter „Nach dem Zusammenführen musst du …“, mit dem, was passiert, wenn du wartest.
+Auch ein Plan kann so einen Schritt brauchen, etwa einen Kauf oder eine Anfrage in deinem Namen.
+Seine Karte listet ihn ganz oben auf, unter „Schritte, die nur du erledigen kannst“, und sobald du den Plan genehmigst, warten die Teile, die den Schritt brauchen, auf ihn.
 
-Nachdem du zusammengeführt hast, kommt jedes davon als eigene Karte zurück.
+Nachdem du die Änderung zusammengeführt oder den Plan genehmigt hast, kommt jedes davon als eigene Karte zurück.
 Tu, was sie sagt, und drück dann ihre Schaltfläche zur Bestätigung.
 Hat es nicht funktioniert, füg in ihr Feld ein, was du gesehen hast, und wähl **Es ist fehlgeschlagen**, und dein erster Offizier sorgt für eine Lösung.
 **Nicht jetzt** lässt es in „Aufgaben“ unter „Wartet auf dich“ liegen.

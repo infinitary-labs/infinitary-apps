@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "Uma linha de Build só registra a tarefa quando você aprova este cartão. Começar agora registra e começa, Guardar para depois registra no backlog sem começar e Não registrar descarta.";
 "cardBuildRowsLead" = "O tripulante de “%1$@” lê textos que qualquer pessoa pode escrever, então cada tarefa que ele propõe espera a sua decisão. Cada linha de Build mostra as instruções que o tripulante receberia.";
 "cardBuildRowsTitle" = "Registrar no backlog tarefas a partir de issues do %1$@?";
+"cardCaptainStepsLead" = "Etapas que só você pode fazer";
 "cardConsentChanges" = "Altera";
 "cardConsentChangesDetail" = "Estas configurações, cada uma só quando você clica ou pressiona uma tecla no painel. Ele nunca apaga nada.";
 "cardConsentChangesLine" = "Pode alterar uma configuração quando você clica: %1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "Por quê";
 "cardRecordYouSaid" = "Você disse";
 "cardReplyHint" = "algo a acrescentar?";
+"cardRequiredActionWaits" = "%1$@ espera por esta etapa.";
 "cardRequiredActionsLead" = "Depois da mesclagem, você precisa…";
 "cardReviewFinding" = "Constatação da revisão";
 "cardRevisedRemoved" = "%1$@ removidas";

@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "Eine Build-Zeile legt ihre Aufgabe nur ab, wenn du diese Karte bestätigst. Jetzt starten legt sie ab und startet sie, Für später behalten legt sie im Backlog ab, und Nicht ablegen verwirft sie.";
 "cardBuildRowsLead" = "Das Crewmitglied von „%1$@“ liest Texte, die jeder schreiben kann, darum wartet jede Aufgabe, die es vorschlägt, auf dich. Jede Build-Zeile zeigt den Auftrag, den sein Crewmitglied bekäme.";
 "cardBuildRowsTitle" = "Aufgaben aus Issues auf %1$@ im Backlog ablegen?";
+"cardCaptainStepsLead" = "Schritte, die nur du erledigen kannst";
 "cardConsentChanges" = "Ändert";
 "cardConsentChangesDetail" = "Diese Einstellungen, jede nur, wenn du im Panel klickst oder eine Taste drückst. Es löscht nie etwas.";
 "cardConsentChangesLine" = "Kann eine Einstellung auf deinen Klick ändern: %1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "Warum";
 "cardRecordYouSaid" = "Du hast gesagt";
 "cardReplyHint" = "noch etwas hinzuzufügen?";
+"cardRequiredActionWaits" = "%1$@ wartet auf diesen Schritt.";
 "cardRequiredActionsLead" = "Nach dem Zusammenführen musst du …";
 "cardReviewFinding" = "Befund im Review";
 "cardRevisedRemoved" = "%1$@ entfernt";

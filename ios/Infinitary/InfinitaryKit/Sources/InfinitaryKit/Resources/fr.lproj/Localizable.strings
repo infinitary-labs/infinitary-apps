@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "Une ligne Build ne classe sa tâche que si vous approuvez cette carte. Démarrer maintenant la classe et la démarre, Garder pour plus tard la classe sans la démarrer et Ne pas classer l’écarte.";
 "cardBuildRowsLead" = "L’équipier de « %1$@ » lit des mots que tout le monde peut écrire : chaque tâche qu’il propose attend donc votre décision. Chaque ligne Build montre la consigne que recevrait son équipier.";
 "cardBuildRowsTitle" = "Classer des tâches à partir des tickets %1$@ ?";
+"cardCaptainStepsLead" = "Étapes que vous seul pouvez faire";
 "cardConsentChanges" = "Modifie";
 "cardConsentChangesDetail" = "Ces réglages, chacun seulement quand vous cliquez ou appuyez sur une touche dans le panneau. Il ne supprime jamais rien.";
 "cardConsentChangesLine" = "Peut modifier un réglage quand vous cliquez : %1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "Pourquoi";
 "cardRecordYouSaid" = "Vous avez dit";
 "cardReplyHint" = "quelque chose à ajouter ?";
+"cardRequiredActionWaits" = "%1$@ attend cette étape.";
 "cardRequiredActionsLead" = "Après la fusion, vous devez…";
 "cardReviewFinding" = "Constat de la revue";
 "cardRevisedRemoved" = "%1$@ retirées";

@@ -445,6 +445,7 @@
 "cardBuildRowsHow" = "Una fila de Build anota su tarea solo si apruebas esta tarjeta. Empezar ahora la anota y la empieza, Guardar para después la anota sin empezarla y No anotar la descarta.";
 "cardBuildRowsLead" = "El tripulante de «%1$@» lee palabras que cualquiera puede escribir, así que cada tarea que propone espera tu decisión. Cada fila de Build muestra el encargo que recibiría su tripulante.";
 "cardBuildRowsTitle" = "¿Anotar tareas a partir de incidencias de %1$@?";
+"cardCaptainStepsLead" = "Pasos que solo tú puedes hacer";
 "cardConsentChanges" = "Cambia";
 "cardConsentChangesDetail" = "Estos ajustes, cada uno solo cuando haces clic o pulsas una tecla en el panel. Nunca borra nada.";
 "cardConsentChangesLine" = "Puede cambiar un ajuste cuando haces clic: %1$@";
@@ -599,6 +600,7 @@
 "cardRecordWhy" = "Por qué";
 "cardRecordYouSaid" = "Dijiste";
 "cardReplyHint" = "¿algo que agregar?";
+"cardRequiredActionWaits" = "%1$@ espera este paso.";
 "cardRequiredActionsLead" = "Después de fusionar, tienes que…";
 "cardReviewFinding" = "Hallazgo de la revisión";
 "cardRevisedRemoved" = "eliminadas: %1$@";

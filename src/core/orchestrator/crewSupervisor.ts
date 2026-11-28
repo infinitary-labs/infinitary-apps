@@ -38,6 +38,7 @@ import type { DuplicateResult } from "../storage/cardStore";
 import { currentChange, currentReceipt, mergingClose } from "../storage/changeProjection";
 import { FIRSTMATE_RECIPIENT } from "../storage/inboxStore";
 import type { CompletionOffer, TaskRecord } from "../storage/taskRecords";
+import { startPlanSteps } from "../tasks/planSteps";
 import { carryOnWords } from "../tasks/recordActivity";
 import { TaskService } from "../tasks/taskService";
 import { type AskEnding, askEndingOf } from "./askEnding";
@@ -981,6 +982,16 @@ export class CrewSupervisor {
           index >= all.length - 4 || this.cards.get(entry.cardId)?.offerId === entry.offerId,
       ),
     });
+  }
+
+  /**
+   * The first mate's start of an approved plan's steps for the captain
+   * (`startPlanSteps`); each step's card goes up once what it waits on is done.
+   */
+  startPlanSteps(planId: string): ReturnType<typeof startPlanSteps> {
+    const started = startPlanSteps(this.options.tasks, planId);
+    if ("steps" in started) void this.watch.sweepGates(this.now());
+    return started;
   }
 
   declareStandaloneRequiredActions(input: EmittedCardInput, cardId: string): void {

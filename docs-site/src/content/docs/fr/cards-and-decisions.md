@@ -1,5 +1,5 @@
 ---
-source: cf25805d32836d90
+source: 14bfa295581f637a
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -156,8 +156,10 @@ Voir [Votre première tâche](/fr/your-first-task/) pour ce que fait chaque bout
 
 Parfois, un changement demande après sa fusion quelque chose que vous seul pouvez faire, comme mettre à jour une app sur un autre ordinateur.
 La carte de fusion le liste alors en haut, sous « Après la fusion, vous devez… », avec ce qui se passe si vous attendez.
+Un plan peut aussi demander une telle étape, comme un achat ou une demande en votre nom.
+Sa carte la liste en haut, sous « Étapes que vous seul pouvez faire », et une fois le plan approuvé, les parties qui en ont besoin l’attendent.
 
-Après la fusion, chacune de ces actions revient sous forme de carte à part.
+Après la fusion du changement ou l’approbation du plan, chacune de ces actions revient sous forme de carte à part.
 Faites ce qu’elle dit, puis appuyez sur son bouton pour confirmer.
 Si cela n’a pas marché, collez ce que vous avez vu dans son champ et choisissez **Ça n’a pas marché**, et votre second organise une correction.
 **Pas maintenant** la laisse sous En attente de vous dans Tâches.

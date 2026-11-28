@@ -470,6 +470,7 @@ public enum PhoneMessages {
     public static func `cardBuildRowsHow`() -> String { PhoneWords.format("cardBuildRowsHow", []) }
     public static func `cardBuildRowsLead`(`task`: String) -> String { PhoneWords.format("cardBuildRowsLead", [`task`]) }
     public static func `cardBuildRowsTitle`(`place`: String) -> String { PhoneWords.format("cardBuildRowsTitle", [`place`]) }
+    public static func `cardCaptainStepsLead`() -> String { PhoneWords.format("cardCaptainStepsLead", []) }
     public static func `cardCarriedNotes`(`count`: Int) -> String { PhoneWords.format("cardCarriedNotes", [`count`]) }
     public static func `cardCarriedPictures`(`count`: Int) -> String { PhoneWords.format("cardCarriedPictures", [`count`]) }
     public static func `cardCarriedWithChoice`(`count`: Int, `items`: String) -> String { PhoneWords.format("cardCarriedWithChoice", [`count`, `items`]) }
@@ -640,6 +641,7 @@ public enum PhoneMessages {
     public static func `cardRecordWhy`() -> String { PhoneWords.format("cardRecordWhy", []) }
     public static func `cardRecordYouSaid`() -> String { PhoneWords.format("cardRecordYouSaid", []) }
     public static func `cardReplyHint`() -> String { PhoneWords.format("cardReplyHint", []) }
+    public static func `cardRequiredActionWaits`(`task`: String) -> String { PhoneWords.format("cardRequiredActionWaits", [`task`]) }
     public static func `cardRequiredActionsLead`() -> String { PhoneWords.format("cardRequiredActionsLead", []) }
     public static func `cardReviewFinding`() -> String { PhoneWords.format("cardReviewFinding", []) }
     public static func `cardRevisedPartsNew`(`count`: Int) -> String { PhoneWords.format("cardRevisedPartsNew", [`count`]) }
@@ -5389,6 +5391,7 @@ extension PhoneWords {
         "cardBuildRowsHow": [],
         "cardBuildRowsLead": ["task"],
         "cardBuildRowsTitle": ["place"],
+        "cardCaptainStepsLead": [],
         "cardCarriedNotes": ["count"],
         "cardCarriedPictures": ["count"],
         "cardCarriedWithChoice": ["count", "items"],
@@ -5559,6 +5562,7 @@ extension PhoneWords {
         "cardRecordWhy": [],
         "cardRecordYouSaid": [],
         "cardReplyHint": [],
+        "cardRequiredActionWaits": ["task"],
         "cardRequiredActionsLead": [],
         "cardReviewFinding": [],
         "cardRevisedPartsNew": ["count"],

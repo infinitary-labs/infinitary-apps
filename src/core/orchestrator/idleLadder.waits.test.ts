@@ -32,6 +32,7 @@ import { piToolsOf } from "../pi/toolSpec";
 import { ORDINARY_NOTE_READ_ACK } from "../prompts/cardContract";
 import { InboxStore } from "../storage/inboxStore";
 import type { TaskRecord } from "../storage/taskRecords";
+import { startPlanSteps } from "../tasks/planSteps";
 import { seedTask } from "../tasks/seedTask";
 import type { TaskService } from "../tasks/taskService";
 import { BASELINE_OBSERVATIONS_NEXT, declareCheckAction, observeCheckRepair } from "./checkRepair";
@@ -938,6 +939,44 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         state: "idle",
         reason: "dependency",
       });
+    });
+
+    // INF-7250 finding 3, which the captain chose to start: a plan's step only
+    // the captain can do is its own task with its own card, and a part waiting
+    // on it waits on them, not on a start the first mate owes.
+    it("a wait only on a step only the captain can do is theirs: no nudge or wake past every rung", async () => {
+      const { crewmate, ops, tasks, taskId, at } = await stopped();
+      seedTask(tasks, {
+        id: "gemini-plan",
+        title: "Plan the Gemini sign-in",
+        status: "completed",
+        shape: { kind: "research", deliverable: "answer" },
+      });
+      tasks.delivery.declareRequiredActions("gemini-plan", {
+        cardId: "card-gemini-plan",
+        offerId: "offer-plan",
+        actions: [
+          {
+            id: "google-request",
+            target: "Google Cloud",
+            title: "Ask Google to verify the app's sign-in",
+            consequence: "Until Google answers, the Gemini sign-in cannot start.",
+            instructions: ["Submit the verification request in the Google Cloud console."],
+            criterion: "Google shows the request as submitted.",
+            prerequisites: [],
+            completion: { kind: "manual", label: "I submitted it" },
+          },
+        ],
+      });
+      tasks.close("gemini-plan", { status: "done", reason: "answered", actor: "captain" });
+      const started = startPlanSteps(tasks, "gemini-plan");
+      const step = "steps" in started ? started.steps[0] : undefined;
+      if (!step) throw new Error("the plan's step filed no task");
+      tasks.graph.link(step.id, taskId, "blocks", "firstmate");
+      const prompts = crewmate.promptCalls.length;
+      for (const at_ of [10, 20, 50, 80, 600]) await at(minutes(at_));
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(idleWakes(ops)).toEqual([]);
     });
   });
 

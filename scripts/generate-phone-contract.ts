@@ -389,6 +389,7 @@ enum PhoneCardWords {
     static let putAside = ${text(leave.CARD_LEAVE.decision.label)}
     static let putAsideRest = ${text(leave.CARD_LEAVE.decision.restWords)}
     static let requiredActionsLead = ${text(required.REQUIRED_ACTIONS_LEAD)}
+    static let captainStepsLead = ${text(required.CAPTAIN_STEPS_LEAD)}
     static let afterMergeLead = ${text(afterMerge.AFTER_MERGE_LEAD)}
     static let afterMergeDoer = ${table(afterMerge.AFTER_MERGE_DOER_WORDS)}
     static let threadWho = ${table(thread.THREAD_WHO_LABELS)}

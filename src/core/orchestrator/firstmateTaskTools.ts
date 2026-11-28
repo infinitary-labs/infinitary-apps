@@ -460,6 +460,20 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
         }
         return cardMutationText(mutation);
       }),
+    startPlanSteps: (input) =>
+      asText(() => {
+        const record = resolve(input.task);
+        host.asks.attach(record.id, "update_task", undefined, "tie");
+        const started = supervisor.startPlanSteps(record.id);
+        if ("refused" in started)
+          return `${record.key} declared no steps for the captain on a plan card, so nothing was filed.`;
+        tookEffect(record.id, `Started the captain's steps of ${record.key}: ${record.title}`);
+        const lines = started.steps.map(
+          (step) =>
+            `${step.key}: ${step.title} (${TaskService.isClosed(step) ? `closed ${step.status}` : "waiting on the captain"})`,
+        );
+        return `The captain's steps of ${record.key}, each its own task with its own card:\n${lines.join("\n")}\nGive each piece that needs a step blocked_by its key; put up no other card for these steps.`;
+      }),
     withdrawMerge: (input) =>
       asText(() => {
         const record = resolve(input.task);

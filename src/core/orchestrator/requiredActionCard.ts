@@ -1,4 +1,5 @@
 import type { Card } from "@shared/cards";
+import { said, saidMark } from "@shared/i18n/said";
 import type { CaptainAction } from "@shared/requiredActions";
 import type { TaskService } from "../tasks/taskService";
 import { escapeCardText } from "./cardText";
@@ -8,12 +9,19 @@ import { escapeCardText } from "./cardText";
  * says it on every view (docs/required-actions.md, "Correcting the words"):
  * the source task's name for its filing. Absent, the card says neither.
  */
-export type RequiredActionProvenance = { filedFrom: (sourceId: string) => string };
+export type RequiredActionProvenance = {
+  filedFrom: (sourceId: string) => string;
+  /** The open work that waits on the step, by title: a plan's later parts (docs/required-actions.md, "A plan's steps"). */
+  waitingOn?: (taskId: string) => string[];
+};
 
 export function requiredActionProvenance(
-  tasks: Pick<TaskService, "get">,
+  tasks: Pick<TaskService, "get" | "graph">,
 ): RequiredActionProvenance {
-  return { filedFrom: (sourceId) => tasks.get(sourceId)?.key || sourceId };
+  return {
+    filedFrom: (sourceId) => tasks.get(sourceId)?.key || sourceId,
+    waitingOn: (taskId) => tasks.graph.liveWaiters(taskId).map((waiter) => waiter.title),
+  };
 }
 
 /** Instructions stay inert; completion and deferral alone carry host lifecycle effects. */
@@ -43,6 +51,9 @@ export function requiredActionCard(
           ({ action: entry, source, corrections }) =>
             `<section><p>${e(entry.consequence)}</p><p>On ${e(entry.target)}</p><ol>${entry.instructions.map((instruction) => `<li>${e(instruction)}</li>`).join("")}</ol><p>Complete when: ${e(entry.criterion)}</p>${provenance ? provenanceLines(provenance.filedFrom(source), corrections ?? []) : ""}</section>`,
         )
+        .join("") +
+      (provenance?.waitingOn?.(taskId) ?? [])
+        .map((title) => `<p>${saidMark(said("cardRequiredActionWaits", { task: title }))}</p>`)
         .join("") +
       "<p>If this fails, paste the output below and choose It failed.</p>" +
       (manual

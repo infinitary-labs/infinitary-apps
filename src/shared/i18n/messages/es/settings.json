@@ -55,6 +55,8 @@
   "settingsAppearanceCardSizeDescription": "Elige cómo se abren las tarjetas. Igual puedes cambiar el tamaño de cada una.",
   "settingsAppearanceCardUsual": "Habitual",
   "settingsAppearanceCardWide": "Ancha",
+  "settingsAppearanceCopyOnSelect": "Copiar al seleccionar",
+  "settingsAppearanceCopyOnSelectDescription": "Las palabras que seleccionas con el puntero van directamente al portapapeles, así que no necesitas copiarlas con el teclado.",
   "settingsAppearanceCrewGroupedByComputer": "Animación de la tripulación agrupada por computadora",
   "settingsAppearanceCrewGroupedByProject": "Animación de la tripulación agrupada por proyecto",
   "settingsAppearanceCrewGrouping": "Agrupar la animación de la tripulación por proyecto",

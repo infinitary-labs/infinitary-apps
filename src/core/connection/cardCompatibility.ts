@@ -14,6 +14,7 @@ export const AMBIENT_MUSIC = contractChange("ambient-music");
 export const AMBIENT_PAUSE = contractChange("ambient-pause");
 export const AMBIENT_STYLE = contractChange("ambient-style");
 export const AMBIENT_AWAY = contractChange("ambient-away");
+export const COPY_ON_SELECT = contractChange("copy-on-select");
 export const CREW_GROUPING = contractChange("crew-grouping");
 /** A built-in color theme over Dark or Light in the look (`color-theme.md`). */
 export const COLOR_THEME = contractChange("color-theme");

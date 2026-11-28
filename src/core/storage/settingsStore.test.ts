@@ -99,6 +99,26 @@ describe("SettingsStore preferences", () => {
     expect(new SettingsStore(db).getAppearance().ambientOwnStyles).toBeUndefined();
   });
 
+  // The captain's ask for Copy on select: off on a fresh or older install,
+  // and kept in a row of its own, which an older build's stricter look never meets.
+  it("keeps Copy on select only in its own row, and only while on", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    const readRow = (key: string) =>
+      db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+    expect(settings.getAppearance().copyOnSelect).toBeUndefined();
+    settings.setAppearance({ theme: "dark", copyOnSelect: true });
+    expect(readRow("copy-on-select")).toBeDefined();
+    expect(JSON.parse((readRow("appearance") as { value: string }).value)).not.toHaveProperty(
+      "copyOnSelect",
+    );
+    settings.setAppearance({ theme: "light" });
+    expect(new SettingsStore(db).getAppearance().copyOnSelect).toBe(true);
+    settings.setAppearance({ theme: "light", copyOnSelect: false });
+    expect(readRow("copy-on-select")).toBeUndefined();
+    expect(new SettingsStore(db).getAppearance().copyOnSelect).toBeUndefined();
+  });
+
   // INF-5528's answer, the captain's choice: the music pauses while nobody
   // is at the computer unless Keep playing was chosen, kept in its own row
   // so an older build still reads the switch and volume.

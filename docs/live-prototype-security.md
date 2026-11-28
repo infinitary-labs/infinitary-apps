@@ -378,6 +378,12 @@ Desktop annotation targets name only parts the current card declared for revisio
 The host admits a pick only from the frame holding focus and draws the comment popover outside the authored document.
 Only the host's reply send delivers queued comments; the frame receives target identities and highlight state, never those comments.
 
+## Copy on select
+
+With Copy on select on, the window reads two facts from the focused frame after the person's own press: the words selected there, and, through that read, a field's selected text.
+It then calls the window's copy, as the Edit menu's copy does.
+A card's script cannot start a copy, because the hook hears only the person's presses; it can change only whether the person's own selection is copied, and its copy event fires as it does for ⌘C. The frame's sandbox, its content policy, its bridge script and that script's pinned hash do not change.
+
 ## Not-typing key offers
 
 The bridge's one-way `key` message offers a key, never an action or command id.

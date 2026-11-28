@@ -153,6 +153,8 @@ export function AppearanceTab() {
   const setWashStrength = useShellStore((s) => s.setWashStrength);
   const showCrewModelNames = useShellStore((s) => s.showCrewModelNames);
   const setShowCrewModelNames = useShellStore((s) => s.setShowCrewModelNames);
+  const copyOnSelect = useShellStore((s) => s.copyOnSelect);
+  const setCopyOnSelect = useShellStore((s) => s.setCopyOnSelect);
   const crewGrouping = useShellStore((s) => s.crewGrouping);
   const setCrewGrouping = useShellStore((s) => s.setCrewGrouping);
   // Grouping by project matters to someone with two projects or more, so the
@@ -228,6 +230,19 @@ export function AppearanceTab() {
               checked={keepCardsMaximized}
               aria-label={m.settingsAppearanceKeepMaximized()}
               onChange={setKeepCardsMaximized}
+            />
+          }
+        />
+        <SettingRow
+          id="copy-on-select"
+          error={errorFor("copyOnSelect")}
+          title={m.settingsAppearanceCopyOnSelect()}
+          description={m.settingsAppearanceCopyOnSelectDescription()}
+          control={
+            <Switch
+              checked={copyOnSelect}
+              aria-label={m.settingsAppearanceCopyOnSelect()}
+              onChange={setCopyOnSelect}
             />
           }
         />

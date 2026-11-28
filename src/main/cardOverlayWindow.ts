@@ -29,6 +29,7 @@ import {
   carriedKeys,
   type OverlayPanel,
 } from "./cardOverlay";
+import { followCopyOnSelect } from "./copyOnSelect";
 import {
   followWindowCommands,
   type InstalledKeymap,
@@ -53,6 +54,8 @@ export type CardOverlayWindowOptions = {
   mainDir: string;
   rendererSource: RendererSourceOptions;
   keymap: Pick<InstalledKeymap, "bindings" | "panels">;
+  /** Whether Copy on select is on, as this computer's window has it. */
+  copyOnSelect: () => boolean;
   /** The main window's page arguments: its desktop, language and the computer's languages. */
   pageArguments: () => string[];
   /** Whether the window's language runs right to left: the panel then sits at the left edge. */
@@ -172,6 +175,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       void assertSecurityBaseline(win, options.isDev);
     });
     lockdownNavigation(win, options.rendererSource);
+    followCopyOnSelect(win, options.copyOnSelect);
     followOverlayKeys(win, options.keymap, () => controller.leave());
     if (options.isDev && options.rendererSource.devServerUrl) {
       void win.loadURL(options.rendererSource.devServerUrl);

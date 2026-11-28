@@ -158,6 +158,7 @@ export const PANEL_SETTINGS: Record<ActionName, PanelSetting> = {
   "kept-job-forget": { unreadable: "read" },
   "ambient-away": { unreadable: "later" },
   "crew-grouping": { unreadable: "later" },
+  "copy-on-select": { unreadable: "later" },
   "card-size": { unreadable: "later" },
   language: { unreadable: "later" },
   "usage-unit": { unreadable: "later" },

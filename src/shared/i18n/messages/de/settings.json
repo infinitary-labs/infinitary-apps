@@ -53,6 +53,8 @@
   "settingsAppearanceCardSizeDescription": "Wähle, wie Karten sich öffnen. Du kannst die Größe jeder Karte trotzdem ändern.",
   "settingsAppearanceCardUsual": "Normal",
   "settingsAppearanceCardWide": "Breit",
+  "settingsAppearanceCopyOnSelect": "Beim Auswählen kopieren",
+  "settingsAppearanceCopyOnSelectDescription": "Wörter, die du mit dem Zeiger auswählst, landen sofort in der Zwischenablage, du musst sie also nicht per Tastatur kopieren.",
   "settingsAppearanceCrewGroupedByComputer": "Crew-Animation nach Computer gruppiert",
   "settingsAppearanceCrewGroupedByProject": "Crew-Animation nach Projekt gruppiert",
   "settingsAppearanceCrewGrouping": "Crew-Animation nach Projekt gruppieren",

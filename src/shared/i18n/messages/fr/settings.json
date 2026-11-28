@@ -55,6 +55,8 @@
   "settingsAppearanceCardSizeDescription": "Choisissez comment les cartes s’ouvrent. Vous pouvez toujours redimensionner chaque carte.",
   "settingsAppearanceCardUsual": "Habituelle",
   "settingsAppearanceCardWide": "Large",
+  "settingsAppearanceCopyOnSelect": "Copier à la sélection",
+  "settingsAppearanceCopyOnSelectDescription": "Les mots que vous sélectionnez avec le pointeur vont directement dans le presse-papiers, sans avoir à les copier au clavier.",
   "settingsAppearanceCrewGroupedByComputer": "Animation de l’équipage groupée par ordinateur",
   "settingsAppearanceCrewGroupedByProject": "Animation de l’équipage groupée par projet",
   "settingsAppearanceCrewGrouping": "Grouper l’animation de l’équipage par projet",

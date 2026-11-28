@@ -1,5 +1,5 @@
 ---
-source: b54d92169707b7c1
+source: 817b31e64d3ccdc3
 title: Einstellungen
 description: Was jeder Bereich der Einstellungen enthält – Allgemein und Erscheinungsbild hier erklärt, für den Rest ein Link.
 ---
@@ -64,6 +64,10 @@ Auf dem Computer, auf dem dein erster Offizier lebt, stehen sie unter **Angemeld
 - **Standardgröße der Karten** legt fest, wie Karten sich öffnen: **Normal**, **Breit**, **Voll** oder **Maximiert**.
   Du kannst jede Karte trotzdem in der Größe ändern.
 - **Karten maximiert lassen** hält jede Karte maximiert, nachdem du eine maximiert hast, bis du eine wiederherstellst.
+- **Beim Auswählen kopieren** kopiert die Wörter, die du mit dem Zeiger auswählst, sobald du loslässt, sodass du die Kopiertaste nicht drücken musst.
+  Es ist standardmäßig aus.
+  Es kopiert auch ein doppelt angeklicktes Wort, einen dreifach angeklickten Absatz und in einem Feld ausgewählte Wörter und zeigt dabei nichts an.
+  Dein erster Offizier kann es ebenfalls umschalten.
 - **Modellnamen der Crew** zeigt Modellnamen, während deine Crewmitglieder nur eine Umlaufbahn nutzen.
 - **Crew-Animation nach Projekt gruppieren** setzt die Crew jedes Projekts in der Crew-Animation zusammen, egal auf welchem Computer sie läuft.
   Es ist standardmäßig aus und erscheint, solange du zwei oder mehr Projekte hast.

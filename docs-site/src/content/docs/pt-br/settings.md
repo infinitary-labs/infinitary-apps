@@ -1,5 +1,5 @@
 ---
-source: b54d92169707b7c1
+source: 817b31e64d3ccdc3
 title: Ajustes
 description: O que cada seção dos Ajustes contém, com Geral e Aparência explicadas aqui e um link para as demais.
 ---
@@ -64,6 +64,10 @@ No computador em que seu imediato vive, eles ficam em **Sites com login** em **S
 - **Tamanho padrão dos cartões** escolhe como os cartões se abrem: **Normal**, **Largo**, **Completo** ou **Maximizado**.
   Você ainda pode redimensionar cada cartão.
 - **Manter os cartões maximizados** mantém todos os cartões maximizados depois que você maximiza um, até você restaurar um.
+- **Copiar ao selecionar** copia as palavras que você seleciona com o ponteiro quando você solta, então você não precisa apertar a tecla de copiar.
+  Vem desativado por padrão.
+  Também copia uma palavra com clique duplo, um parágrafo com clique triplo e palavras selecionadas em um campo, e não mostra nada ao fazer isso.
+  Seu primeiro imediato também pode ativá-lo ou desativá-lo.
 - **Nomes dos modelos da tripulação** mostra os nomes dos modelos enquanto seus tripulantes usam só uma órbita.
 - **Agrupar a animação da tripulação por projeto** reúne os tripulantes de cada projeto na animação da tripulação, seja qual for o computador que os executa.
   Vem desligado e aparece enquanto você tiver dois projetos ou mais.

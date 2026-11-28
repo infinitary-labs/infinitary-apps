@@ -67,6 +67,7 @@ Markdown in `docs/`, `primitives/` and the design skill is one sentence per line
 
 - `renderer.md`: renderer hot paths and the character.
 - `crew-orbits.md`: the crew's orbital formation around the first mate.
+- `copy-on-select.md`: the Copy on select switch and the release of the pointer that copies.
 - `composer.md`: the composer's keys, growth, paste and recall.
 - `keyboard.md`: keyboard commands, the catalog, scopes, the resolver, command search, key hints and a new feature's keys.
 - `card-overlay.md`: the card overlay, a Mac's system-wide key that shows the card stack over a full-screen app.

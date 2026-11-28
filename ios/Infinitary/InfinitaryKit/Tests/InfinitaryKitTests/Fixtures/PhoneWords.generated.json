@@ -2129,6 +2129,8 @@
   {"said":{"m":"settingsAppearanceCardSizeDescription"},"words":"Choose how cards open. You can still resize each card."},
   {"said":{"m":"settingsAppearanceCardUsual"},"words":"Usual"},
   {"said":{"m":"settingsAppearanceCardWide"},"words":"Wide"},
+  {"said":{"m":"settingsAppearanceCopyOnSelect"},"words":"Copy on select"},
+  {"said":{"m":"settingsAppearanceCopyOnSelectDescription"},"words":"Words you select with the pointer go straight to the clipboard, so you need not copy them with the keyboard."},
   {"said":{"m":"settingsAppearanceCrewGroupedByComputer"},"words":"Crew animation grouped by computer"},
   {"said":{"m":"settingsAppearanceCrewGroupedByProject"},"words":"Crew animation grouped by project"},
   {"said":{"m":"settingsAppearanceCrewGrouping"},"words":"Group crew animation by project"},

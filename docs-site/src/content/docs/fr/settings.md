@@ -1,5 +1,5 @@
 ---
-source: b54d92169707b7c1
+source: 817b31e64d3ccdc3
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -64,6 +64,10 @@ Sur l’ordinateur où vit votre second, ils se trouvent sous **Sites connectés
 - **Taille des cartes par défaut** choisit comment les cartes s’ouvrent : **Habituelle**, **Large**, **Pleine** ou **Agrandie**.
   Vous pouvez toujours redimensionner chaque carte.
 - **Garder les cartes agrandies** garde chaque carte agrandie après que vous en avez agrandi une, jusqu’à ce que vous en restauriez une.
+- **Copier à la sélection** copie les mots que vous sélectionnez avec le pointeur dès que vous relâchez, sans avoir à appuyer sur la touche de copie.
+  Il est désactivé par défaut.
+  Il copie aussi un mot sur lequel vous double-cliquez, un paragraphe sur lequel vous triple-cliquez et les mots sélectionnés dans un champ, sans rien afficher.
+  Votre premier maître peut aussi l’activer ou le désactiver.
 - **Noms des modèles de l’équipage** affiche le nom des modèles tant que vos équipiers n’utilisent qu’une seule orbite.
 - **Grouper l’animation de l’équipage par projet** réunit les équipiers de chaque projet dans l’animation de l’équipage, quel que soit l’ordinateur qui les exécute.
   Il est désactivé par défaut et apparaît tant que vous avez au moins deux projets.

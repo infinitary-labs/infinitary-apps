@@ -52,6 +52,8 @@ export type AppearanceSlice = {
   showCrewModelNames: boolean;
   /** How the crew animation groups the crew (docs/crew-orbits.md, "Grouping by project"). */
   crewGrouping: CrewGrouping;
+  copyOnSelect: boolean;
+  setCopyOnSelect: (on: boolean) => void;
   /**
    * Whether the ambient music plays, and how loud, 0-100 (docs/ambient-music.md):
    * one on/off for the sound button, its key and Settings' switch.
@@ -116,6 +118,7 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     washStrength: appearance.washStrength ?? DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: appearance.showCrewModelNames ?? true,
     crewGrouping: appearance.crewGrouping ?? "computer",
+    copyOnSelect: appearance.copyOnSelect ?? false,
     ambientMusic: appearance.ambientMusic ?? false,
     ambientPlaysWhenAway: appearance.ambientPlaysWhenAway ?? false,
     ambientVolume: appearance.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
@@ -192,6 +195,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         washStrength: s.washStrength,
         showCrewModelNames: s.showCrewModelNames,
         crewGrouping: s.crewGrouping,
+        copyOnSelect: s.copyOnSelect,
         ambientMusic: s.ambientMusic,
         ambientPlaysWhenAway: s.ambientPlaysWhenAway,
         ambientVolume: s.ambientVolume,
@@ -218,6 +222,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     washStrength: DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
     crewGrouping: "computer",
+    copyOnSelect: false,
     ambientMusic: false,
     ambientPlaysWhenAway: false,
     ambientVolume: DEFAULT_AMBIENT_VOLUME,
@@ -277,6 +282,10 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setShowCrewModelNames: (showCrewModelNames) => {
       set({ showCrewModelNames });
       saveAppearance("showCrewModelNames", { showCrewModelNames });
+    },
+    setCopyOnSelect: (copyOnSelect) => {
+      set({ copyOnSelect });
+      saveAppearance("copyOnSelect", { copyOnSelect });
     },
     setCrewGrouping: (crewGrouping) => {
       set({ crewGrouping });

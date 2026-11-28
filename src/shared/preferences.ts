@@ -128,6 +128,12 @@ export const appearanceSchema = z.strictObject({
   /** Missing on older installs means on, as on a fresh install. */
   showCrewModelNames: z.boolean().optional(),
   /**
+   * Whether words selected with the pointer go straight to the clipboard
+   * (docs/copy-on-select.md); missing means off. The core keeps it in a row
+   * of its own, so an older build never meets it.
+   */
+  copyOnSelect: z.boolean().optional(),
+  /**
    * How the crew animation groups the crew (docs/crew-orbits.md, "Grouping
    * by project"): by the computer each runs on, or by project. Missing means
    * by computer, on a fresh install and an older one. The core keeps it in a

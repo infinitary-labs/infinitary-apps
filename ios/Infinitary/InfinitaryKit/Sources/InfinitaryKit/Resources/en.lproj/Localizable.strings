@@ -2866,6 +2866,8 @@
 "settingsAppearanceCardSizeDescription" = "Choose how cards open. You can still resize each card.";
 "settingsAppearanceCardUsual" = "Usual";
 "settingsAppearanceCardWide" = "Wide";
+"settingsAppearanceCopyOnSelect" = "Copy on select";
+"settingsAppearanceCopyOnSelectDescription" = "Words you select with the pointer go straight to the clipboard, so you need not copy them with the keyboard.";
 "settingsAppearanceCrewGroupedByComputer" = "Crew animation grouped by computer";
 "settingsAppearanceCrewGroupedByProject" = "Crew animation grouped by project";
 "settingsAppearanceCrewGrouping" = "Group crew animation by project";

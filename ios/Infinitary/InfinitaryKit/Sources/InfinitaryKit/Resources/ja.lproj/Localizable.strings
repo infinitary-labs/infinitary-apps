@@ -2866,6 +2866,8 @@
 "settingsAppearanceCardSizeDescription" = "カードを開くときの大きさを選びます。各カードのサイズはあとから変更できます。";
 "settingsAppearanceCardUsual" = "通常";
 "settingsAppearanceCardWide" = "ワイド";
+"settingsAppearanceCopyOnSelect" = "選択時にコピー";
+"settingsAppearanceCopyOnSelectDescription" = "ポインターで選択した語句はそのままクリップボードに入るので、キーボードでコピーする必要がありません。";
 "settingsAppearanceCrewGroupedByComputer" = "乗組員のアニメーションをコンピューターごとにまとめました";
 "settingsAppearanceCrewGroupedByProject" = "乗組員のアニメーションをプロジェクトごとにまとめました";
 "settingsAppearanceCrewGrouping" = "乗組員のアニメーションをプロジェクトごとにまとめる";

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calendarScope, forgeScope, recipientsScope } from "./scopes";
+import {
+  calendarScope,
+  forgeScope,
+  googleFileScope,
+  newGoogleFileScope,
+  recipientsScope,
+} from "./scopes";
 
 /**
  * What one Allow for the rest of this task covers (INF-2993, the captain's
@@ -85,5 +91,26 @@ describe("Allow for the rest of this task's place (INF-2993)", () => {
     const sent = recipientsScope({ to: ["Ada <ada@example.com>"], cc: ["sam@example.com"] });
     expect(recipientsScope({ to: ["sam@example.com", "ada <ADA@example.com>"] })).toEqual(sent);
     expect(recipientsScope({ to: ["ada <ada@example.com>"] }).key).not.toBe(sent.key);
+  });
+
+  // INF-6447 piece 2: one allowance covers one doc or one spreadsheet, as one covers one calendar.
+  it("names one Google Doc or Sheet by its id, and a new one by the folder it is made in", () => {
+    const sheet = googleFileScope("spreadsheet");
+    expect(sheet({ id: "1ShEeTbUdGeT", range: "Costs!B2", rows: [[400]] })).toEqual({
+      key: "1ShEeTbUdGeT",
+      words: "the spreadsheet 1ShEeTbUdGeT",
+    });
+    expect(sheet({ id: "1ShEeTbUdGeT", tab: "Crew rates", rows: [["Lena"]] }).key).toBe(
+      "1ShEeTbUdGeT",
+    );
+    const made = newGoogleFileScope("document");
+    expect(made({ title: "Call sheet", text: "Roof at 6am" })).toEqual({
+      key: "",
+      words: "new documents in My Drive",
+    });
+    expect(made({ title: "Call sheet", text: "Roof", folder: "1FoLdEr0rtiz" })).toEqual({
+      key: "1FoLdEr0rtiz",
+      words: "new documents in the Drive folder 1FoLdEr0rtiz",
+    });
   });
 });

@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: 88c26f56331369d6
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -52,10 +52,10 @@ Siehe [Deine anderen Computer](/de/your-other-computers/).
 
 Wenn du dich bei GitHub abmeldest, funktionieren private Klone und Pull Requests erst wieder, wenn du dich erneut anmeldest.
 
-## Google: Gmail, Kalender und Drive {#google-gmail-calendar-and-drive}
+## Google: Gmail, Kalender, Drive, Docs und Tabellen {#google-gmail-calendar-drive-docs-and-sheets}
 
-Google ist eine Anmeldung für Gmail, Kalender und Drive.
-Infinitary erreicht sie über Googles eigene Gmail-, Kalender- und Drive-Server für KI-Agenten, mit deiner eigenen Google-Verbindung: einem Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst.
+Google ist eine Anmeldung für Gmail, Kalender, Drive, Docs und Tabellen.
+Infinitary erreicht sie über Googles eigene Gmail-, Kalender-, Drive-, Docs- und Tabellen-Server für KI-Agenten, mit deiner eigenen Google-Verbindung: einem Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst.
 Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht nach 7 Tagen.
 
 1. Drück **Google**, dann öffnet sich **Deine eigene Google-Verbindung einrichten**.
@@ -88,7 +88,7 @@ Die Google-Zeile sagt es, wenn die Verbindung dich braucht:
   Drück **Erneut einrichten**.
 - **Client für Agenten kennzeichnen**: Die Server von Google für KI-Agenten nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist, und deiner ist es nicht.
   Drück **Google Cloud öffnen**, setz bei deinem Client das Häkchen bei „Use this client for an AI-powered agent“ und speichere, und wähl dann **Jetzt prüfen** im Menü der Zeile.
-- **Ein Google-Dienst ist ausgeschaltet**: Der MCP-Dienst für Gmail, Kalender oder Drive ist in deinem Google-Cloud-Projekt ausgeschaltet.
+- **Ein Google-Dienst ist ausgeschaltet**: Der MCP-Dienst für Gmail, Kalender, Drive, Docs oder Tabellen ist in deinem Google-Cloud-Projekt ausgeschaltet.
   Drück **Google Cloud öffnen**, schalt ihn ein und wähl dann **Jetzt prüfen** im Menü der Zeile.
 
 In diesen beiden letzten Fällen bleibst du angemeldet, und nichts muss neu eingerichtet werden.
@@ -100,10 +100,13 @@ Ab dem 1. Februar 2027 lässt Google keinen KI-Agenten mehr eine an eine Nachric
 Im Kalender können sie deine Kalender und Termine auflisten, einen Termin lesen, Zeiten finden, zu denen alle frei sind, und einen Termin anlegen oder ändern.
 Keine Aktion löscht einen Kalendertermin.
 In Drive können sie deine Dateien durchsuchen, eine Datei als Text lesen und eine Datei im Ordner einer Aufgabe speichern, ein Google-Dokument, eine Tabelle oder eine Präsentation als PDF oder als Office-Datei exportiert.
-Keine Aktion löscht, verschiebt oder teilt eine Datei, und keine ändert eine.
+In Docs können sie ein Dokument aus Text mit Überschriften, Listen, Fettdruck und Links erstellen, Text am Ende eines Dokuments anfügen und Wörter darin ersetzen.
+In Tabellen können sie die Tabellenblätter oder Zellen einer Tabelle lesen, eine Tabelle mit ihren Tabellenblättern und ersten Zeilen erstellen, Zellen setzen und Zeilen nach der letzten gefüllten anfügen.
+Jede dieser Änderungen wartet auf deine Zustimmung, und **Für den Rest dieser Aufgabe erlauben** gilt für ein Dokument oder eine Tabelle.
+Keine Aktion löscht, verschiebt oder teilt eine Datei.
 
 Google kann einen Aufruf stoppen, um zuerst dich zu fragen, auch einen, den du erlaubt hast.
-Infinitary zeigt die Frage dann auf einer Karte, die Gmail, Kalender oder Drive als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
+Infinitary zeigt die Frage dann auf einer Karte, die Gmail, Kalender, Drive, Docs oder Tabellen als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
 Nichts läuft, bis du eine drückst, und deine Auswahl beantwortet nur diesen einen Aufruf.
 Eine Auswahl, immer zu erlauben, speichert Google, nicht Infinitary.
 

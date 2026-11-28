@@ -141,6 +141,8 @@ export async function googleWorld(
       take: (taskId, askId) => tasks.delivery.takeWriteAsk(taskId, askId),
       record: (taskId, askId, outcome) =>
         tasks.delivery.recordWriteAskOutcome(taskId, askId, outcome),
+      allow: (taskId, allowance) => tasks.delivery.allowIntegration(taskId, allowance),
+      allowances: (taskId) => tasks.delivery.integrationAllowances(taskId),
     },
     reads,
     files: {

@@ -696,7 +696,8 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
  *
  * - Promised result: a sign-in with Drive's box unticked on Google's page is
  *   kept; the row says quietly that Drive, Docs and Sheets were not added,
- *   with Sign in again, and lists Drive's actions at Asks you; Sign in
+ *   with Sign in again, and lists Drive's, Docs' and Sheets' actions at
+ *   Asks you; Sign in
  *   again by keys shows Google's notice, and a sign-in with every box
  *   ticked clears the line.
  * - Data: the stand-in Google, whose consent page grants what the test ticks.
@@ -755,7 +756,19 @@ test("a sign-in that leaves Drive out keeps the row, says so quietly, and Sign i
     await expect(state).toHaveAttribute("data-tone", "quiet");
     await expect(detail).toHaveText(m.integrationsGoogleWithoutDriveDetail());
     const actions = tab.locator('[data-integration-actions="google"]');
-    for (const name of ["search_files", "read_file", "save_file"])
+    // INF-7010: Docs' and Sheets' actions are on the row at Asks you too, waiting for Drive.
+    for (const name of [
+      "search_files",
+      "read_file",
+      "save_file",
+      "create_document",
+      "append_to_document",
+      "replace_in_document",
+      "read_sheet",
+      "create_spreadsheet",
+      "update_cells",
+      "append_rows",
+    ])
       await expect(
         actions.locator(`[data-integration-action="${name}"] [data-integration-rule]`),
       ).toHaveText(INTEGRATION_RULE_WORDS.ask);

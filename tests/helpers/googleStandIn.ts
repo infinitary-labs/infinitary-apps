@@ -3,8 +3,9 @@
  * sign-in for an installed app (the consent page, the token endpoint with
  * PKCE, renewal and revocation), Gmail's profile, which the sign-in reads
  * the account from, an attached file's bytes from Gmail's own API, and
- * Google's Gmail, Calendar and Drive MCP servers
- * (`googleMcpStandIn.ts`, `driveMcpStandIn.ts`), on this computer, answering in the shapes Google
+ * Google's Gmail, Calendar, Drive, Docs and Sheets MCP servers
+ * (`googleMcpStandIn.ts`, `driveMcpStandIn.ts`, `docsSheetsMcpStandIn.ts`),
+ * on this computer, answering in the shapes Google
  * documents (the OAuth 2.0 guide for installed apps, Gmail's API reference,
  * and the MCP servers' own tool lists) and Google's error shape
  * `{ error: { code, message, errors: [{ reason }], status } }`.
@@ -24,6 +25,7 @@ import { Readable } from "node:stream";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 
 import { calendarStandIn } from "./calendarStandIn";
+import { docsMcpServer, sheetsMcpServer } from "./docsSheetsMcpStandIn";
 import { driveMcpServer, type StandInDriveFile } from "./driveMcpStandIn";
 import {
   attachmentIdOf,
@@ -73,18 +75,22 @@ const SCOPES = [
 ];
 
 /** The Google services the stand-in serves an MCP server for. */
-type StandInService = GoogleMcpService | "drive";
+type StandInService = GoogleMcpService | "drive" | "docs" | "sheets";
 
 const MCP_PATHS: Record<string, StandInService> = {
   "/gmailmcp/mcp/v1": "gmail",
   "/calendarmcp/mcp/v1": "calendar",
   "/drivemcp/mcp/v1": "drive",
+  "/docsmcp/mcp/v1": "docs",
+  "/sheetsmcp/mcp/v1": "sheets",
 };
 
 const SERVICE_NAMES: Record<StandInService, string> = {
   gmail: "Gmail",
   calendar: "Calendar",
   drive: "Drive",
+  docs: "Docs",
+  sheets: "Sheets",
 };
 
 function googleError(code: number, message: string, reason: string, status: string) {
@@ -249,7 +255,20 @@ export async function startGoogleStandIn() {
       { legacy: "reject" },
     ),
     drive: createMcpHandler(
-      (context) => driveMcpServer({ files, granted: () => context.authInfo?.scopes ?? [] }),
+      (context) =>
+        driveMcpServer({
+          files,
+          granted: () => context.authInfo?.scopes ?? [],
+          owner: () => knobs.account,
+        }),
+      { legacy: "reject" },
+    ),
+    docs: createMcpHandler(
+      (context) => docsMcpServer({ files, granted: () => context.authInfo?.scopes ?? [] }),
+      { legacy: "reject" },
+    ),
+    sheets: createMcpHandler(
+      (context) => sheetsMcpServer({ files, granted: () => context.authInfo?.scopes ?? [] }),
       { legacy: "reject" },
     ),
   };
@@ -565,6 +584,8 @@ export async function startGoogleStandIn() {
           handlers.gmail.close(),
           handlers.calendar.close(),
           handlers.drive.close(),
+          handlers.docs.close(),
+          handlers.sheets.close(),
         ]).finally(() => {
           server.close(() => resolve());
           server.closeAllConnections();

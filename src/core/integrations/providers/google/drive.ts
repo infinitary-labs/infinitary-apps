@@ -25,7 +25,7 @@ type DriveFile = {
 };
 
 // i18n-exempt: served to the crew, which stays English
-const fileIdSchema = z
+export const fileIdSchema = z
   .string()
   .regex(/^[A-Za-z0-9_-]{1,256}$/, "a Drive file's id, as search_files answers it");
 /** A quoted value in Drive's search words: one line. */
@@ -164,7 +164,7 @@ export function driveQuery(input: {
   ].join(" and ");
 }
 
-const answer = (value: unknown): IntegrationAnswer => ({ text: JSON.stringify(value) });
+export const answer = (value: unknown): IntegrationAnswer => ({ text: JSON.stringify(value) });
 
 function listed(file: DriveFile) {
   return {

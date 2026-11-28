@@ -1,6 +1,7 @@
 /**
  * Google's Drive MCP server, as the Google stand-in serves it
- * (`googleStandIn.ts`): the four read tools the Google row calls, by
+ * (`googleStandIn.ts`): the four read tools the Google row calls and
+ * create_file, which makes a new doc or sheet, by
  * Google's own name, input fields and answer shapes, as `tools/list` on
  * drivemcp.googleapis.com gave them (their `inputSchema` and
  * `outputSchema`), over the SDK's 2026-07-28 server. Every answer carries
@@ -15,10 +16,15 @@
  * `trashed =`), with a value in single quotes whose quote and backslash are
  * escaped by a backslash; a file's size is a string of bytes; a Google
  * Doc, Sheet or Slides deck downloads only as an export, and its content
- * comes base64-encoded. Each tool answers a key granted none of Drive's
- * permissions Google's insufficient-scopes refusal.
+ * comes base64-encoded. create_file makes one of Google's own types
+ * named in `contentMimeType` with no content, and converts a text upload to
+ * a Doc, as its description says; how Google's Markdown import reads the
+ * text is assumed here (heading and bold marks dropped). Each tool answers
+ * a key granted none of Drive's permissions Google's insufficient-scopes
+ * refusal.
  */
 
+import { randomBytes } from "node:crypto";
 import { type CallToolResult, McpServer } from "@modelcontextprotocol/server";
 import { z } from "zod";
 
@@ -36,10 +42,23 @@ export type StandInDriveFile = {
   text?: string;
   /** Its bytes, for a file that is not one of Google's own types. */
   bytes?: Buffer;
+  /** A Google Sheet's tabs, in order (`docsSheetsMcpStandIn.ts`). */
+  tabs?: StandInTab[];
+  /** Shared with the signed-in account to view only, so Docs refuses an edit to it. */
+  viewOnly?: boolean;
+};
+
+/** One tab of a stand-in Google Sheet: its id, its name and its cells' values, row by row. */
+export type StandInTab = {
+  sheetId: number;
+  title: string;
+  rows: (string | number | boolean | null)[][];
 };
 
 export type DriveWorld = {
   files: Map<string, StandInDriveFile>;
+  /** The signed-in account, the owner of a file create_file makes. */
+  owner: () => string;
   /** The permissions the request's key was granted. */
   granted: () => string[];
 };
@@ -286,5 +305,60 @@ export function driveMcpServer(world: DriveWorld): McpServer {
       });
     },
   );
+  server.registerTool(
+    "create_file",
+    {
+      outputSchema: ANSWER,
+      inputSchema: z.strictObject({
+        title: z.string(),
+        textContent: z.string().optional(),
+        base64Content: z.string().optional(),
+        contentMimeType: z.string().optional(),
+        disableConversionToGoogleType: z.boolean().optional(),
+        parentId: z.string().optional(),
+      }),
+      annotations: { readOnlyHint: false, openWorldHint: true },
+    },
+    async ({ title, textContent, contentMimeType, parentId }) => {
+      const scope = scoped();
+      if (scope) return scope;
+      if (parentId && world.files.get(parentId)?.mimeType !== FOLDER)
+        return refused(`File not found: ${parentId}.`);
+      const made = (mimeType: string, more: Partial<StandInDriveFile>): StandInDriveFile => ({
+        id: `1nEw${randomBytes(9).toString("base64url")}`,
+        title,
+        mimeType,
+        owner: world.owner(),
+        modifiedTime: new Date().toISOString(),
+        ...(parentId ? { parentId } : {}),
+        ...more,
+      });
+      let file: StandInDriveFile;
+      if (textContent !== undefined) {
+        if (!contentMimeType) return refused("contentMimeType is required with content.");
+        file = made(DOCUMENT, { text: imported(textContent) });
+      } else if (contentMimeType === DOCUMENT) file = made(DOCUMENT, { text: "" });
+      else if (contentMimeType === SPREADSHEET)
+        file = made(SPREADSHEET, { tabs: [{ sheetId: 0, title: "Sheet1", rows: [] }] });
+      else
+        return refused(
+          `Cannot create a file of type ${contentMimeType ?? "(none)"} without content.`,
+        );
+      world.files.set(file.id, file);
+      return text(described(file));
+    },
+  );
   return server;
+}
+
+const FOLDER = "application/vnd.google-apps.folder";
+const DOCUMENT = "application/vnd.google-apps.document";
+const SPREADSHEET = "application/vnd.google-apps.spreadsheet";
+
+/** A Markdown upload's text as the Doc it becomes reads: heading and bold marks become formatting. */
+function imported(markdown: string): string {
+  return markdown
+    .split("\n")
+    .map((line) => line.replace(/^#{1,6}\s+/, "").replaceAll("**", ""))
+    .join("\n");
 }

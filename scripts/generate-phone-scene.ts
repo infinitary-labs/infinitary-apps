@@ -326,33 +326,32 @@ try {
   }
   /** The meteor fidgets' settings, schedule and tables: every meteor, piece, star and grain of dust the desktop draws. */
   function meteorsData() {
-    const fixed = (n: number) => Math.round(n * 1e6) / 1e6;
-    const close = (n: number) => Math.round(n * 1e12) / 1e12;
     const { METEORS, METEOR_SCHEDULE, STORM_DIR, FIREBALL_PATH, SHOWER_METEORS, STORM_METEORS, FIREBALL_HERALDS, FIREBALL_FRAGMENTS,
       FIREBALL_BURST, METEOR_STARS, FIREBALL_DUST } = meteors;
-    // The meteors, the pieces and the paths keep 12 places: the phone replays their lights to the desktop's own
-    // digits, and a whole double's last bit differs between Node versions, so the file would not match on every machine.
+    // The desktop builds its tables on a grid every machine agrees on (meteors.ts), so they go over as they are and
+    // the phone replays their lights to the desktop's own digits.
     const meteor = (m: (typeof SHOWER_METEORS)[number]) =>
-      [m.x0, m.y0, m.ux, m.uy, m.L, m.t0, m.life, m.lifeF, m.mag, m.w, m.flare, m.linger, m.near ? 1 : 0].map(close);
-    const piece = (f: (typeof FIREBALL_FRAGMENTS)[number]) => [f.u, f.v, f.drag, f.side, f.life, f.w, f.a, f.turn].map(close);
+      [m.x0, m.y0, m.ux, m.uy, m.L, m.t0, m.life, m.lifeF, m.mag, m.w, m.flare, m.linger, m.near ? 1 : 0];
+    const piece = (f: (typeof FIREBALL_FRAGMENTS)[number]) => [f.u, f.v, f.drag, f.side, f.life, f.w, f.a, f.turn];
     return { shower: METEORS.shower, storm: METEORS.storm, fireball: METEORS.fireball, stars: METEORS.stars, crewLight: METEORS.crewLight,
       reachPx: METEORS.reachPx, releaseMs: WARP_RELEASE_MS,
       schedule: Object.fromEntries(Object.entries(METEOR_SCHEDULE).filter(([, value]) => typeof value === "number")),
-      flares: METEOR_SCHEDULE.flares, stormDir: STORM_DIR.map(close), path: Object.fromEntries(Object.entries(FIREBALL_PATH).map(([key, value]) => [key, close(value)])),
+      flares: METEOR_SCHEDULE.flares, stormDir: STORM_DIR, path: FIREBALL_PATH,
       showerMeteors: SHOWER_METEORS.map(meteor), stormMeteors: STORM_METEORS.map(meteor), heralds: FIREBALL_HERALDS.map(meteor),
-      fragments: FIREBALL_FRAGMENTS.map(piece), burst: FIREBALL_BURST.map(piece), skyStars: METEOR_STARS.map((s) => [s.x, s.y, s.m].map(fixed)),
-      dust: FIREBALL_DUST.map((d) => d.map(fixed)) };
+      fragments: FIREBALL_FRAGMENTS.map(piece), burst: FIREBALL_BURST.map(piece), skyStars: METEOR_STARS.map((s) => [s.x, s.y, s.m]),
+      dust: FIREBALL_DUST };
   }
   /** The desktop meteor fidgets' carriage, eyes, lights, storm points and crew light through each fidget, for the phone's to replay. */
   function meteorsTraces() {
-    const fixed = (n: number) => Math.round(n * 1e9) / 1e9;
+    // Seven places: Math.exp and its kin differ in their last bits between machines, and a finer grid would let
+    // that cross a step on some of these readings; the replay compares to six.
+    const fixed = (n: number) => Math.round(n * 1e7) / 1e7;
     const { meteorBody, meteorEyes, meteorLights, meteorLitAt, placeStormVertices, stormFlights, stormLanded } = meteors;
     const rank = [3, 4, 0, 1, 7, 5, 15, 2, 9, 11, 13, 12, 8, 10, 14, 6];
     const c = 140, R = 75.6;
     const home = new Float64Array(32);
-    // Twelve places, as the tables keep: a whole double's last bit differs between Node versions.
-    const close = (n: number) => Math.round(n * 1e12) / 1e12;
-    for (let i = 0; i < 16; i++) { home[2 * i] = close(Math.cos(i * 0.4) * R * 0.8); home[2 * i + 1] = close(Math.sin(i * 0.7) * R * 0.8); }
+    // On the grid the tables use, so every machine reads the same points.
+    for (let i = 0; i < 16; i++) { home[2 * i] = fixed(Math.cos(i * 0.4) * R * 0.8); home[2 * i + 1] = fixed(Math.sin(i * 0.7) * R * 0.8); }
     const crew: Array<[number, number]> = [[0, 0], [110, -40], [-150, 60], [40, 180], [-90, -200], [220, 90]];
     return (["shower", "storm", "fireball"] as const).flatMap((variant) =>
       [0, 0.03, 0.08, 0.12, 0.2, 0.3, 0.4, 0.5, 0.53, 0.56, 0.6, 0.65, 0.7, 0.72, 0.75, 0.8, 0.84, 0.88, 0.9, 0.93, 0.97, 1].map((et) => {

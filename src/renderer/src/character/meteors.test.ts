@@ -57,12 +57,13 @@ describe("the storm's frame", () => {
     const flying = stormFlights(0.7, RANK, home);
     expect(flying.length).toBeGreaterThan(0);
     for (const f of flying) {
-      // Each falls along the storm's heading toward where the first mate drew it.
+      // Each falls along the storm's heading toward where the first mate drew it,
+      // to the millionth the tables are kept to (meteors.ts, onGrid).
       const dx = (home[2 * f.i] ?? 0) - f.x;
       const dy = (home[2 * f.i + 1] ?? 0) - f.y;
       const d = Math.hypot(dx, dy);
       expect(d, `point ${f.i}`).toBeGreaterThan(0);
-      expect((dx * STORM_DIR[0] + dy * STORM_DIR[1]) / d, `point ${f.i}`).toBeCloseTo(1, 9);
+      expect((dx * STORM_DIR[0] + dy * STORM_DIR[1]) / d, `point ${f.i}`).toBeCloseTo(1, 5);
     }
     const late = stormFlights(0.9, RANK, home);
     expect(late).toEqual([]);
@@ -117,12 +118,13 @@ describe("the shower", () => {
   it("runs every meteor straight away from its radiant", () => {
     const rx = METEOR_SCHEDULE.radiant[0] * METEORS.reachPx;
     const ry = METEOR_SCHEDULE.radiant[1] * METEORS.reachPx;
-    // The brightest, last, crosses the sky on its own path.
+    // The brightest, last, crosses the sky on its own path. The tables are kept
+    // to the millionth (meteors.ts, onGrid), so the line holds to five places.
     for (const m of SHOWER_METEORS.slice(0, -1)) {
       const dx = m.x0 - rx;
       const dy = m.y0 - ry;
       const d = Math.hypot(dx, dy);
-      expect((dx * m.uy - dy * m.ux) / d).toBeCloseTo(0, 9);
+      expect((dx * m.uy - dy * m.ux) / d).toBeCloseTo(0, 5);
       expect(dx * m.ux + dy * m.uy).toBeGreaterThan(-m.L / 2);
     }
   });

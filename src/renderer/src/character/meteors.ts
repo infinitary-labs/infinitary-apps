@@ -96,8 +96,23 @@ const CORE_R = 280 * 0.27;
 const LAND_FAR = REACH * 1.2;
 
 const frac = (v: number): number => v - Math.floor(v);
-/** A fixed pseudo-random number in 0..1 for item `i`, stream `k`; the phone reads the tables built from it. */
-const hash = (i: number, k: number): number => frac(Math.sin(i * 127.1 + k * 311.7) * 43758.5453);
+/**
+ * `v` on a grid of `steps` to the unit. Math.sin and its kin differ in their
+ * last bits between machines, and the hash below multiplies that up to some
+ * billionths of a px; on the grid every machine builds the same tables, so
+ * the phone's generated copy matches wherever it is generated.
+ */
+const onGrid = (v: number, steps = 1e6): number => Math.round(v * steps) / steps;
+const gridded = <T extends object>(o: T): T =>
+  Object.fromEntries(
+    Object.entries(o).map(([key, value]) => [
+      key,
+      typeof value === "number" ? onGrid(value) : value,
+    ]),
+  ) as T;
+/** A fixed pseudo-random number in 0..1 for item `i`, stream `k`, on a coarse grid (see `onGrid`); the phone reads the tables built from it. */
+const hash = (i: number, k: number): number =>
+  onGrid(frac(Math.sin(i * 127.1 + k * 311.7) * 43758.5453), 1e4);
 
 export const meteorSeconds = (v: MeteorVariant): number => METEORS[v].durationMs / 1000;
 
@@ -111,8 +126,8 @@ export const meteorEdge = (x: number, y: number): number =>
 
 /** The storm's heading. */
 export const STORM_DIR: readonly [number, number] = [
-  Math.cos((S.stormDeg * Math.PI) / 180),
-  Math.sin((S.stormDeg * Math.PI) / 180),
+  onGrid(Math.cos((S.stormDeg * Math.PI) / 180)),
+  onGrid(Math.sin((S.stormDeg * Math.PI) / 180)),
 ];
 
 /**
@@ -201,7 +216,7 @@ export const SHOWER_METEORS: readonly Meteor[] = (() => {
     linger: 1.3,
     near: false,
   });
-  return out;
+  return out.map(gridded);
 })();
 
 const depth = (z: number, far: number, middle: number, near: number): number =>
@@ -253,7 +268,7 @@ export const STORM_METEORS: readonly Meteor[] = (() => {
       near: z === 2,
     });
   }
-  return out;
+  return out.map(gridded);
 })();
 
 /** The fireball's path, from its start, in px. */
@@ -261,13 +276,13 @@ export const FIREBALL_PATH = (() => {
   const x0 = S.from[0] * REACH;
   const y0 = S.from[1] * REACH;
   const len = Math.hypot(S.to[0] - S.from[0], S.to[1] - S.from[1]) * REACH;
-  return {
+  return gridded({
     x0,
     y0,
     len,
     ux: ((S.to[0] - S.from[0]) * REACH) / len,
     uy: ((S.to[1] - S.from[1]) * REACH) / len,
-  };
+  });
 })();
 const FB = FIREBALL_PATH;
 
@@ -278,21 +293,23 @@ export const FIREBALL_HERALDS: readonly Meteor[] = (
     [0.135, 0.3, 0.42, 0.42],
     [0.76, 0.2, 0.46, 0.5],
   ] as const
-).map(([t0, off, len, mag]) => ({
-  x0: -FB.ux * len * REACH * 0.5 - FB.uy * off * REACH,
-  y0: -FB.uy * len * REACH * 0.5 + FB.ux * off * REACH,
-  ux: FB.ux,
-  uy: FB.uy,
-  L: len * REACH,
-  t0,
-  life: 0.55,
-  lifeF: 0,
-  mag,
-  w: 1.3,
-  flare: 0,
-  linger: 0,
-  near: false,
-}));
+)
+  .map(([t0, off, len, mag]) => ({
+    x0: -FB.ux * len * REACH * 0.5 - FB.uy * off * REACH,
+    y0: -FB.uy * len * REACH * 0.5 + FB.ux * off * REACH,
+    ux: FB.ux,
+    uy: FB.uy,
+    L: len * REACH,
+    t0,
+    life: 0.55,
+    lifeF: 0,
+    mag,
+    w: 1.3,
+    flare: 0,
+    linger: 0,
+    near: false,
+  }))
+  .map(gridded);
 
 /** A piece of the fireball: where along the crossing it breaks off, and how it flies. */
 export type Fragment = {
@@ -337,7 +354,7 @@ export const FIREBALL_FRAGMENTS: readonly Fragment[] = Array.from(
       turn: 0,
     };
   },
-);
+).map(gridded);
 
 /** The nine pieces it bursts into at its last flare, thrown ahead in a narrow cone. */
 export const FIREBALL_BURST: readonly Fragment[] = Array.from({ length: 9 }, (_, j) => ({
@@ -349,7 +366,7 @@ export const FIREBALL_BURST: readonly Fragment[] = Array.from({ length: 9 }, (_,
   w: 1.4 + 1.4 * hash(j, 84),
   a: 1,
   turn: (hash(j, 81) - 0.5) * 0.8,
-}));
+})).map(gridded);
 
 /**
  * The fireball's wake, one grain every 1.5 px of its path: how far it drifts
@@ -357,7 +374,7 @@ export const FIREBALL_BURST: readonly Fragment[] = Array.from({ length: 9 }, (_,
  */
 export const FIREBALL_DUST: readonly (readonly [number, number, number, number])[] = Array.from(
   { length: Math.floor(FB.len / 1.5) + 1 },
-  (_, i) => [hash(i, 85) * 2 - 1, hash(i, 86), hash(i, 87), hash(i, 88)] as const,
+  (_, i) => [onGrid(hash(i, 85) * 2 - 1), hash(i, 86), hash(i, 87), hash(i, 88)] as const,
 );
 
 /** The sky's stars: where, and how bright (0..1). */
@@ -366,7 +383,7 @@ export const METEOR_STARS: readonly { x: number; y: number; m: number }[] = Arra
   (_, i) => {
     const r = REACH * Math.sqrt(hash(i, 91)) * 0.98;
     const a = hash(i, 92) * TAU;
-    return { x: Math.cos(a) * r, y: Math.sin(a) * r, m: hash(i, 93) ** 3 };
+    return gridded({ x: Math.cos(a) * r, y: Math.sin(a) * r, m: hash(i, 93) ** 3 });
   },
 );
 

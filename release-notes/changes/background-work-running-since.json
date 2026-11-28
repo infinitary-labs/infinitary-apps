@@ -10,7 +10,7 @@
         "alt": "A task's record with the header reading Background work, running since a time of day, above the task's title"
       },
       "title": "A task's background work says when it started",
-      "body": "While a crewmate's work runs in the background, the top of its task record now says \"Background work · running since\" and the time it began, on your computer and on your phone. It tells you when the work started, not when it will finish. Before, the line gave no time at all.",
+      "body": "While a crewmate's work runs in the background and no check-back is set for it, the top of its task record now says \"Background work · running since\" and the time it began, on your computer and on your phone. It tells you when the work started, not when it will finish. Before, the line gave no time at all.",
       "provenance": {
         "origin": "change"
       }

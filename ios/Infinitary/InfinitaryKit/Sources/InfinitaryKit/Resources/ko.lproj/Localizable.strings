@@ -2866,6 +2866,8 @@
 "settingsAppearanceCardSizeDescription" = "카드가 열릴 때의 크기를 골라요. 카드마다 크기를 따로 바꿀 수도 있어요.";
 "settingsAppearanceCardUsual" = "보통";
 "settingsAppearanceCardWide" = "넓게";
+"settingsAppearanceCopyOnSelect" = "선택하면 바로 복사";
+"settingsAppearanceCopyOnSelectDescription" = "포인터로 선택한 단어가 바로 클립보드에 들어가서, 키보드로 복사하지 않아도 돼요.";
 "settingsAppearanceCrewGroupedByComputer" = "선원 애니메이션을 컴퓨터별로 묶었어요";
 "settingsAppearanceCrewGroupedByProject" = "선원 애니메이션을 프로젝트별로 묶었어요";
 "settingsAppearanceCrewGrouping" = "선원 애니메이션을 프로젝트별로 묶기";

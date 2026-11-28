@@ -2866,6 +2866,8 @@
 "settingsAppearanceCardSizeDescription" = "Escolha como os cartões abrem. Você ainda pode redimensionar cada cartão.";
 "settingsAppearanceCardUsual" = "Normal";
 "settingsAppearanceCardWide" = "Largo";
+"settingsAppearanceCopyOnSelect" = "Copiar ao selecionar";
+"settingsAppearanceCopyOnSelectDescription" = "As palavras que você seleciona com o ponteiro vão direto para a área de transferência, então você não precisa copiá-las pelo teclado.";
 "settingsAppearanceCrewGroupedByComputer" = "Animação da tripulação agrupada por computador";
 "settingsAppearanceCrewGroupedByProject" = "Animação da tripulação agrupada por projeto";
 "settingsAppearanceCrewGrouping" = "Agrupar a animação da tripulação por projeto";

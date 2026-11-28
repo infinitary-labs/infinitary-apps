@@ -525,6 +525,12 @@ Keep cards maximized and whether cards are maximized now live in a settings row 
 An older build reads `appearance` strictly, so neither goes in it, and it still reads theme, size and wash; it ignores the new row and opens cards at Default card size.
 A look written without them keeps the saved row.
 
+## Copy on select
+
+Copy on select lives in a settings row of its own, `copy-on-select`, beside the `appearance` row, and exists only while the switch is on.
+An older build reads `appearance` strictly, so it is not in it; the older build ignores the row and copies nothing on select.
+A look written without it removes the row.
+
 ## The language choice
 
 The language the captain chose in Settings → Appearance lives in a settings row of its own, `language`, beside the `appearance` row (`SettingsStore.getAppearance` and `setAppearance`).

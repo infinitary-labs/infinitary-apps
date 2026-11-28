@@ -78,6 +78,19 @@ export const appearanceLines = {
         ? m.settingsAppearanceCrewGroupedByProject()
         : m.settingsAppearanceCrewGroupedByComputer(),
   },
+  "copy-on-select": {
+    fields: ["copyOnSelect"],
+    area: "appearance",
+    tier: "asked",
+    change: "inf:settings:appearance:set",
+    current: "inf:settings:appearance:get",
+    value: z.strictObject({ on: z.boolean() }),
+    // i18n-exempt: served to the first mate, a model, never shown
+    line: "Copy on select, when asked: with on true, words the person selects with the pointer (a drag, a double-click or a triple-click) go to the clipboard when the pointer is released, as the copy key would; off is the default. Keyboard selections never copy. It is this computer's window setting.",
+    toRequest: (v, current) => [{ ...(current as Appearance), copyOnSelect: v.on }],
+    readValue: (current) => ({ on: (current as Appearance).copyOnSelect === true }),
+    done: (v) => `copy on select ${v.on ? "on" : "off"}`,
+  },
   "ambient-away": {
     fields: ["ambientPlaysWhenAway"],
     area: "appearance",

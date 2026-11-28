@@ -51,6 +51,8 @@
   "settingsAppearanceCardSizeDescription": "选择卡片打开时的大小。你仍可以单独调整每张卡片的大小。",
   "settingsAppearanceCardUsual": "常规",
   "settingsAppearanceCardWide": "宽",
+  "settingsAppearanceCopyOnSelect": "选中即复制",
+  "settingsAppearanceCopyOnSelectDescription": "用指针选中的文字会直接进入剪贴板，无需再用键盘复制。",
   "settingsAppearanceCrewGroupedByComputer": "船员动画已按电脑分组",
   "settingsAppearanceCrewGroupedByProject": "船员动画已按项目分组",
   "settingsAppearanceCrewGrouping": "按项目分组船员动画",

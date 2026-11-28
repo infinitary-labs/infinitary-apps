@@ -3008,6 +3008,8 @@ public enum PhoneMessages {
     public static func `settingsAppearanceCardSizeDescription`() -> String { PhoneWords.format("settingsAppearanceCardSizeDescription", []) }
     public static func `settingsAppearanceCardUsual`() -> String { PhoneWords.format("settingsAppearanceCardUsual", []) }
     public static func `settingsAppearanceCardWide`() -> String { PhoneWords.format("settingsAppearanceCardWide", []) }
+    public static func `settingsAppearanceCopyOnSelect`() -> String { PhoneWords.format("settingsAppearanceCopyOnSelect", []) }
+    public static func `settingsAppearanceCopyOnSelectDescription`() -> String { PhoneWords.format("settingsAppearanceCopyOnSelectDescription", []) }
     public static func `settingsAppearanceCrewGroupedByComputer`() -> String { PhoneWords.format("settingsAppearanceCrewGroupedByComputer", []) }
     public static func `settingsAppearanceCrewGroupedByProject`() -> String { PhoneWords.format("settingsAppearanceCrewGroupedByProject", []) }
     public static func `settingsAppearanceCrewGrouping`() -> String { PhoneWords.format("settingsAppearanceCrewGrouping", []) }
@@ -7921,6 +7923,8 @@ extension PhoneWords {
         "settingsAppearanceCardSizeDescription": [],
         "settingsAppearanceCardUsual": [],
         "settingsAppearanceCardWide": [],
+        "settingsAppearanceCopyOnSelect": [],
+        "settingsAppearanceCopyOnSelectDescription": [],
         "settingsAppearanceCrewGroupedByComputer": [],
         "settingsAppearanceCrewGroupedByProject": [],
         "settingsAppearanceCrewGrouping": [],

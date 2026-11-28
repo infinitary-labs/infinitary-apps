@@ -131,6 +131,16 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     expect(paused.lines).toEqual(["ambient music pauses while you're away"]);
   });
 
+  it("switches Copy on select on and off, as its Settings switch does", async () => {
+    const was = await appearance();
+    const on = await asked("copy-on-select", { on: true });
+    expect(await appearance()).toEqual({ ...was, copyOnSelect: true });
+    expect(on.lines).toEqual(["copy on select on"]);
+    const off = await asked("copy-on-select", { on: false });
+    expect((await appearance()).copyOnSelect).not.toBe(true);
+    expect(off.lines).toEqual(["copy on select off"]);
+  });
+
   // INF-6955's plan, the captain's "a real toggle setting to change the
   // grouping to by project": the first mate, a window and the phone turn one
   // switch on the look, and each turn leaves one Activity line.

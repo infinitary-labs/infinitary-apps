@@ -61,6 +61,8 @@
   "settingsAppearanceCardSizeDescription": "اختر كيف تُفتح البطاقات. يظل بإمكانك تغيير حجم كل بطاقة.",
   "settingsAppearanceCardUsual": "عادي",
   "settingsAppearanceCardWide": "عريض",
+  "settingsAppearanceCopyOnSelect": "النسخ عند التحديد",
+  "settingsAppearanceCopyOnSelectDescription": "الكلمات التي تحددها بالمؤشر تُنسخ مباشرة إلى الحافظة، فلا حاجة إلى نسخها بلوحة المفاتيح.",
   "settingsAppearanceCrewGroupedByComputer": "جُمّعت رسوم الطاقم المتحركة حسب الحاسوب",
   "settingsAppearanceCrewGroupedByProject": "جُمّعت رسوم الطاقم المتحركة حسب المشروع",
   "settingsAppearanceCrewGrouping": "تجميع رسوم الطاقم المتحركة حسب المشروع",

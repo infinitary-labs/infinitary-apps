@@ -1,5 +1,5 @@
 ---
-source: b54d92169707b7c1
+source: 817b31e64d3ccdc3
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -64,6 +64,10 @@ En la computadora donde vive tu primer oficial, están en **Sitios con sesión i
 - **Tamaño predeterminado de las tarjetas** elige cómo se abren las tarjetas: **Habitual**, **Ancha**, **Completa** o **Maximizada**.
   Aun así puedes cambiar el tamaño de cada tarjeta.
 - **Mantener las tarjetas maximizadas** mantiene maximizada cada tarjeta después de que maximizas una, hasta que restauras una.
+- **Copiar al seleccionar** copia las palabras que seleccionas con el puntero cuando lo sueltas, así que no necesitas pulsar la tecla de copiar.
+  Está desactivado de forma predeterminada.
+  También copia una palabra con doble clic, un párrafo con triple clic y las palabras seleccionadas en un campo, y no muestra nada al hacerlo.
+  Tu primer oficial también puede activarlo o desactivarlo.
 - **Nombres de los modelos de la tripulación** muestra los nombres de los modelos mientras tus tripulantes usan una sola órbita.
 - **Agrupar la animación de la tripulación por proyecto** junta a los tripulantes de cada proyecto en la animación de la tripulación, sea cual sea la computadora que los ejecuta.
   Viene desactivado y aparece mientras tengas dos proyectos o más.

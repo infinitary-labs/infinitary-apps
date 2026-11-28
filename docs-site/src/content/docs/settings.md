@@ -63,6 +63,10 @@ On the computer where your first mate lives, they are under **Signed-in sites** 
 - **Default card size** chooses how cards open: **Usual**, **Wide**, **Full** or **Maximized**.
   You can still resize each card.
 - **Keep cards maximized** keeps every card maximized after you maximize one, until you restore one.
+- **Copy on select** copies the words you select with the pointer when you let go, so you need not press the copy key.
+  It is off by default.
+  It also copies a double-clicked word, a triple-clicked paragraph and words selected in a field, and shows nothing when it does.
+  Your first mate can switch it too.
 - **Crew model names** shows model names while your crewmates use only one orbit.
 - **Group crew animation by project** seats each project's crew together in the crew animation, whichever computer runs them.
   It is off by default, and shows while you have two projects or more.

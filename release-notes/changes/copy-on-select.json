@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "copy-on-select",
+      "kind": "feature",
+      "title": "Copy on select",
+      "body": "Settings → Appearance now has Copy on select. Turn it on, and the words you select with the pointer go straight to the clipboard when you let go, so you need not press the copy key. A double-clicked word, a triple-clicked paragraph and words selected in a field copy too, and nothing appears when they do. It is off by default, and your first mate can switch it when asked.",
+      "area": "settings",
+      "docsSite": ["settings"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

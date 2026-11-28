@@ -66,6 +66,7 @@ import {
 import { type CardOverlayHost, startCardOverlay } from "./cardOverlayWindow";
 import { disableChromiumFeatures } from "./chromiumFeatures";
 import { commandStarter } from "./commandStarter";
+import { followCopyOnSelect } from "./copyOnSelect";
 import { frameFontFiles } from "./frames/fontFiles";
 import { frameLibPins } from "./frames/frameLibFiles";
 import { FrameMountRegistry } from "./frames/frameMounts";
@@ -285,6 +286,7 @@ function createMainWindow(
 
   followRendererRecovery(win.webContents);
   followWindowSize(win, shell.preferences);
+  followCopyOnSelect(win, () => shell.preferences.get().appearance.copyOnSelect === true);
   if (desktop.windowControls === "app") followWindowState(win);
   followPresence(win);
   const { panel: panelCommand, ...pageCommands } = shellCommands(win);
@@ -1555,6 +1557,7 @@ export async function startApp(
         mainDir,
         rendererSource,
         keymap: shell.keymap,
+        copyOnSelect: () => shell.preferences.get().appearance.copyOnSelect === true,
         pageArguments,
         rightToLeft: () =>
           textDirection(

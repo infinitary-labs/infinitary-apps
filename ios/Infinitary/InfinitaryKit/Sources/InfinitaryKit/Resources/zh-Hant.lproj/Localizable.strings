@@ -2866,6 +2866,8 @@
 "settingsAppearanceCardSizeDescription" = "選擇卡片開啟時的大小。你仍然可以調整每張卡片的大小。";
 "settingsAppearanceCardUsual" = "一般";
 "settingsAppearanceCardWide" = "寬";
+"settingsAppearanceCopyOnSelect" = "選取即複製";
+"settingsAppearanceCopyOnSelectDescription" = "用指標選取的文字會直接進入剪貼簿，不必再用鍵盤複製。";
 "settingsAppearanceCrewGroupedByComputer" = "船員動畫已按電腦分組";
 "settingsAppearanceCrewGroupedByProject" = "船員動畫已按專案分組";
 "settingsAppearanceCrewGrouping" = "按專案分組船員動畫";

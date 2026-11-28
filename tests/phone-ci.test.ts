@@ -1122,10 +1122,14 @@ it("sends a check dealt into one or two jobs to the small phone queue and every 
     // Until MAC_QUEUES names the small queue, every check waits in the phone queue.
     expect(placed(request(jobs), { phone: "mini-mac-phone" })).toBe("mini-mac-phone");
   }
-  // The phone release's call hands on only the jobs its own step dealt, and a wait-clock or tool request chooses no
-  // parts, so neither marks a check small.
+  // The phone release's call waits in the phone queue however few jobs its own step dealt, even were that step to hand
+  // on all the chooser prints; a wait-clock or tool request chooses no parts, so it marks nothing either.
   const release = workflowString(workflow.jobs.request.outputs.small, {
-    steps: { "release-select": { outputs: { jobs: JSON.stringify(one) } } },
+    steps: {
+      "release-select": {
+        outputs: { jobs: JSON.stringify(one), small: String(smallPhoneCheck(one)) },
+      },
+    },
   });
   expect(placed({ request: { outputs: { small: release } } })).toBe("mini-mac-phone");
   expect(placed({})).toBe("mini-mac-phone");

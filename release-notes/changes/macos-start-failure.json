@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "macos-start-failure",
+      "kind": "fix",
+      "title": "The stopped notice shows why macOS could not start your first mate",
+      "body": "When macOS reports why it could not start your first mate, the stopped notice shows its reason. If your account cannot read the macOS log, the notice says so instead.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "macos-start-failure-dark.webp",
+        "light": "macos-start-failure-light.webp",
+        "alt": "The stopped notice shows a macOS permission-denied start failure"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

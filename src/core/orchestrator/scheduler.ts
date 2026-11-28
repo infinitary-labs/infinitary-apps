@@ -257,6 +257,14 @@ const WEEKDAY_NAMES = [
 const MISSED_COUNT_CAP = 10_000;
 
 /** One event across every rule listening to it, whatever each one filters. */
+/** Whether a rule looks at the event it found: the same connection, its integration not paused. */
+function looksAt(
+  record: Pick<ScheduleRecord, "connection">,
+  listened: ListenedEvent | undefined,
+): listened is ListenedEvent {
+  return !!listened && listened.connection === record.connection && !listened.paused;
+}
+
 function listenerKey(spec: { integration: string; event: string }): string {
   return `${spec.integration}\u0000${spec.event}`;
 }
@@ -461,7 +469,7 @@ export class Scheduler {
     // reading it per rule, and again per look, stalled the main process on
     // each tick (INF-6885).
     const reading = this.reading();
-    const listeners = this.listenersByEvent();
+    const listeners = this.listenersByEvent(reading);
     for (const record of this.options.store.list()) {
       if (record.spec.kind === "event") {
         this.listen(record, false, reading, listeners);
@@ -666,12 +674,12 @@ export class Scheduler {
     }
     const listened = (reading ?? events).find(record.spec.integration, record.spec.event);
     // A rule that does not look now has no row of failed looks to carry on.
-    if (!listened || listened.connection !== record.connection || listened.paused) {
+    if (!looksAt(record, listened)) {
       this.failedLooks.delete(record.id);
       return;
     }
     const sharing = listened.shared
-      ? ((listeners ?? this.listenersByEvent()).get(listenerKey(record.spec)) ?? 1)
+      ? ((listeners ?? this.listenersByEvent(reading)).get(listenerKey(record.spec)) ?? 1)
       : 1;
     const found = sharing > 1 ? { ...listened, every: listened.every * sharing } : listened;
     const last = this.looked.get(record.id);
@@ -692,14 +700,23 @@ export class Scheduler {
     this.looking.set(record.id, look);
   }
 
-  /** How many turned-on event rules listen to each event, holds and put-offs included. */
-  private listenersByEvent(): Map<string, number> {
+  /**
+   * How many turned-on event rules look at each event, holds and put-offs
+   * included. A rule that waits without looking (its integration paused, or
+   * its id now another connection) spends none of a shared event's budget,
+   * so it is not counted.
+   */
+  private listenersByEvent(reading?: EventReading): Map<string, number> {
+    const events = reading ?? this.options.events;
     const counts = new Map<string, number>();
-    for (const record of this.options.store.list())
-      if (record.state === "enabled" && record.spec.kind === "event") {
-        const key = listenerKey(record.spec);
-        counts.set(key, (counts.get(key) ?? 0) + 1);
-      }
+    if (!events) return counts;
+    const found = new Map<string, ListenedEvent | undefined>();
+    for (const record of this.options.store.list()) {
+      if (record.state !== "enabled" || record.spec.kind !== "event") continue;
+      const key = listenerKey(record.spec);
+      if (!found.has(key)) found.set(key, events.find(record.spec.integration, record.spec.event));
+      if (looksAt(record, found.get(key))) counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
     return counts;
   }
 

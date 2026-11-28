@@ -383,6 +383,43 @@ describe("Gmail through its MCP server", () => {
     expect(searches() - before).toBe(4);
   });
 
+  // The review of the shared look: a rule whose saved connection is another Google
+  // account's waits without looking, so it must not slow the rule that looks.
+  it("leaves the whole five-minute look to the one rule that looks when another waits on a replaced connection", async () => {
+    const { google, integrations, clock, db } = await signedIn();
+    const store = new ScheduleStore(db);
+    const inbox = new InboxStore(db);
+    const scheduler = new Scheduler({
+      store,
+      inbox,
+      notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
+      broadcastEvent: () => {},
+      now: () => clock.now,
+      events: {
+        find: (integration, event) => integrations.listenable(integration, event),
+        look: (integration, event, cursor, filter) =>
+          integrations.look(integration, event, cursor, filter),
+      },
+    });
+    const spec = { kind: "event", integration: "google", event: "message_received" } as const;
+    scheduler.create(spec, "Tell me: {{events}}", true);
+    const waiting = scheduler.create(spec, "File invoices: {{events}}", true);
+    // Saved while another Google account was signed in.
+    store.save({ ...waiting, connection: "another-google-account" });
+    const searches = () =>
+      google.calls("gmail").filter((call) => call.tool === "search_threads").length;
+    const tick = async () => {
+      clock.now += 60_000;
+      scheduler.tick(clock.now);
+      await scheduler.settled();
+    };
+    for (let minute = 0; minute < 10; minute += 1) await tick();
+    const before = searches();
+    for (let minute = 0; minute < 20; minute += 1) await tick();
+    // Twenty minutes hold four looks at one look per five minutes, all the looking rule's.
+    expect(searches() - before).toBe(4);
+  });
+
   // The captain's pick B on INF-7017's plan-mismatch card: a rule names only the conversation, and
   // the crewmate reads it by that id.
   it("reads the conversation a rule named as its newest message in the inbox, listing the rest by id, sender and date", async () => {

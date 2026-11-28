@@ -48,6 +48,7 @@ Anything else is a name or an id, and reaches a row only when exactly one row an
 ## What an integration can tell
 
 A connection may declare events (`IntegrationEventSpec`): a name, a few plain words for what happens ("A message arrives"), a description, and `every`, how often the app looks, in the one tick's minutes.
+An event marked `shared` splits that `every` among all its turned-on rules that look, each looking every `every` times n minutes, for an event whose looks spend one daily allowance at the service (Gmail's `message_received`).
 Events are per connection, since an MCP server's differ from server to server.
 Its binding's `look` answers what arrived since a cursor and the cursor to look from next; with no cursor it answers where now is and nothing else, and a cursor it lost answers `resynced`.
 Each item is its id there and the kind's one-line typed summary, never its body.

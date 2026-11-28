@@ -197,6 +197,7 @@ Mail's five minutes is the captain's "Every 5 minutes, like Calendar" on INF-726
 A look that fails because Google asked the app to wait, until midnight Pacific time for a daily limit, fails with those words and tries again at the rule's next look (`docs/integrations.md`, "Google").
 
 - The Scheduler looks for each enabled event rule on its tick when the event's `every` comes round, counted in ticks, so a development run's shortened tick looks sooner (`tickPeriodFor`).
+  A `shared` event, such as Gmail's new mail, splits its `every` among its turned-on rules that look: with n of them, each looks every `every` times n ticks, so together they spend one rule's allowance; a rule waiting on a paused integration or a replaced connection is not counted.
   A look runs beside the tick, one per rule at a time, through `IntegrationsService.look`.
 - Each rule keeps its own cursor at the integration (`schedules.event_cursor`, migration 89).
   Its first look only finds its place, so what arrived before it was turned on never fires.

@@ -1,0 +1,217 @@
+[
+  {
+    "text": "Open https://openrouter.ai/settings/keys and sign in.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "Open "
+      },
+      {
+        "type": "url",
+        "value": "https://openrouter.ai/settings/keys"
+      },
+      {
+        "type": "text",
+        "value": " and sign in."
+      }
+    ]
+  },
+  {
+    "text": "I kept your harbour reply with this chart. Its survey is at https://www.charts.noaa.gov/ChartCatalog/, and the older copy at http://www.charts.noaa.gov/old.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "I kept your harbour reply with this chart. Its survey is at "
+      },
+      {
+        "type": "url",
+        "value": "https://www.charts.noaa.gov/ChartCatalog/"
+      },
+      {
+        "type": "text",
+        "value": ", and the older copy at http://www.charts.noaa.gov/old."
+      }
+    ]
+  },
+  {
+    "text": "PR is up: https://github.com/acme/repo.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "PR is up: "
+      },
+      {
+        "type": "url",
+        "value": "https://github.com/acme/repo"
+      },
+      {
+        "type": "text",
+        "value": "."
+      }
+    ]
+  },
+  {
+    "text": "Run it at http://localhost:5173/ or http://127.0.0.1:8080/health, or http://[::1]:3000/; the preview is http://app.localhost:5173/ and not http://localhost.example.com/.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "Run it at "
+      },
+      {
+        "type": "url",
+        "value": "http://localhost:5173/"
+      },
+      {
+        "type": "text",
+        "value": " or "
+      },
+      {
+        "type": "url",
+        "value": "http://127.0.0.1:8080/health"
+      },
+      {
+        "type": "text",
+        "value": ", or "
+      },
+      {
+        "type": "url",
+        "value": "http://[::1]:3000/"
+      },
+      {
+        "type": "text",
+        "value": "; the preview is "
+      },
+      {
+        "type": "url",
+        "value": "http://app.localhost:5173/"
+      },
+      {
+        "type": "text",
+        "value": " and not http://localhost.example.com/."
+      }
+    ]
+  },
+  {
+    "text": "(see https://en.wikipedia.org/wiki/API_(disambiguation)) and [https://openrouter.ai/docs]",
+    "parts": [
+      {
+        "type": "text",
+        "value": "(see "
+      },
+      {
+        "type": "url",
+        "value": "https://en.wikipedia.org/wiki/API_(disambiguation)"
+      },
+      {
+        "type": "text",
+        "value": ") and ["
+      },
+      {
+        "type": "url",
+        "value": "https://openrouter.ai/docs"
+      },
+      {
+        "type": "text",
+        "value": "]"
+      }
+    ]
+  },
+  {
+    "text": "打开 https://openrouter.ai/settings/keys。然后登录（https://openrouter.ai/docs）",
+    "parts": [
+      {
+        "type": "text",
+        "value": "打开 "
+      },
+      {
+        "type": "url",
+        "value": "https://openrouter.ai/settings/keys"
+      },
+      {
+        "type": "text",
+        "value": "。然后登录（"
+      },
+      {
+        "type": "url",
+        "value": "https://openrouter.ai/docs"
+      },
+      {
+        "type": "text",
+        "value": "）"
+      }
+    ]
+  },
+  {
+    "text": "Tracked at https://acme.atlassian.net/browse/INF-12 as INF-12.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "Tracked at "
+      },
+      {
+        "type": "url",
+        "value": "https://acme.atlassian.net/browse/INF-12"
+      },
+      {
+        "type": "text",
+        "value": " as INF-12."
+      }
+    ]
+  },
+  {
+    "text": "openrouter.ai/keys has no scheme, and javascript:alert(1) or file:///etc/hosts open nothing.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "openrouter.ai/keys has no scheme, and javascript:alert(1) or file:///etc/hosts open nothing."
+      }
+    ]
+  },
+  {
+    "text": "Two lines\nhttps://openrouter.ai/activity\nend",
+    "parts": [
+      {
+        "type": "text",
+        "value": "Two lines\n"
+      },
+      {
+        "type": "url",
+        "value": "https://openrouter.ai/activity"
+      },
+      {
+        "type": "text",
+        "value": "\nend"
+      }
+    ]
+  },
+  {
+    "text": "HTTPS://OpenRouter.ai/Keys in capitals 🚢 then https://openrouter.ai/models?order=top&q=neon#list!",
+    "parts": [
+      {
+        "type": "url",
+        "value": "HTTPS://OpenRouter.ai/Keys"
+      },
+      {
+        "type": "text",
+        "value": " in capitals 🚢 then "
+      },
+      {
+        "type": "url",
+        "value": "https://openrouter.ai/models?order=top&q=neon#list"
+      },
+      {
+        "type": "text",
+        "value": "!"
+      }
+    ]
+  },
+  {
+    "text": "Done, thanks.",
+    "parts": [
+      {
+        "type": "text",
+        "value": "Done, thanks."
+      }
+    ]
+  }
+]

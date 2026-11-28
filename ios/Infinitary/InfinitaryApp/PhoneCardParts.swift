@@ -423,7 +423,7 @@ private struct PhoneThreadMessage: View {
                 }
             }
             if !(message["text"].text ?? "").isEmpty || message["notes"].list.isEmpty {
-                Text(message["text"].text ?? "").textSelection(.enabled)
+                Text(Self.linkedWords(message["text"].text ?? "")).textSelection(.enabled)
                     .foregroundStyle(who == "host" ? PhoneTheme.secondary : PhoneTheme.text)
             }
             if !message["notes"].list.isEmpty { PhoneThreadNotes(notes: message["notes"].list, onReveal: onNote) }
@@ -449,6 +449,23 @@ private struct PhoneThreadMessage: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .contain)
+    }
+
+    /// INF-7045's plan, part 2: the reply's words with each address the safe opener takes a link, split where the Mac
+    /// splits them (`PhoneLinkedWords`); a tap opens it in the phone's default browser, as a body's link does.
+    static func linkedWords(_ text: String) -> AttributedString {
+        PhoneLinkedWords.parts(text).reduce(into: AttributedString()) { words, part in
+            switch part {
+            case .text(let value):
+                words += AttributedString(value)
+            case .address(let value):
+                var link = AttributedString(value)
+                link.link = URL(string: value)
+                link.foregroundColor = PhoneTheme.accent
+                link.underlineStyle = .single
+                words += link
+            }
+        }
     }
 
     /// The Mac's settingsRows: a question reads as what was picked and the words written in; a staged snapshot opens

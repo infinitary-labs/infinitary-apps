@@ -1,5 +1,5 @@
 ---
-source: 86bf487dacd685ea
+source: fddef151ac47ef10
 title: Karten und Entscheidungen
 description: Wie dein erster Offizier und deine Crew dir Antworten und Entscheidungen als Karten bringen und wie du sie beantwortest.
 ---
@@ -128,6 +128,7 @@ Eine Webadresse in einer Karte öffnet sich in deinem Standardbrowser, wenn du s
 Das gilt auch für eine Adresse, die ein Crewmitglied als einfachen Text geschrieben hat, etwa in einem Schritt, der eine Anmeldeseite nennt, auf deinem Computer und auf deinem iPhone oder iPad.
 Das betrifft Adressen, die mit https:// beginnen, und http://-Adressen auf deinem eigenen Computer.
 Eine lange Adresse bricht innerhalb der Karte um.
+Eine Adresse im Verlauf einer Karte, in deinen Antworten und in denen der Crew, öffnet sich genauso.
 
 ## Karten zum Zusammenführen {#merge-cards}
 

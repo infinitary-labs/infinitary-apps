@@ -95,7 +95,7 @@ import {
 } from "./phoneSettings";
 import { phoneTakeOverControls } from "./phoneTakeOver";
 import { phoneTalkControls, TALK_WRITES } from "./phoneTalk";
-import { raiseConversationCard, seedReplyReading } from "./replyReading";
+import { raiseConversationCard, seedReplyReading, THREAD_WORDS } from "./replyReading";
 import { startScriptedClient } from "./scriptedClient";
 import { bundleSqlProcess } from "./sqlProcessBundle";
 import { type SshServer, startSshServer } from "./sshServer";
@@ -2849,7 +2849,7 @@ export async function startPhoneHome(
           cards.addMessage(
             cardIDs.conversation,
             "firstmate",
-            "I kept your harbour reply with this chart.",
+            THREAD_WORDS.threadAnswer,
             undefined,
             undefined,
             undefined,
@@ -2857,7 +2857,7 @@ export async function startPhoneHome(
             harbourReply !== undefined ? { answersMessage: harbourReply } : {},
           );
           cards.closeOut({ kind: "firstmate" }, "turn-end");
-          result = { ok: true };
+          result = { ok: true, ...THREAD_WORDS };
           break;
         }
         case "POST show-past":

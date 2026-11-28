@@ -16,6 +16,16 @@ export const REPLY_NOTE_WORDS = [
 export const REPLY_READING_QUESTION =
   "also, can we improve the UI of the card that pops open when clicking on these bubbles? the card should probably render something that looks more like chat messages. give me a few prototype options to choose between";
 
+/**
+ * The first mate's answer on the harbour chart's thread (INF-7045's plan, part 2): it names the survey's page as
+ * words, which the thread links, and an older public http page, which the opener refuses and the thread keeps as words.
+ */
+const THREAD_ADDRESS = "https://www.charts.noaa.gov/ChartCatalog/";
+export const THREAD_WORDS = {
+  threadAnswer: `I kept your harbour reply with this chart. Its survey is at ${THREAD_ADDRESS}, and the older copy at http://www.charts.noaa.gov/old.`,
+  threadAddress: THREAD_ADDRESS,
+};
+
 /** Real saved-round shapes through the task owner, not a replacement reply store or renderer hook. */
 export function seedReplyReading(tasks: TaskService) {
   const problemWords = plainProblem(undefined);

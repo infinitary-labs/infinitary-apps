@@ -154,9 +154,13 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
       } catch (error) {
         try {
           await finishWitness(test.info());
-        } finally {
-          throw error;
+        } catch (witnessError) {
+          test.info().annotations.push({
+            type: "Dismissal witness unavailable",
+            description: String(witnessError),
+          });
         }
+        throw error;
       }
       await finishWitness();
       const board = await page.evaluate(() => window.infinitary.tasks.board());

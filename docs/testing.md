@@ -937,7 +937,8 @@ The job count is those passes and the other passes' recorded minutes over 20, ro
 Passes go longest first to the job they leave lightest, a pass of a part with no recorded time counting as the median part, and a pass joins a job already holding its device, whose simulators it then reuses, when that leaves no job longer than the lightest choice would.
 A job may hold several devices, and its name gives its number and devices, such as `job 2 of 5: iPad, iPhone`.
 `tests/phone-chooser.test.ts` holds, over generated selections, that the dealt jobs together hold exactly the passes a job of each of the request's devices would run, none lost and none doubled.
-The phone release's call, and a wait-clock or tool request, keep one job of the device they name, or of every device, matrix device `every`, whose gate runs every device's lanes from one build (INF-4241 piece 8).
+The phone release's call, which names no device, is dealt the same way as a request of every part on every device, so its jobs of at most 20 recorded minutes run side by side on the phone Macs (INF-7079's fix 5).
+A call that names a device, and a wait-clock or tool request, keep one job of the device they name, or of every device, matrix device `every`, whose gate runs every device's lanes from one build (INF-4241 piece 8).
 Each runs the disposable `scripts/test-phone.ts` gate for its devices only on the required `MAC_QUEUES.phone` queue ("Each Mac job's kind and size"), without an override or fallback.
 When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
@@ -948,7 +949,7 @@ That gate checks and builds once, starts as many simulators of its device as the
 A dealt request's jobs share one build (INF-6039's plan, part 1): its first job builds the app for testing in a step of its own (`node scripts/phone-build.ts`) and uploads it as `phone-build-<attempt>`, named for the run attempt, before its gate starts.
 Each other job downloads that artifact if it is there when the job starts, and its gate uses it in place of its own build only when its record names this job's own commit, a checkout with no changes, the same Xcode, simulator SDK and chip, and its archive's SHA-256 matches (`phoneBuildRefusal`, `useSharedPhoneBuild`).
 Otherwise the gate says why in a notice and builds the app itself, as every job did before, so a job that starts before the first job shared its build, or finds it broken, still runs.
-The archive holds the first job's built products folder whole, its test plan included; a failed upload or download fails nothing, and the phone release's call and wait-clock or tool requests build in their gate as before.
+The archive holds the first job's built products folder whole, its test plan included; a failed upload or download fails nothing, and a job dealt nothing, such as a wait-clock or tool request's, builds in its gate as before.
 A check dealt into one job shares nothing and its job builds in its gate as before.
 When every job starts at once, the first job starts its parts later than it would building in its gate, by its upload's minutes and about a minute more, since its simulators no longer start during the build.
 Each placed guest runs simulators of only the devices its job holds.
@@ -994,12 +995,12 @@ The recorded part times come from a full gate that ran two simulators at once.
 A phone Mac with one simulator runs a job's parts one after another at up to 1.08 of their recorded minutes, and its gate step also builds the app for up to 3.1 minutes and starts the first part about a minute late.
 It also starts no part until the simulator's wallpaper prewarm has finished, which on the phone Macs came up to 2.0 minutes after the build ended (`docs/ios.md`, "Disposable verification").
 So a gate of 20 recorded minutes ends near 27.7 minutes there, inside its 30, and sooner on a phone Mac with two simulators.
-The phone release's call keeps its job's 345 minutes, 165 for setup, the ordinary pass, cleanup and evidence upload and 90 for each of two further passes it never runs, and its gate step's 90; there is no command-admission wait.
+The phone release's dealt jobs keep these dealt limits; a job dealt nothing keeps its job's 345 minutes, 165 for setup, the ordinary pass, cleanup and evidence upload and 90 for each of two further passes, and its gate step's 90; there is no command-admission wait.
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 `tests/phone-ci.test.ts` evaluates the required queue, rejects missing configuration and proves former overrides cannot change routing or suppress guest setup.
 The device gate runs as many simulators of its one device as the phone Mac's processors and memory hold, two on today's compute Mac VMs, where an iPhone Duo takes both (`docs/ios.md`, "Disposable verification"), and shares the device's parts among them by their recorded times (INF-4241 piece 3; `docs/ios.md`, "Disposable verification").
-This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; a request's dealt jobs each take their own phone Mac, and the TestFlight call runs every device in its one job.
+This applies to requested checks and unsigned TestFlight checks, with the same tests, failure propagation and allowances; a request's dealt jobs and the TestFlight call's each take their own phone Mac, and the TestFlight call's first failed job stops no other, so it reports every failed part.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request
@@ -1050,8 +1051,8 @@ Complete branch selections and requests with edited-part passes stop at the firs
 Inside the gate a failed Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`; no `mac_runner` input, `PHONE_VIRTUAL_MAC` switch or generic-Mac variable can redirect it.
 Do not use local mini borrows for phone proof.
-The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and no device, so one job runs every device's parts without repeats from one build on one phone Mac (INF-4241 piece 8, the plan's "a phone release runs the full check"); it must succeed before host signing starts.
-Each job names its key, a dealt job's number (`job-1`, `job-2` and so on) or a call's device, or every device, in each artifact (`phone-logs-job-2`, `phone-results-every` and so on), and keeps each device's evidence under its device's folder; a gate that ran every part of a device writes that device's `part-times.json` there, and the job of every device one `part-times.json` with every device's times, so a dealt job, which runs only some parts, usually writes none and the phone release keeps the times current.
+The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and no device; the `request` job checks out that source and deals every device's parts without repeats into jobs, as a request of every part is dealt, and each job takes its own phone Mac (INF-7079's fix 5, which replaced INF-4241 piece 8's one build on one phone Mac); every job must succeed before host signing starts.
+Each job names its key, a dealt job's number (`job-1`, `job-2` and so on) or a call's device, or every device, in each artifact (`phone-logs-job-2`, `phone-results-every` and so on), and keeps each device's evidence under its device's folder; a gate that ran every part of a device writes that device's `part-times.json` there, and the job of every device one `part-times.json` with every device's times, so a dealt job, which runs only some parts, usually writes none, the phone release's dealt jobs included.
 Only a request's first job runs the phone's Swift package tests, once for the request, and it holds the Mac part when one is dealt, since that part reuses their build.
 Two phone guests on the one rented computer reported memory pressure warnings in 5 of 29 readings while both ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.

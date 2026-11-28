@@ -29,15 +29,18 @@ name: phone
 # follow it (tests/phone-ci.test.ts holds them to it), and the gate runs a part only on the devices its
 # row names, so a call or a request for every part runs on the iPad only the parts about the iPad.
 # INF-4241 piece 8: the iPhone Duo is a third device, checked in the four flat sizes its hinge gives
-# it. A call that names no device, as the phone release's does, and a request of every part on every
-# device run one job, matrix device "every", whose gate runs every device's lanes from one build on
-# one phone Mac and keeps one part-times.json.
+# it. A wait-clock or tool request that names no device runs one job, matrix device "every", whose gate
+# runs every device's lanes from one build on one phone Mac and keeps one part-times.json.
 # INF-5387's plan, piece 2: a manual request that chooses its parts on Linux runs them as dealt jobs instead: the
 # chooser builds the passes its device jobs ran and deals them into jobs of at most 20 recorded minutes, each device
 # past a job's first counted as 3 (scripts/affected-phone.ts, `dealPhonePasses`; INF-5546, INF-6058), one phone Mac
 # each, side by side, each stopped at 34 minutes, the first of several at 46, since it builds and shares the app first
 # (INF-6039; INF-6234 raised 14, 27 and 39 to 20, 34 and 46).
-# The phone release's call and a wait-clock or tool request keep a job of their device, or of every device.
+# INF-7079's fix 5 (the captain's "Split TestFlight's every-device phone check into jobs of about 20 minutes that run
+# side by side, as branch phone checks already are"): the phone release's call, which names no device, is dealt the same
+# way as a request of every part on every device, and replaces INF-4241 piece 8's one build on one phone Mac for it. It
+# keeps full discovery: its first failed job stops no other. A call naming a device and a wait-clock or tool request
+# keep a job of their device, or of every device.
 on:
   workflow_call:
     inputs:
@@ -139,7 +142,7 @@ jobs:
     # INF-5387's plan, piece 2: the dealt jobs, each with its key, its name and its passes, and whether the first
     # failed job cancels the others. The chooser's parts, devices and passes stay in its summary and placement.
     outputs:
-      jobs: ${{ steps.request-select.outputs.jobs }}
+      jobs: ${{ steps.request-select.outputs.jobs || steps.release-select.outputs.jobs }}
       stop_early: ${{ steps.request-select.outputs.stop_early }}
     steps:
       - name: Validate and record the manual phone request
@@ -210,15 +213,33 @@ jobs:
           path: ${{ runner.temp }}/phone-placement.json
           if-no-files-found: error
           retention-days: 14
+      # INF-7079's fix 5: the phone release's call deals every part on every device at its resolved source into jobs, as a
+      # default request does, from no comparison. It hands on the jobs alone, so no stop_early: a failed job stops no other.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: inputs.source_commit && !inputs.device
+        with:
+          ref: ${{ inputs.source_commit }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        if: inputs.source_commit && !inputs.device
+        with:
+          node-version: 24
+      - id: release-select
+        name: Deal the phone release's every part into jobs
+        if: inputs.source_commit && !inputs.device
+        run: |
+          node scripts/affected-phone.ts --request --base HEAD --coverage "" > "$RUNNER_TEMP/phone-release-jobs.txt"
+          grep '^jobs=' "$RUNNER_TEMP/phone-release-jobs.txt" >> "$GITHUB_OUTPUT"
   # Each job's name leads with the caller's trigger (scripts/ci-job-names.mjs).
   native-phone:
     needs: request
     name: ${{ inputs.evidence_run != '' && 'Manual request · Phone checks not requested' || format(inputs.waits && '{0} · Wait-clock tests ({1})' || inputs.tools && '{0} · Tool tests ({1})' || '{0} · Phone checks ({1})', inputs.trigger || 'Manual request', matrix.label || matrix.device == 'ipad' && 'iPad' || matrix.device == 'duo' && 'iPhone Duo' || matrix.device == 'every' && 'every device' || 'iPhone') }}
     if: inputs.evidence_run == '' && needs.request.outputs.jobs != '[]'
-    # INF-5387's plan, piece 2: a request the Linux chooser chose runs one job for each job it dealt, each on its own
-    # phone Mac, with `key` (job-1, job-2, ...) naming its groups, saved passes and artifacts, `label` its name and
-    # `passes` what its gate runs. A call, and a wait-clock or tool request, run one job of the device it names, or of
-    # every device from one build (INF-4241 piece 8), keyed by that device, as before.
+    # INF-5387's plan, piece 2: a request the Linux chooser chose, and the phone release's call (INF-7079's fix 5), run
+    # one job for each job it dealt, each on its own phone Mac, with `key` (job-1, job-2, ...) naming its groups, saved
+    # passes and artifacts, `label` its name and `passes` what its gate runs. A call naming a device, and a wait-clock or
+    # tool request, run one job of the device it names, or of every device from one build, keyed by that device.
     # A request that stops at its first failed pass (`stop_early`: a complete selection or edited-part passes) cancels
     # its other jobs at the first failed one; otherwise every job runs to its end and reports its own passes.
     strategy:
@@ -238,9 +259,9 @@ jobs:
     # prewarm included, and sooner on one with two, and setup and evidence upload add up to about 3, so it is stopped
     # at 34. INF-6039's plan, part 1: in a check of several jobs, job 1 builds the app (2.4 to 3.8 minutes measured,
     # stopped at 12) and uploads it before its gate, whose own build it then skips, so job 1 gets the build step's 12
-    # minutes more, 46, and its gate's 30 still ends inside it. A call keeps its limit for setup, checks, cleanup and
-    # evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two edited-part passes, which ran
-    # as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
+    # minutes more, 46, and its gate's 30 still ends inside it. An undealt job keeps its limit for setup, checks, cleanup
+    # and evidence upload: 165 minutes for the ordinary pass, and 90 more for each of the two edited-part passes, which
+    # ran as jobs of 165 minutes each before INF-2582. The device gate has its own limit.
     timeout-minutes: ${{ matrix.passes && (matrix.key == 'job-1' && strategy.job-total > 1 && 46 || 34) || 345 }}
     defaults:
       run:
@@ -307,10 +328,10 @@ jobs:
       # INF-662: one gate checks and builds once, its device on one simulator it starts
       # once (INF-1438) and each part on its own test home; any failing part fails it.
       # INF-2970's fix 1: each phone Mac runs its job's one device, or every device in the one job
-      # of a full check (INF-4241 piece 8). Release calls run every part each device's rows of
+      # of a wait-clock or tool request (INF-4241 piece 8). The release call runs every part each device's rows of
       # PHONE_PARTS name (INF-4241 piece 6), the Duo's with the hinge its row names.
-      # INF-5387's plan, piece 2: a manual request's dealt job runs the passes the chooser dealt it, of one device
-      # or several, from one build. INF-4241 piece 3 (INF-4308, the captain's "Build on two
+      # INF-5387's plan, piece 2: a manual request's dealt job, and the release call's (INF-7079's fix 5), runs the
+      # passes the chooser dealt it, of one device or several, from one build. INF-4241 piece 3 (INF-4308, the captain's "Build on two
       # at once"): the gate runs as many simulated devices as the Mac's processors and
       # memory hold, two on a 10-core, 9 GB compute VM, and shares a device's parts among its simulators by their
       # recorded times (scripts/phone-part-times.json); INF-2101's one at a time came from 4-core VMs.
@@ -371,7 +392,7 @@ jobs:
       - id: both
         name: Read and recover on iPhone and iPad
         # A dealt job's gate is stopped at 30 minutes, inside its job's 34, so an over-long gate fails the job and its
-        # results, cleanup and evidence upload still run; a call's gate keeps 90 minutes. Job 1 of a check of several
+        # results, cleanup and evidence upload still run; an undealt job's gate keeps 90 minutes. Job 1 of a check of several
         # jobs runs its build and upload steps before its gate, so its job keeps 12 minutes more, 46 (INF-6039's plan, part 1).
         timeout-minutes: ${{ matrix.passes && 30 || 90 }}
         if: ${{ steps.scope.outputs.gate == 'true' }}

@@ -904,17 +904,36 @@ export function CustomApiForm({
                   </Button>
                 ) : null,
               )
-            : line.destination && (
-                <p className="fm-custom-hint" data-custom-sends-to>
-                  {sendsBefore}
-                  <b className="fm-custom-mono">{line.destination}</b>
-                  {sendsAfter}
+            : baseUrl.trim() && (
+                // The line's place is held blank while its answer is on its way:
+                // drawn only once the answer came, the line would move the HTTP
+                // approval between a press and its release, and the click
+                // would miss it.
+                <p
+                  className="fm-custom-hint"
+                  data-custom-sends-to={line.destination ? "" : undefined}
+                >
+                  {line.destination ? (
+                    <>
+                      {sendsBefore}
+                      <b className="fm-custom-mono">{line.destination}</b>
+                      {sendsAfter}
 
-                  {approved("exception")
-                    ? ` · ${CUSTOM_EXCEPTION_WORDS.line}`
-                    : network
-                      ? ` · ${customNetworkLabel(network, who)}`
-                      : ""}
+                      {approved("exception")
+                        ? ` · ${CUSTOM_EXCEPTION_WORDS.line}`
+                        : network
+                          ? ` · ${customNetworkLabel(network, who)}`
+                          : ""}
+                    </>
+                  ) : (
+                    // A blank run in the address's mono face keeps the held
+                    // line exactly as tall as the drawn one, which that face
+                    // makes taller than one plain line; a bare minimum height
+                    // would leave the approval a pixel to move.
+                    <b className="fm-custom-mono" aria-hidden="true">
+                      {"\u200b"}
+                    </b>
+                  )}
                 </p>
               )}
           {!errors.address &&

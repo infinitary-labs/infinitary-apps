@@ -393,10 +393,12 @@ struct MessageComposer: View {
     /// INF-2553: the box clears at the tap and the message is the last turn, marked sending; a refusal puts the words and
     /// pictures back in front of anything typed since, and the session says why.
     private func send() {
-        guard !loading, session.canMessage else { return }
+        // The Send button's own rule, which also keeps photos back while reading only. Command-Return reaches here
+        // through the button's shortcut, which SwiftUI turns off only once it draws the emptied box, so a second press
+        // delivered before that draw, such as a key repeat, still arrives here with the box empty.
+        guard canSend else { return }
         // Reading only, words alone go, as one plain string: no photos and no hints (`messages-while-reading`).
         let plain = !session.canChange
-        guard !plain || photos.isEmpty else { return }
         guard text.utf16.count <= PhoneLimits.text else { problem = PhoneMessages.phoneComposerTooLong(); return }
         let words = text, pictures = photos
         var payload: [String: Any] = ["text": words, "images": pictures.map(\.wire)]

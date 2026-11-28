@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-command-return-sends-once",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Command-Return on iPhone and iPad no longer sends an empty message after yours",
+      "body": "With a keyboard attached to your iPhone or iPad, pressing Command-Return twice quickly, or holding it down, now sends your message once. Before, a second press that arrived before the message box emptied on screen could send an empty message right after yours.",
+      "noPicture": "The message box looks as it did before; the change is that a quick second press now sends nothing.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

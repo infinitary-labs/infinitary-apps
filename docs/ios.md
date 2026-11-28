@@ -719,6 +719,7 @@ A mark already shown stays even if the minute ends while the captain edits, as o
 The send carries `replaces`, so the computer takes the old message back as it keeps the new one, and the strip shows both at the tap.
 A message taken back reads Reverted before its faint bubble, its words struck, on the strip and in the Conversation, and a replacement folds the words it replaced under Edited in the Conversation; a reply withdrawn before any turn read the message reads Reverted before your first mate read it.
 Command-Return sends from either message field; native controls retain hardware-keyboard focus, VoiceOver and Dynamic Type.
+Send, and Command-Return through its shortcut, sends only what the button would, so a press that arrives before the emptied box draws, as a repeated key can, sends nothing (INF-7097).
 
 The Tasks tab is the Mac's Tasks panel in a phone's hands (INF-2928, the captain's direction A): its groups, order, rows, search and tap are the Mac's (`src/panels/now/rows.ts`), ported in `PhoneTaskList`.
 Its five groups come from `src/shared/nowPanel.ts`, generated as a finite native lookup with seven inputs, so the phone does not own another grouping rule.
@@ -1470,6 +1471,7 @@ A turn of the device waits until a target the turn carries elsewhere has left it
 A check that read a dialog's button, a gliding row or a web page's answer right after an action waits for it on the load clock instead.
 If Xcode stops offering that method, or changes what it takes, the journey fails naming it; the gate fails a part whose log never printed "Phone animation wait skipped", and prints how many animation waits XCTest still ran out in each part.
 `talk-drafts` checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
+Two Command-Return presses before the box draws again are an app-hosted check in the rest part (`PhoneComposerSendTests`): the shipped message box on the test home's real core sends its words once and no empty message (INF-7097).
 `talk-drafts` exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
 It also checks that Tasks starts and ends where the message box does, the reading column, and that the card starts and ends one gutter inside its stage.

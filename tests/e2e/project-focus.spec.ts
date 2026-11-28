@@ -37,7 +37,8 @@ import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
  * (tests/browser/project-focus-still-click.test.tsx). Every message to the
  * first mate names the filter (INF-6860): from the main box with a project or
  * All projects picked, under a card, kept by a Crewmate tab /feedback line,
- * and from a paired phone as every project.
+ * and from a paired phone as the phone's own focus, or every project at All
+ * projects (INF-2820 piece 2, the captain's answer "messages: focus").
  */
 
 const PROJECTS = [
@@ -377,8 +378,9 @@ test("under focus the stack holds other projects' cards back and Activity hides 
       );
     });
 
-    await test.step("a message from a paired phone covers every project, whatever the window picked", async () => {
-      // The captain's answer: "Every project: say it came from the phone, which shows them all".
+    await test.step("a message from a paired phone says the phone's own focus, whatever the window picked", async () => {
+      // INF-2820 piece 2, the captain's answer "messages: focus": a phone focused on a project names it; at All
+      // projects it covers every project (INF-6860: "Every project: say it came from the phone, which shows them all").
       const { link } = await page.evaluate(() => window.infinitary.devices.invite({ kind: "mac" }));
       const phone = await connectClient(
         await claimLink(link, { kind: "mac", name: "A phone", system: "ios" }),
@@ -388,19 +390,24 @@ test("under focus the stack holds other projects' cards back and Activity hides 
           (project) => project.key === "INF",
         )?.id;
         if (!infId) throw new Error("The board lists the infinitary project");
-        // Once naming the window's own project, once naming none: neither narrows a phone message.
-        for (const fields of [{ focusedProjectId: infId }, {}]) {
-          const words = `What waits on me today? ${Object.keys(fields).length}`;
-          expect(
-            await filterLineFor(launched, words, () =>
-              phone.invoke("inf:converse", [{ text: words, ...fields }]),
-            ),
-          ).toEqual(
-            expect.stringMatching(
-              /^every project - the captain's latest message came from their phone/,
-            ),
-          );
-        }
+        const focused = "What waits on me today? focused";
+        expect(
+          await filterLineFor(launched, focused, () =>
+            phone.invoke("inf:converse", [{ text: focused, focusedProjectId: infId }]),
+          ),
+        ).toEqual(
+          expect.stringMatching(
+            /^INF "infinitary" - the project filter on the captain's phone, which they wrote from\./,
+          ),
+        );
+        const all = "What waits on me today? all";
+        expect(
+          await filterLineFor(launched, all, () => phone.invoke("inf:converse", [{ text: all }])),
+        ).toEqual(
+          expect.stringMatching(
+            /^every project - the captain's latest message came from their phone, whose project filter is at All projects/,
+          ),
+        );
       } finally {
         await phone.close();
       }

@@ -30,6 +30,9 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         var bracketed: (task: String, computer: String)?
         /// The project in light (`PhoneFocusLight`): every other project's crew keep a quarter of their light. Nil lights all.
         var lit: String?
+        /// Whether `lit` names a computer: a grouped crewmate's rest lights its computer's crew across every group, while the
+        /// held focus still lights a project (the desktop's `restedLight` with `computerOf`).
+        var litComputer = false
         /// Names the drawing for the DEBUG frame sample (`characterEvidenceSource`).
         var source = ""
     }
@@ -232,7 +235,7 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
         let frame = lit(crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
                                    supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27)),
-                        project: input.lit, byProject: roster.byProject, elapsed: lightElapsed, duration: still ? 0 : PhoneTheme.surfaceSeconds)
+                        project: input.lit, byComputer: input.litComputer, elapsed: lightElapsed, duration: still ? 0 : PhoneTheme.surfaceSeconds)
         let palette = input.palette
         // A warp's wormhole and stars lie behind every crewmate and the first mate.
         if let warp = crew.warp {
@@ -257,9 +260,8 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
 
 extension PhoneSceneRenderer {
     /// The frame with each crewmate's light eased toward the lit project and folded into its alpha; nothing moves.
-    fileprivate func lit(_ frame: PhoneSceneMotion.Frame, project: String?, byProject: Bool, elapsed: Double, duration: Double) -> PhoneSceneMotion.Frame {
-        // Grouped by project, a crewmate's project is already its group: the light names its computer instead (`restedLight`).
-        let key = { (task: PhoneTask) in byProject ? PhoneSceneRoster.computerID(task) : task.projectId }
+    fileprivate func lit(_ frame: PhoneSceneMotion.Frame, project: String?, byComputer: Bool, elapsed: Double, duration: Double) -> PhoneSceneMotion.Frame {
+        let key = { (task: PhoneTask) in byComputer ? PhoneSceneRoster.computerID(task) : task.projectId }
         lightMoving = PhoneFocusLight.step(frame.glyphs.map { ($0.task.id, key($0.task)) }, lit: project, state: &lights,
                                            elapsed: elapsed, duration: duration)
         guard lights.values.contains(where: { $0 != 1 }) else { return frame }
@@ -312,6 +314,7 @@ struct PhoneSceneBackdrop {
     let selection: String?
     let bracketed: (task: String, computer: String)?
     var lit: String? = nil
+    var litComputer = false
 
     struct Key: PreferenceKey {
         static let defaultValue: PhoneSceneBackdrop? = nil
@@ -330,7 +333,8 @@ extension View {
                     PhoneSceneSurface(renderer: backdrop.renderer, roster: backdrop.roster, state: backdrop.state, fold: backdrop.fold,
                                       still: backdrop.still, running: backdrop.running,
                                       offset: CGSize(width: backdrop.offset.width + stage.minX, height: backdrop.offset.height + stage.minY),
-                                      selection: backdrop.selection, bracketed: backdrop.bracketed, lit: backdrop.lit)
+                                      selection: backdrop.selection, bracketed: backdrop.bracketed, lit: backdrop.lit,
+                                      litComputer: backdrop.litComputer)
                         // One surface per renderer: a new scene attaches its own drawing rather than borrowing the last one's.
                         .id(ObjectIdentifier(backdrop.renderer))
                 }
@@ -352,6 +356,7 @@ struct PhoneSceneSurface: UIViewRepresentable {
     var selection: String?
     var bracketed: (task: String, computer: String)?
     var lit: String?
+    var litComputer = false
 
     func makeUIView(context: Context) -> PhoneSceneSurfaceView {
         let view = PhoneSceneSurfaceView()
@@ -367,7 +372,8 @@ struct PhoneSceneSurface: UIViewRepresentable {
         let source = ""
         #endif
         renderer.update(.init(roster: roster, state: state, fold: fold, still: still, running: running, offset: offset,
-                              palette: CharacterPainter.Palette(context.environment), selection: selection, bracketed: bracketed, lit: lit, source: source))
+                              palette: CharacterPainter.Palette(context.environment), selection: selection, bracketed: bracketed, lit: lit,
+                              litComputer: litComputer, source: source))
     }
 
     static func dismantleUIView(_ view: PhoneSceneSurfaceView, coordinator: ()) {

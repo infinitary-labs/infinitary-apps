@@ -56,6 +56,7 @@ const { values } = parseArgs({ options: {
   "every-device": { type: "boolean", default: false },
   // INF-4241 piece 8: a Duo part's hinge helper, built once by the gate (scripts/phone-hinge.ts).
   "hinge-helper": { type: "string" },
+  "key-helper": { type: "string" },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many devices at once.
   part: { type: "string", multiple: true },
   // INF-2582 direction A: parts a change only reaches, run on the iPhone alone, and parts whose test code
@@ -332,16 +333,19 @@ const recording = {
       await turnPhone({ run, simulator, helper: values["hinge-helper"]!, to });
       return { turn: to };
     },
-    // INF-5183: the fold part presses a key on the open Duo once, as an attached keyboard does, and the answer names
-    // where the simulator sent it: the app's own process, or nowhere. The keyboard is attached for the press alone, as
-    // XCTest's own is for its key, so the simulator ends detached and still shows its own keyboard for the next field.
+  } : {}),
+  // INF-5183: a part presses a key once, as an attached keyboard does, and the answer names where the simulator sent
+  // it: the app's own process, or nowhere. The keyboard is attached for the press alone, as XCTest's own is for its
+  // key, so the simulator ends detached and still shows its own keyboard for the next field. The fold part needs it on
+  // the open Duo; a part marked `keys` needs it for a key XCTest's typist sends no event for, such as Escape.
+  ...(values["key-helper"] ? {
     key: async (key: PhoneKey) => {
       if (!simulator || !keyboard) throw new Error("No owned simulator keyboard observer exists");
       const [owned, observer] = [simulator, keyboard];
       const services = await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]);
       const pid = phoneApplicationPid(services, phoneBundle);
       const pressed = await withPhoneHardwareKeyboard(run, owned, () => pressPhoneKey({ run, simulator: owned,
-        helper: values["hinge-helper"]!, key, outcome: (since, until, deadline) => observer.keyOutcome(pid, since, until, deadline) }));
+        helper: values["key-helper"]!, key, outcome: (since, until, deadline) => observer.keyOutcome(pid, since, until, deadline) }));
       return { key, ...pressed };
     },
   } : {}),
@@ -546,6 +550,7 @@ const lanePhotos = (lane: Lane, stopping: AbortSignal, number: number) => device
       ? (mkdirSync(join(folder, `lane-${number}`), { recursive: true }), join(folder, `lane-${number}`)) : folder)(perDevice ? join(evidence, lane.device) : evidence) }),
   () => libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run }));
 let hingeHelper: Promise<string> | undefined;
+const pressesKeys = (part: string) => !!PHONE_PARTS.find((each) => each.name === part && "keys" in each && each.keys);
 // Builds once for any simulator, then runs each device's parts on the lanes `lanePlan` gives it, each lane one
 // simulator it starts once and each part as its own gate from that build with its own test home, as many lanes at
 // once as --simulators places hold, an iPhone Duo's lane taking two (INF-4241 piece 3, INF-6407).
@@ -563,8 +568,9 @@ const everyPart = async () => {
   finally { await Promise.allSettled(starting.values()); }
 };
 const everyPartOn = async (starting: Map<string, Promise<Lane>>, xcode: string) => {
-  // INF-4241 piece 8: the hinge helper builds beside the app when a Duo part runs; its failure fails the Duo's parts.
-  if (jobs.some((job) => job.device === "duo")) {
+  // INF-4241 piece 8: the hinge helper builds beside the app when a Duo part, or a part that presses keys, runs; its
+  // failure fails those parts.
+  if (jobs.some((job) => job.device === "duo" || pressesKeys(job.part))) {
     hingeHelper = buildPhoneHinge(run, root);
     hingeHelper.catch(() => {});
   }
@@ -626,6 +632,7 @@ const everyPartOn = async (starting: Map<string, Promise<Lane>>, xcode: string) 
     }
     const command = [process.execPath, "scripts/test-phone.ts", "--device", device,
       ...(device === "duo" ? ["--hinge-helper", await hingeHelper!] : []),
+      ...(device === "duo" || pressesKeys(part) ? ["--key-helper", await hingeHelper!] : []),
       ...demo.childArgs, ...(only ? [`--${only}`] : []), ...(values["guest-observer"] ? ["--guest-observer"] : []),
       "--part", part, ...(job.tests ?? []).flatMap((test) => ["--test", test]),
       ...(job.tools ?? []).flatMap((test) => ["--tool-test", test]), "--evidence", folder(job),

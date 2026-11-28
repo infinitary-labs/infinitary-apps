@@ -172,14 +172,15 @@ export async function setPhoneHinge({ run, simulator, helper, hinge, reading, se
 }
 
 /**
- * INF-5183: the keys the fold part presses on the open Duo, by the helper's names for them. XCTest's typeKey gives its
- * key a keyboard bound to one display, and while the Duo is open the simulator's event router finds that key no
- * destination. The helper's key names no display, as an attached keyboard's does, so it goes to the app in front.
+ * INF-5183: the keys a part presses through the helper, by the helper's names for them: the fold part on the open Duo,
+ * and a part marked `keys` on any device. XCTest's typeKey gives its key a keyboard bound to one display, and while the
+ * Duo is open the simulator's event router finds that key no destination; on any device XCTest's typist sends no event
+ * for Escape. The helper's key names no display, as an attached keyboard's does, so it goes to the app in front.
  */
 export type PhoneKey = "tab" | "return" | "escape";
 
 /**
- * Presses `key` once on the Duo `simulator`, through the helper `buildPhoneHinge` built, then reads what the simulator
+ * Presses `key` once on `simulator`, the open Duo or any device for a part marked `keys`, through the helper `buildPhoneHinge` built, then reads what the simulator
  * did with it. `outcome` answers for the press's own span and is asked again until it holds proof or `settle`
  * milliseconds pass, since the simulator's kept log can trail the press; each ask names when that window ends, so no
  * read of the log outlasts it. Nothing presses the key a second time.

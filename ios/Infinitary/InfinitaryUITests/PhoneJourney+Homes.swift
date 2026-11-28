@@ -36,8 +36,9 @@ extension PhoneJourney {
         XCTAssertEqual(first["registered"] as? Bool, true, "\(first)")
         let firstKeys = try XCTUnwrap(first["keys"] as? [String])
         XCTAssertEqual(firstKeys.count, 1, "\(first)")
-        let computer = app.buttons["computer-details"]
-        XCTAssertEqual(computer.label, "Your computer", "One computer kept: the bar names none")
+        // INF-2820 piece 2: Settings names the computer shown, "<computer> · <reach>", in the computer button's place.
+        let computer = settingsButton
+        XCTAssertTrue((computer.value as? String)?.hasPrefix("Test Mac mini · ") == true, "Settings names the one computer kept: \(computer.value ?? "")")
 
         let second = try await home("second-home", budget: 150)
         let secondControl = try XCTUnwrap(second["control"] as? String)
@@ -62,7 +63,7 @@ extension PhoneJourney {
         XCTAssertTrue(confirm.waitForPresence(timeout: 10), app.debugDescription)
         tapOnPhone(confirm)
         reach("Live", timeout: 30)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", secondName), object: computer, timeout: 10),
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value BEGINSWITH %@", secondName + " · "), object: computer, timeout: 10),
                        .completed, "The bar names the computer shown: \(app.debugDescription)")
         XCTAssertFalse(app.alerts["Get a notification for each card?"].waitForPresence(timeout: 3), "The question is asked once")
         // The second computer gets its own registration under a key of its own, with no second ask of the relay.
@@ -93,24 +94,24 @@ extension PhoneJourney {
         _ = try await home("offline")
         computerDetails(repeatDiscarded: false)
         try reachMark(row, "Not answering from here")
-        XCTAssertEqual(computer.label, secondName, "A computer that stops answering switches nothing")
+        XCTAssertEqual((computer.value as? String)?.components(separatedBy: " · ").first, secondName, "A computer that stops answering switches nothing")
         closeComputerDetails(repeatDiscarded: false)
         XCTAssertTrue(row.waitForAbsence(timeout: 10))
         _ = try await home("online")
         try await pressPhoneKey("i", modifiers: .command, in: app)
         try reachMark(row, "Answers now")
-        XCTAssertEqual(computer.label, secondName, "A computer that answers again switches nothing")
+        XCTAssertEqual((computer.value as? String)?.components(separatedBy: " · ").first, secondName, "A computer that answers again switches nothing")
         // The phone's own network goes, as a private network turned off, and comes back, while the page stays open:
         // the mark goes with it and comes back with the next look, and nothing switches.
         _ = try await home("phone-path", body: "{\"usable\":false}")
         try reachMark(row, "Not answering from here")
         _ = try await home("phone-path", body: "{\"usable\":true}")
         try reachMark(row, "Answers now")
-        XCTAssertEqual(computer.label, secondName, "A network change switches nothing")
+        XCTAssertEqual((computer.value as? String)?.components(separatedBy: " · ").first, secondName, "A network change switches nothing")
         app.typeKey("\n", modifierFlags: [])
         XCTAssertTrue(row.waitForAbsence(timeout: 10), "Return on the row shows its computer and closes Settings")
         reach("Live", timeout: 30)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Test Mac mini"), object: computer, timeout: 10),
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value BEGINSWITH %@", "Test Mac mini · "), object: computer, timeout: 10),
                        .completed, app.debugDescription)
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(cardHeading("Review the phone connection finding").exists, "The second computer's card is not the first's")
@@ -140,7 +141,7 @@ extension PhoneJourney {
         XCTAssertEqual(secondCleared["registered"] as? Bool, false, "\(secondCleared)")
         app.terminate(); try await launchPhoneApp(app)
         reach("Live", timeout: 30)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Test Mac mini"), object: computer, timeout: 10),
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value BEGINSWITH %@", "Test Mac mini · "), object: computer, timeout: 10),
                        .completed, app.debugDescription)
         let relaunched = try await home("push-registered", budget: 90)
         XCTAssertEqual(relaunched["keys"] as? [String], firstKeys, "The first computer keeps its key through a relaunch")
@@ -169,7 +170,7 @@ extension PhoneJourney {
         picture("homes-notification")
         tapOnPhone(notification, repeatDiscarded: false)
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 20), "\(app.state.rawValue)")
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", secondName), object: computer, timeout: 30),
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value BEGINSWITH %@", secondName + " · "), object: computer, timeout: 30),
                        .completed, "The tap shows the computer the card came from: \(app.debugDescription)")
         XCTAssertTrue(cardHeading("Review the phone connection finding").waitForPresence(timeout: 30), app.debugDescription)
         picture("homes-opened")
@@ -187,8 +188,8 @@ extension PhoneJourney {
         XCTAssertTrue(closeSettings.waitForAbsence(timeout: 10), app.debugDescription)
 
         try leaveShown()
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Your computer"), object: computer, timeout: 30),
-                       .completed, "One computer left: the bar names none")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value BEGINSWITH %@", "Test Mac mini · "), object: computer, timeout: 30),
+                       .completed, "One computer left: Settings names it")
         reach("Live", timeout: 30)
         XCTAssertFalse(app.buttons["paste-link"].exists, "The first computer shows, not the first screen")
         let kept = try await home("push-state", method: "GET")

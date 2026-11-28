@@ -143652,13 +143652,17 @@ svg { ${pinned} }
   const sendScale = () => frame?.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, type: "text-scale", scale }, "*");
   let state = { collapsed: false, shown: true, asks: {} };
   const NO_VIEW = { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null };
+  let focusedProjectId = null;
+  function viewOf() {
+    return input.panel.reads.includes("tasks.board") ? { ...NO_VIEW, focusedProjectId } : NO_VIEW;
+  }
   function viewState() {
     if (input.card) {
       const { data, kept, revision: revision2 } = input.card;
-      return { card: { data, kept, revision: revision2 }, view: NO_VIEW, keys: {} };
+      return { card: { data, kept, revision: revision2 }, view: viewOf(), keys: {} };
     }
     const askedBy = Object.fromEntries(Object.keys(state.asks).map((button) => [button, "click"]));
-    return { asks: state.asks, askedBy, focus: 0, view: NO_VIEW, collapsed: state.collapsed, keys: {} };
+    return { asks: state.asks, askedBy, focus: 0, view: viewOf(), collapsed: state.collapsed, keys: {} };
   }
   function shownOf(value) {
     if (typeof value === "boolean") return value;
@@ -143777,6 +143781,7 @@ svg { ${pinned} }
   window.phonePanel = {
     async mount(value) {
       input = value;
+      focusedProjectId = value.focusedProjectId ?? null;
       scale = textScale(value.textScale);
       const { panel, mount, card } = value;
       const boot = value.lib[FRAME_LIB_BOOT];
@@ -143868,6 +143873,7 @@ svg { ${pinned} }
     },
     state(value) {
       state = { collapsed: value.collapsed, shown: value.shown, asks: value.asks ?? state.asks };
+      if (value.focusedProjectId !== void 0) focusedProjectId = value.focusedProjectId;
       controller?.setState(viewState());
     },
     card(value) {

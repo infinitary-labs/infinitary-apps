@@ -17,6 +17,7 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 | The filter a message says | `messageProjectFilter` (`src/renderer/src/app/projectFocus.ts`) fills `focusedProjectId` or `allProjects` on `inf:converse` and `inf:cards:reply`; `projectFilterOf` (`src/core/orchestrator/projectFilter.ts`) reads them, and `CaptainPlaces.fromPhone` says a phone sent it |
 | The first mate's line | `project_filter`, written by `projectFilterLine` in `src/core/orchestrator/firstmateContext.ts` |
 | The keys | `project-focus.open` and `project-focus.clear` (`docs/keyboard.md`) |
+| The phone's own focus | `PhoneProjectFocus` in InfinitaryKit, drawn by `PhoneProjectFilter.swift` (below, "On the phone") |
 
 ## Which projects get a pill
 
@@ -52,11 +53,19 @@ A quiet mono tail after it says how many tasks wait on the captain in other proj
 Every message from a window says the window's filter to the first mate, as the `project_filter` line on each input: the focused project, or All projects while the pill shows.
 A window with one project has nothing to pick, so its message says no filter.
 A reply under a first mate card says it too; a crewmate's card ignores it.
-A message from the phone says it came from the phone, which has no filter and shows every project (the captain's answer to INF-6860's question 2).
+A message from the phone says the phone's own focus (below): the project it is focused on, said as the filter on the captain's phone, or at All projects that it came from the phone, which then shows every project (the captain's answers to INF-6860's question 2 and INF-2820's "messages: focus").
 Ask again, a Crewmate tab line and a button's press say nothing of their own, so the filter from the captain's last message holds, and so does it for every crew report and wake until the next message.
 The line tells the first mate what decides a message's project, strongest first: a project, repository or task the captain's words name, the card they replied under, the shown record or card, then the filter.
 Where nothing stronger names a project, the filter scopes new work, answers and actions on many tasks, and the first mate names what it left out (the captain's answer to INF-6860's question 1).
 The first mate says so in a few words when the filter decided something the captain did not say, and it never changes the filter.
+
+## On the phone
+
+The iPhone and iPad keep a focus of their own, picked from the top bar's Filter button (INF-2820's plan, piece 2; `docs/ios.md`, "The project filter").
+`PhoneProjectFocus` ports `projectPillsOf`, `pillShown`, `heldFocus`, `waitingElsewhere` and `linesInFocus`, and `PhoneProjectFocusTests` replays the desktop's own readings of one board, which `scripts/generate-phone-scene.ts` records.
+The focus is saved on the phone for each kept computer and never written to the computer, so a Mac window's focus and the phone's are apart.
+It narrows the phone's Tasks, its tag row and Activity, lights its project in the crew scene, reaches a panel that reads the board as `view.focusedProjectId`, and rides the phone's messages and card replies as `focusedProjectId`.
+It holds no card back, and every project still notifies.
 
 ## The card stack
 
@@ -100,5 +109,5 @@ Before the board is read at launch the saved focus holds, so a restart never sho
 ## Tests
 
 - Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus, the tail and which cards are held back), `src/renderer/src/app/stackActions.test.ts` (the stack holding, bringing back and letting a pointed-at card through), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames, and an open summary's project giving way over the focus) and `computers.test.ts` (that light on another computer), `src/panels/now/rows.test.ts` (the narrowed summary), `src/panels/activity/feedRows.test.ts` (Activity's lines under focus), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/renderer/src/app/composer.test.ts` and `cardActions.test.ts` (the filter a message and a reply carry), `src/core/orchestrator/projectFilter.test.ts` (the filter a window or the phone says) and `src/core/orchestrator/firstmateAgent.projectFilter.test.ts` (the line, and which messages keep it).
-- Phone: `PhoneFocusLightTests` replays the desktop's light for one board of two computers and two projects.
-- Journey: `tests/e2e/computer-clusters.spec.ts` reads a crewmate's summary lighting its project's crew on another computer, and its light going when the summary closes; `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects, the held cards and hidden Activity lines coming back, and the project filter line the first mate hears from the main box, a card reply, a Crewmate tab /feedback line and a paired phone; `tests/browser/project-focus-still-click.test.tsx` holds a still click on the pill to the row opening with no crew dimmed, moving onto a pill lighting its project (INF-1292), and Esc from the message box folding the row that click opened (INF-1294); `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus.
+- Phone: `PhoneFocusLightTests` replays the desktop's light for one board of two computers and two projects; `PhoneProjectFocusTests` replays the desktop's pills, held focus, waiting elsewhere and Activity lines, and keeps each computer's own saved focus; `PhoneTaskListTests` reads the Tasks groups and tag row narrowed to a focused project.
+- Journey: `tests/e2e/computer-clusters.spec.ts` reads a crewmate's summary lighting its project's crew on another computer, and its light going when the summary closes; `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects, the held cards and hidden Activity lines coming back, and the project filter line the first mate hears from the main box, a card reply, a Crewmate tab /feedback line and a paired phone; `tests/browser/project-focus-still-click.test.tsx` holds a still click on the pill to the row opening with no crew dimmed, moving onto a pill lighting its project (INF-1292), and Esc from the message box folding the row that click opened (INF-1294); `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus; the phone's `project-filter` part (`testProjectFilter`) picks a project from Filter on an iPhone and an iPad, narrows Tasks, its tag row, Activity and a panel, sends a message with and without the project, keeps the focus through a relaunch, drives the sheet by keys and shows every project again from the ×.

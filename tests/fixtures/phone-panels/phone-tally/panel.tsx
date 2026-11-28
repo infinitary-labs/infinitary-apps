@@ -10,8 +10,9 @@ import { useEffect, useState } from "react";
  * press puts up a note card and opens the seeded task. It shows whether the computer's music is on (`settings.current`),
  * so the phone shows a settings read arriving and following the computer. Its last two presses start the captain's next
  * message (`point.draft`) and open Settings at Automation (`point.openSettings`), the two pointings every panel has.
+ * It names the project the phone is focused on (`view.focusedProjectId`, INF-2820 piece 2's project-filter part).
  */
-export default function Panel({ id, reads, store, invoke, cards, asks, point }: PanelProps) {
+export default function Panel({ id, reads, store, invoke, cards, asks, point, view }: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
   const [tally, setTally] = useState<StoreValue | undefined>(undefined);
   const [marked, setMarked] = useState(0);
@@ -37,6 +38,9 @@ export default function Panel({ id, reads, store, invoke, cards, asks, point }: 
     <div data-fixture={id} style={{ display: "grid", gap: "var(--space-2)" }}>
       <p style={{ margin: 0 }}>{`Tally ${count}`}</p>
       <p style={{ margin: 0 }}>{`Marked ${marked}`}</p>
+      <p style={{ margin: 0 }}>
+        {view.focusedProjectId ? `Focused on ${view.focusedProjectId}` : "Every project"}
+      </p>
       <p style={{ margin: 0 }}>
         {music ? `Music ${music["ambient-music"].on ? "on" : "off"}` : "Reading music"}
       </p>

@@ -93,7 +93,7 @@ With no project in focus, other projects' tasks count and list under No tag.
 - **Command search.**
   Filter tasks by tag, Show tasks by tag and Group tasks, with no default keys; the first two say why they cannot run while no tags apply (`rail.refuse`, `docs/ui-plugins.md`).
 - **The phone.**
-  Its Tasks search shows the same tag row while the only project with tags has them, since it keeps no project focus, and its task record shows the Tags row without Edit tags (`docs/ios.md`, "Talk and tasks").
+  Its Tasks search shows the focused project's tag row, or with no focus the tag row of the only project with tags, and its task record shows the Tags row without Edit tags (`docs/ios.md`, "Talk and tasks").
   It changes no tags and has no Group tasks.
 
 ## Automatic tagging

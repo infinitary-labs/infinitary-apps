@@ -31,8 +31,16 @@ describe("the project filter a message says", () => {
     expect(filterFrom(undefined, "fix the login bug")).toBeNull();
   });
 
-  it("says a phone message covers every project, whatever it carries", () => {
+  it("says a phone message at All projects covers every project, whatever else it carries", () => {
     expect(filterFrom(PHONE.id, "what's waiting on me?")).toBe("phone");
-    expect(filterFrom(PHONE.id, { focusedProjectId: "project-site" })).toBe("phone");
+    expect(filterFrom(PHONE.id, { allProjects: true })).toBe("phone");
+  });
+
+  // INF-2820 piece 2, the captain's answer "messages: focus": the phone's own focus rides its messages.
+  it("names the project a phone is focused on, saying it came from the phone", () => {
+    expect(filterFrom(PHONE.id, { focusedProjectId: "project-site" })).toEqual({
+      project: "project-site",
+      phone: true,
+    });
   });
 });

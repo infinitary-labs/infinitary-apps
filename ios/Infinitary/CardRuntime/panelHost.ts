@@ -57,7 +57,7 @@ declare global {
     phonePanel: {
       mount(input: Input): Promise<void>;
       theme(value: FrameTheme, colorTheme?: PhoneColorTheme): void;
-      state(value: { collapsed: boolean; shown: boolean; asks?: Record<string, number> }): void;
+      state(value: { collapsed: boolean; shown: boolean; asks?: Record<string, number>; focusedProjectId?: string | null }): void;
       card(value: { data: unknown; kept: unknown; revision: number }): void;
       push(channel: string, payload: unknown): void;
       /** A replay's pushes, in order, handed over at once so the panel's reads run once for them all. */
@@ -84,6 +84,8 @@ type Input = {
   /** The panel's own files by path, each pin the hash of the bytes native code holds and will serve. */
   files: Record<string, string>;
   collapsed: boolean;
+  /** The phone's project focus at the mount, which each later state carries on. */
+  focusedProjectId?: string | null;
   /** The device's Text Size as a factor of the Mac's sizes (docs/ios.md, "Text size"); 1 draws them as the Mac does. */
   textScale?: number;
   /** Its card views (`cards/<view>.tsx`): the views `cards.emit` may name. */
@@ -121,16 +123,23 @@ let scale = 1;
 /** Hands the frame the factor, which its own rule reads; one sent before its document loaded is sent again once it draws. */
 const sendScale = () => frame?.contentWindow?.postMessage({ fm: FRAME_BRIDGE_VERSION, type: "text-scale", scale }, "*");
 let state: { collapsed: boolean; shown: boolean; asks: Record<string, number> } = { collapsed: false, shown: true, asks: {} };
-const NO_VIEW = { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null };
+const NO_VIEW: { openTaskIds: string[]; shownTaskId: null; litTaskId: null; focusedProjectId: string | null } =
+  { openTaskIds: [], shownTaskId: null, litTaskId: null, focusedProjectId: null };
+/** The phone's project focus (INF-2820 piece 2), heard with each state; null at All projects. */
+let focusedProjectId: string | null = null;
+/** As on the desktop, only a panel that reads the board is handed the view, here only the focus; the rest stays empty. */
+function viewOf(): typeof NO_VIEW {
+  return input.panel.reads.includes("tasks.board") ? { ...NO_VIEW, focusedProjectId } : NO_VIEW;
+}
 /** The view state the page hears: a card's data, revision and kept place, or the panel's header presses and fold. */
 function viewState(): unknown {
   if (input.card) {
     const { data, kept, revision } = input.card;
-    return { card: { data, kept, revision }, view: NO_VIEW, keys: {} };
+    return { card: { data, kept, revision }, view: viewOf(), keys: {} };
   }
   // A press of a header button that asks the panel, counted, as the desktop's view state counts them (`asks`, `askedBy`).
   const askedBy = Object.fromEntries(Object.keys(state.asks).map((button) => [button, "click"]));
-  return { asks: state.asks, askedBy, focus: 0, view: NO_VIEW, collapsed: state.collapsed, keys: {} };
+  return { asks: state.asks, askedBy, focus: 0, view: viewOf(), collapsed: state.collapsed, keys: {} };
 }
 
 /** `rail.show`'s value, as the rail reads it: whether it shows, or that and why it does not. */
@@ -275,6 +284,7 @@ window.addEventListener("message", (event: MessageEvent) => {
 window.phonePanel = {
   async mount(value) {
     input = value;
+    focusedProjectId = value.focusedProjectId ?? null;
     scale = textScale(value.textScale);
     const { panel, mount, card } = value;
     const boot = value.lib[FRAME_LIB_BOOT];
@@ -352,6 +362,7 @@ window.phonePanel = {
   },
   state(value) {
     state = { collapsed: value.collapsed, shown: value.shown, asks: value.asks ?? state.asks };
+    if (value.focusedProjectId !== undefined) focusedProjectId = value.focusedProjectId;
     controller?.setState(viewState() as never);
   },
   card(value) {

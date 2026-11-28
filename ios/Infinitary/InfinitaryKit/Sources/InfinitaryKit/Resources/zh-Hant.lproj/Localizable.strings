@@ -2022,6 +2022,9 @@
 "phoneComputerShowHint" = "顯示這台電腦";
 "phoneComputerTitle" = "你的電腦";
 "phoneCrewSummaryOpenTask" = "開啟任務";
+"phoneFilterCounts" = "%1$@ 項等你處理 · %2$@ 項進行中";
+"phoneFilterProject" = "專案";
+"phoneFilterTitle" = "篩選";
 "phoneFormatDays" = "%1$@ 天";
 "phoneFormatDaysHours" = "%1$@ 天 %2$@ 小時";
 "phoneFormatHours" = "%1$@ 小時";

@@ -127,11 +127,13 @@ extension PhoneJourney {
         XCTAssertLessThan(settings.frame.maxX, strip[0].frame.minX, "Settings sits left of the strip")
         // INF-1328: the segmented control draws its tabs edge to edge, in order and never overlapping.
         XCTAssertLessThanOrEqual(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThanOrEqual(strip[1].frame.maxX, strip[2].frame.minX)
-        XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
-        // INF-2820 piece 1: until piece 2 puts Filter in its place, the computer button opens Settings at Your computer.
-        tapOnPhone(app.buttons["computer-details"])
+        // INF-2820 piece 2: Filter takes the computer button's place; Settings names the computer, and Command-I still
+        // opens Your computer.
+        XCTAssertFalse(app.buttons["computer-details"].exists, "No computer button in the bar")
+        XCTAssertTrue(settings.value as? String == "Test Mac mini · Live", "Settings names the computer shown: \(settings.value ?? "")")
+        app.typeKey("i", modifierFlags: .command)
         XCTAssertTrue(app.staticTexts["home-name"].waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.buttons["phone-settings-back"].exists, "The button opens Your computer inside Settings")
+        XCTAssertTrue(app.buttons["phone-settings-back"].exists, "Command-I opens Your computer inside Settings")
         closeComputerDetails()
         XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
         // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
@@ -148,9 +150,9 @@ extension PhoneJourney {
         let grown = NSPredicate { _, _ in words.exists && words.frame.height > standardWords }
         XCTAssertEqual(waitForPhonePredicate(grown, object: nil, timeout: 10), .completed,
                        "At the largest standard Text Size the card's words stayed \(standardWords) points tall")
-        XCTAssertTrue(waitForPhonePress(app.buttons["computer-details"]))
-        // INF-1062: growing words once truncated Activity and lost a tap on the computer; the bar's computer stays
-        // pressable at the largest standard type. INF-4241: that the strip keeps the bar's own size through a change of
+        XCTAssertTrue(waitForPhonePress(settings))
+        // INF-1062: growing words once truncated Activity and lost a tap on the bar's right; Settings stays pressable at
+        // the largest standard type. INF-4241: that the strip keeps the bar's own size through a change of
         // type size is PhoneShellTests' testTabStripKeepsItsSizeFromLaunch.
         picture("cards-largest-standard-type")
         computerDetails()

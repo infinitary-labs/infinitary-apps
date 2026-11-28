@@ -18,6 +18,8 @@ import SwiftUI
     private(set) var folded: Set<String>
     /// Whether the column is on the screen: a panel that is not runs on, out of sight, and is never stopped for it.
     var visible = false { didSet { if visible != oldValue { tellStates() } } }
+    /// INF-2820 piece 2: the phone's project focus, which every page hears in its view as a Mac window's panels do.
+    var focus: String? { didSet { if focus != oldValue { for host in pages { host.setFocus(focus) } } } }
     /// The status mark's presses on their way to the computer, by panel and button (`statusPress`).
     private(set) var pressing: Set<String> = []
     /// The panels' cards on Home, held on this phone only.

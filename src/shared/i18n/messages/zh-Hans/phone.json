@@ -159,6 +159,13 @@
   "phoneComputerShowHint": "显示这台电脑",
   "phoneComputerTitle": "你的电脑",
   "phoneCrewSummaryOpenTask": "打开任务",
+  "phoneFilterCounts": "{waiting} 个等你处理 · {working} 个进行中",
+  "phoneFilterProject": "项目",
+  "phoneFilterTitle": "筛选",
+  "phoneFilterWaitingElsewhere": {
+    "plural": "count",
+    "other": "其他项目有 {count} 个等你处理"
+  },
   "phoneFormatDays": "{days} 天",
   "phoneFormatDaysHours": "{days} 天 {hours} 小时",
   "phoneFormatHours": "{hours} 小时",

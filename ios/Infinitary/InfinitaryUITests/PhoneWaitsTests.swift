@@ -183,7 +183,7 @@ import XCTest
         // differently on every read for 88 seconds and never held still to be tapped. The home removes this phone
         // instead, which ends the join whatever the screen shows, and Join again is pressed on the scene-free Removed
         // screen.
-        let computer = app.buttons["computer-details"]
+        let computer = app.buttons["phone-settings"]
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in paste.exists || computer.exists },
                                             object: app, timeout: 10), .completed, app.debugDescription)
         if computer.exists {

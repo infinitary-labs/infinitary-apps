@@ -19,7 +19,7 @@ extension PhoneJourney {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in self.app.state != .runningForeground }, object: nil, timeout: 10), .completed, "Home leaves the app")
         let whileShortlyAway = try await home("change")
         app.activate()
-        XCTAssertEqual(app.buttons["computer-details"].value as? String, "Live", "The app reopens in reach, not reconnecting")
+        XCTAssertTrue((settingsButton.value as? String)?.hasSuffix(" · Live") == true, "The app reopens in reach, not reconnecting: \(settingsButton.value ?? "")")
         XCTAssertFalse(app.otherElements["reach-line"].exists, "No out-of-reach line shows on the return")
         let stateAfterTrip = try await home("state", method: "GET")
         let afterTrip = try XCTUnwrap(stateAfterTrip["readings"] as? [String: Int])

@@ -27,7 +27,7 @@ import { phoneRecording } from "./phone-recording.ts";
 import { phoneBuildArguments, readPhoneBuildIdentity, useSharedPhoneBuild } from "./phone-build.ts";
 import { endPhoneHang, PHONE_COMMAND_BUDGET_MS, PhoneDeadlinePassed, phoneCommandBudget, phoneCommandName, phonePartBudget, withinPhoneDeadline } from "./phone-deadlines.ts";
 import { startPhoneGuestObserver } from "./phone-guest-observer.ts";
-import { buildPhoneFaceId, PHONE_BOOT_BUDGET_MS, PHONE_FACE_ID_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phoneFaceIdStarted, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
+import { buildPhoneFaceId, PHONE_BOOT_BUDGET_MS, PHONE_FACE_ID_BUDGET_MS, PHONE_PREWARM_BUDGET_MS, phoneFaceIdStarted, phonePrewarmFinished, phoneSharedCacheFolder, phoneSimulator, phoneSimulatorBooted, phoneSimulatorInEnglish, phoneXcode, removeEmptyPhoneSharedCache } from "./phone-simulator.ts";
 import { devicePartNames, PHONE_APP, devicePhotos, endPhoneGate, firstPhoneLanes, macTestFilter, partHinge, PHONE_DEVICES, PHONE_PARTS, partOnMac, partPlanPath, type PhoneWork, phoneWork, phoneWorkPast, runSideBySide, type PhoneDevice, type PhoneJob, type PhonePassEnd, phonePassName, phoneSelectionRunsJourney, phoneTestSelection, phoneTestsStarted, phoneAnimationWaits, phoneExecutionArguments, phoneLanePlan, phoneLanes, phonePasses, phoneStopsEarly, PHONE_PART_TIMES, partTimes, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -475,6 +475,8 @@ const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   await sharedCaches.get(runtime.identifier);
   const owned = (await run("xcrun", ["simctl", "create", GATE_SIMULATOR, kind.identifier, runtime.identifier])).trim();
   ownedSimulators.add(owned);
+  // Before its first boot, so SpringBoard starts in English whatever this Mac speaks.
+  await phoneSimulatorInEnglish(owned, (command, args) => run(command, args));
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
   const booted = new Date();
   // INF-3689: a boot that never finishes fails its lane in minutes, named in the log as it happens.

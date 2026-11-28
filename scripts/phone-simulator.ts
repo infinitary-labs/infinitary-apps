@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { budgetTimer, type DeadlineTimer } from "../tests/helpers/budgets.ts";
@@ -50,6 +50,29 @@ export function phoneSimulator(catalog: SimulatorCatalog, device: PhoneDevice) {
     throw new Error(`The pinned iOS ${pin.ios} simulator ${pin.iosBuild} does not support ${pin.name}`);
   }
   return { kind, runtime };
+}
+
+/** The language and region of every simulator the gate creates: English with US forms, as the Macs CI runs it on speak. */
+export const PHONE_SIMULATOR_LANGUAGE = { languages: ["en"], locale: "en_US" } as const;
+
+/**
+ * Sets `simulator`, which `simctl create` has just made and nothing has booted yet, to speak PHONE_SIMULATOR_LANGUAGE
+ * from its first boot, through `run`. `simctl create` copies this Mac's own language and region into the new simulator's
+ * global preferences, and SpringBoard reads them as it boots. The app speaks English whatever the simulator speaks
+ * (`englishPhone` in PhoneKeys.swift), but the system's own questions speak the simulator's language, such as the
+ * notification question whose Allow the push part waits for, and a question no part answers can stay over the app for
+ * the parts after it on the same simulator.
+ */
+export async function phoneSimulatorInEnglish(simulator: string, run: (command: string, args: string[]) => Promise<string>) {
+  const listing = JSON.parse(await run("xcrun", ["simctl", "list", "devices", "-j"])) as
+    { devices: Record<string, { udid: string; dataPath: string }[]> };
+  const device = Object.values(listing.devices).flat().find((each) => each.udid === simulator);
+  if (!device) throw new Error(`simctl lists no simulator ${simulator} to set its language`);
+  const preferences = join(device.dataPath, "Library", "Preferences", ".GlobalPreferences.plist");
+  // A create that wrote no global preferences still leaves the simulator in English.
+  if (!existsSync(preferences)) await run("plutil", ["-create", "xml1", preferences]);
+  await run("plutil", ["-replace", "AppleLanguages", "-json", JSON.stringify(PHONE_SIMULATOR_LANGUAGE.languages), preferences]);
+  await run("plutil", ["-replace", "AppleLocale", "-string", PHONE_SIMULATOR_LANGUAGE.locale, preferences]);
 }
 
 /** Where CoreSimulator keeps the shared library caches it built on this Mac, one folder per Mac build and runtime. */

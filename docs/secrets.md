@@ -311,8 +311,8 @@ A name Secrets already keeps under that place arrives unticked and says which ve
 Tab reaches the rows, the arrows move between them, Space ticks and Enter brings.
 Bring into Secrets sends the pass and the ids of the ticked rows in their own request, `inf:secrets:bring`, never as a card choice; Don't bring, and Read it for a `lines` source with no names, are ordinary one-time passes (`secrets-decision`).
 The phone draws the same rows on the card's face, between the body and the buttons, outside the card's web view (`PhoneSecretBring.swift`, `PhoneCardBring.swift`): Bring into Secrets stays on the face, never under the thread's field, waits for a tick, and sends only the pass and the ticked ids through the same request.
-A Bring the home cannot finish leaves the card up with new passes and the phone says why beside the buttons, kept through the card's new passes, as a Save does.
-The phone presses Don't bring and Read it as it presses any choice, since they hand nothing out; the other Secrets cards' one-time choices still wait for the computer (`PhoneSecretBring.isDecision`, by the bring card's id).
+A Bring the home refuses, such as one while storage is locked, leaves the card up with its ticks, and the phone says why beside the buttons; the words stay if the home raises the card again with new passes, as a Save's do.
+The phone presses Don't bring and Read it as it presses any choice, since they hand nothing out; the other Secrets cards' one-time choices, except an ask's Don't save, still wait for the computer (`PhoneSecretBring.isDecision`, by the bring card's id).
 An iPad's keyboard reaches the rows as the window's does: Tab reaches them, the arrows move between them, Space ticks and Return brings.
 A bring that hands kept keys to its program (`uses`) still asks the first mate's computer for its own confirmation when the phone presses Bring into Secrets.
 

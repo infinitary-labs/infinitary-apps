@@ -7,8 +7,8 @@ import SwiftUI
 /// the button's pass and the ticked rows' ids, and Infinitary runs or reads the source on the computer the card names.
 /// Split from PhoneCards.swift; the pane's state stays there.
 extension PhoneCardPane {
-    /// The rows ticked now: the offer's own until the captain ticks one. A card raised again after a read or a refused
-    /// press carries new passes, so it starts from its own offer.
+    /// The rows ticked now: the offer's own until the captain ticks one. A card raised again, after a read or a press the
+    /// home could not finish, carries new passes, so it starts from its own offer; a refused press keeps its pass and ticks.
     func bringTicks(_ bring: PhoneSecretBring) -> Set<String> { bringTicked[bring.pass] ?? bring.ticked }
 
     func tickBring(_ row: PhoneSecretBring.Row, of bring: PhoneSecretBring) {
@@ -18,11 +18,14 @@ extension PhoneCardPane {
         bringTicked = [bring.pass: ticks]
     }
 
-    /// Whether the keyboard reaches the rows: the shown card's face, while no field holds the keyboard. Tab reaches the
-    /// rows, the arrows move between them, Space ticks and Return brings, as the Mac's rows do (docs/keyboard.md).
+    /// Whether the keyboard reaches the rows: the shown card's face, while no field holds the keyboard, a panel's
+    /// included, and while the phone may change things, as the rows' touch does. Tab reaches the rows, the arrows move
+    /// between them, Space ticks and Return brings, as the Mac's rows do (docs/keyboard.md).
     var bringTakesKeys: Bool {
         shown && visible && !card.isPast && !showsBack && pick == nil && replyFocus == nil
-            && !messageContext.composerFocused && !messageContext.keyboardUp && !host.changing
+            && !messageContext.composerFocused && !messageContext.keyboardUp
+            && !messageContext.panelFieldFocused && !messageContext.panelCardTyping
+            && !host.changing && session.canChange
     }
 
     func bringRows(_ bring: PhoneSecretBring) -> some View {
@@ -83,6 +86,11 @@ extension PhoneCardPane {
                 }
             }.frame(width: 0, height: 0).accessibilityHidden(true)
         }
+        // Only the pane whose rows take or give up the keys writes, so a card behind the shown one never clears it.
+        .onChange(of: bringTakesKeys && !open.isEmpty, initial: true) { was, takes in
+            if takes || was { messageContext.bringRowsTakeKeys = takes }
+        }
+        .onDisappear { if bringTakesKeys { messageContext.bringRowsTakeKeys = false } }
     }
 
     private func bringStep(_ rows: [String], from row: String?, by offset: Int) -> String? {
@@ -97,7 +105,8 @@ extension PhoneCardPane {
     }
 
     /// Sends the pass and the ticked rows in their own request, never as a card choice. The home withdraws the card once
-    /// the bring ends; otherwise the card stays and says why, and the home raises it again with new passes.
+    /// the bring ends; otherwise the card stays and says why, with the same pass, or with new passes when the home raises
+    /// it again.
     func bringSecrets(_ bring: PhoneSecretBring) {
         let picked = bringTicks(bring)
         guard !picked.isEmpty else { return }

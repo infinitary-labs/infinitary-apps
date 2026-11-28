@@ -115,7 +115,7 @@ export const SECRET_BRING_CARD_WORDS = {
       : `Infinitary read it and found ${count === 1 ? "1 name" : `${count} names`}. Tick the ones to keep.`,
   /** What the crewmate never gets; the window's rows say what the press does. */
   fine: "The crewmate gets names and references, never a value, and the copy in the other tool stays as it is.",
-  /** Shown only where the tick boxes cannot draw: the phone, or a window from before them. */
+  /** Shown only where the tick boxes cannot draw: a phone or window from before them. */
   elsewhere:
     "To pick the secrets to bring, answer this card in Infinitary's window on the first mate's computer.",
   bring: "Bring into Secrets",

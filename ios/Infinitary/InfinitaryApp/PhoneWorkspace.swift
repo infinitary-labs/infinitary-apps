@@ -51,6 +51,9 @@ extension EnvironmentValues {
     /// INF-1208's direction C: a text box in a panel's own card on Home holds the keyboard's focus, which places a
     /// foldable's pages as the message box does.
     var panelCardTyping = false
+    /// The shown card's bring rows take Tab, the arrows, Space and Return (`PhoneCardBring.swift`), so the open Duo's
+    /// panel button steps aside for them.
+    var bringRowsTakeKeys = false
     /// INF-3468, the captain: "hide pager and everything below the card (the main chat input etc) to make more space.
     /// they come back when the keyboard gets collapsed". On every device, upright or on its side, while a text box in the
     /// shown card holds the keyboard, the pager and the message box with its last turn step aside for the card, a
@@ -227,7 +230,7 @@ struct PhoneWorkspace<Tasks: View, Composer: View>: View {
     private var takesPanelKeys: Bool {
         offersPanelToggle && scenePhase == .active && messageContext.taskID == nil
             && !messageContext.composerFocused && !messageContext.replyFocused
-            && !messageContext.panelFieldFocused && !messageContext.panelCardTyping
+            && !messageContext.panelFieldFocused && !messageContext.panelCardTyping && !messageContext.bringRowsTakeKeys
     }
     private func togglePanels() {
         panelKeySelected = false

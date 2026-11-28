@@ -522,7 +522,7 @@ With a card up, a flat Duo with Split at the fold on folds its side panel by def
 Folded, the card uses its own reading width like a book and the available width on its side, spanning the inactive fold.
 An iPad on its side folds the panel only when the stage cannot fit the card, using the Mac's 560-point threshold for a regular or unspecified card and 720 for an explicitly wider one, inside the stage gutters.
 On the open Duo, Show panels beside Settings returns to the split layout; Fold panels takes it away again, and Tab and Return operate the same button.
-On Home with a card showing, the same app-owned responder as crew browsing lets Tab draw the panel button’s focus ring and Return press it, yielding to text editing and sheets.
+On Home with a card showing, the same app-owned responder as crew browsing lets Tab draw the panel button’s focus ring and Return press it, yielding to text editing, sheets and a shown bring card's tick rows, which take those keys for themselves.
 Explicitly shown panels stay open when new cards arrive, and the device remembers the choice across cards.
 Without a card the panel shows; a new card waits until the panel keyboard closes before folding it automatically.
 On the open Duo, when the pager and message box are on the same page, they share a row if they both fit and stack if they do not.

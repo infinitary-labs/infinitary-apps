@@ -12,6 +12,7 @@ import { resizeWindow } from "./layout";
 import { writeMockClaudeClient } from "./mockClaudeClient";
 import { mockProviderOverrideModelsJson } from "./mockModels";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { watchFirstCrewmateDismissal } from "./noteDismissalWitness";
 import { windowShot } from "./pictures";
 import { projectSettings, taskWorktrees } from "./projects";
 import { promptInput } from "./prompt";
@@ -141,12 +142,23 @@ test("a fresh install signs in, adds a project, asks the first mate and merges i
     const title = `${PROJECT} ${DESTINATION_STORY_MARKER}`;
     let taskId = "";
     await test.step("first mate: a message starts a crewmate on the project in its own working copy", async () => {
-      await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
-      await input.press("Enter");
-      const key = await taskKey(page, title);
-      await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
-      // A new person's first crewmate brings its once-only note.
-      await putAwayFirstCrewmateNote(page);
+      const finishWitness = await watchFirstCrewmateDismissal(app, page);
+      let key: string;
+      try {
+        await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+        await input.press("Enter");
+        key = await taskKey(page, title);
+        await expect(startedLine(page, key)).toBeVisible({ timeout: 30_000 });
+        // A new person's first crewmate brings its once-only note.
+        await putAwayFirstCrewmateNote(page);
+      } catch (error) {
+        try {
+          await finishWitness(test.info());
+        } finally {
+          throw error;
+        }
+      }
+      await finishWitness();
       const board = await page.evaluate(() => window.infinitary.tasks.board());
       const task = board.tasks.find((row) => row.key === key);
       if (!task) throw new Error("The started task is not on the board.");

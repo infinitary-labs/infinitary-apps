@@ -136,6 +136,13 @@ describe("the phone release's dealt call", () => {
         workflowValue(joinJob.if!, { inputs: { ...inputs, device: "ipad" }, needs: undealt }, ran),
       ).toBe(false);
 
+      // It reads the parts of the release's resolved source, never the version its caller started from.
+      const checkout = joinJob.steps.find((step) => step.uses?.startsWith("actions/checkout@"))!;
+      const caller = { sha: "b".repeat(40) };
+      expect(workflowString(checkout.with!.ref!, { inputs, github: caller })).toBe(
+        inputs.source_commit,
+      );
+
       const upload = native.steps.find((step) => step.with?.name?.startsWith("phone-pass-times-"))!;
       const fetch = joinJob.steps.find((step) =>
         step.uses?.startsWith("actions/download-artifact@"),

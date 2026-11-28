@@ -679,8 +679,7 @@ describe("the dispatched workflow's gate", () => {
         }) as Record<string, string>[]
       )[0],
     };
-    // INF-7175: the join of the dealt jobs' part times reads the parts of the same source.
-    for (const id of ["native-phone", "part-times"])
+    for (const id of ["native-phone"])
       for (const step of phone.jobs[id].steps.filter((step: { uses?: string }) =>
         step.uses?.startsWith("actions/checkout@"),
       ))

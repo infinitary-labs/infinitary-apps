@@ -29,6 +29,7 @@ import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
 import type { MergeWay } from "../../src/shared/batches";
 import type { KnownForgeHost } from "../../src/shared/forge";
 import type { NamingRule } from "../../src/shared/runbooks";
+import type { CheckedOut as CheckedOutReading } from "../../src/shared/workCopies";
 import { freshDatabase } from "./database";
 import { BUNDLED_NAMING } from "./namingRunbook";
 import { scratchDir } from "./scratchDirs";
@@ -181,9 +182,7 @@ export class FakeForge implements Forge {
 }
 
 /** What a placed task's computer says its working copy has checked out (`ChangeDeliveryOptions`' `checkedOut`). */
-export type CheckedOut = (
-  taskId: string,
-) => Promise<{ branch: string | null; head: string; dirty?: boolean } | null>;
+export type CheckedOut = (taskId: string) => Promise<CheckedOutReading | null>;
 
 export type PrCiHarness = {
   db: AppDatabase;

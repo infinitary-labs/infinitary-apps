@@ -2,6 +2,7 @@ import type { CutOffClass } from "@shared/authFailure";
 import type { InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type { ComputerSignIns, signInPlace } from "@shared/signIns";
 import type { placedTaskFolders, WorkingCopyBase, WorkOrderResponse } from "@shared/work";
+import type { CheckedOut } from "@shared/workCopies";
 import { type ContractChangeName, contractChange } from "../connection/contractChanges";
 import type { JobExit } from "../jobs/jobManager";
 import type { ComputerPool } from "../routing/computerPool";
@@ -411,9 +412,7 @@ export type CrewMachines = {
    * The branch the task's working copy there has checked out, its commit (INF-2490), and
    * whether it holds work left to commit.
    */
-  checkedOut(
-    taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null>;
+  checkedOut(taskId: string): Promise<CheckedOut | null>;
   /** The computers that run work on the list, by device id. */
   computers(): readonly string[];
   /** The computer's name, as Devices lists it. */

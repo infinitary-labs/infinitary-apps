@@ -1,5 +1,6 @@
 import { appendFile, open, readFile, realpath, rename, rm, stat } from "node:fs/promises";
 import { cutText } from "@shared/textCut";
+import { RENAMED_FROM_LIMIT } from "@shared/workCopies";
 import { bundledGit, gitHelperResetParameters, hostEnv } from "../hostEnv";
 import { atUtilityQos } from "../utilityQos";
 import { runGitProcess } from "./gitProcess";
@@ -355,6 +356,30 @@ export async function checkoutOf(
     head,
     dirty: lines.some((line) => !line.startsWith("# ")),
   };
+}
+
+/**
+ * The names a branch had before, oldest first, as its own log records each
+ * `git branch -m` (INF-7081): the log moves with the branch, so a branch
+ * renamed twice names both. Empty where it was never renamed, where the
+ * repository keeps no log of its branches, or where the folder cannot say.
+ */
+export async function renamedFrom(cwd: string, branch: string): Promise<string[]> {
+  const log = await git(cwd, [
+    "log",
+    "--walk-reflogs",
+    // i18n-exempt: git's own words for a rename in a branch's log, never shown to a person
+    "--grep-reflog=^Branch: renamed ",
+    "--format=%gs",
+    `refs/heads/${branch}`,
+    "--",
+  ]).catch(() => "");
+  const names = log
+    .split("\n")
+    .map((line) => /^Branch: renamed refs\/heads\/(\S+) to refs\/heads\/\S+$/.exec(line)?.[1])
+    .filter((name): name is string => name !== undefined && name.length <= 255)
+    .reverse();
+  return [...new Set(names)].slice(0, RENAMED_FROM_LIMIT);
 }
 
 export async function isGitRepo(dir: string): Promise<boolean> {

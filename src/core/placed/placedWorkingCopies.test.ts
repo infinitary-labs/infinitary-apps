@@ -636,6 +636,30 @@ describe("a task that runs on a computer that runs work", () => {
     expect(await home.placed.checkedOut("t-hidden")).toEqual({ branch, head, dirty: true });
   });
 
+  // Intent: INF-7081's goal, a bug being fixed: a crewmate there renamed its task's branch and
+  // pushed the new name, and this Mac, which heard only the checked-out branch's name, opened a
+  // pull request for it that merged outside its batch. The former name crosses in the answer.
+  it("hears the name a checkout there was renamed from", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.from("")));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started on the units fix." }]);
+    await at.start("t-renamed", "Keep the units with the meter.", repo.id);
+    await expect.poll(() => home.tasks.get("t-renamed")?.activity).toBe("idle");
+    const work = at.folders("t-renamed").work;
+    const branch = home.tasks.get("t-renamed")?.branch;
+    writeFileSync(join(work, "units.ts"), "export const unit = 'mWh';\n");
+    const head = await commit(work, "fix: keep the units");
+    await git(work, ["branch", "-m", "inf/keep-units"]);
+    expect(await home.placed.checkedOut("t-renamed")).toEqual({
+      branch: "inf/keep-units",
+      head,
+      dirty: false,
+      renamedFrom: [branch],
+    });
+  });
+
   // R3: prepared contribution routing survives the actual move/pack owners in both directions.
   // Host identities are declared fixtures; branches, bundles, packs and pushes are disposable real Git.
   it("keeps a started contribution pushing to its fork after moving home and back", async () => {

@@ -24,7 +24,7 @@ import type { BundledRef, ReadableRef } from "@shared/workCopies";
 import { writeArtifact } from "../workspace/artifacts";
 import { bundleRef, commitOf, sha256Of, takeBundle } from "../workspace/bundles";
 import { forgeAuthRequired } from "../workspace/forgeAuth";
-import { checkoutOf, git, inheritWorktreeRemotes } from "../workspace/git";
+import { checkoutOf, git, inheritWorktreeRemotes, renamedFrom } from "../workspace/git";
 import { branchOfTask, defaultTaskBranch } from "../workspace/taskBranches";
 import { type MovedFolders, packWork, readManifest, unpackWork } from "../workspace/workMove";
 import {
@@ -515,13 +515,18 @@ export class WorkingCopies {
     );
     // The checkout itself, as the home's own working copy reads it for a
     // story: the task's branch, or another the crewmate checked out (INF-2490),
-    // with what is left to commit there, read in the same answer.
+    // with what is left to commit there, read in the same answer, and the
+    // names the branch had before, so the home can tell a renamed task
+    // branch from another branch (INF-7081).
     const checkedOut = await checkoutOf(workspace.cwd);
+    const former = checkedOut?.branch ? await renamedFrom(workspace.cwd, checkedOut.branch) : [];
     return {
       present: true,
       ...held,
       origin: origin || null,
-      ...(checkedOut ? { checkedOut } : {}),
+      ...(checkedOut
+        ? { checkedOut: { ...checkedOut, ...(former.length ? { renamedFrom: former } : {}) } }
+        : {}),
     };
   }
 

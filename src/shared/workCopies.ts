@@ -31,16 +31,25 @@ export type BundledRef = z.infer<typeof bundledRefSchema>;
 export const readableRefSchema = z.enum(["branch", "kept", "move"]);
 export type ReadableRef = z.infer<typeof readableRefSchema>;
 
+/** How many former names of a checked-out branch one reading carries. */
+export const RENAMED_FROM_LIMIT = 32;
+
 /**
  * What a working copy has checked out: its branch, null when its checkout is
  * detached, and the commit it points at (INF-2490). `dirty` says whether work
  * is left to commit at that checkout, untracked files included whatever the
  * repository's settings, read in the same answer as the branch and the
  * commit; absent from a computer that reads them apart
- * (`checkout-left-to-commit.md`).
+ * (`checkout-left-to-commit.md`). `renamedFrom` names the branch's former
+ * names, oldest first, as its own log records each rename; absent where it
+ * has none, and from a computer that does not read them
+ * (`checkout-renamed-from.md`, INF-7081).
  */
 export const checkedOutSchema = z.object({
   branch: z.string().min(1).max(255).nullable(),
   head: commitSchema,
   dirty: z.boolean().optional(),
+  renamedFrom: z.array(z.string().min(1).max(255)).max(RENAMED_FROM_LIMIT).optional(),
 });
+
+export type CheckedOut = z.infer<typeof checkedOutSchema>;

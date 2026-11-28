@@ -28,7 +28,7 @@ import {
 import { currentChange, storyNeverSent } from "../storage/changeProjection";
 import type { TaskRecord } from "../storage/taskRecords";
 import { earlyPublication } from "../tasks/liveValidation";
-import { git, gitFailure } from "../workspace/git";
+import { git, gitFailure, renamedFrom } from "../workspace/git";
 import { requireNamed, requireNamedRange } from "../workspace/naming";
 import { checkedOutRefFor } from "../workspace/workspaceService";
 import type { ChangeChecks } from "./changeChecks";
@@ -57,6 +57,10 @@ export const BATCH_OPEN_WORDS = {
     `Confirmed the story on the pushed branch ${branch}. This project merges approved changes together, as one batch pull request, so this change opens no pull request of its own: its story is published on its batch's pull request once the change is approved. Read its checks with check_change, which reads the checks the project runs on the pushed branch; if the project runs none there, declare that with check_change absentChecks after the local gate. Then show the merge card: the captain's click on it, or the task's autonomy, puts this version in line for the project's next batch, where it merges as one commit of its own. If the rest of your work needs this merged first, list it in the story's afterMerge and end this task with the merge card.`,
   around:
     "This change has no pull request of its own: it merges in this project's batch, so there are no words around its story to change. Pass presentation alone.",
+  /** A branch renamed from the task's own, which would open a pull request that merges alone (INF-7081). */
+  // i18n-exempt: served to the crewmate in open_change's and show_merge_card's answers, never shown to a person
+  renamed: (own: string, renamed: string) =>
+    `Nothing was published: this project merges approved changes together, as one batch pull request, and a change joins its batch only from its task's own branch, ${own}. ${renamed} was renamed from it, so it would open a pull request of its own that merges alone. Keep the task's branch name: rename it back and push it under that name (git branch -m ${own}, then git push -u origin ${own}). If you pushed ${renamed}, delete it there (git push origin --delete ${renamed}). Its story stays with the branch it was prepared on, so pass the story again.`,
 } as const;
 
 export class ChangePublication {
@@ -280,6 +284,29 @@ export class ChangePublication {
     return branch && branch !== "HEAD" ? branch : undefined;
   }
 
+  /**
+   * The refusal for publishing `branch` when the working copy renamed the
+   * task's own branch to it, in a project that merges in batches of the
+   * person's own (INF-7081): a change joins its batch only from the task's own
+   * branch, so the renamed one would open a pull request that merges alone.
+   * The rename is read where the task runs, from the branch's own log: here
+   * for any branch, on another computer for the one checked out there. A
+   * computer that cannot say, or an older one that sends no former names,
+   * refuses nothing.
+   */
+  async renamedBranchRefusal(taskId: string, branch: string): Promise<string | undefined> {
+    const record = this.options.tasks.get(taskId);
+    const own = record?.branch;
+    if (!record || !own || branch === own || !this.context.ownBatch(taskId, "own"))
+      return undefined;
+    let former: readonly string[] | undefined;
+    if (record.deviceId) {
+      const there = await this.options.checkedOut?.(taskId).catch(() => null);
+      former = there?.branch === branch ? there.renamedFrom : undefined;
+    } else if (record.worktreeDir) former = await renamedFrom(record.worktreeDir, branch);
+    return former?.includes(own) ? BATCH_OPEN_WORDS.renamed(own, branch) : undefined;
+  }
+
   /** Delivery, not the presence of an origin, decides whether a story reaches a host. */
   localStoryDestination(taskId: string): LocalPresentationDestination | undefined {
     const record = this.options.tasks.get(taskId);
@@ -474,6 +501,11 @@ export class ChangePublication {
       input.branch?.trim() ||
       ((await this.presentationBranch(taskId, "own").catch(() => undefined)) ?? located.branch);
     const own = branch === record.branch;
+    // A stacked change opens a pull request of its own whatever its branch is called.
+    if (!own && !input.base) {
+      const renamed = await this.renamedBranchRefusal(taskId, branch);
+      if (renamed) return renamed;
+    }
     try {
       requireNamed(input.title, "pull request title", this.options.namingRule?.() ?? null);
       if (own) await this.context.branchHome(record);

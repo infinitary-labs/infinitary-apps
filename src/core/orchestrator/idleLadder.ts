@@ -36,6 +36,7 @@ import {
 import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";
 import { wakeBuiltOn } from "./reportWakes";
 import { asksAbout } from "./reviewCard";
+import { nothingMergedWake } from "./startWakes";
 import { waitingGuidance } from "./waitingGuidance";
 import type { TypedWake, WakeFacts, WakeTask } from "./wakes";
 
@@ -1622,6 +1623,13 @@ export class IdleLadder {
       const dead = tasks.graph.waitingOn(record.id).find((blocker) => blocker.status === "dropped");
       if (dead) this.host.wakeDeadGate(record, dead);
     }
+    // A side-effect task's wait whose answer carries on in other work moves
+    // there before anything reads it as finished; one whose every wait then
+    // closed with nothing merged stays unstarted and is one wake
+    // (docs/task-graph.md, "A side-effect task").
+    tasks.graph.carryAnswers("host");
+    for (const { record, waits } of tasks.graph.listNothingMerged())
+      this.host.notifyOp(nothingMergedWake(record, waits), "agent", record.id);
     // The ready query (design section 7): everything it lists starts now,
     // in priority order. On-request rows never appear in it.
     for (const record of tasks.graph.listReady()) {

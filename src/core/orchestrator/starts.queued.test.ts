@@ -691,6 +691,71 @@ describe("the task graph (R1)", () => {
     expect(runbookText("ordinary")).not.toBe("");
   });
 
+  // INF-7198's plan, part 3: when every wait ends with nothing merged the task stays
+  // unstarted and the first mate hears once; a wait whose answer carries on in another
+  // task moves to that task, and the task starts once that work merges.
+  it("keeps a side-effect task with nothing merged unstarted, wakes once, and follows the work built on its answer", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks, inbox } = setup(crew);
+    supervisor.setFirstmateHooks({
+      notifyOp: (text, origin, ref) => {
+        inbox.enqueueWake(FIRSTMATE_RECIPIENT, text, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const wakes = () =>
+      inbox
+        .allFor(FIRSTMATE_RECIPIENT)
+        .filter((row) => renderWake(row).includes("closed with nothing merged"));
+    seedTask(tasks, {
+      id: "plan",
+      title: "Plan the negative reading fix",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    seedTask(tasks, {
+      id: "tell-item",
+      title: "Tell the issue how the fix ended",
+      status: "queued",
+      blockedBy: ["plan"],
+      shape: { kind: "unclear", side_effect: true },
+    });
+    tasks.close("plan", { status: "done", reason: "answered", actor: "host" });
+    await supervisor.watch.sweepGates(Date.now());
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(0);
+    expect(legacyStateOf(tasks.get("tell-item"))).toBe("queued");
+    expect(wakes().map((row) => [row.ref, renderWake(row)])).toEqual([
+      [
+        "tell-item",
+        `[fm-op] queued side-effect task tell-item ${tasks.get("tell-item")?.key} "Tell the issue how the fix ended" stays unstarted: every task it waits on closed with nothing merged (${tasks.get("plan")?.key} "Plan the negative reading fix" (answered)), so nothing has shipped for its outside action to tell.`,
+      ],
+    ]);
+
+    // The fix filed on the plan's answer carries the wait on.
+    seedTask(tasks, {
+      id: "fix",
+      title: "Fix the negative reading",
+      status: "queued",
+      startPolicy: "on-request",
+      shape: { kind: "implement", basis: tasks.get("plan")?.key },
+    });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(tasks.graph.blockers("tell-item").map((row) => row.id)).toEqual(["fix"]);
+    expect(crew.promptCalls).toHaveLength(0);
+    expect(wakes()).toHaveLength(1);
+
+    tasks.close("fix", { status: "done", reason: "merged", actor: "host" });
+    await supervisor.watch.sweepGates(Date.now());
+    await tick();
+    expect(crew.promptCalls).toHaveLength(1);
+    expect(crew.promptCalls[0]).toContain(
+      `- ${tasks.get("fix")?.key} "Fix the negative reading": merged; in no release yet`,
+    );
+  });
+
   // The same piece: an open wait's latest report is progress, never what the work found.
   it("names no report under a wait that is still open", () => {
     const section = renderSideEffectSection([

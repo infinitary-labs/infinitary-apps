@@ -262,7 +262,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       side_effect: Type.Optional(
         Type.Boolean({
           description:
-            "True when its only job is an outside action that waits on work, such as closing a work item: each blocked_by, added later too, holds until merged, never at approval, and its brief says how each closed.",
+            "True when its only job is an outside action that waits on work, such as closing a work item: each blocked_by, added later too, holds until merged, never at approval, and its brief says how each closed. A wait on an answer moves to the work whose basis names it. When every wait closes with nothing merged it stays unstarted and you hear once: link the work that ships it, drop it, or start_now on the captain's word.",
         }),
       ),
       unsafe_data_reader: Type.Optional(

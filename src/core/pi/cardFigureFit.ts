@@ -267,6 +267,7 @@ function spillWords(spill: Spill): string {
   const edge = Math.round(right ? spill.edgeRight : spill.edgeLeft);
   const quoted = spill.text.length > 48 ? `${spill.text.slice(0, 47)}...` : spill.text;
   const from = right ? "ends" : "starts";
+  // i18n-exempt: served to the agent, stays English
   const where = `its box's ${right ? "right" : "left"} edge (${edge})`;
   // i18n-exempt: served to the agent, stays English
   return spill.room < 0

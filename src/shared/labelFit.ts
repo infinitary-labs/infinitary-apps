@@ -4,4 +4,5 @@
  * never holds, so a reader of the receipt (`scripts/dispatch-corpus/cards.ts`)
  * cuts the facts off without guessing at the title's own words.
  */
+// i18n-exempt: served to the agent, stays English
 export const LABEL_FIT_DELIMITER = "\n\nLabel fit:";

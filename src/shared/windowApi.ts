@@ -106,7 +106,7 @@ import type {
 } from "./personal/manifest";
 import type { PanelMounts } from "./personal/mounts";
 import type { MediatedFetchCall, MediatedFetchResult } from "./plugins/fetch";
-import type { FrameMount, FrameMountRequest } from "./plugins/frameDocument";
+import type { FrameMountAnswer, FrameMountRequest } from "./plugins/frameDocument";
 import type {
   Appearance,
   Layout,
@@ -1198,7 +1198,7 @@ export type FirstmateApi = {
   };
   /** The plugin host's own needs: the frame vehicle, the read catalog, the fetch seam. */
   plugins: {
-    mountFrame: (request: FrameMountRequest) => Promise<FrameMount>;
+    mountFrame: (request: FrameMountRequest) => Promise<FrameMountAnswer>;
     unmountFrame: (mountId: string) => Promise<{ ok: true }>;
     /** Answers once the main process runs; the frame watchdog asks it each tick. */
     mainAlive: () => Promise<{ ok: true }>;

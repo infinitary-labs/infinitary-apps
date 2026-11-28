@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panel-refused-plain-words",
+      "kind": "fix",
+      "area": "devices",
+      "title": "A panel that cannot open says why in plain words",
+      "body": "When one of your panels cannot open, such as on another computer whose Infinitary version differs from the computer where your first mate lives, its place now says why in one plain sentence in your language. It no longer shows internal error names. When trying again can help, a Retry button sits beside the sentence.",
+      "picture": {
+        "dark": "panel-refused-plain-words-dark.png",
+        "light": "panel-refused-plain-words-light.png",
+        "alt": "The Notes panel saying it opens once Infinitary here and on the computer where your first mate lives are on the same version"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

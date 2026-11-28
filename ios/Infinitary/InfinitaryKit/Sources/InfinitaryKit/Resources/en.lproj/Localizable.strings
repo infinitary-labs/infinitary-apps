@@ -1846,6 +1846,13 @@
 "panelMarkFailing" = "Background reads failing since %1$@";
 "panelMarkPaused" = "Background work paused";
 "panelMarkStopped" = "Background work stopped";
+"panelMountFailed" = "This panel could not be opened.";
+"panelMountNoEntry" = "This panel's code could not be used: it has no file to start from.";
+"panelMountNotServed" = "The computer where your first mate lives is not serving this panel now.";
+"panelMountOtherVersion" = "This panel opens once Infinitary here and on the computer where your first mate lives are on the same version.";
+"panelMountOutOfReach" = "This panel opens once this computer reaches the computer where your first mate lives.";
+"panelMountTooLarge" = "This panel's code could not be used: it is too large.";
+"panelMountTooMany" = "Too many panels are open. Close one to open this one.";
 "panelMoveNotAsked" = "Only your own click or key in this panel moves a task. Nothing was written.";
 "panelRailFolded" = "Panels folded for room";
 "panelRailMore" = "%1$@ more";

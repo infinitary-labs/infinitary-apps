@@ -46,6 +46,7 @@ The app's quit stops every running command process and removes the keys; a heavy
 axi-sdk-js writes `process.exitCode` and reads `process.argv`, so each command runs in a process of its own, never the app's: the host starts one per request (`src/core/axi/axiProcess.ts`, a utility process in the app through `HostCapabilities.axiProcess`, a plain `fork` in tests).
 It runs `runTaskAxiCli` (`src/core/axi/cli.ts`) over the command's table with what the shell passed, its home view naming the path the shell ran it from, and sends back what the command printed and its exit code.
 The table reaches the task's tool only through one call per operation, which the app answers against the tool it granted that task: for the browser, `CrewmateBrowser`'s `navigate`, `inspect`, `act`, `capture`, `close` and `pages`, and never a picture's bytes.
+The Node fork stops accepting replies as soon as it is told to stop, and a failed IPC write stops the child through the same exit path instead of raising an uncaught error in the parent.
 A command process that has not answered in a minute is stopped.
 An interrupted native load claim returns `CLAIM_UNAVAILABLE` with the existing reading cadence, letting its waiting wrapper keep the same process group and ask again; other commands still fail without retry permission.
 Its output goes to the app alone, never to the app's log.

@@ -35,6 +35,10 @@ describe("a pointer release", () => {
     ).toBe(false);
   });
 
+  it("leaves a double-click on blank space alone, where only a line break is selected", () => {
+    expect(releaseSelects({ ...press, clicks: 2 }, { x: 100, y: 40 }, "\n")).toBe(false);
+  });
+
   it("leaves a double-click on a picture alone, with no words selected", () => {
     expect(releaseSelects({ ...press, clicks: 2 }, { x: 100, y: 40 }, "")).toBe(false);
   });

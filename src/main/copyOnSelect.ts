@@ -12,7 +12,8 @@ export type Press = { x: number; y: number; clicks: number; before: string };
  * panel, a card's edge or a file chip, and never copies.
  */
 export function releaseSelects(press: Press, release: { x: number; y: number }, now: string) {
-  if (now === "") return false;
+  // Blank space is no words: a double-click on empty room never replaces the clipboard.
+  if (now.trim() === "") return false;
   if (press.clicks >= 2) return true;
   const moved = Math.hypot(release.x - press.x, release.y - press.y) >= DRAG_PIXELS;
   return moved && now !== press.before;

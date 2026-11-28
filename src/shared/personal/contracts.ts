@@ -1107,6 +1107,7 @@ export type PanelChangeSetting =
   | "automation-pause-all"
   | "automation-state"
   | "card-size"
+  | "copy-on-select"
   | "copy-stop"
   | "cost-limit"
   | "crew-grouping"

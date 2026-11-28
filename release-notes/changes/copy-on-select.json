@@ -6,6 +6,11 @@
       "title": "Copy on select",
       "body": "Settings → Appearance now has Copy on select. Turn it on, and the words you select with the pointer go straight to the clipboard when you let go, so you need not press the copy key. A double-clicked word, a triple-clicked paragraph and words selected in a field copy too, and nothing appears when they do. It is off by default, and your first mate can switch it when asked.",
       "area": "settings",
+      "picture": {
+        "dark": "copy-on-select-dark.webp",
+        "light": "copy-on-select-light.webp",
+        "alt": "Settings, Appearance: the new Copy on select row, switched on, between Keep cards maximized and Crew model names"
+      },
       "docsSite": ["settings"],
       "provenance": { "origin": "change" }
     }

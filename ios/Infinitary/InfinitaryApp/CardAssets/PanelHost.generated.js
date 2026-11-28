@@ -6494,6 +6494,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "window-size": true,
     "crew-model-names": true,
     "crew-grouping": true,
+    "copy-on-select": true,
     "ambient-music": true,
     // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
     "ambient-own-style": true,
@@ -63858,6 +63859,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Wide`;
   }
+  function settingsAppearanceCopyOnSelect() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `النسخ عند التحديد`;
+      case "de":
+        return `Beim Auswählen kopieren`;
+      case "es":
+        return `Copiar al seleccionar`;
+      case "fr":
+        return `Copier à la sélection`;
+      case "ja":
+        return `選択時にコピー`;
+      case "ko":
+        return `선택하면 바로 복사`;
+      case "pt-BR":
+        return `Copiar ao selecionar`;
+      case "zh-Hans":
+        return `选中即复制`;
+      case "zh-Hant":
+        return `選取即複製`;
+      case "en-XA":
+        return `[Çöþý öñ šéļéçţ ~~~~~]`;
+      case "ar-XB":
+        return `‮Copy on select‬`;
+    }
+    return `Copy on select`;
+  }
+  function settingsAppearanceCopyOnSelectDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `الكلمات التي تحددها بالمؤشر تُنسخ مباشرة إلى الحافظة، فلا حاجة إلى نسخها بلوحة المفاتيح.`;
+      case "de":
+        return `Wörter, die du mit dem Zeiger auswählst, landen sofort in der Zwischenablage, du musst sie also nicht per Tastatur kopieren.`;
+      case "es":
+        return `Las palabras que seleccionas con el puntero van directamente al portapapeles, así que no necesitas copiarlas con el teclado.`;
+      case "fr":
+        return `Les mots que vous sélectionnez avec le pointeur vont directement dans le presse-papiers, sans avoir à les copier au clavier.`;
+      case "ja":
+        return `ポインターで選択した語句はそのままクリップボードに入るので、キーボードでコピーする必要がありません。`;
+      case "ko":
+        return `포인터로 선택한 단어가 바로 클립보드에 들어가서, 키보드로 복사하지 않아도 돼요.`;
+      case "pt-BR":
+        return `As palavras que você seleciona com o ponteiro vão direto para a área de transferência, então você não precisa copiá-las pelo teclado.`;
+      case "zh-Hans":
+        return `用指针选中的文字会直接进入剪贴板，无需再用键盘复制。`;
+      case "zh-Hant":
+        return `用指標選取的文字會直接進入剪貼簿，不必再用鍵盤複製。`;
+      case "en-XA":
+        return `[Ŵöŕðš ýöû šéļéçţ ŵîţĥ ţĥé þöîñţéŕ ĝö šţŕáîĝĥţ ţö ţĥé çļîþƀöáŕð, šö ýöû ñééð ñöţ çöþý ţĥéɱ ŵîţĥ ţĥé ķéýƀöáŕð. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Words you select with the pointer go straight to the clipboard, so you need not copy them with the keyboard.‬`;
+    }
+    return `Words you select with the pointer go straight to the clipboard, so you need not copy them with the keyboard.`;
+  }
   function settingsAppearanceCrewGroupedByComputer() {
     switch (currentLanguage()) {
       case "ar":
@@ -120762,6 +120817,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceCardSizeDescription,
     settingsAppearanceCardUsual,
     settingsAppearanceCardWide,
+    settingsAppearanceCopyOnSelect,
+    settingsAppearanceCopyOnSelectDescription,
     settingsAppearanceCrewGroupedByComputer,
     settingsAppearanceCrewGroupedByProject,
     settingsAppearanceCrewGrouping,
@@ -124567,6 +124624,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceCardSizeDescription": [],
     "settingsAppearanceCardUsual": [],
     "settingsAppearanceCardWide": [],
+    "settingsAppearanceCopyOnSelect": [],
+    "settingsAppearanceCopyOnSelectDescription": [],
     "settingsAppearanceCrewGroupedByComputer": [],
     "settingsAppearanceCrewGroupedByProject": [],
     "settingsAppearanceCrewGrouping": [],

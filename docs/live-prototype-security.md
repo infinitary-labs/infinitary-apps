@@ -382,8 +382,7 @@ Only the host's reply send delivers queued comments; the frame receives target i
 
 With Copy on select on, the window reads two facts from the focused frame after the person's own press: the words selected there, and, through that read, a field's selected text.
 It then calls the window's copy, as the Edit menu's copy does.
-A card's script cannot start a copy, because the hook hears only the person's presses; it can change only whether the person's own selection is copied, and its copy event fires as it does for ⌘C.
-The frame's sandbox, its content policy, its bridge script and that script's pinned hash do not change.
+A card's script cannot start a copy, because the hook hears only the person's presses; it can change only whether the person's own selection is copied, and its copy event fires as it does for ⌘C. The frame's sandbox, its content policy, its bridge script and that script's pinned hash do not change.
 
 ## Not-typing key offers
 

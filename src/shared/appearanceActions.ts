@@ -89,6 +89,7 @@ export const appearanceLines = {
     line: "Copy on select, when asked: with on true, words the person selects with the pointer (a drag, a double-click or a triple-click) go to the clipboard when the pointer is released, as the copy key would; off is the default. Keyboard selections never copy. It is this computer's window setting.",
     toRequest: (v, current) => [{ ...(current as Appearance), copyOnSelect: v.on }],
     readValue: (current) => ({ on: (current as Appearance).copyOnSelect === true }),
+    // i18n-exempt: the first mate's Activity line, English as the lines beside it
     done: (v) => `copy on select ${v.on ? "on" : "off"}`,
   },
   "ambient-away": {

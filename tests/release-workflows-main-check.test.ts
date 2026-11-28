@@ -168,6 +168,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(releaseCall?.with).toEqual({
       trigger: "Requested TestFlight",
       source_commit: "${{ needs.resolve.outputs.source_commit }}",
+      // INF-7079's fix 4: the release phone queue (tests/phone-ci.test.ts owns where it lands).
+      release: true,
     });
     // One call naming no device; phone.yml deals its passes into jobs (INF-7079's fix 5,
     // tests/phone-ci.test.ts "the phone release's call").

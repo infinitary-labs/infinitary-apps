@@ -1560,6 +1560,7 @@ The `phone` kind in `MAC_QUEUES` keeps the exact label `mini-mac-phone` (INF-220
 The fleet serves both labels from every phone place the placement service runs, one on each compute Mac, never the captain's Mac mini VM; which places serve it is the fleet's setup, not this project's.
 The one native job, `native-phone`, requires the `phone` mapping, reading `phone_small` first for a small check, with no per-run override, fixed-clone switch or generic-Mac fallback.
 An absent, empty or malformed `phone` mapping supplies no runnable destination instead of redirecting to the mini, and an absent `phone_small` mapping leaves a small check on `phone`.
+The unsigned TestFlight call passes `release: true`, so each of its jobs asks for the `release_phone` kind, `mini-mac-release-phone`, ahead of `phone_small` even when it was dealt into one or two jobs; the same places serve it and the placement service starts it ahead of every other phone check; until `MAC_QUEUES` names it, the call asks for `phone` (INF-7079's fix 4; `docs/testing.md`, "Each Mac job's kind and size").
 The other queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
 Each guest runs `scripts/test-phone.ts` directly, with as many simulators as the guest holds, two on a compute Mac VM of 10 cores and 9 GiB, where an iPhone Duo runs alone, and one on a rented VM of 5 cores (INF-4241 piece 3).
 A request runs each dealt job's passes with `--plan`, and only its first job runs the phone's Swift package tests (INF-5387's plan, piece 2).

@@ -91,6 +91,8 @@ jobs:
     with:
       trigger: Requested TestFlight
       source_commit: ${{ needs.resolve.outputs.source_commit }}
+      # Waits in the release phone queue, started ahead of branch phone checks (INF-7079's fix 4).
+      release: true
 
   testflight:
     name: Requested TestFlight · Sign and upload

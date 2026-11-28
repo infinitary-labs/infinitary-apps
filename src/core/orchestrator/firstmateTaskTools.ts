@@ -665,13 +665,10 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
             .flatMap((blocker) => tasks.graph.mergedWork(blocker))
             .map((task) => task.id),
         );
-        const leaving = new Set(tasks.graph.mergedWork(from).map((task) => task.id));
+        const leaving = new Set([from.id, ...tasks.graph.mergedWork(from).map((task) => task.id)]);
         const others = tasks.graph
           .waitingOn(to.id)
-          .filter(
-            (blocker) =>
-              blocker.id !== from.id && !(leaving.has(blocker.id) && !kept.has(blocker.id)),
-          );
+          .filter((blocker) => !(leaving.has(blocker.id) && !kept.has(blocker.id)));
         const held =
           others.length === 0
             ? cardHeldStartRefusal(to, { ...cardHold(to.id), edit: "wait-removal" })

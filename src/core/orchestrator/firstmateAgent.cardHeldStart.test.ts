@@ -156,7 +156,7 @@ describe("FirstmateAgent start held by its own open card", () => {
 
   // INF-7238 review: a release-moment task waiting on a finished parent is held by the
   // parent's merged part, which no edge names, so removing the parent's edge is its last wait.
-  it("refuses removing a release-moment task's last wait on a finished parent while the card waits", async () => {
+  it("removes a release-moment task's edge to a part its finished parent still holds, and refuses the parent's last edge while the card waits", async () => {
     const f = await cardUp();
     seedTask(f.tasks, { id: "export", title: "Rework the export", status: "queued" });
     seedTask(f.tasks, {
@@ -173,13 +173,24 @@ describe("FirstmateAgent start held by its own open card", () => {
       side_effect: true,
       moment: "release",
       start_policy: "when-ready",
-      blocked_by: ["export"],
+      blocked_by: ["export", "writer"],
     });
     f.session.emitTurnEnd("It waits for the release.");
     f.session.resolveNextPrompt();
     await tick();
     expect(f.tasks.graph.waitingOn(f.task.id).map((row) => row.id)).toEqual(["writer"]);
     await reportWake(f);
+    // The part's own edge goes, since the parent still holds the part.
+    const partRemoved = (
+      await f.tools.get("link_tasks")?.execute("unpart", {
+        from: "writer",
+        to: f.task.key,
+        type: "blocks",
+        remove: true,
+      })
+    )?.content[0]?.text;
+    expect(partRemoved).toMatch(/^Removed: /);
+    expect(f.tasks.graph.blockers(f.task.id).map((row) => row.id)).toEqual(["export"]);
     const text = (
       await f.tools.get("link_tasks")?.execute("unwait", {
         from: "export",

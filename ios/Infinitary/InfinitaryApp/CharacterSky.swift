@@ -5,6 +5,8 @@ import SwiftUI
 enum CharacterSky {
     static let rings = [[0, 1, 5, 4, 12, 8], [9, 11, 10, 14, 15, 13], [2, 3, 7, 6]]
     static let winding = rings[2] + rings[0] + rings[1]
+    /// Each vertex's place in the winding, inner square first.
+    static let windingRank = (0..<16).map { winding.firstIndex(of: $0)! }
     static func envelope(_ pose: CharacterPose) -> Double {
         pose.mode == .fidget ? band(pose.progress, 0.05, 0.25, 0.8, 0.17) : 0
     }

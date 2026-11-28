@@ -224,17 +224,19 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         commands.commit()
     }
 
-    /// The scene as the Canvas drew it: the warp's backdrop and the supernova's blast, the crew, the first mate, then the selection and brackets.
+    /// The scene as the Canvas drew it: the warp's backdrop, the supernova's blast and a meteor fidget's sky, the crew, the first mate,
+    /// a storm's nearest streaks, then the selection and brackets.
     func paint(_ input: Input, lightElapsed: Double, in pen: inout ScenePen) {
         #if DEBUG
         let started = ProcessInfo.processInfo.systemUptime
         #endif
         let roster = input.roster, still = input.still, now = still ? 0 : self.now
         let pose = still ? CharacterPose.still(input.state, folding: input.fold.folding, at: 0)
-            : character.advance(to: now, state: input.state, fold: input.fold)
+            : character.advance(to: now, state: input.state, fold: input.fold, stormHome: cache.stormHome)
         // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
         let frame = lit(crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27),
-                                   supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27)),
+                                   supernova: CharacterSupernova.frame(pose, coreR: 280 * 0.27),
+                                   meteors: CharacterMeteors.frame(pose, coreR: 280 * 0.27, home: cache.stormHome)),
                         project: input.lit, byComputer: input.litComputer, elapsed: lightElapsed, duration: still ? 0 : PhoneTheme.surfaceSeconds)
         let palette = input.palette
         // A warp's wormhole and stars lie behind every crewmate and the first mate.
@@ -246,10 +248,18 @@ final class PhoneSceneRenderer: NSObject, @unchecked Sendable {
         if let supernova = crew.supernova {
             CharacterSupernova.drawBlast(supernova, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, in: &pen)
         }
+        // A meteor fidget's sky lies behind them too; only the storm's nearest streaks pass in front, after the first mate.
+        let meteors = crew.meteors
+        if let meteors {
+            CharacterMeteors.drawSky(meteors, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, near: false, in: &pen)
+        }
         PhoneCrewPainter.draw(frame, roster: roster, now: now, still: still, in: &pen, palette: palette)
         var firstmate = pen
         firstmate.translateBy(x: roster.homeX - 140, y: roster.height / 2 - 140)
         CharacterPainter.draw(pose, in: &firstmate, size: CGSize(width: 280, height: 280), cache: cache, palette: palette, source: input.source)
+        if let meteors {
+            CharacterMeteors.drawSky(meteors, at: CGPoint(x: roster.homeX, y: roster.height / 2), scale: PhoneSceneRoster.ringScale, palette: palette, near: true, in: &pen)
+        }
         PhoneCrewPainter.drawMarks(frame, selection: input.selection, bracketed: input.bracketed, in: &pen, palette: palette)
         #if DEBUG
         // The scene scope excludes the nested first mate's separate character reading.

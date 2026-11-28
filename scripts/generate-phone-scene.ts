@@ -53,6 +53,7 @@ try {
   const { WARP_RELEASE_MS } = await runner.import<typeof import("../src/renderer/src/character/crew/warp.ts")>(join(character, "crew/warp.ts"));
   const supernova = await runner.import<typeof import("../src/renderer/src/character/supernova.ts")>(join(character, "supernova.ts"));
   const { supernovaKick } = await runner.import<typeof import("../src/renderer/src/character/crew/supernova.ts")>(join(character, "crew/supernova.ts"));
+  const meteors = await runner.import<typeof import("../src/renderer/src/character/meteors.ts")>(join(character, "meteors.ts"));
   const { CINCH, cinchFrame, cinchMotes } = await runner.import<typeof import("../src/renderer/src/character/cinch.ts")>(join(character, "cinch.ts"));
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
@@ -112,6 +113,7 @@ try {
       ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare, glyphPx: PLANES_GLYPH_PX,
         remoteGlyphPx: CLUSTER_LAYOUT.crewGlyphPx, crowdedGlyphPx: CLUSTER_LAYOUT.crowdedGlyphPx, crowdedCrew: CLUSTER_LAYOUT.crowdedCrew }, constellations: { orion: ORION, dipper: BIG_DIPPER },
       saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, cinch: CINCH, warp: warpData(), supernova: supernovaData(),
+      meteors: meteorsData(),
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
       wait: { ...WAIT_LIGHT, arcRate: WAIT_ARC_RATE },
       batch: BATCH_GATE,
@@ -124,6 +126,7 @@ try {
     "ios/Infinitary/InfinitaryTests/PhoneFocusLight.generated.json": focusLightTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneCrewGroups.generated.json": crewGroupReadings(),
     "ios/Infinitary/InfinitaryTests/PhoneSupernovaTraces.generated.json": supernovaTraces(),
+    "ios/Infinitary/InfinitaryTests/PhoneMeteorsTraces.generated.json": meteorsTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryTests/PhoneFixedStars.generated.json": fixedStarReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneTaskFacts.generated.json": taskFactReadings(),
@@ -320,6 +323,54 @@ try {
         kick: [0, 60, 120, 180, 240].map((d) => fixed(supernovaKick(d, frame))),
       };
     });
+  }
+  /** The meteor fidgets' settings, schedule and tables: every meteor, piece, star and grain of dust the desktop draws. */
+  function meteorsData() {
+    const fixed = (n: number) => Math.round(n * 1e6) / 1e6;
+    const { METEORS, METEOR_SCHEDULE, STORM_DIR, FIREBALL_PATH, SHOWER_METEORS, STORM_METEORS, FIREBALL_HERALDS, FIREBALL_FRAGMENTS,
+      FIREBALL_BURST, METEOR_STARS, FIREBALL_DUST } = meteors;
+    // The meteors, the pieces and the paths stay whole: the phone replays their lights to the desktop's own digits.
+    const meteor = (m: (typeof SHOWER_METEORS)[number]) =>
+      [m.x0, m.y0, m.ux, m.uy, m.L, m.t0, m.life, m.lifeF, m.mag, m.w, m.flare, m.linger, m.near ? 1 : 0];
+    const piece = (f: (typeof FIREBALL_FRAGMENTS)[number]) => [f.u, f.v, f.drag, f.side, f.life, f.w, f.a, f.turn];
+    return { shower: METEORS.shower, storm: METEORS.storm, fireball: METEORS.fireball, stars: METEORS.stars, crewLight: METEORS.crewLight,
+      reachPx: METEORS.reachPx, releaseMs: WARP_RELEASE_MS,
+      schedule: Object.fromEntries(Object.entries(METEOR_SCHEDULE).filter(([, value]) => typeof value === "number")),
+      flares: METEOR_SCHEDULE.flares, stormDir: STORM_DIR, path: FIREBALL_PATH,
+      showerMeteors: SHOWER_METEORS.map(meteor), stormMeteors: STORM_METEORS.map(meteor), heralds: FIREBALL_HERALDS.map(meteor),
+      fragments: FIREBALL_FRAGMENTS.map(piece), burst: FIREBALL_BURST.map(piece), skyStars: METEOR_STARS.map((s) => [s.x, s.y, s.m].map(fixed)),
+      dust: FIREBALL_DUST.map((d) => d.map(fixed)) };
+  }
+  /** The desktop meteor fidgets' carriage, eyes, lights, storm points and crew light through each fidget, for the phone's to replay. */
+  function meteorsTraces() {
+    const fixed = (n: number) => Math.round(n * 1e9) / 1e9;
+    const { meteorBody, meteorEyes, meteorLights, meteorLitAt, placeStormVertices, stormFlights, stormLanded } = meteors;
+    const rank = [3, 4, 0, 1, 7, 5, 15, 2, 9, 11, 13, 12, 8, 10, 14, 6];
+    const c = 140, R = 75.6;
+    const home = new Float64Array(32);
+    for (let i = 0; i < 16; i++) { home[2 * i] = Math.cos(i * 0.4) * R * 0.8; home[2 * i + 1] = Math.sin(i * 0.7) * R * 0.8; }
+    const crew: Array<[number, number]> = [[0, 0], [110, -40], [-150, 60], [40, 180], [-90, -200], [220, 90]];
+    return (["shower", "storm", "fireball"] as const).flatMap((variant) =>
+      [0, 0.03, 0.08, 0.12, 0.2, 0.3, 0.4, 0.5, 0.53, 0.56, 0.6, 0.65, 0.7, 0.72, 0.75, 0.8, 0.84, 0.88, 0.9, 0.93, 0.97, 1].map((et) => {
+        const flights = variant === "storm" ? stormFlights(et, rank, home) : [];
+        const sky = meteorLights(variant, et, flights);
+        const landed = variant === "storm" ? stormLanded(et, rank, home) : null;
+        const body = meteorBody(variant, et), eyes = meteorEyes(variant, et, sky.watch, landed, R);
+        const pts = Array.from({ length: 16 }, (_, i) => [c + (home[2 * i] ?? 0), c + (home[2 * i + 1] ?? 0)]);
+        const progress = new Float64Array(16), placed = new Float64Array(32);
+        const dots = { scale: new Float64Array(16).fill(1), fade: new Float64Array(16).fill(1), white: new Float64Array(16) };
+        const glints = variant === "storm" ? placeStormVertices(et, rank, pts, c, progress, dots, placed).length : 0;
+        return {
+          variant, et, rank, home: Array.from(home),
+          body: [body.hush, body.spin, body.follow, body.wish].map(fixed),
+          eyes: [eyes.look[0], eyes.look[1], eyes.lid, eyes.wide, eyes.happy].map(fixed),
+          watch: [sky.watch.x, sky.watch.y, sky.watch.v].map(fixed), lights: sky.lights.length,
+          lit: crew.map(([x, y]) => fixed(meteorLitAt(sky.lights, x, y))),
+          flights: flights.map((f) => [f.i, f.x, f.y, f.dn].map(fixed)),
+          progress: Array.from(progress, fixed), scale: Array.from(dots.scale, fixed), fade: Array.from(dots.fade, fixed),
+          white: Array.from(dots.white, fixed), glints,
+        };
+      }));
   }
   /** INF-1926: the desktop crew summary's own facts and words for rows in each state it reads, for the phone's sheet to replay. */
   function taskFactReadings() {

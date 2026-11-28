@@ -351,6 +351,15 @@ export const FIREBALL_BURST: readonly Fragment[] = Array.from({ length: 9 }, (_,
   turn: (hash(j, 81) - 0.5) * 0.8,
 }));
 
+/**
+ * The fireball's wake, one grain every 1.5 px of its path: how far it drifts
+ * off the line (-1..1), how white it runs, how bright and how big it is (0..1).
+ */
+export const FIREBALL_DUST: readonly (readonly [number, number, number, number])[] = Array.from(
+  { length: Math.floor(FB.len / 1.5) + 1 },
+  (_, i) => [hash(i, 85) * 2 - 1, hash(i, 86), hash(i, 87), hash(i, 88)] as const,
+);
+
 /** The sky's stars: where, and how bright (0..1). */
 export const METEOR_STARS: readonly { x: number; y: number; m: number }[] = Array.from(
   { length: METEORS.stars },
@@ -813,7 +822,8 @@ function drawFireball(
   const y0 = cy + FB.y0;
   // The wake: dust left along the path, each grain twinkling, drifting off
   // the line and sinking a little as it fades. Brighter where it flared.
-  for (let s = 0, i = 0; s <= run; s += 1.5, i++) {
+  for (let s = 0, i = 0; s <= run && i < FIREBALL_DUST.length; s += 1.5, i++) {
+    const [drift, ink, bright, big] = FIREBALL_DUST[i] as readonly [number, number, number, number];
     // When the head passed this point, by inverting fireballRun.
     const us = (1.1 - Math.sqrt(1.21 - (0.4 * s) / FB.len)) / 0.2;
     const age = (u - us) * crossS;
@@ -823,23 +833,23 @@ function drawFireball(
       (m, [at, k]) => Math.max(m, k * clamp01(1 - Math.abs(us - at) / 0.06)),
       0,
     );
-    const off = (hash(i, 85) - 0.5) * 2 * (1.2 + (7 + 9 * knot) * (1 - Math.exp(-age * 1.1)));
+    const off = drift * (1.2 + (7 + 9 * knot) * (1 - Math.exp(-age * 1.1)));
     const rx = FB.x0 + FB.ux * s - FB.uy * off;
     const ry = FB.y0 + FB.uy * s + FB.ux * off + age * age * 1.4;
     const a = Math.min(
       1,
       fade *
         (0.55 + 0.45 * noise1(t * 8 + i * 2.1)) *
-        (0.45 + 0.75 * hash(i, 87)) *
+        (0.45 + 0.75 * bright) *
         (1.2 + 1.2 * knot) *
         meteorEdge(rx, ry) *
         col.boost *
         clamp01(us / 0.04),
     );
     if (a < 0.02) continue;
-    ctx.fillStyle = rgba(blaze(col, 0.5 * hash(i, 86)), a);
+    ctx.fillStyle = rgba(blaze(col, 0.5 * ink), a);
     ctx.beginPath();
-    ctx.arc(cx + rx, cy + ry, (0.6 + 0.95 * hash(i, 88)) * (1 + 0.5 * knot), 0, TAU);
+    ctx.arc(cx + rx, cy + ry, (0.6 + 0.95 * big) * (1 + 0.5 * knot), 0, TAU);
     ctx.fill();
   }
   // The fragments, each behind the head on its own slowing line.

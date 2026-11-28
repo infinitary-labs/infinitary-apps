@@ -312,7 +312,8 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var captain = 0.0, captainSince = 0.0
         /// A warp's change of size and its light trail (CharacterWarp.ride), on the drawn frame only.
         var scale = 1.0, streak: [CGPoint] = []
-        /// A supernova's flash and kick lighting it toward white (CharacterSupernova.kick), on the drawn frame only.
+        /// A supernova's flash and kick (CharacterSupernova.kick) or a passing meteor (CharacterMeteors.light) lighting
+        /// it toward white, on the drawn frame only.
         var flash = 0.0
         /// A fixed star's eased blend, 0 when it is not pinned, and its glint's twinkle, 0 on a settled frame (INF-3634).
         var star = 0.0, twinkle = 0.0
@@ -376,6 +377,10 @@ final class PhoneSceneMotion: @unchecked Sendable {
     /// The supernova the home crew are kicked by this frame, for the blast under them.
     private var exploding: CharacterSupernova.Frame?
     var supernova: CharacterSupernova.Frame? { lock.withLock { exploding } }
+    private var sky = CharacterMeteors.Ride()
+    /// The meteor fidget lighting the home crew this frame, for the sky round them.
+    private var falling: CharacterMeteors.Frame?
+    var meteors: CharacterMeteors.Frame? { lock.withLock { falling } }
     private var latest = Frame(glyphs: [], marks: [], packets: [], links: [])
     var warp: CharacterWarp.Frame? { lock.withLock { playing } }
     var riders: Int { lock.withLock { riding } }
@@ -412,20 +417,22 @@ final class PhoneSceneMotion: @unchecked Sendable {
         }
     }
 
-    /// `warp` is the warp the first mate plays (CharacterWarp.frame) and `supernova` its supernova
-    /// (CharacterSupernova.frame), each nil when none.
+    /// `warp` is the warp the first mate plays (CharacterWarp.frame), `supernova` its supernova
+    /// (CharacterSupernova.frame) and `meteors` its meteor fidget (CharacterMeteors.frame), each nil when none.
     func frame(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame? = nil,
-               supernova bursting: CharacterSupernova.Frame? = nil) -> Frame {
-        lock.withLock { frameLocked(roster: roster, now: now, settled: settled, warp: playing, supernova: bursting) }
+               supernova bursting: CharacterSupernova.Frame? = nil, meteors raining: CharacterMeteors.Frame? = nil) -> Frame {
+        lock.withLock { frameLocked(roster: roster, now: now, settled: settled, warp: playing, supernova: bursting, meteors: raining) }
     }
     private func frameLocked(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame?,
-                             supernova bursting: CharacterSupernova.Frame?) -> Frame {
+                             supernova bursting: CharacterSupernova.Frame?, meteors raining: CharacterMeteors.Frame?) -> Frame {
         let dt = min(0.05, max(0, now - (last ?? now))); last = now; time = now
-        if settled { ride = CharacterWarp.Ride(); blast = CharacterSupernova.Ride() }
+        if settled { ride = CharacterWarp.Ride(); blast = CharacterSupernova.Ride(); sky = CharacterMeteors.Ride() }
         let warp = settled ? nil : ride.resolve(playing, now: now)
         self.playing = warp
         let supernova = settled ? nil : blast.resolve(bursting, now: now)
         exploding = supernova
+        let meteors = settled ? nil : sky.resolve(raining, now: now)
+        falling = meteors
         if generation != roster.generation { rosterReady = false }
         let initial = generation != roster.generation || !rosterReady
         if initial { members = [:]; packets = []; computerTime = [:]; drawingBooks = [:]; generation = roster.generation; home = nil }
@@ -644,6 +651,12 @@ final class PhoneSceneMotion: @unchecked Sendable {
         if let supernova {
             for i in glyphs.indices where Self.rides(glyphs[i]) {
                 CharacterSupernova.kick(&glyphs[i], around: firstmate, f: supernova, scale: PhoneSceneRoster.ringScale)
+            }
+        }
+        if let meteors {
+            let lights = CharacterMeteors.crewLights(meteors, scale: PhoneSceneRoster.ringScale)
+            for i in glyphs.indices where Self.rides(glyphs[i]) {
+                CharacterMeteors.light(&glyphs[i], around: firstmate, f: meteors, lights: lights, scale: PhoneSceneRoster.ringScale)
             }
         }
         glyphs.sort { $0.depth < $1.depth }

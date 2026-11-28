@@ -20,6 +20,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
 import { seedProject } from "../workspace/seedProject";
+import { renderAnswerShapeSection } from "./intentBrief";
 import { RELEASE_CHECK_FLOOR_MS, RELEASE_CHECK_GAP_MS } from "./releaseChecks";
 
 fakeCrewTimersEachTest();
@@ -142,6 +143,9 @@ describe("the host's release check", () => {
     expect(h.crewmate.promptCalls[0]).toContain(
       `- ${fix?.key} "Fix the negative reading": merged ${new Date(fix?.closedAt ?? 0).toISOString()}, merge commit ${MERGE_COMMIT}`,
     );
+    // Review of INF-7209: an answer's section would ask for a card each day and free edits in
+    // the person's own project folder.
+    expect(h.crewmate.promptCalls[0]).not.toContain(renderAnswerShapeSection());
 
     h.pushTag("tags-with-alpha-68");
     vi.advanceTimersByTime(RELEASE_CHECK_GAP_MS);
@@ -217,6 +221,34 @@ describe("the host's release check", () => {
     expect(h.crewmate.promptCalls[1]).toContain(
       `merged; first shipped in release ${RELEASE.version} (${RELEASE.url})`,
     );
+
+    vi.advanceTimersByTime(2 * RELEASE_CHECK_FLOOR_MS);
+    await h.look();
+    expect(h.checks()).toHaveLength(1);
+  });
+
+  // Review of INF-7209: a check that could not look must reach the first mate, never close
+  // quietly and fail the same way each day.
+  it("keeps a check open and wakes the first mate when its report asks for help", async () => {
+    const h = shop();
+    await h.look();
+    h.pushTag("tags-with-alpha-67");
+    await h.look();
+    const [check] = h.checks();
+    if (!check) throw new Error("no release check was filed");
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1));
+
+    await reportAndSettle(h, "Origin's release pages could not be read.", {
+      workWait: {
+        observation:
+          "The release pages where the project lives answered that the app is not signed in.",
+        cheapestWay: "Sign in where the project lives, then look again.",
+      },
+    });
+    const sorted = h.sorts.filter((sort) => sort.taskId === check.id);
+    expect(sorted.map((sort) => sort.rule)).toEqual(["recovery"]);
+    expect(sorted[0]?.verdict).toBe("captain");
+    expect(h.tasks.get(check.id)?.status).not.toBe("done");
 
     vi.advanceTimersByTime(2 * RELEASE_CHECK_FLOOR_MS);
     await h.look();

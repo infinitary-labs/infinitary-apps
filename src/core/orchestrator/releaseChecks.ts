@@ -18,6 +18,32 @@ export const RELEASE_CHECK_GAP_MS = 3 * 60 * 60 * 1000;
 /** With no new tag, a check starts this long after the last one, or after the oldest listed merge. */
 export const RELEASE_CHECK_FLOOR_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * What a release check's report declared that only someone else can move:
+ * a wait on the captain, the first mate's help, a work wait, recovery ways
+ * or a job it looks at again. Such a report sorts as any task's would and
+ * keeps the check open; any other report sorts `host-check` and closes it
+ * (docs/report-sort.md, row 2c).
+ */
+export type ReleaseCheckReport = {
+  wait?: unknown;
+  needsFirstmate?: string;
+  workWait?: unknown;
+  recoveryWays?: readonly unknown[];
+  checkBack?: unknown;
+};
+
+/** True when a release check's report hands nothing on, so the host may close the check. */
+export function releaseCheckReported(declared: ReleaseCheckReport | undefined): boolean {
+  return (
+    declared?.wait === undefined &&
+    declared?.needsFirstmate === undefined &&
+    declared?.workWait === undefined &&
+    !declared?.recoveryWays?.length &&
+    declared?.checkBack === undefined
+  );
+}
+
 /** What the release checks reach of the supervisor beyond its options. */
 export type ReleaseChecksHost = {
   now(): number;
@@ -138,10 +164,13 @@ export class ReleaseChecks {
     const facts: InPlaceRelease = {
       release: { tasks: listed.map((wait) => wait.id), ...(tags ? { tags } : {}) },
     };
+    // Deliverable "change", as the folder and pull request repairs take: an
+    // answer's brief would ask for a card and free edits in the folder, which
+    // here is the person's own project folder.
     const shape: WorkShape = {
       kind: "chore",
       kind_source: `${KIND_SOURCE.skipped}in-place`,
-      deliverable: "answer",
+      deliverable: "change",
       in_place: facts,
     };
     const record = this.options.tasks.create({

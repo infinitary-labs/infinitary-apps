@@ -30,7 +30,7 @@ import {
   renderFolderRepairBrief,
   renderPullRepairBrief,
 } from "./intentBrief";
-import { ReleaseChecks } from "./releaseChecks";
+import { ReleaseChecks, releaseCheckReported } from "./releaseChecks";
 import type { SettleOwners } from "./settleOwners";
 import { folderMissingText } from "./settleWords";
 
@@ -391,14 +391,18 @@ export class InPlaceWork {
   }
 
   /**
-   * A release check is done once its crewmate reported what it found: each
-   * release it verified is already recorded from that report, and work still
-   * unreleased waits for the next check (docs/task-record.md, "A release check").
+   * A release check is done once its crewmate's newest report handed nothing
+   * on: each release it verified is already recorded from that report, and
+   * work still unreleased waits for the next check. A report that asks for
+   * someone keeps it open for them (docs/task-record.md, "A release check").
    */
   private releaseCheckDone(record: TaskRecord): string | undefined {
-    return this.options.tasks.lastReportAt(record.id) === undefined
-      ? undefined
-      : m.taskReleaseCheckReported();
+    const newest = this.options.tasks.lastReportEntries(record.id).at(-1);
+    if (!newest) return undefined;
+    const { waitingOnCaptain, ...declared } = newest.declared;
+    return releaseCheckReported({ ...declared, wait: waitingOnCaptain })
+      ? m.taskReleaseCheckReported()
+      : undefined;
   }
 
   /**

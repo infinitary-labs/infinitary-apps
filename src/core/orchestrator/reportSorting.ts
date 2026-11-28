@@ -7,6 +7,7 @@ import { boundedRecoveryOf, type ReportDeclaration } from "../tasks/taskTurns";
 import { ciFactOf } from "./ciFact";
 import type { CrewCore } from "./crewCore";
 import type { RelayWoken, TaskRuntime } from "./crewRuntime";
+import { releaseCheckReported } from "./releaseChecks";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { wakeBuiltOn } from "./reportWakes";
 import { earlierPassOf } from "./reviewCarry";
@@ -295,7 +296,7 @@ export class ReportSorting {
         !handed &&
         !(declared?.wait !== undefined && witnesses.decisionCardOpen),
       programPart,
-      hostCheck: isReleaseCheck(record?.shape?.in_place),
+      hostCheck: isReleaseCheck(record?.shape?.in_place) && releaseCheckReported(declared),
       // A session that is gone cannot prove anything either; the record
       // keeps that the host could not tell, and the report still wakes.
       workObservable: task.session?.controlProfile.backgroundWork === "host",

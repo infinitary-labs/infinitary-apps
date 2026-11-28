@@ -841,7 +841,9 @@ The host reads origin's tags itself (`WorkspaceService.originTags`), since the f
 At most one check of a project is open at a time.
 It is a task that works in place, like "Close the pull request" ("A folder a merge left behind"): its shape's `in_place.release` names the listed tasks and the tags it was filed on, and it ships nothing.
 Its brief lists each listed task still merged with no first release, with its key, title, merge time and merge commit, and tells the crewmate to find how the project publishes from the project itself, to count only a published release and to declare what it verifies through `report.first_release` ("First release of merged work").
-Its report wakes nobody (`docs/report-sort.md`, `rule:host-check`) and the host closes it as soon as it reported; a declared release fires "Work ships in a release" (`docs/automation.md`) and the next start sweep starts the waiting task.
+A report that hands nothing on wakes nobody (`docs/report-sort.md`, `rule:host-check`) and the host closes the check as soon as it reported; one that declares a wait on the captain, `needs_firstmate`, a work wait, recovery ways or a check-back sorts as any task's report does and keeps the check open for whoever it names, so a check that could not look never closes quietly.
+It is filed with deliverable `change`, as the folder and pull request repairs are, so its brief carries no answer's card or free edits in the folder.
+A declared release fires "Work ships in a release" (`docs/automation.md`) and the next start sweep starts the waiting task.
 A task still in no published release keeps its waiting task unstarted until a later check finds it.
 
 ## A task waiting to start

@@ -36,9 +36,9 @@ import {
  *   the record keeps it, the check closes, and the waiting task then starts
  *   with a brief naming that release. Another project whose merged work no
  *   task waits on gets no check.
- * - Data: project meterlab over a bare repository here, the fix seeded merged
- *   with its merge commit, and project quietlab with merged work and no
- *   waiting task.
+ * - Data: projects meterlab and quietlab, each a real folder over its own
+ *   bare repository here with a tag; the fix seeded merged a day ago with its
+ *   merge commit, and quietlab's merged work, as old, with no waiting task.
  * - Completion signal: the task board, the model's requests and the fix's
  *   saved first release.
  * - Not proven here: whether a real model finds a release the way a project
@@ -57,37 +57,61 @@ test.afterEach(async () => {
   launched = undefined;
 });
 
-/** A fresh folder holding meterlab, its fix merged a day ago, the waiting task, and quietlab. */
+/**
+ * A project folder over its own bare origin, its one commit tagged, as a
+ * clone of `origin` reads where the project lives: returns the folder and
+ * that commit.
+ */
+function project(userDataDir: string, name: string, origin: string, subject: string) {
+  const bare = join(userDataDir, `github-${name}.git`);
+  git("init", "--bare", "--initial-branch=main", bare);
+  const folder = join(userDataDir, name);
+  git("init", "--initial-branch=main", folder);
+  git("-C", folder, "config", "user.name", "Test");
+  git("-C", folder, "config", "user.email", "test@localhost");
+  git("-C", folder, "commit", "--allow-empty", "-m", subject);
+  git("-C", folder, "remote", "add", "origin", origin);
+  git("-C", folder, "config", `url.${bare}.insteadOf`, origin);
+  git("-C", folder, "push", "origin", "HEAD:refs/heads/main");
+  const commit = git("-C", folder, "rev-parse", "HEAD");
+  git("-C", folder, "push", "origin", `${commit}:refs/tags/v1.4.0`);
+  return { folder, commit };
+}
+
+/**
+ * A fresh folder holding meterlab, its fix merged a day ago, the waiting
+ * task, and quietlab, a real project with merged work no task waits on.
+ */
 function arrange(): { userDataDir: string; mergeCommit: string } {
   const userDataDir = scratchDir("infinitary-release-check-");
-  const origin = "https://github.com/octo/meterlab.git";
-  const bare = join(userDataDir, "github-meterlab.git");
-  git("init", "--bare", "--initial-branch=main", bare);
-  const meterlab = join(userDataDir, "meterlab");
-  git("init", "--initial-branch=main", meterlab);
-  git("-C", meterlab, "config", "user.name", "Test");
-  git("-C", meterlab, "config", "user.email", "test@localhost");
-  git(
-    "-C",
-    meterlab,
-    "commit",
-    "--allow-empty",
-    "-m",
+  const origins = {
+    meterlab: "https://github.com/octo/meterlab.git",
+    quietlab: "https://github.com/octo/quietlab.git",
+  };
+  const meterlab = project(
+    userDataDir,
+    "meterlab",
+    origins.meterlab,
     "fix: stop the meter idling on a cold start",
   );
-  git("-C", meterlab, "remote", "add", "origin", origin);
-  git("-C", meterlab, "config", `url.${bare}.insteadOf`, origin);
-  git("-C", meterlab, "push", "origin", "HEAD:refs/heads/main");
-  const mergeCommit = git("-C", meterlab, "rev-parse", "HEAD");
-  git("-C", meterlab, "push", "origin", `${mergeCommit}:refs/tags/v1.4.0`);
+  const quietlab = project(
+    userDataDir,
+    "quietlab",
+    origins.quietlab,
+    "fix: round the quiet reading",
+  );
+  const mergeCommit = meterlab.commit;
   const db = openDatabase(userDataDir);
-  for (const name of ["meterlab", "quietlab"]) {
+  for (const [name, folder] of [
+    ["meterlab", meterlab.folder],
+    ["quietlab", quietlab.folder],
+  ] as const) {
     seedProject(db, {
       id: `repo-${name}`,
-      path: name === "meterlab" ? meterlab : join(userDataDir, name),
+      path: folder,
       name,
       setupKind: "clone",
-      origin: name === "meterlab" ? origin : `https://github.com/octo/${name}.git`,
+      origin: origins[name],
       runsOn: null,
       delivery: "direct-pr",
       rigor: "quick",
@@ -96,13 +120,13 @@ function arrange(): { userDataDir: string; mergeCommit: string } {
   }
   const dayAgo = Date.now() - DAY_AND_HOUR;
   const tasks = new TaskService({ db, now: () => dayAgo });
-  const merged = (id: string, title: string, repoId: string) => {
+  const merged = (id: string, title: string, repoId: string, mergedSha: string) => {
     seedTask(tasks, { id, title, repoId, status: "queued", startPolicy: "on-request" });
-    seedDelivery(tasks, id, { mergedSha: mergeCommit });
+    seedDelivery(tasks, id, { mergedSha });
     tasks.close(id, { status: "done", reason: "merged", actor: "host" });
   };
-  merged(RELEASE_CHECK_FIX.id, RELEASE_CHECK_FIX.title, "repo-meterlab");
-  merged("quietfix1", "Round the quiet reading", "repo-quietlab");
+  merged(RELEASE_CHECK_FIX.id, RELEASE_CHECK_FIX.title, "repo-meterlab", mergeCommit);
+  merged("quietfix1", "Round the quiet reading", "repo-quietlab", quietlab.commit);
   seedTask(tasks, {
     id: "thank1",
     title: "Thank the reporter of the cold start issue",

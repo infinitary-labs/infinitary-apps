@@ -109,6 +109,8 @@
   "commandMoveRightWords": "flecha, derecha, siguiente",
   "commandMoveUp": "Mover hacia arriba",
   "commandMoveUpWords": "flecha, arriba, anterior",
+  "commandNoticeMacLogUnreadable": "Tu primer oficial no pudo iniciarse. Esta cuenta no puede leer el registro de macOS que podría explicar por qué.",
+  "commandNoticeMacReason": "macOS no pudo iniciar a tu primer oficial: {reason}",
   "commandNoticeNotAnsweringRetry": "Tu primer oficial está en marcha pero no responde. Espéralo, o inícialo aquí para volver a conectarte con él.",
   "commandNoticeStopping": "Tu primer oficial se está deteniendo. Esta ventana lo inicia aquí cuando se haya detenido.",
   "commandNoticeWindowCrashed": "Tu primer oficial se detuvo sin decir por qué y no se ha vuelto a iniciar. Inícialo aquí para volver a iniciarlo.",

@@ -109,6 +109,8 @@
   "commandMoveRightWords": "seta, direita, próximo",
   "commandMoveUp": "Mover para cima",
   "commandMoveUpWords": "seta, cima, anterior",
+  "commandNoticeMacLogUnreadable": "Seu imediato não conseguiu iniciar. Esta conta não pode ler o registro do macOS que pode explicar por quê.",
+  "commandNoticeMacReason": "O macOS não conseguiu iniciar seu imediato: {reason}",
   "commandNoticeNotAnsweringRetry": "Seu imediato está em execução, mas não responde. Espere por ele, ou inicie-o aqui para se conectar a ele de novo.",
   "commandNoticeStopping": "Seu imediato está sendo parado. Esta janela o inicia aqui assim que ele parar.",
   "commandNoticeWindowCrashed": "Seu imediato parou sem dizer por quê e não iniciou de novo. Inicie-o aqui para iniciá-lo de novo.",

@@ -109,6 +109,8 @@
   "commandMoveRightWords": "سهم, يمين, التالي",
   "commandMoveUp": "التحرك لأعلى",
   "commandMoveUpWords": "سهم, أعلى, السابق",
+  "commandNoticeMacLogUnreadable": "تعذّر بدء نائب القبطان. لا يستطيع هذا الحساب قراءة سجل macOS الذي قد يوضح السبب.",
+  "commandNoticeMacReason": "لم يتمكن macOS من بدء نائب القبطان: {reason}",
   "commandNoticeNotAnsweringRetry": "نائب القبطان يعمل لكنه لا يجيب. انتظره، أو ابدأه هنا لتتصل به من جديد.",
   "commandNoticeStopping": "يجري إيقاف نائب القبطان. تبدأه هذه النافذة هنا بعد أن يتوقف.",
   "commandNoticeWindowCrashed": "توقف نائب القبطان دون أن يذكر السبب ولم يبدأ من جديد. ابدأه هنا ليبدأ من جديد.",

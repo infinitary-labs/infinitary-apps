@@ -212,6 +212,10 @@ export class BesideWindow {
   private ownerTimer: ReturnType<typeof setInterval> | null = null;
   /** When this window last started the command, until that one welcomes it. */
   private startedAt: number | null;
+  private macStartDiagnostic: {
+    startedAt: number;
+    result: import("./macStartReason").MacStartReason;
+  } | null = null;
   /**
    * Restart it under way, until its own replacement is known or the run it
    * replaces is known to survive (`settleRestart`): the run its notice
@@ -1239,7 +1243,8 @@ export class BesideWindow {
     // waits for this one as long as it would for a start entry, then says
     // it stopped without saying why.
     const started = this.startedAt;
-    if (started !== null && status.running === false && (end?.at ?? 0) < started)
+    const neverStarted = started !== null && status.running === false && (end?.at ?? 0) < started;
+    if (neverStarted)
       end =
         now() - started < waitMs
           ? null
@@ -1276,8 +1281,31 @@ export class BesideWindow {
       goneFor: now() - (end.at ?? this.stoppedAt),
       waitMs,
     });
+    if (neverStarted && notice?.state === "stopped" && beside.starter?.macStartReason) {
+      if (this.macStartDiagnostic?.startedAt !== started) {
+        this.macStartDiagnostic = { startedAt: started, result: null };
+        void beside.starter.macStartReason(started).then((result) => {
+          if (
+            this.closed ||
+            this.startedAt !== started ||
+            this.macStartDiagnostic?.startedAt !== started
+          )
+            return;
+          this.macStartDiagnostic.result = result;
+          this.read();
+        });
+      }
+    }
+    const diagnostic =
+      neverStarted && this.macStartDiagnostic?.startedAt === started
+        ? this.macStartDiagnostic.result
+        : null;
     // Beside the program this window starts, the notice speaks of the person's first mate.
-    this.show(notice && beside.starter ? { ...notice, byWindow: true } : notice);
+    this.show(
+      notice && beside.starter
+        ? { ...notice, byWindow: true, ...(diagnostic ? { macStartDiagnostic: diagnostic } : {}) }
+        : notice,
+    );
   }
 
   private show(shown: CommandNotice | null): void {
@@ -1301,7 +1329,8 @@ export class BesideWindow {
       was?.state === notice?.state &&
       was?.ending === notice?.ending &&
       was?.byWindow === notice?.byWindow &&
-      was?.retries === notice?.retries
+      was?.retries === notice?.retries &&
+      JSON.stringify(was?.macStartDiagnostic) === JSON.stringify(notice?.macStartDiagnostic)
     )
       return;
     this.shown = notice;

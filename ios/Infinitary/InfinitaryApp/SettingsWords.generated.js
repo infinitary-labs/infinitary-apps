@@ -15148,7 +15148,11 @@ ${events}` : prompt;
      * Start it here then stops nothing, and the app starting again connects
      * to whichever run is there; the line says so.
      */
-    retries: literal(true).optional()
+    retries: literal(true).optional(),
+    macStartDiagnostic: discriminatedUnion("kind", [
+      strictObject({ kind: literal("reason"), text: string() }),
+      strictObject({ kind: literal("unreadable") })
+    ]).optional()
   });
   const updateChannelSchema = _enum(["stable", "alpha"]);
   const updateWorkSchema = object({

@@ -824,6 +824,8 @@
   {"said":{"m":"commandMoveRightWords"},"words":"arrow, right, next"},
   {"said":{"m":"commandMoveUp"},"words":"Move up"},
   {"said":{"m":"commandMoveUpWords"},"words":"arrow, up, previous"},
+  {"said":{"m":"commandNoticeMacLogUnreadable"},"words":"Your first mate could not start. This account cannot read the macOS log that may say why."},
+  {"said":{"m":"commandNoticeMacReason","a":{"reason":"‹reason›"}},"words":"macOS could not start your first mate: ‹reason›"},
   {"said":{"m":"commandNoticeNotAnsweringRetry"},"words":"Your first mate is running but not answering. Wait for it, or start it here to connect to it again."},
   {"said":{"m":"commandNoticeStopping"},"words":"Your first mate is being stopped. This window starts it here once it has stopped."},
   {"said":{"m":"commandNoticeWindowCrashed"},"words":"Your first mate stopped without saying why and has not started again. Start it here to start it again."},

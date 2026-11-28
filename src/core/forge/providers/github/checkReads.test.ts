@@ -1,3 +1,5 @@
+import { setCurrentLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import { describe, expect, it } from "vitest";
 import { stub } from "../../../../../tests/helpers/githubForgeStub";
 
@@ -80,19 +82,19 @@ describe("GitHub pull request check ownership (issue #89)", () => {
       };
       const withForeignQueued = await forge.checks(change);
       expect(withForeignQueued.items.map((job) => job.run)).toEqual([original.id]);
-      console.log("Shared-head fixture", {
-        pull: change.number,
-        withLinks,
-        read,
-        withForeignQueued,
-      });
       if (!withLinks) {
         requests = [...requests, { ...request, number: 1948 }];
-        expect(await forge.checks(change)).toMatchObject({
-          complete: false,
-          items: [],
-          problem: expect.stringContaining("did not identify"),
-        });
+        // The crew reads this reason, so it stays English whatever the app speaks (docs/i18n.md).
+        setCurrentLanguage("de");
+        try {
+          expect(await forge.checks(change)).toMatchObject({
+            complete: false,
+            items: [],
+            problem: "GitHub did not identify the pull request for some workflow runs.",
+          });
+        } finally {
+          setCurrentLanguage(SOURCE_LANGUAGE);
+        }
       }
     },
   );
@@ -142,7 +144,6 @@ describe("GitHub pull request check ownership (issue #89)", () => {
         }),
       });
       const read = await forge.checks(change);
-      console.log("Shared workflow links", { sameSource, read });
       expect({
         complete: read.complete,
         jobs: read.items.map(({ state, run }) => [state, run]),

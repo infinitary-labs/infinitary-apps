@@ -10,9 +10,10 @@ extension PhoneJourney {
     /// once it opened a card (`push-opened`); each home's own sealed send is read at its relay, and `PhonePushTests`
     /// owns opening each computer's sealed card under its own key. Completion: the bar names the computer shown, each
     /// computer shows only its own cards, the sheet marks the other as answering or not as its home goes away and comes
-    /// back with no switch, a keyboard's Return shows it, both stay kept through a relaunch and hand each home its own
-    /// key again (each home let go of its registration first) under which it seals a new card, the push's tap shows its
-    /// computer with its card, and leaving each in turn ends on the first screen. A test cannot change the simulator's own
+    /// back with no switch, a keyboard's Return shows it, the first computer's own theme, worn, stays worn and listed
+    /// while the second shows and goes back to Dark once the first removes it, both stay kept through a relaunch and
+    /// hand each home its own key again (each home let go of its registration first) under which it seals a new card,
+    /// the push's tap shows its computer with its card, and leaving each in turn ends on the first screen. A test cannot change the simulator's own
     /// network, so the phone's path going and coming back while the sheet stays open comes from the app's stand-in
     /// path monitor (`phone-path`); the real monitor's own readings are not driven.
     func testSeveralComputers() async throws {
@@ -114,6 +115,21 @@ extension PhoneJourney {
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(cardHeading("Review the phone connection finding").exists, "The second computer's card is not the first's")
 
+        // The captain's choice on the review of own themes on the phone (docs/ios.md, "Settings"): each computer's own
+        // themes are kept by the phone, so an own theme from the first computer, worn, survives showing the second one,
+        // which lists none, and a relaunch, and goes back to its base only once the first computer removes it.
+        _ = try await home("own-theme-save")
+        try reopenAppearance()
+        let terminal = phoneThemeTiles.buttons["phone-theme-own-old-terminal"]
+        bringThemeTileUp(terminal)
+        XCTAssertTrue(terminal.waitForPresence(timeout: 10), app.debugDescription)
+        bringThemeTileUp(terminal)
+        tapOnPhone(terminal)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: terminal, timeout: 10), .completed)
+        let closeSettings = app.buttons["close-phone-settings"]
+        tapOnPhone(closeSettings)
+        XCTAssertTrue(closeSettings.waitForAbsence(timeout: 10), app.debugDescription)
+
         // Both computers stay kept through a relaunch, the one shown last still shown, each keeping its key. Each home
         // first lets go of the registration it holds, so what it holds after is what the relaunched phone handed it.
         let firstCleared = try await home("push-cleared")
@@ -162,6 +178,13 @@ extension PhoneJourney {
         XCTAssertEqual(secondAgain["keys"] as? [String], secondKeys, "The second computer keeps its key through the relaunch")
         _ = try await homeAt(secondControl, "homes-card")
         try await sentSealed(secondControl, after: secondSent)
+        // By now the second computer has answered its own themes, an empty list, long since.
+        try reopenAppearance()
+        bringThemeTileUp(terminal)
+        XCTAssertTrue(terminal.waitForPresence(timeout: 10), "The first computer's own theme is still listed: \(app.debugDescription)")
+        XCTAssertTrue(terminal.isSelected, "An own pick survives showing another computer")
+        tapOnPhone(closeSettings)
+        XCTAssertTrue(closeSettings.waitForAbsence(timeout: 10), app.debugDescription)
 
         try leaveShown()
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Your computer"), object: computer, timeout: 30),
@@ -170,6 +193,13 @@ extension PhoneJourney {
         XCTAssertFalse(app.buttons["paste-link"].exists, "The first computer shows, not the first screen")
         let kept = try await home("push-state", method: "GET")
         XCTAssertEqual(kept["keys"] as? [String], firstKeys, "The first computer keeps the phone's registration and key: \(kept)")
+        _ = try await home("own-theme-remove")
+        try reopenAppearance()
+        bringThemeScopeDown()
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: phoneThemeTiles.buttons["Dark"], timeout: 10),
+                       .completed, "The computer that sent the pick removed it: it goes back to its base")
+        tapOnPhone(closeSettings)
+        XCTAssertTrue(closeSettings.waitForAbsence(timeout: 10), app.debugDescription)
         try leaveShown()
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 30), "No computer left: the first screen")
     }

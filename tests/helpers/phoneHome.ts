@@ -88,6 +88,7 @@ import { phoneSecondHome } from "./phoneSecondHome";
 import { secretAskShown } from "./phoneSecretAsk";
 import {
   PHONE_SETTINGS_SESSION_LATER,
+  phoneAppearanceCommand,
   phoneSettingsState,
   readPhoneAllowanceAgain,
   seedPhoneAutomations,
@@ -1252,14 +1253,6 @@ export async function startPhoneHome(
         case "POST panel-write":
           result = await panels.write(41);
           break;
-        // The music on at the computer, which a panel reading settings.current shows.
-        case "POST panel-music-on": {
-          const look = await core.dispatch("inf:settings:appearance:get", []);
-          result = await core.dispatch("inf:settings:appearance:set", [
-            { ...look, ambientMusic: true },
-          ]);
-          break;
-        }
         case "POST panel-note":
           result = await panels.note(1);
           break;
@@ -3503,7 +3496,7 @@ export async function startPhoneHome(
           await removeEveryDevice(core, await controlBody(request));
           break;
         default:
-          result = await takeOver.command(`${request.method} ${command}`);
+          result = await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver);
           if (result === undefined) {
             response.writeHead(404).end();
             return;

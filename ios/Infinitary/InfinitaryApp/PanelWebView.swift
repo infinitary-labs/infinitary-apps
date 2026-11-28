@@ -49,8 +49,8 @@ import SwiftUI
     private var loading: Task<Void, Never>?
     private var input: PhoneJSON?
     private var theme = "light"
-    /// The built-in color theme the panel draws on `theme`, or none (docs/themes.md, "On the phone").
-    private var colorTheme: PhoneColorTheme?
+    /// The color theme the panel draws on `theme`, or none (docs/themes.md, "On the phone").
+    private var colorTheme: PhoneDrawnTheme?
     /// The device's Text Size as a factor of the Mac's sizes (`PhoneTextSize`), which the page draws the panel at.
     private var textScale = 1.0
     private var collapsed: Bool
@@ -69,7 +69,7 @@ import SwiftUI
     }
 
     /// The panel's one view: made the first time it is asked for, then the same view.
-    func makeView(theme: String, colorTheme: PhoneColorTheme?) -> WKWebView {
+    func makeView(theme: String, colorTheme: PhoneDrawnTheme?) -> WKWebView {
         if let view { updateTheme(theme, colorTheme: colorTheme); return view }
         self.theme = theme
         self.colorTheme = colorTheme
@@ -192,12 +192,12 @@ import SwiftUI
         input = nil; stand = .loading
     }
 
-    func updateTheme(_ theme: String, colorTheme: PhoneColorTheme?) {
+    func updateTheme(_ theme: String, colorTheme: PhoneDrawnTheme?) {
         guard theme != self.theme || colorTheme != self.colorTheme else { return }
         self.theme = theme
         self.colorTheme = colorTheme
         guard stand == .drawn else { return }
-        view?.evaluateJavaScript("window.phonePanel?.theme('\(theme == "dark" ? "dark" : "light")', \(colorTheme.map { "'\($0.rawValue)'" } ?? "null"))",
+        view?.evaluateJavaScript("window.phonePanel?.theme('\(theme == "dark" ? "dark" : "light")', \(PhoneDrawnTheme.script(colorTheme)))",
                                  completionHandler: nil)
     }
 
@@ -263,7 +263,7 @@ import SwiftUI
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard webView === view, case .object(var fields)? = input else { return }
-        fields["theme"] = .string(theme); fields["colorTheme"] = colorTheme.map { .string($0.rawValue) } ?? .null; fields["collapsed"] = .bool(collapsed); fields["textScale"] = .number(textScale)
+        fields["theme"] = .string(theme); fields["colorTheme"] = colorTheme?.frameValue ?? .null; fields["collapsed"] = .bool(collapsed); fields["textScale"] = .number(textScale)
         do {
             webView.callAsyncJavaScript("await window.phonePanel.mount(input)", arguments: ["input": try PhoneJSON.object(fields).foundation],
                                        in: nil, in: .page) { [weak self] result in
@@ -484,10 +484,10 @@ struct PanelWebView: UIViewRepresentable {
     @Environment(\.dynamicTypeSize) private var typeSize
     func makeUIView(context: Context) -> WKWebView {
         host.updateTextScale(PhoneTextSize.scale(for: typeSize))
-        return host.makeView(theme: theme, colorTheme: PhoneColorTheme.shown(colorTheme, dark: theme == "dark"))
+        return host.makeView(theme: theme, colorTheme: PhoneDrawnTheme.shown(colorTheme, dark: theme == "dark"))
     }
     func updateUIView(_ view: WKWebView, context: Context) {
-        host.updateTheme(theme, colorTheme: PhoneColorTheme.shown(colorTheme, dark: theme == "dark"))
+        host.updateTheme(theme, colorTheme: PhoneDrawnTheme.shown(colorTheme, dark: theme == "dark"))
         host.updateTextScale(PhoneTextSize.scale(for: typeSize))
     }
 }

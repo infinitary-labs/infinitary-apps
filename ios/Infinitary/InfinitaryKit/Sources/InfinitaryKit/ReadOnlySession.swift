@@ -199,6 +199,11 @@ public struct PhoneNotice: Equatable, Sendable {
     /// implied by the major that folded it in; `homeUpdate` is its last answer (docs/ios.md, "Updating the computer").
     public private(set) var homeUpdates = false
     public private(set) var homeUpdate: PhoneHomeUpdate?
+    /// INF-6888's part 3: the person's own color themes as the computer last worked them out, read from a computer whose
+    /// welcome lists `own-themes-worked` and again whenever its look changes; a computer without it leaves the list
+    /// this phone last read from it (`PhoneOwnThemes`), which the app's appearance keeps.
+    public private(set) var ownThemes: [PhoneOwnTheme]
+    @ObservationIgnored private var homeWorksOutOwnThemes = false
     /// The connection ended just as the computer was about to restart for its update: the line says Restarting, never
     /// Out of reach, and after `PhoneHomeRestart.patience` says it has not come back. It never claims the update worked.
     public private(set) var homeRestartingSince: Date?
@@ -388,6 +393,14 @@ public struct PhoneNotice: Equatable, Sendable {
         args.isEmpty && (channel == PhoneRequest.homeUpdateInstall.rawValue || channel == PhoneRequest.homeUpdateLater.rawValue)
     }
 
+    /// Reads the own themes, for the app's appearance to keep under this computer's pin.
+    public func readOwnThemes() async throws {
+        guard homeWorksOutOwnThemes else { return }
+        let answer = try await request(.ownThemes, as: PhoneOwnThemes.Answer.self)
+        guard answer.themes != ownThemes else { return }
+        ownThemes = answer.themes
+    }
+
     public func readHomeUpdate() async throws {
         guard homeUpdates else { return }
         homeUpdate = try await request(.homeUpdate, as: PhoneHomeUpdate.self)
@@ -414,6 +427,7 @@ public struct PhoneNotice: Equatable, Sendable {
             if homeRestartingSince != nil { homeUpdate = nil }
             homeRestartingSince = nil; homeNotBack = false
             if homeUpdates { Task { [weak self] in try? await self?.readHomeUpdate() } }
+            if homeWorksOutOwnThemes { Task { [weak self] in try? await self?.readOwnThemes() } }
             return
         }
         guard was == "in-reach", homeRestartingSince == nil, homeUpdate?.aboutToRestart == true else { return }
@@ -838,6 +852,7 @@ public struct PhoneNotice: Equatable, Sendable {
 
     public init(mac: JoinedMac, phone: PhoneIdentity) {
         self.mac = mac; self.phone = phone
+        ownThemes = PhoneOwnThemes.saved()[mac.pin] ?? []
         cardDrafts = PhoneCardDrafts(
             send: { [weak self] cardID, change in
                 guard let self else { throw PhoneError.unavailable }
@@ -1345,6 +1360,7 @@ public struct PhoneNotice: Equatable, Sendable {
             homeTakesBack = (frame["changes"] as? [String] ?? []).contains(PhoneContract.takeBackMessage)
             homeGroupsCrew = (frame["changes"] as? [String] ?? []).contains(PhoneContract.crewGrouping)
             if !homeGroupsCrew { crewGrouping = "computer" }
+            homeWorksOutOwnThemes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.ownThemesWorked)
             homeTakesPushes = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePush)
             homeTakesWithdrawals = (frame["changes"] as? [String] ?? []).contains(PhoneContract.phonePushWithdraw)
             servesPanels = folded || (frame["changes"] as? [String] ?? []).contains(PhonePanelRequest.change)
@@ -1471,6 +1487,10 @@ public struct PhoneNotice: Equatable, Sendable {
             if homeGroupsCrew, frame["channel"] as? String == "inf:shell:preferences",
                let look = (frame["payload"] as? [String: Any])?["appearance"] as? [String: Any] {
                 crewGrouping = look["crewGrouping"] as? String ?? "computer"
+            }
+            // Saving, changing or removing an own theme changes the look; a replay ends in the welcome's own read.
+            if !replayed, homeWorksOutOwnThemes, frame["channel"] as? String == "inf:shell:preferences" {
+                Task { [weak self] in try? await self?.readOwnThemes() }
             }
             // A replay ends in reach, where the open page reads again anyway.
             if !replayed, let channel = frame["channel"] as? String,

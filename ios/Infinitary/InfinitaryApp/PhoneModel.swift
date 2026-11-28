@@ -54,6 +54,9 @@ struct AddressJoin: Equatable {
     /// Whether the kept computers were read since launch: until then the push record is not told the list, so a wake
     /// before the first unlock or before the read drops no computer's key.
     @ObservationIgnored private var restored = false
+    /// The kept computers' pins once the list is read, none before, so a launch still reading it forgets nothing kept by pin.
+    /// `kept` is set before `restored` in the same step, so watching this sees both.
+    var keptPins: Set<String>? { restored ? Set(kept.all.map(\.pin)) : nil }
     /// A notification's tap waiting for its computer to show: a join under way, or a list not read yet.
     @ObservationIgnored private var tapped: (card: String, computer: String?)?
     private var identity: PhoneIdentity?

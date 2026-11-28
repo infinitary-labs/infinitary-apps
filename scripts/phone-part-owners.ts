@@ -49,6 +49,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneColorTheme.swift",
     "ios/Infinitary/InfinitaryApp/PhoneThemeTiles.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneColorThemes.generated.swift",
+    // The person's own themes the computer sends, kept for Yours, and the rule cards and panels draw them with.
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneOwnThemes.swift",
+    "ios/Infinitary/CardRuntime/themeRule.ts",
     "ios/Infinitary/InfinitaryApp/PhoneCardBodies.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardRow.swift",
     // The Maximize card control in every card head beside a side panel (PhoneCards.swift).
@@ -283,7 +286,10 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/CardRuntime/textSize.ts",
     "ios/Infinitary/InfinitaryApp/PhoneTextSize.swift",
   ] },
-  { parts: family("settings"), files: ["scripts/generate-phone-settings.ts", "tests/helpers/phoneSettings.ts"] },
+  { parts: family("settings"), files: ["scripts/generate-phone-settings.ts"] },
+  // The test home's appearance commands sit with its settings seeds: the panels part turns the music on, and the
+  // join-read part saves and removes an own theme (INF-7024).
+  { parts: [...family("settings"), ...family("panels"), "join-read"], files: ["tests/helpers/phoneSettings.ts"] },
   // Every native gate runs the Swift package tests before its part. One smoke part owns their inputs; the weak-link
   // part's own package target (INF-4326) is its test code, read in affected-phone.
   { parts: ["join-read"], files: ["ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/"] },

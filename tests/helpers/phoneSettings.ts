@@ -8,6 +8,8 @@ import { UsageStore } from "@core/storage/usageStore";
 import { seedTask } from "@core/tasks/seedTask";
 import { TaskService } from "@core/tasks/taskService";
 import type { AutomationSave } from "@shared/automation";
+import { checkOwnTheme, type OwnThemeAsk } from "@shared/ownColorThemes";
+import type { Appearance } from "@shared/preferences";
 import type { WorkKind } from "@shared/routingPolicy";
 import {
   seedAccountAuth,
@@ -275,6 +277,42 @@ export function seedPhoneSettings(root: string, userData: string): void {
   // Read once the computer's allowance reader starts, in place of every provider's own address.
   process.env.INFINITARY_QUOTA_FIXTURE_DIR = seedAllowance(allowanceDir(root), now);
   seedWork(userData, now);
+}
+
+/** INF-6888's own-theme fixture: the old green terminal, as the first mate's trial wrote it from one sentence. */
+const OLD_TERMINAL: OwnThemeAsk = {
+  name: "Old terminal",
+  colors: {
+    background: "#020a03",
+    text: "#3ddc5a",
+    accent: "#8dff9c",
+    hot: "#ffd23d",
+    danger: "#ff5a4d",
+  },
+};
+
+/**
+ * The test home's commands that set the computer's appearance: the music on,
+ * which a panel reading settings.current shows, and INF-7024's own theme saved
+ * and removed again, which the phone lists under Yours. Any other command goes
+ * on to `next`.
+ */
+export async function phoneAppearanceCommand(
+  core: Core,
+  command: string,
+  next: { command(command: string): Promise<unknown> },
+): Promise<unknown> {
+  const checked = checkOwnTheme(OLD_TERMINAL);
+  if ("refusal" in checked) throw new Error(checked.refusal);
+  const changes: Record<string, Partial<Appearance>> = {
+    "POST panel-music-on": { ambientMusic: true },
+    "POST own-theme-save": { ownColorThemes: [checked.theme] },
+    "POST own-theme-remove": { ownColorThemes: [] },
+  };
+  const change = changes[command];
+  if (!change) return next.command(command);
+  const look = await core.dispatch("inf:settings:appearance:get", []);
+  return core.dispatch("inf:settings:appearance:set", [{ ...look, ...change }]);
 }
 
 /** What is left of the first account's session window once the computer reads its allowance again. */

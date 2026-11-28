@@ -299,6 +299,47 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     }
   });
 
+  // INF-6888's part 3, Yours on the phone: the phone holds none of the math, so the computer
+  // answers each saved theme worked out, its base and its tokens, and an empty list once removed.
+  // Fixture: the plan trial's old green terminal, whose background, text and accent no floor moves.
+  it("reads each own color theme worked out for a view that holds none of the math", async () => {
+    const was = await appearance();
+    const terminal = {
+      name: "Old terminal",
+      colors: {
+        background: "#020a03",
+        text: "#3ddc5a",
+        accent: "#8dff9c",
+        hot: "#ffd23d",
+        danger: "#ff5a4d",
+      },
+    };
+    try {
+      expect(await core.dispatch("inf:settings:own-themes:get", [])).toEqual({ themes: [] });
+      await asked("own-theme", { save: terminal });
+      const { themes } = await core.dispatch("inf:settings:own-themes:get", []);
+      expect(themes).toEqual([
+        {
+          id: "own-old-terminal",
+          name: "Old terminal",
+          base: "dark",
+          tokens: expect.objectContaining({
+            "--bg-0": "#020a03",
+            "--fg-1": "#3ddc5a",
+            "--accent": "#8dff9c",
+            "--hot": "#ffd23d",
+            "--danger": "#ff5a4d",
+            "--on-accent": expect.stringMatching(/^#[0-9a-f]{6}$/),
+          }),
+        },
+      ]);
+      await asked("own-theme", { remove: "Old terminal" });
+      expect(await core.dispatch("inf:settings:own-themes:get", [])).toEqual({ themes: [] });
+    } finally {
+      await core.dispatch("inf:settings:appearance:set", [{ ...was, ownColorThemes: [] }]);
+    }
+  });
+
   it("chooses a language by its tag and goes back to the default with null", async () => {
     const tag = (
       ACTIONS.language.value.safeParse({ language: "zh-Hans" }).success ? "zh-Hans" : null

@@ -29,7 +29,7 @@ import { replayedPointing } from "@shared/events";
 import type { CoreInvokeChannel, InvokeResponse, PushChannel } from "@shared/ipc";
 import type { JoinAtAnswer, JoinAtOptions } from "@shared/joinByAddress";
 import { DEFAULT_SAVED_KEYMAP, type SavedKeymap, type SavedKeymapRead } from "@shared/keymap";
-import type { PanelFiles, PanelFilesRequest } from "@shared/personal/panelFiles";
+import type { PanelFiles, PanelFilesRequest, PanelLibrary } from "@shared/personal/panelFiles";
 import type { KeySystem } from "@shared/platform";
 import { DEFAULT_SHELL_PREFERENCES, type ShellPreferences } from "@shared/preferences";
 import type { WindowKeyReminders } from "@shared/windowAnswer";
@@ -767,6 +767,16 @@ export class Shell {
    */
   panelFiles(request: PanelFilesRequest): Promise<PanelFiles> {
     return this.dispatch("inf:plugins:files", [request]);
+  }
+
+  /**
+   * The first mate's panel library at the version a panel's files were
+   * built for, asked as a phone asks it, for a window on another version
+   * (docs/view.md, "Panels in every window"). Null when the first mate is
+   * not on that version.
+   */
+  panelLibrary(version: string): Promise<PanelLibrary> {
+    return this.dispatch("inf:plugins:library", [{ version }]);
   }
 
   /** Stops whatever this app is running, for a quit. */

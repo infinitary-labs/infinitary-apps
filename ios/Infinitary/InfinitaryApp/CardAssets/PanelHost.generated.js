@@ -133014,6 +133014,18 @@ ${FRAME_KEYBOARD_SCRIPT}
 })();`;
   const FRAME_BRIDGE_SHA256 = "sha256-5v7hzdTC8z16Wk4TaQGyuznSbwtGOsY8WXZfh0yNf/w=";
   const APP_FRAME_SCHEME = "app-frame";
+  const FRAME_LIB_HOST = "lib";
+  const FRAME_LIB_BOOT = "boot.mjs";
+  const BUILTIN_FRAME_PANELS = [
+    "activity",
+    "automation",
+    "knowledge",
+    "now",
+    "batches-panel"
+  ];
+  function frameLibUrl(file, host = FRAME_LIB_HOST) {
+    return `${APP_FRAME_SCHEME}://${host}/${file}`;
+  }
   const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
   const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
   const FRAME_FONT_SOURCE = `${APP_FRAME_SCHEME}:`;
@@ -133025,27 +133037,15 @@ ${FRAME_KEYBOARD_SCRIPT}
   }
   frameCsp();
   frameCsp([], SRCDOC_FONT_SOURCE);
-  function panelScriptSources(mountHost) {
-    return [`${APP_FRAME_SCHEME}://lib/`, `${APP_FRAME_SCHEME}://${mountHost}/`];
+  function panelScriptSources(mountHost, libHost = FRAME_LIB_HOST) {
+    return [`${APP_FRAME_SCHEME}://${libHost}/`, `${APP_FRAME_SCHEME}://${mountHost}/`];
   }
-  function panelFrameCsp(inlineHashes, mountHost) {
+  function panelFrameCsp(inlineHashes, mountHost, libHost = FRAME_LIB_HOST) {
     const scripts = [
       ...[FRAME_BRIDGE_SHA256, ...inlineHashes].map((hash) => `'${hash}'`),
-      ...panelScriptSources(mountHost)
+      ...panelScriptSources(mountHost, libHost)
     ].join(" ");
     return `default-src 'none'; style-src 'unsafe-inline'; font-src ${FRAME_FONT_SOURCE}; img-src ${FRAME_IMAGE_SOURCE}; script-src ${scripts}`;
-  }
-  const FRAME_LIB_HOST = "lib";
-  const FRAME_LIB_BOOT = "boot.mjs";
-  const BUILTIN_FRAME_PANELS = [
-    "activity",
-    "automation",
-    "knowledge",
-    "now",
-    "batches-panel"
-  ];
-  function frameLibUrl(file) {
-    return `${APP_FRAME_SCHEME}://${FRAME_LIB_HOST}/${file}`;
   }
   const FRAME_TEMPLATE_MAX_BYTES = 524288;
   const FRAME_TITLE_MAX = 120;
@@ -133212,7 +133212,7 @@ ${FRAME_KEYBOARD_SCRIPT}
       `<script>${FRAME_BRIDGE_SCRIPT}<\/script>`,
       `<script type="importmap">${parts.importMap}<\/script>`,
       `<script type="application/json" id="${PANEL_CONFIG_ID}">${scriptSafeJson(parts.config)}<\/script>`,
-      `<script type="module" src="${frameLibUrl(FRAME_LIB_BOOT)}" integrity="${escapeAttribute(parts.bootIntegrity)}"><\/script>`,
+      `<script type="module" src="${frameLibUrl(FRAME_LIB_BOOT, parts.libHost)}" integrity="${escapeAttribute(parts.bootIntegrity)}"><\/script>`,
       "</head>",
       `<body data-theme="${theme}">`,
       `<div id="${PANEL_ROOT_ID}"></div>`,

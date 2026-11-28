@@ -131134,230 +131134,6 @@ ${FRAME_KEYBOARD_SCRIPT}
   function isDrawingSource(src) {
     return src.startsWith(DRAWING_SOURCE_PREFIX);
   }
-  const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
-  const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
-  const FRAME_FONT_SOURCE = `${APP_FRAME_SCHEME}:`;
-  const SRCDOC_FONT_SOURCE = `${APP_FRAME_SCHEME}://fonts`;
-  const FRAME_IMAGE_SOURCE = `data: ${APP_FRAME_SCHEME}:`;
-  function frameCsp(scriptHashes = [], fontSource = FRAME_FONT_SOURCE) {
-    const scripts = [FRAME_BRIDGE_SHA256, ...scriptHashes].map((hash) => `'${hash}'`).join(" ");
-    return `default-src 'none'; style-src 'unsafe-inline'; font-src ${fontSource}; img-src ${FRAME_IMAGE_SOURCE}; script-src ${scripts}`;
-  }
-  frameCsp();
-  frameCsp([], SRCDOC_FONT_SOURCE);
-  const PANEL_CHANGES = {
-    "project-setup": [
-      "ruling",
-      "Adding a project stays on its own setup card and Settings → Projects (FI3-1531)"
-    ],
-    "project-remove": ["destructive", "Takes a project off the list and ends its planned work"],
-    "project-settings": true,
-    "project-move": true,
-    "project-name": true,
-    "project-tags": [
-      "destructive",
-      "Removing a tag takes it off every task for good; tags are not panel data yet"
-    ],
-    "project-tag-check": [
-      "not-a-setting",
-      "Starts or stops a run of decision model requests; nothing is set"
-    ],
-    "project-runs-on": true,
-    "device-invite": ["credential", "Makes a joining link for a new computer"],
-    "private-site-allow": ["consent", "Widens what every task browser may reach"],
-    "device-remove": ["destructive", "Removes a computer and the work it holds"],
-    "device-update": ["other-computer", "Installs a new version on another computer"],
-    "device-sign-in": ["credential", "Signs another computer in to a subscription"],
-    "device-address": ["not-a-setting", "A link carries every address; nothing is chosen"],
-    theme: true,
-    font: true,
-    panel: true,
-    "voice-model": true,
-    "account-sign-in": ["credential", "A provider's sign-in"],
-    "custom-connection": ["credential", "A custom connection's key"],
-    "decision-key": ["credential", "A decision model's key"],
-    "panel-remove": ["destructive", "Removes a panel and its folder from the rail"],
-    "task-actions": ["crew-only", "A panel moves tasks through its own moves grant"],
-    settle: ["consent", "A merge or discard stays on its task's own card"],
-    "card-close": ["consent", "Closing a card stays the captain's on that card"],
-    "plugin-consent": ["consent", "A panel never answers its own or another panel's approval card"],
-    recovery: ["consent", "Recovery buttons stay on the recovery card"],
-    "ask-first-merge": ["consent", "An ask-first project's merge stays on its merge card"],
-    "show-card": ["crew-only", "A panel brings a card forward through its own pointing"],
-    "show-whats-new": true,
-    direction: [
-      "consent",
-      "A standing direction instructs every agent; only the captain's words or the first mate write one"
-    ],
-    "start-at-login": true,
-    "show-in-dock": true,
-    "release-page": true,
-    "integration-add": ["credential", "Connecting an integration signs in to it"],
-    "integration-add-mcp": ["consent", "Runs a program the captain names on this computer"],
-    "integration-remove": ["destructive", "Forgets an integration and its sign-in"],
-    "delete-outside": ["destructive", "Deletes saved Gmail and Calendar content"],
-    "integration-settings": true,
-    "integration-action-rule": ["consent", "An action's allowance is the captain's consent"],
-    "integration-key": ["credential", "An integration's key"],
-    "integration-check": true,
-    "forge-sign-out": ["credential", "Ends a project host's sign-in"],
-    diagnostics: ["consent", "Diagnostics is the captain's consent to share"],
-    contribution: ["consent", "Contribution is the captain's consent to share"],
-    "sharing-ask": ["consent", "The sharing ask is the captain's own answer"],
-    purge: ["destructive", "Erases this conversation"],
-    "panels-switch": ["consent", "The panels switch is the captain's consent to run panels at all"],
-    dictation: true,
-    "firstmate-model": true,
-    "firstmate-account": true,
-    "crew-slots": true,
-    "crew-speed": true,
-    "crew-reasoning": true,
-    "crew-slots-reset": true,
-    "model-pins": true,
-    "decision-model": true,
-    "refresh-usage": true,
-    "account-rename": true,
-    "account-pause": true,
-    "account-prefer": true,
-    "account-keep-going": ["consent", "Keep going on credits spends money past the plan"],
-    "account-use-reset": ["consent", "Spends one of an account's saved resets"],
-    "account-use-saved-resets": [
-      "consent",
-      "Lets work spend an account's saved resets with no click"
-    ],
-    "account-disconnect": ["credential", "Forgets an account's sign-in"],
-    "projects-folder": true,
-    "custom-connection-file": true,
-    "project-batch-answer": true,
-    "cost-limit": true,
-    "summary-point": true,
-    notifications: true,
-    runbook: true,
-    "runbook-copy": true,
-    "personal-resources": true,
-    "window-wash": true,
-    "window-size": true,
-    "crew-model-names": true,
-    "crew-grouping": true,
-    "ambient-music": true,
-    // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
-    "ambient-own-style": true,
-    "own-theme": [
-      "destructive",
-      "Saving under a saved theme's name replaces its colors for good, and remove deletes one"
-    ],
-    "ambient-away": true,
-    "card-size": true,
-    language: true,
-    "usage-unit": true,
-    "key-reminders": [
-      "window",
-      "The key reminder is kept by each window's own program, which a panel's change does not reach"
-    ],
-    "panel-collapse": true,
-    "automation-edit": true,
-    "automation-state": true,
-    "automation-pause-all": true,
-    "automation-notes": ["crew-only", "An automation's notes are written by its run's crewmate"],
-    "automation-delete": ["destructive", "Deletes an automation and its run history"],
-    "kept-job-remove": ["destructive", "Runs a kept job's remove"],
-    "device-change-address": ["other-computer", "Changes how this computer reaches another"],
-    "home-move": ["other-computer", "Moves the first mate's whole record to another computer"],
-    "standby-keep": ["other-computer", "Keeps a copy of the record on another computer"],
-    "device-forge-sign-in": ["credential", "Signs another computer in to GitHub"],
-    "keep-home": ["other-computer", "Chooses which of two first mates keeps the record"],
-    "kept-job-forget": ["destructive", "Forgets a kept job whose remove did not finish"],
-    "secrets-page": ["credential", "Secrets stay in Settings → Secrets"],
-    "show-task": ["crew-only", "A panel opens a task's record through its own pointing"],
-    "show-settings": ["crew-only", "A panel opens Settings through its own pointing"],
-    "update-channel": true,
-    "update-check": true,
-    "inbox-link": true,
-    "panel-retry": [
-      "consent",
-      "Starting a panel's stopped background work again is the captain's call on that panel"
-    ],
-    "panel-ask-again": ["consent", "A panel's integration ask is answered on its own card"],
-    "decision-use-off": true,
-    "private-site-remove": true,
-    "secret-end-read": ["credential", "A permission to read secrets"],
-    "device-keep": true,
-    "home-move-cancel": true,
-    "copy-stop": true,
-    "device-fix-work": true,
-    "device-try-again": true,
-    "kept-job-check": true
-  };
-  const PANEL_CHANGE_NAMES = Object.keys(PANEL_CHANGES).filter((name) => PANEL_CHANGES[name] === true);
-  const SQL_VIEWS = [
-    "v_version_v1",
-    "v_tasks_v1",
-    "v_task_events_v1",
-    "v_usage_v1",
-    "v_feed_v1",
-    "v_quota_windows_v1",
-    "v_routing_v1",
-    "v_placements_v1",
-    "v_projects_v1",
-    "v_repos_v1"
-  ];
-  const SQL_VIEW_NAME_PATTERN = /^v_[a-z][a-z0-9_]*_v[1-9][0-9]*$/;
-  const sqlViewNameSchema = string().regex(SQL_VIEW_NAME_PATTERN, {
-    message: "a versioned view name, such as v_usage_v1"
-  });
-  const SQL_LIMITS = {
-    /** UTF-8 bytes of SQL text. */
-    textBytes: 4096,
-    params: 32,
-    /** UTF-8 bytes of one string param. */
-    paramBytes: 4096
-  };
-  function utf8Bytes(text) {
-    return new TextEncoder().encode(text).byteLength;
-  }
-  const sqlParamSchema = union([
-    string().refine((value) => utf8Bytes(value) <= SQL_LIMITS.paramBytes, "a param is at most 4 KB"),
-    number().finite(),
-    _null()
-  ]);
-  const sqlTextSchema = string().min(1).refine((value) => utf8Bytes(value) <= SQL_LIMITS.textBytes, "a query is at most 4 KB");
-  const sqlQuerySchema = strictObject({
-    sql: sqlTextSchema,
-    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional()
-  });
-  strictObject({
-    sql: sqlTextSchema,
-    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional(),
-    views: array(sqlViewNameSchema).max(64)
-  });
-  const SQL_REFUSAL_CODES = [
-    "sql_view_not_declared",
-    "sql_not_readonly",
-    "sql_invalid",
-    "sql_timeout",
-    "sql_too_large"
-  ];
-  const sqlValueSchema = union([string(), number(), _null()]);
-  const sqlRowsSchema = object({
-    columns: array(string()),
-    rows: array(record(string(), sqlValueSchema)),
-    truncated: boolean(),
-    elapsedMs: number()
-  });
-  const sqlRefusalSchema = object({
-    refused: _enum(SQL_REFUSAL_CODES),
-    message: string()
-  });
-  union([sqlRefusalSchema, sqlRowsSchema]);
-  function sameSqlAnswer(a, b) {
-    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
-    const left = a;
-    const right = b;
-    if ("refused" in left || "refused" in right) {
-      return left.refused === right.refused && left.message === right.message;
-    }
-    return left.truncated === right.truncated && JSON.stringify(left.columns) === JSON.stringify(right.columns) && JSON.stringify(left.rows) === JSON.stringify(right.rows);
-  }
   function searchWords(words2) {
     return words2.split(/[,、，]/).map((word) => word.trim()).filter(Boolean);
   }
@@ -132800,6 +132576,237 @@ ${FRAME_KEYBOARD_SCRIPT}
     if ([...rest].length !== 1 || /\s/.test(rest)) return null;
     return { ...chord, key: /^[A-Za-z]$/.test(rest) ? rest.toLowerCase() : rest };
   }
+  const BUILTIN_FRAME_PANELS = [
+    "activity",
+    "automation",
+    "knowledge",
+    "now",
+    "batches-panel"
+  ];
+  const FRAME_SANDBOX_TOKENS = ["allow-scripts"];
+  const FRAME_SANDBOX = FRAME_SANDBOX_TOKENS.join(" ");
+  const FRAME_FONT_SOURCE = `${APP_FRAME_SCHEME}:`;
+  const SRCDOC_FONT_SOURCE = `${APP_FRAME_SCHEME}://fonts`;
+  const FRAME_IMAGE_SOURCE = `data: ${APP_FRAME_SCHEME}:`;
+  function frameCsp(scriptHashes = [], fontSource = FRAME_FONT_SOURCE) {
+    const scripts = [FRAME_BRIDGE_SHA256, ...scriptHashes].map((hash) => `'${hash}'`).join(" ");
+    return `default-src 'none'; style-src 'unsafe-inline'; font-src ${fontSource}; img-src ${FRAME_IMAGE_SOURCE}; script-src ${scripts}`;
+  }
+  frameCsp();
+  frameCsp([], SRCDOC_FONT_SOURCE);
+  const PANEL_CHANGES = {
+    "project-setup": [
+      "ruling",
+      "Adding a project stays on its own setup card and Settings → Projects (FI3-1531)"
+    ],
+    "project-remove": ["destructive", "Takes a project off the list and ends its planned work"],
+    "project-settings": true,
+    "project-move": true,
+    "project-name": true,
+    "project-tags": [
+      "destructive",
+      "Removing a tag takes it off every task for good; tags are not panel data yet"
+    ],
+    "project-tag-check": [
+      "not-a-setting",
+      "Starts or stops a run of decision model requests; nothing is set"
+    ],
+    "project-runs-on": true,
+    "device-invite": ["credential", "Makes a joining link for a new computer"],
+    "private-site-allow": ["consent", "Widens what every task browser may reach"],
+    "device-remove": ["destructive", "Removes a computer and the work it holds"],
+    "device-update": ["other-computer", "Installs a new version on another computer"],
+    "device-sign-in": ["credential", "Signs another computer in to a subscription"],
+    "device-address": ["not-a-setting", "A link carries every address; nothing is chosen"],
+    theme: true,
+    font: true,
+    panel: true,
+    "voice-model": true,
+    "account-sign-in": ["credential", "A provider's sign-in"],
+    "custom-connection": ["credential", "A custom connection's key"],
+    "decision-key": ["credential", "A decision model's key"],
+    "panel-remove": ["destructive", "Removes a panel and its folder from the rail"],
+    "task-actions": ["crew-only", "A panel moves tasks through its own moves grant"],
+    settle: ["consent", "A merge or discard stays on its task's own card"],
+    "card-close": ["consent", "Closing a card stays the captain's on that card"],
+    "plugin-consent": ["consent", "A panel never answers its own or another panel's approval card"],
+    recovery: ["consent", "Recovery buttons stay on the recovery card"],
+    "ask-first-merge": ["consent", "An ask-first project's merge stays on its merge card"],
+    "show-card": ["crew-only", "A panel brings a card forward through its own pointing"],
+    "show-whats-new": true,
+    direction: [
+      "consent",
+      "A standing direction instructs every agent; only the captain's words or the first mate write one"
+    ],
+    "start-at-login": true,
+    "show-in-dock": true,
+    "release-page": true,
+    "integration-add": ["credential", "Connecting an integration signs in to it"],
+    "integration-add-mcp": ["consent", "Runs a program the captain names on this computer"],
+    "integration-remove": ["destructive", "Forgets an integration and its sign-in"],
+    "delete-outside": ["destructive", "Deletes saved Gmail and Calendar content"],
+    "integration-settings": true,
+    "integration-action-rule": ["consent", "An action's allowance is the captain's consent"],
+    "integration-key": ["credential", "An integration's key"],
+    "integration-check": true,
+    "forge-sign-out": ["credential", "Ends a project host's sign-in"],
+    diagnostics: ["consent", "Diagnostics is the captain's consent to share"],
+    contribution: ["consent", "Contribution is the captain's consent to share"],
+    "sharing-ask": ["consent", "The sharing ask is the captain's own answer"],
+    purge: ["destructive", "Erases this conversation"],
+    "panels-switch": ["consent", "The panels switch is the captain's consent to run panels at all"],
+    dictation: true,
+    "firstmate-model": true,
+    "firstmate-account": true,
+    "crew-slots": true,
+    "crew-speed": true,
+    "crew-reasoning": true,
+    "crew-slots-reset": true,
+    "model-pins": true,
+    "decision-model": true,
+    "refresh-usage": true,
+    "account-rename": true,
+    "account-pause": true,
+    "account-prefer": true,
+    "account-keep-going": ["consent", "Keep going on credits spends money past the plan"],
+    "account-use-reset": ["consent", "Spends one of an account's saved resets"],
+    "account-use-saved-resets": [
+      "consent",
+      "Lets work spend an account's saved resets with no click"
+    ],
+    "account-disconnect": ["credential", "Forgets an account's sign-in"],
+    "projects-folder": true,
+    "custom-connection-file": true,
+    "project-batch-answer": true,
+    "cost-limit": true,
+    "summary-point": true,
+    notifications: true,
+    runbook: true,
+    "runbook-copy": true,
+    "personal-resources": true,
+    "window-wash": true,
+    "window-size": true,
+    "crew-model-names": true,
+    "crew-grouping": true,
+    "ambient-music": true,
+    // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
+    "ambient-own-style": true,
+    "own-theme": [
+      "destructive",
+      "Saving under a saved theme's name replaces its colors for good, and remove deletes one"
+    ],
+    "ambient-away": true,
+    "card-size": true,
+    language: true,
+    "usage-unit": true,
+    "key-reminders": [
+      "window",
+      "The key reminder is kept by each window's own program, which a panel's change does not reach"
+    ],
+    "panel-collapse": true,
+    "automation-edit": true,
+    "automation-state": true,
+    "automation-pause-all": true,
+    "automation-notes": ["crew-only", "An automation's notes are written by its run's crewmate"],
+    "automation-delete": ["destructive", "Deletes an automation and its run history"],
+    "kept-job-remove": ["destructive", "Runs a kept job's remove"],
+    "device-change-address": ["other-computer", "Changes how this computer reaches another"],
+    "home-move": ["other-computer", "Moves the first mate's whole record to another computer"],
+    "standby-keep": ["other-computer", "Keeps a copy of the record on another computer"],
+    "device-forge-sign-in": ["credential", "Signs another computer in to GitHub"],
+    "keep-home": ["other-computer", "Chooses which of two first mates keeps the record"],
+    "kept-job-forget": ["destructive", "Forgets a kept job whose remove did not finish"],
+    "secrets-page": ["credential", "Secrets stay in Settings → Secrets"],
+    "show-task": ["crew-only", "A panel opens a task's record through its own pointing"],
+    "show-settings": ["crew-only", "A panel opens Settings through its own pointing"],
+    "update-channel": true,
+    "update-check": true,
+    "inbox-link": true,
+    "panel-retry": [
+      "consent",
+      "Starting a panel's stopped background work again is the captain's call on that panel"
+    ],
+    "panel-ask-again": ["consent", "A panel's integration ask is answered on its own card"],
+    "decision-use-off": true,
+    "private-site-remove": true,
+    "secret-end-read": ["credential", "A permission to read secrets"],
+    "device-keep": true,
+    "home-move-cancel": true,
+    "copy-stop": true,
+    "device-fix-work": true,
+    "device-try-again": true,
+    "kept-job-check": true
+  };
+  const PANEL_CHANGE_NAMES = Object.keys(PANEL_CHANGES).filter((name) => PANEL_CHANGES[name] === true);
+  const SQL_VIEWS = [
+    "v_version_v1",
+    "v_tasks_v1",
+    "v_task_events_v1",
+    "v_usage_v1",
+    "v_feed_v1",
+    "v_quota_windows_v1",
+    "v_routing_v1",
+    "v_placements_v1",
+    "v_projects_v1",
+    "v_repos_v1"
+  ];
+  const SQL_VIEW_NAME_PATTERN = /^v_[a-z][a-z0-9_]*_v[1-9][0-9]*$/;
+  const sqlViewNameSchema = string().regex(SQL_VIEW_NAME_PATTERN, {
+    message: "a versioned view name, such as v_usage_v1"
+  });
+  const SQL_LIMITS = {
+    /** UTF-8 bytes of SQL text. */
+    textBytes: 4096,
+    params: 32,
+    /** UTF-8 bytes of one string param. */
+    paramBytes: 4096
+  };
+  function utf8Bytes(text) {
+    return new TextEncoder().encode(text).byteLength;
+  }
+  const sqlParamSchema = union([
+    string().refine((value) => utf8Bytes(value) <= SQL_LIMITS.paramBytes, "a param is at most 4 KB"),
+    number().finite(),
+    _null()
+  ]);
+  const sqlTextSchema = string().min(1).refine((value) => utf8Bytes(value) <= SQL_LIMITS.textBytes, "a query is at most 4 KB");
+  const sqlQuerySchema = strictObject({
+    sql: sqlTextSchema,
+    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional()
+  });
+  strictObject({
+    sql: sqlTextSchema,
+    params: array(sqlParamSchema).max(SQL_LIMITS.params).optional(),
+    views: array(sqlViewNameSchema).max(64)
+  });
+  const SQL_REFUSAL_CODES = [
+    "sql_view_not_declared",
+    "sql_not_readonly",
+    "sql_invalid",
+    "sql_timeout",
+    "sql_too_large"
+  ];
+  const sqlValueSchema = union([string(), number(), _null()]);
+  const sqlRowsSchema = object({
+    columns: array(string()),
+    rows: array(record(string(), sqlValueSchema)),
+    truncated: boolean(),
+    elapsedMs: number()
+  });
+  const sqlRefusalSchema = object({
+    refused: _enum(SQL_REFUSAL_CODES),
+    message: string()
+  });
+  union([sqlRefusalSchema, sqlRowsSchema]);
+  function sameSqlAnswer(a, b) {
+    if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+    const left = a;
+    const right = b;
+    if ("refused" in left || "refused" in right) {
+      return left.refused === right.refused && left.message === right.message;
+    }
+    return left.truncated === right.truncated && JSON.stringify(left.columns) === JSON.stringify(right.columns) && JSON.stringify(left.rows) === JSON.stringify(right.rows);
+  }
   const KEBAB_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/;
   const pluginIdSchema = string().min(2).max(64).regex(KEBAB_ID, "kebab-case id");
   const contributionIdSchema = string().min(1).max(64).regex(KEBAB_ID, "kebab-case id");
@@ -133276,13 +133283,6 @@ ${FRAME_KEYBOARD_SCRIPT}
     object({ ok: literal(true), result: unknown() }),
     object({ ok: literal(false), error: string() })
   ]);
-  const BUILTIN_FRAME_PANELS = [
-    "activity",
-    "automation",
-    "knowledge",
-    "now",
-    "batches-panel"
-  ];
   const FRAME_TEMPLATE_MAX_BYTES = 524288;
   const FRAME_TITLE_MAX = 120;
   function withoutClosingTag(tag) {

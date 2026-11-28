@@ -13,7 +13,12 @@ import {
 } from "@shared/cardPictures";
 import { APP_FRAME_SCHEME } from "@shared/csp";
 import { CARD_MOUNT_HOST_PREFIX, PANEL_MOUNT_HOST_PREFIX } from "@shared/plugins/frameDocument";
-import { FRAME_LIB_HOST, type FrameLibPins, isFrameLibPath } from "@shared/plugins/frameLib";
+import {
+  FRAME_LIB_HOST,
+  FRAME_LIB_VERSION_HOST_PREFIX,
+  type FrameLibPins,
+  isFrameLibPath,
+} from "@shared/plugins/frameLib";
 import { protocol } from "electron";
 import { bytesHash, type FrameMountRegistry, type ServedFrameDocument } from "./frameMounts";
 import { mediaResponse, requestedRange } from "./mediaResponse";
@@ -55,6 +60,10 @@ import { mediaResponse, requestedRange } from "./mediaResponse";
  *   runtime, the design library, the runtime, the app's own panels), served
  *   from the bundle only while each file's bytes match the pin this build
  *   baked into main. No other file under the host exists.
+ * - `app-frame://lib-<16 hex>/<file>`: the first mate's panel library at
+ *   another version, for a panel built for it (docs/view.md, "Panels in
+ *   every window"): exactly the files the mount registry checked against
+ *   their pins and holds in memory while a mount draws from it.
  *
  * Its privileges (`standard`, `secure`, `corsEnabled`, `stream`) live in
  * `./frameScheme`, so the work mode can register them without loading this
@@ -216,6 +225,10 @@ export async function answerFrameRequest(
     } catch {
       return new Response(null, { status: 404 });
     }
+  }
+  if (parsed.host.startsWith(FRAME_LIB_VERSION_HOST_PREFIX)) {
+    const bytes = mounts.libraryFile(parsed.host, segments.join("/"));
+    return bytes ? moduleResponse(bytes) : new Response(null, { status: 404 });
   }
   if (parsed.host.startsWith(CARD_MOUNT_HOST_PREFIX) && segments.length === 0) {
     return servedDocument(mounts.cardDocument(parsed.host.slice(CARD_MOUNT_HOST_PREFIX.length)));

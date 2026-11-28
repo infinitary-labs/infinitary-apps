@@ -26,7 +26,8 @@ export const panelFilesSchema = z
   .strictObject({
     /**
      * The first mate's own version of the app: the files were built for the
-     * panel library of that version, which only a window on it serves.
+     * panel library of that version, which a window on it serves from its own
+     * build and any other view asks the first mate for (`inf:plugins:library`).
      */
     builtFor: z.string().min(1).max(64),
     /** Every built file, by its forward-slashed path under the panel's version, base64. */
@@ -36,8 +37,8 @@ export const panelFilesSchema = z
 export type PanelFiles = z.infer<typeof panelFilesSchema>;
 
 /**
- * The panel library a phone may ask for (docs/view.md, "Panels on the
- * phone"): named by the version of the app a panel's files were built for
+ * The panel library a phone, or a window on another version, may ask for
+ * (docs/view.md, "Panels on the phone" and "Panels in every window"): named by the version of the app a panel's files were built for
  * (`PanelFiles.builtFor`), so a device can keep one copy per version and
  * ask again only when that version changes.
  */
@@ -49,7 +50,7 @@ export type PanelLibraryRequest = z.infer<typeof panelLibraryRequestSchema>;
 /**
  * The answer: every file of the frame realm's library this computer's build
  * made, with the pin its import map must carry, but the app's own panels,
- * which a phone does not draw from it. Null when this computer's version is not
+ * which a view draws from its own build or asks for one by one. Null when this computer's version is not
  * the one asked for, or it has no library to serve.
  */
 export const panelLibrarySchema = z

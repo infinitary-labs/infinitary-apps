@@ -1315,6 +1315,7 @@
 "integrationsGoogleStops" = "%1$@ に停止";
 "integrationsGoogleStopsDetail" = "このクライアントは個人モードではないため、Google は %1$@ にサインインを終了します。Google の接続を保つには、個人モードのクライアントを設定してください。";
 "integrationsMcpAdd" = "%1$@ を追加";
+"integrationsMcpNameTooLong" = "名前は %1$@ 文字以内にしてください。";
 "integrationsMcpNeedsSignIn" = "もう一度サインインが必要";
 "integrationsMcpOfferBody" = "%1$@ はサインインを求めます。サインインはブラウザで行います。その後、ツールは「常に許可」を選ぶまでカードで確認します。";
 "integrationsMcpOfferButton" = "連携を開く";
@@ -1326,6 +1327,7 @@
 "integrationsMcpRevokeOperation" = "削除したサインインを忘れるよう %1$@ に伝える";
 "integrationsMcpRevokeReason" = "削除したサインインを忘れるよう、Infinitary が %1$@ に伝えます。";
 "integrationsMcpRevokeResult" = "何も保持しません。サインインはそこで終わります";
+"integrationsMcpRunsTooLong" = "実行する内容は %1$@ 文字以内にしてください。";
 "integrationsSignInAgain" = "ページをもう一度開く";
 "integrationsSignInCancel" = "キャンセル";
 "integrationsSignInCancelled" = "サインインはキャンセルされました。";

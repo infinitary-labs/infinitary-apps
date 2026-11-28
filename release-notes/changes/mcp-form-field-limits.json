@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "mcp-form-field-limits",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Adding an MCP server says when its name or address is too long",
+      "body": "In Settings → Integrations, the MCP server form now says under the field when a name is over 64 characters or what it runs is over 2,048, and holds Connect until it fits. Before, Connect sent it anyway and the form answered only “malformed request”, which read as if the address itself was refused.",
+      "picture": {
+        "dark": "mcp-form-field-limits-dark.webp",
+        "light": "mcp-form-field-limits-light.webp",
+        "alt": "The MCP server form says a name can be at most 64 characters long, under a name that is longer, with Connect held."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

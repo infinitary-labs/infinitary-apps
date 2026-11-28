@@ -1,12 +1,13 @@
 import type { AutomationList, AutomationRule } from "@shared/automation";
 import { changeRequestHostAt, isServerIntegration } from "@shared/forgeKinds";
 import { FORGE_CLI_WORDS, FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
-import { formatDateTime } from "@shared/i18n/format";
+import { formatDateTime, formatNumber } from "@shared/i18n/format";
 import * as m from "@shared/i18n/messages.generated";
 import {
   INBOX_WORDS,
   INTEGRATION_EFFECT_WORDS,
   INTEGRATION_KIND_NAMES,
+  INTEGRATION_NAME_MAX,
   INTEGRATION_NOTICES,
   INTEGRATION_RULE_WORDS,
   INTEGRATION_SECRET_WORDS,
@@ -23,6 +24,7 @@ import {
   type IntegrationsView,
   type IntegrationView,
   integrationRenameWords,
+  MCP_RUNS_MAX,
   MCP_SIGN_IN_PICKS,
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
@@ -1393,6 +1395,8 @@ function IntegrationKeys({
   );
 }
 
+const TOO_LONG_STYLE = { fontSize: "var(--text-sm)", color: "var(--danger)" } as const;
+
 /**
  * The form that adds an MCP server: its name and what it runs. Connect
  * hands both to the core, which starts the server, reads its tools and
@@ -1420,7 +1424,10 @@ function McpAddForm({
   const [problem, setProblem] = useState("");
   const ids = useId();
   const here = useHereAs();
-  const ready = name.trim() !== "" && runs.trim() !== "";
+  // The core's own limits, said under their field before Connect can send.
+  const nameTooLong = name.trim().length > INTEGRATION_NAME_MAX;
+  const runsTooLong = runs.trim().length > MCP_RUNS_MAX;
+  const ready = name.trim() !== "" && runs.trim() !== "" && !nameTooLong && !runsTooLong;
   const connect = async () => {
     if (!ready || connecting) return;
     setConnecting(true);
@@ -1462,8 +1469,15 @@ function McpAddForm({
           placeholder={INTEGRATIONS_MCP_WORDS.namePlaceholder}
           autoComplete="off"
           autoFocus={!preset?.go}
+          aria-invalid={nameTooLong || undefined}
+          aria-describedby={nameTooLong ? `${ids}-name-long` : undefined}
           onChange={(event) => setName(event.target.value)}
         />
+        {nameTooLong && (
+          <span id={`${ids}-name-long`} data-integration-mcp-too-long="name" style={TOO_LONG_STYLE}>
+            {m.integrationsMcpNameTooLong({ max: formatNumber(INTEGRATION_NAME_MAX) })}
+          </span>
+        )}
       </div>
       <div className="fm-forges-field">
         <label htmlFor={`${ids}-runs`}>{INTEGRATIONS_MCP_WORDS.runs}</label>
@@ -1474,9 +1488,15 @@ function McpAddForm({
           placeholder={INTEGRATIONS_MCP_WORDS.runsPlaceholder}
           autoComplete="off"
           spellCheck={false}
-          aria-describedby={`${ids}-hint`}
+          aria-invalid={runsTooLong || undefined}
+          aria-describedby={runsTooLong ? `${ids}-runs-long ${ids}-hint` : `${ids}-hint`}
           onChange={(event) => setRuns(event.target.value)}
         />
+        {runsTooLong && (
+          <span id={`${ids}-runs-long`} data-integration-mcp-too-long="runs" style={TOO_LONG_STYLE}>
+            {m.integrationsMcpRunsTooLong({ max: formatNumber(MCP_RUNS_MAX) })}
+          </span>
+        )}
       </div>
       <div id={`${ids}-hint`} style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
         {here(INTEGRATIONS_MCP_WORDS.runsHint)}

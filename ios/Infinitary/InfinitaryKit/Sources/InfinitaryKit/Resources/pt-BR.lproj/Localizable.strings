@@ -1315,6 +1315,7 @@
 "integrationsGoogleStops" = "Para em %1$@";
 "integrationsGoogleStopsDetail" = "Este cliente não está no modo pessoal, então o Google encerra o login dele em %1$@. Configure um cliente no modo pessoal para manter o Google conectado.";
 "integrationsMcpAdd" = "Adicionar %1$@";
+"integrationsMcpNameTooLong" = "O nome pode ter no máximo %1$@ caracteres.";
 "integrationsMcpNeedsSignIn" = "precisa fazer login de novo";
 "integrationsMcpOfferBody" = "%1$@ pede um login, que você faz no seu navegador. Depois, as ferramentas dele perguntam a você em um cartão até você escolher “Sempre permitida”.";
 "integrationsMcpOfferButton" = "Abrir Integrações";
@@ -1326,6 +1327,7 @@
 "integrationsMcpRevokeOperation" = "Pedir ao %1$@ que esqueça o login que você removeu";
 "integrationsMcpRevokeReason" = "O Infinitary pede ao %1$@ que esqueça o login que você removeu.";
 "integrationsMcpRevokeResult" = "Nada é guardado: o login termina lá";
+"integrationsMcpRunsTooLong" = "O que ele executa pode ter no máximo %1$@ caracteres.";
 "integrationsSignInAgain" = "Abrir a página de novo";
 "integrationsSignInCancel" = "Cancelar";
 "integrationsSignInCancelled" = "O login foi cancelado.";

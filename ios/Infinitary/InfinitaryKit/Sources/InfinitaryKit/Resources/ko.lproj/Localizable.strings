@@ -1315,6 +1315,7 @@
 "integrationsGoogleStops" = "%1$@에 멈춤";
 "integrationsGoogleStopsDetail" = "이 클라이언트는 개인 모드가 아니어서 Google이 %1$@에 로그인을 끝냅니다. Google 연결을 유지하려면 개인 모드 클라이언트를 설정하세요.";
 "integrationsMcpAdd" = "%1$@ 추가";
+"integrationsMcpNameTooLong" = "이름은 최대 %1$@자까지 입력할 수 있습니다.";
 "integrationsMcpNeedsSignIn" = "다시 로그인해야 함";
 "integrationsMcpOfferBody" = "%1$@은(는) 로그인을 요청해요. 로그인은 브라우저에서 해요. 그 뒤 도구는 “항상 허용”을 고를 때까지 카드로 물어봐요.";
 "integrationsMcpOfferButton" = "연동 열기";
@@ -1326,6 +1327,7 @@
 "integrationsMcpRevokeOperation" = "삭제한 로그인을 잊도록 %1$@에 알리기";
 "integrationsMcpRevokeReason" = "Infinitary가 삭제한 로그인을 잊도록 %1$@에 알려요.";
 "integrationsMcpRevokeResult" = "아무것도 보관하지 않음: 로그인은 그곳에서 끝나요";
+"integrationsMcpRunsTooLong" = "실행할 내용은 최대 %1$@자까지 입력할 수 있습니다.";
 "integrationsSignInAgain" = "페이지 다시 열기";
 "integrationsSignInCancel" = "취소";
 "integrationsSignInCancelled" = "로그인이 취소됐어요.";

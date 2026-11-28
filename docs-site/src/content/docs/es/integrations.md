@@ -1,5 +1,5 @@
 ---
-source: 88c26f56331369d6
+source: 986fc1734c8e8607
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -221,7 +221,7 @@ Una fila abierta los enumera marcados como **avisa**.
 - Calendar: **Cambia un evento del calendario**.
 - Un servidor MCP que lo ofrezca: **Cambió un recurso**.
 
-Una automatización de Gmail sabe qué conversación recibió correo nuevo uno o dos minutos después de que llegue; leer el correo es un paso aparte, sobre el que Google puede preguntarte antes.
+Una automatización de Gmail sabe qué conversación recibió correo nuevo en unos seis minutos desde que llega, y más tarde cuando varias automatizaciones de Gmail comparten el cupo diario de Google; leer el correo es un paso aparte, sobre el que Google puede preguntarte antes.
 
 Elige uno en **Cuando pasa algo**, en Automatización.
 Consulta [Automatización](/es/automation/#when-it-runs).

@@ -24,19 +24,16 @@ describe("nextPacificMidnight", () => {
 
 describe("namesDailyLimit", () => {
   it("reads Gmail's own daily-limit reason", () => {
-    // Google's Gmail error guide's body for a daily limit.
+    // Google's Gmail error guide's reason for a daily limit, under words that
+    // name no day, so only the reason can tell it.
     expect(
       namesDailyLimit({
         error: {
           errors: [
-            {
-              domain: "usageLimits",
-              reason: "dailyLimitExceeded",
-              message: "Daily Limit Exceeded",
-            },
+            { domain: "usageLimits", reason: "dailyLimitExceeded", message: "Quota exceeded" },
           ],
-          code: 403,
-          message: "Daily Limit Exceeded",
+          code: 429,
+          message: "Quota exceeded",
         },
       }),
     ).toBe(true);

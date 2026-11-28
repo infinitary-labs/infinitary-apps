@@ -1,5 +1,5 @@
 ---
-source: 88c26f56331369d6
+source: 986fc1734c8e8607
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -221,7 +221,7 @@ Eine geöffnete Zeile listet diese mit der Markierung **meldet**.
 - Kalender: **Ein Kalendertermin ändert sich**.
 - Ein MCP-Server, der es anbietet: **Eine Ressource hat sich geändert**.
 
-Eine Gmail-Automatisierung erfährt ein bis zwei Minuten nach dem Eingang, welche Unterhaltung neue Mail bekommen hat; die Mail selbst zu lesen ist ein eigener Schritt, zu dem Google dich vorher fragen kann.
+Eine Gmail-Automatisierung erfährt innerhalb von etwa sechs Minuten nach dem Eingang, welche Unterhaltung neue Mail bekommen hat, und später, wenn sich mehrere Gmail-Automatisierungen Googles Tageskontingent teilen; die Mail selbst zu lesen ist ein eigener Schritt, zu dem Google dich vorher fragen kann.
 
 Wähl eines unter **Wenn etwas passiert** in der Automatisierung.
 Siehe [Automatisierung](/de/automation/#when-it-runs).

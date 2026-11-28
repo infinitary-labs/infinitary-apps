@@ -1,5 +1,5 @@
 ---
-source: 88c26f56331369d6
+source: 986fc1734c8e8607
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -221,7 +221,7 @@ Infinitary 把这个登录保存在[机密](/zh-hans/secrets/)中，并自行为
 - Calendar：“**日历日程有变化**”。
 - 提供此功能的 MCP 服务器：“**资源已更改**”。
 
-Gmail 自动化会在邮件到达一两分钟后得知哪个会话收到了新邮件；读取邮件本身是单独的一步，Google 可能会先就此询问你。
+Gmail 自动化会在邮件到达后约六分钟内得知哪个会话收到了新邮件，多个 Gmail 自动化共用 Google 的每日额度时会更晚；读取邮件本身是单独的一步，Google 可能会先就此询问你。
 
 在“自动化”中的“**当某事发生时**”下选择其中一项。
 请参阅[自动化](/zh-hans/automation/#when-it-runs)。

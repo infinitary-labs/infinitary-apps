@@ -220,7 +220,7 @@ An open row lists these marked **tells**.
 - Calendar: **A calendar event changes**.
 - An MCP server that offers it: **A resource changed**.
 
-A Gmail automation hears which conversation got new mail, a minute or two after it arrives; reading the mail is a step of its own, which Google may ask you about first.
+A Gmail automation hears which conversation got new mail within about six minutes of its arrival, and later when several Gmail automations share Google's daily allowance; reading the mail is a step of its own, which Google may ask you about first.
 
 Choose one under **When something happens** in Automation.
 See [Automation](/automation/#when-it-runs).

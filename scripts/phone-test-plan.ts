@@ -511,11 +511,20 @@ export type PhonePassEnd = { outcome: "passed" | "stopped" | "failed"; ms: numbe
  * a part's minutes being its ordinary pass's. A gate is full when each of its devices has an ordinary pass of every
  * part that runs on that device (INF-4241 piece 6) and every pass ran to its end, so a gate of one device keeps its own (INF-2582: the release check runs
  * each device on its own phone Mac). Any failed pass then fails the gate, naming the passes it stopped and the
- * ones it never started. */
+ * ones it never started.
+ * INF-7175: every gate, full or not, also keeps the minutes of each ordinary pass that ran to its end, failed ones
+ * included as a full gate counts them, as `PHONE_PASS_TIMES` in part-times.json's shape, so the jobs a check of every
+ * part was dealt into together give the record none of them holds alone (`joinPhonePassTimes`). */
 export function endPhoneGate(jobs: readonly PhoneJob[], ends: readonly (PhonePassEnd | undefined)[], evidence: string): void {
   const ended = (outcome: PhonePassEnd["outcome"]) => jobs.filter((_, index) => ends[index]?.outcome === outcome).map(phonePassName);
   const [failed, stopped] = [ended("failed"), ended("stopped")];
   const unstarted = jobs.filter((_, index) => !ends[index]).map(phonePassName);
+  const passTimes: PhonePassTimes = {};
+  for (const [index, job] of jobs.entries()) {
+    const end = ends[index];
+    if (job.round === 1 && end && end.outcome !== "stopped") (passTimes[job.part] ??= {})[job.device] = end.ms;
+  }
+  writeFileSync(join(evidence, PHONE_PASS_TIMES), `${JSON.stringify(passTimes, null, 2)}\n`);
   const devices = [...new Set(jobs.map((job) => job.device))];
   const everyPart = devices.length > 0 && devices.every((device) => devicePartNames(device).every((name) =>
     jobs.some((job) => job.device === device && job.part === name && job.round === 1)));
@@ -534,6 +543,25 @@ export function endPhoneGate(jobs: readonly PhoneJob[], ends: readonly (PhonePas
   if (failed.length) throw new Error([`The phone gate failed: ${failed.join(", ")}`,
     ...(stopped.length ? [`it stopped ${stopped.join(", ")}`] : []),
     ...(unstarted.length ? [`it never started ${unstarted.join(", ")}`] : []), `see its results in ${evidence}`].join("; "));
+}
+
+/** The file each gate keeps its ordinary passes' minutes in, beside a full gate's part-times.json (`endPhoneGate`). */
+export const PHONE_PASS_TIMES = "pass-times.json";
+
+/** INF-7175: the part-times.json one full gate of `devices` writes (`endPhoneGate`), joined from the pass times its
+ * dealt jobs kept: every part each device's row of PHONE_PARTS names, in the order that gate lists them, with its
+ * ordinary pass's milliseconds. The devices come from the dealing, not from what was kept, so a job whose times never
+ * arrived still counts. `missing` names each of those passes no job kept a time for; the record is whole when it
+ * names none. */
+export function joinPhonePassTimes(devices: readonly PhoneDevice[], kept: readonly PhonePassTimes[]): { times: PhonePassTimes; missing: string[] } {
+  const times: PhonePassTimes = {};
+  const missing: string[] = [];
+  for (const pass of phonePasses([...devices], { parts: PHONE_PARTS.map(({ name }) => name) })) {
+    const ms = kept.map((each) => each[pass.part]?.[pass.device]).find((each) => typeof each === "number");
+    if (ms === undefined) missing.push(phonePassName(pass));
+    else (times[pass.part] ??= {})[pass.device] = ms;
+  }
+  return { times, missing };
 }
 
 /** INF-4496's fix 2: a rerun of a failed phone job runs only the passes that did not pass in an earlier attempt of
@@ -641,7 +669,8 @@ export function partTimes(text: string | undefined, parts: readonly { name: stri
 /** INF-4241 piece 3: the recorded part times the gate shares a device's parts out by, a full gate's part-times.json
  * copied whole (INF-4241 piece 8's run of every part on every device, two simulators at once, with a later part's
  * time kept from the file before it). A part it lacks starts first, so a new part never
- * ends a lane late; replace the file with a newer full gate's part-times.json when the parts' times move. */
+ * ends a lane late; replace the file with a newer full gate's part-times.json when the parts' times move, or with the one
+ * a check of every part dealt into jobs joins from them (`joinPhonePassTimes`, INF-7175). */
 export const PHONE_PART_TIMES = "scripts/phone-part-times.json";
 
 /** INF-4308 (the captain's "Build on two at once"): what one simulated device and its share of the gate need of the

@@ -561,6 +561,8 @@ it("sends every Linux job to LINUX_RUNNER, and hosted Ubuntu when it is unset, u
       "docs-site.yml:build-and-check",
       // The batch's watch polls its run for about 40 minutes; only this project's own batch reaches it.
       "batch-checks.yml:watch",
+      // INF-7175: a dealt phone check's join of its jobs' part times reads small JSON files with plain Node.
+      "phone.yml:part-times",
     ],
     light_gate: ["journeys.yml:replace-older-request"],
     ci: [

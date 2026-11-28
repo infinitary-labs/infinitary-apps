@@ -12,12 +12,14 @@ import {
   devicePhotos,
   endPhoneGate,
   firstPhoneLanes,
+  joinPhonePassTimes,
   keepPhonePasses,
   macTestFilter,
   PHONE_APP,
   PHONE_DEVICES,
   PHONE_PART_TIMES,
   PHONE_PARTS,
+  PHONE_PASS_TIMES,
   PHONE_TOOL_TESTS,
   type PhoneDevice,
   type PhoneJob,
@@ -1113,6 +1115,72 @@ describe("a gate's end", () => {
       `The phone gate failed: ${first}; it never started ${rest.join(", ")}; see its results in ${evidence}`,
     );
     expect(existsSync(kept(evidence))).toBe(false);
+  });
+
+  // INF-7175: the phone release's check of every part is dealt into jobs that each run only some parts (INF-7079's
+  // fix 5), so no job's gate writes part-times.json; each gate keeps its passes' own minutes, and the join gives back
+  // the record its one job wrote. The minutes are the recorded part times the chooser deals by.
+  const recorded = JSON.parse(readFileSync(PHONE_PART_TIMES, "utf8")) as PhonePassTimes;
+  const keptTimes = (evidence: string) =>
+    JSON.parse(readFileSync(join(evidence, PHONE_PASS_TIMES), "utf8")) as PhonePassTimes;
+
+  it("keeps the minutes of each ordinary pass that ran to its end, in a gate that ran only some parts", () => {
+    const [passed, failed, stopped, unstarted] = [
+      "join-read",
+      "join-activity",
+      "join-away",
+      "talk-tasks",
+    ] as const;
+    const jobs = phonePasses(["iphone"], {
+      parts: [passed, failed, stopped, unstarted],
+      repeats: [passed],
+    });
+    const ms = (part: string) => recorded[part]!.iphone!;
+    const ends = jobs.map((job): PhonePassEnd | undefined =>
+      job.part === unstarted
+        ? undefined
+        : {
+            outcome: job.part === failed ? "failed" : job.part === stopped ? "stopped" : "passed",
+            // A later round of the passed part takes longer, so its ordinary pass's minutes show.
+            ms: ms(job.part) + (job.round - 1) * 60_000,
+          },
+    );
+    const evidence = scratchDir("infinitary-phone-gate-end-");
+    expect(() => endPhoneGate(jobs, ends, evidence)).toThrow(
+      "The phone gate failed: iphone join-activity;",
+    );
+    expect(keptTimes(evidence)).toEqual({
+      "join-read": { iphone: ms("join-read") },
+      "join-activity": { iphone: ms("join-activity") },
+    });
+    expect(existsSync(kept(evidence))).toBe(false);
+  });
+
+  it("joins the times a check's dealt jobs kept into the record one gate of every part writes", () => {
+    const every = phonePasses([...PHONE_DEVICES], { parts: everyPart });
+    const end = (pass: PhoneJob): PhonePassEnd => ({
+      outcome: "passed",
+      ms: phonePassMs(pass, recorded),
+    });
+    const one = scratchDir("infinitary-phone-gate-end-");
+    endPhoneGate(every, every.map(end), one);
+    const jobs = dealPhonePasses(every, recorded);
+    expect(jobs.length).toBeGreaterThan(1);
+    const byJob = jobs.map(({ passes }) => {
+      const evidence = scratchDir("infinitary-phone-gate-end-");
+      endPhoneGate(passes, passes.map(end), evidence);
+      return keptTimes(evidence);
+    });
+    const joined = joinPhonePassTimes(PHONE_DEVICES, byJob);
+    expect(joined.missing).toEqual([]);
+    // The same file, each part and device in the one gate's order.
+    expect(`${JSON.stringify(joined.times, null, 2)}\n`).toBe(
+      readFileSync(join(one, "part-times.json"), "utf8"),
+    );
+    // A job whose times never arrived leaves the record out, naming each of its passes.
+    const lost = jobs.at(-1)!.passes;
+    const partial = joinPhonePassTimes(PHONE_DEVICES, byJob.slice(0, -1));
+    expect(partial.missing.toSorted()).toEqual(lost.map(phonePassName).toSorted());
   });
 
   // INF-4496's fix 2 (the captain's "Let a passing phone retry clear the failed run it retried, so nobody

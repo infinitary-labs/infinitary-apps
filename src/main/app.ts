@@ -1558,6 +1558,7 @@ export async function startApp(
         rendererSource,
         keymap: shell.keymap,
         pageArguments,
+        preferences: shell.preferences,
         rightToLeft: () =>
           textDirection(
             chosenLanguage(shell.preferences.get().appearance.language, systemLanguage),

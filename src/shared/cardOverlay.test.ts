@@ -31,19 +31,41 @@ describe("overlayKeyAllowed", () => {
 describe("overlayBounds", () => {
   const display = { x: 0, y: 25, width: 1512, height: 920 };
 
+  it("takes half the screen, never less than a regular card at the Size setting, nor more than the screen", () => {
+    // INF-7215's plan, the captain's pick "Half": a 27-inch 2560-point display,
+    // a 16-inch MacBook Pro's 1728 and a 13-inch MacBook Air's 1470, at each
+    // Size the captain may pick; 592 x zoom is a 560-point card and its air.
+    const widths: [number, number, number][] = [
+      [2560, 1, 1280],
+      [2560, 1.1, 1280],
+      [2560, 1.25, 1280],
+      [1728, 1, 864],
+      [1728, 1.1, 864],
+      [1728, 1.25, 864],
+      [1470, 1, 735],
+      [1470, 1.1, 735],
+      [1470, 1.25, 740],
+      [1100, 1.5, 888],
+      [700, 1.5, 700],
+    ];
+    for (const [screen, zoom, width] of widths)
+      expect(
+        overlayBounds({ x: 0, y: 25, width: screen, height: 900 }, false, false, zoom).width,
+        `${screen} points at ${zoom * 100}%`,
+      ).toBe(width);
+  });
+
   it("puts the card 24 points from the right edge, the full work area tall", () => {
     const bounds = overlayBounds(display);
-    // The card is 560 wide, centred in the panel: its right edge is the panel's less half the spare width.
-    const cardRight = bounds.x + bounds.width - (bounds.width - 560) / 2;
-    expect(display.x + display.width - cardRight).toBe(24);
+    // The card hugs the panel's trailing edge, 16 points of the stage's air in (overlay.css).
+    expect(display.x + display.width - (bounds.x + bounds.width - 16)).toBe(24);
     expect(bounds.y).toBe(25);
     expect(bounds.height).toBe(920);
   });
 
   it("puts it 24 points from the left edge in a right-to-left language", () => {
     const bounds = overlayBounds({ x: -1440, y: 0, width: 1440, height: 900 }, true);
-    const cardLeft = bounds.x + (bounds.width - 560) / 2;
-    expect(cardLeft - -1440).toBe(24);
+    expect(bounds.x + 16 - -1440).toBe(24);
   });
 
   it("stays inside a display narrower than the panel", () => {

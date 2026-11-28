@@ -39,6 +39,7 @@ import { onNoticedCard } from "./notifiedCard";
 import { assertSecurityBaseline, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
 import { lockdownNavigation } from "./security/navigation";
 import type { RendererSourceOptions } from "./security/rendererSource";
+import { followWindowSize, type PreferenceSource } from "./windowSize";
 import { markOverlayWindow } from "./windows";
 
 /**
@@ -55,6 +56,8 @@ export type CardOverlayWindowOptions = {
   keymap: Pick<InstalledKeymap, "bindings" | "panels">;
   /** The main window's page arguments: its desktop, language and the computer's languages. */
   pageArguments: () => string[];
+  /** The Size setting the window follows: the panel's page follows it too, and the panel grows with it. */
+  preferences: PreferenceSource;
   /** Whether the window's language runs right to left: the panel then sits at the left edge. */
   rightToLeft: () => boolean;
   /** The file this computer keeps the switch and key in. */
@@ -83,6 +86,13 @@ const MENU_KEYS = new Set(["q", "w", "h", "m", ","]);
 
 export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlayHost {
   let shown: { win: BrowserWindow; panel: OverlayPanel; workArea: Rectangle } | null = null;
+  const boundsOn = (workArea: Rectangle, wide = false) =>
+    overlayBounds(
+      workArea,
+      options.rightToLeft(),
+      wide,
+      (options.preferences.get().appearance.size ?? 100) / 100,
+    );
 
   const openPanel = (gone: () => void): OverlayPanel => {
     // The game's display is the pointer's: a game holds the pointer on its own display.
@@ -93,7 +103,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       // A nonactivating panel on every Space, full-screen ones included: it
       // takes the keys while the game stays the front app (INF-7063's plan).
       type: "panel",
-      ...overlayBounds(display.workArea, options.rightToLeft()),
+      ...boundsOn(display.workArea),
       show: false,
       frame: false,
       transparent: true,
@@ -114,6 +124,8 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       },
     });
     markOverlayWindow(win);
+    // Set on purpose, not left to Chromium's zoom per page address, which the window happens to share.
+    followWindowSize(win, options.preferences);
     win.setAlwaysOnTop(true, "floating");
     // Until the pointer is over the card, the panel's clear area is the game's.
     win.setIgnoreMouseEvents(true, { forward: true });
@@ -138,7 +150,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
         behind = frontApp();
         const workArea = displayNow().workArea;
         if (shown?.win === win) shown.workArea = workArea;
-        win.setBounds(overlayBounds(workArea, options.rightToLeft()));
+        win.setBounds(boundsOn(workArea));
       },
       showWithKeys: () => {
         if (!win.isDestroyed()) win.show();
@@ -222,7 +234,7 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
       shown && !shown.win.isDestroyed() && shown.win.webContents === sender ? shown.panel : null,
     wide: (sender, wide) => {
       if (!shown || shown.win.isDestroyed() || shown.win.webContents !== sender) return;
-      shown.win.setBounds(overlayBounds(shown.workArea, options.rightToLeft(), wide));
+      shown.win.setBounds(boundsOn(shown.workArea, wide));
     },
     pointer: (sender, over) => {
       if (!shown || shown.win.isDestroyed() || shown.win.webContents !== sender) return;

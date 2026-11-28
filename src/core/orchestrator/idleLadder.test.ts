@@ -981,10 +981,17 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       },
       {
         name: "guidance waiting out its backoff",
-        arrange: async ({ supervisor, crewmate, taskId }) => {
+        arrange: async ({ supervisor, crewmate, inbox, idleSince, taskId }) => {
           await supervisor.steer.steerCrewmate(taskId, "try the other route");
           await settle();
           await failTurn(crewmate, taskId);
+          // The provider refuses it again until its allowance resets four
+          // hours on, so at the 200-minute read it still waits out its
+          // backoff. A row the sweep left due that long instead is a
+          // leftover, not a witness (crewFacts.servesTurn.test.ts).
+          const ids = inbox.allFor(taskId).map((row) => row.id);
+          inbox.markDelivered(ids);
+          inbox.releaseAfterProviderFailure(ids, { notBefore: idleSince + minutes(240) });
         },
       },
       {

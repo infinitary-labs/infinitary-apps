@@ -734,6 +734,7 @@ export class CrewSupervisor {
       now: this.now,
       tasks: options.tasks,
       inbox: options.inbox,
+      servesTurn: (taskId, now) => this.facts.servesTurn(taskId, now),
       runtime: (taskId) => this.tasks.get(taskId),
       hasRunningJobs: (taskId) =>
         options.hasRunningJobs?.(taskId) === true ||

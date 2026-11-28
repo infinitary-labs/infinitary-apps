@@ -33,6 +33,7 @@ import type { DependencyInstall } from "../workspace/workspaceService";
 import { AccountRefusals } from "./accountRefusals";
 import type { CrewCore } from "./crewCore";
 import { handedDirections, servesDirections } from "./crewDirections";
+import { isStandingNotice } from "./crewFacts";
 import { type MoveAsk, SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import type { PersonalLiveDelegate } from "./crewSupervisorOptions";
 import { updatePauseLine } from "./crewUpdates";
@@ -427,7 +428,14 @@ export class CrewTurns {
   private isLadderTurn(taskId: string, inboxIds: number[]): boolean {
     const record = this.core.options.tasks.get(taskId);
     if (!record || record.recoveryAt == null) return false;
-    return this.core.options.tasks.turns.onlyLadderSteers(taskId, inboxIds);
+    // A notice the ladder's nudge carries along is not the task moving: it
+    // could not start a turn alone (`isStandingNotice`), so the episode and
+    // its rungs go on (INF-7116, the stall steps climb behind a notice).
+    const moving = inboxIds.filter((id) => {
+      const row = this.core.options.inbox.get(id);
+      return row === undefined || !isStandingNotice(row);
+    });
+    return this.core.options.tasks.turns.onlyLadderSteers(taskId, moving);
   }
 
   /**

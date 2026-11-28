@@ -65,7 +65,7 @@ import type { ProofAwaitingReader } from "@shared/liveValidation";
  *     PROGRAM's turn. No wake; the runner reads the answer and closes the
  *     part. The runner's own typed fact, never a reading of the words.
  *  3. The crewmate is provably still moving - a job running inside its
- *     bound, guidance its lane will still deliver, a captured settle, a
+ *     bound, guidance a turn would serve inside its bound, a captured settle, a
  *     timed wait on its gate, or a wait on work underway (FI3-250) whose
  *     close the sweep turns into its steer: the CREWMATE's turn. No wake;
  *     its next report runs this rule again.
@@ -224,8 +224,9 @@ export type Witnesses = {
    */
   captainGateOwed: boolean;
   /**
-   * Guidance its lane will still deliver, including a row waiting out the
-   * honest retry's backoff (`InboxStore.hasDeliverable`).
+   * Guidance its lane will still deliver that a turn would serve, including
+   * a row waiting out the honest retry's backoff, inside its bound
+   * (`CrewFacts.servesTurn`).
    */
   deliverable: boolean;
   /** A background job is running for the task inside its bound (`JOB_BOUND_MS`). */

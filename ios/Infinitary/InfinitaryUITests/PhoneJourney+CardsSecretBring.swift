@@ -18,11 +18,13 @@ extension PhoneJourney {
         let title = try XCTUnwrap(asked["title"] as? String)
         showCard(title)
         waitForShownBodyRevealed()
-        let token = app.buttons["secret-bring-s1"]
-        let kept = app.buttons["secret-bring-s2"]
+        let token = app.switches["secret-bring-s1"]
+        let kept = app.switches["secret-bring-s2"]
+        // A tick row is a switch to XCTest: its .isToggle trait reads as value "1" or "0", not as selected.
+        let ticked = NSPredicate(format: "value == %@", "1"), unticked = NSPredicate(format: "value == %@", "0")
         XCTAssertTrue(token.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(token.isSelected, "The new name arrives ticked")
-        XCTAssertFalse(kept.isSelected, "A name Secrets already keeps arrives unticked")
+        XCTAssertEqual(token.value as? String, "1", "The new name arrives ticked")
+        XCTAssertEqual(kept.value as? String, "0", "A name Secrets already keeps arrives unticked")
         // The phone draws the rows, so the host leaves out the line sending the captain to the computer.
         XCTAssertFalse(app.staticTexts[try XCTUnwrap(asked["elsewhere"] as? String)].exists, app.debugDescription)
         let bring = app.buttons["card-action-\(try XCTUnwrap(asked["go"] as? String))"]
@@ -38,26 +40,26 @@ extension PhoneJourney {
             app.typeKey(XCUIKeyboardKey.downArrow.rawValue, modifierFlags: [])
             XCTAssertTrue(app.descendants(matching: .any)["secret-bring-ring-s2"].waitForPresence(timeout: 10), app.debugDescription)
             app.typeKey(" ", modifierFlags: [])
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isSelected == true"), object: kept, timeout: 10), .completed,
+            XCTAssertEqual(waitForPhonePredicate(ticked, object: kept, timeout: 10), .completed,
                            "Space ticks the row under the ring")
             app.typeKey(" ", modifierFlags: [])
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isSelected == false"), object: kept, timeout: 10), .completed,
+            XCTAssertEqual(waitForPhonePredicate(unticked, object: kept, timeout: 10), .completed,
                            "Space unticks it again")
             app.typeKey(XCUIKeyboardKey.upArrow.rawValue, modifierFlags: [])
             XCTAssertTrue(app.descendants(matching: .any)["secret-bring-ring-s1"].waitForPresence(timeout: 10), app.debugDescription)
             // The row Return brings is one Space ticked: untick it, then tick it again.
             app.typeKey(" ", modifierFlags: [])
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isSelected == false"), object: token, timeout: 10), .completed)
+            XCTAssertEqual(waitForPhonePredicate(unticked, object: token, timeout: 10), .completed)
             app.typeKey(" ", modifierFlags: [])
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isSelected == true"), object: token, timeout: 10), .completed)
+            XCTAssertEqual(waitForPhonePredicate(ticked, object: token, timeout: 10), .completed)
             picture("1-secret-bring-keys")
             // As PhoneKeys owns, Xcode emits the physical Return for LF, not CR.
             app.typeKey("\n", modifierFlags: [])
         } else {
             tapOnPhone(kept)
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isSelected == true"), object: kept, timeout: 10), .completed)
+            XCTAssertEqual(waitForPhonePredicate(ticked, object: kept, timeout: 10), .completed)
             tapOnPhone(kept)
-            XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isSelected == false"), object: kept, timeout: 10), .completed)
+            XCTAssertEqual(waitForPhonePredicate(unticked, object: kept, timeout: 10), .completed)
             tapOnPhone(token)
             // With nothing ticked, Bring into Secrets waits for a tick.
             XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "isEnabled == false"), object: bring, timeout: 10), .completed,
@@ -83,14 +85,14 @@ extension PhoneJourney {
         let readTitle = try XCTUnwrap(read["title"] as? String)
         showCard(readTitle)
         waitForShownBodyRevealed()
-        XCTAssertFalse(app.buttons["secret-bring-s1"].exists, "A read names nothing before Read it\n\(app.debugDescription)")
+        XCTAssertFalse(app.switches["secret-bring-s1"].exists, "A read names nothing before Read it\n\(app.debugDescription)")
         let readIt = app.buttons["card-action-\(try XCTUnwrap(read["go"] as? String))"]
         reveal(readIt); tapOnPhone(readIt)
         let found = try XCTUnwrap(read["found"] as? String)
         XCTAssertTrue(cardHeading(found).waitForPresence(timeout: 20), app.debugDescription)
-        let name = app.buttons["secret-bring-s1"]
+        let name = app.switches["secret-bring-s1"]
         XCTAssertTrue(name.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(name.isSelected, app.debugDescription)
+        XCTAssertEqual(name.value as? String, "1", app.debugDescription)
         picture("2-secret-bring-read")
         let dontBring = app.buttons.matching(NSPredicate(format: "label == %@", try XCTUnwrap(read["dontBringLabel"] as? String))).firstMatch
         reveal(dontBring); tapOnPhone(dontBring)

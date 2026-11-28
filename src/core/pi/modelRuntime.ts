@@ -6,6 +6,7 @@ import { BEDROCK_PROVIDER_ID, OPENCODE_GO_PROVIDER_ID, PROVIDER_CATALOG } from "
 import type { BedrockClaudeSetup } from "../claude/claudeAccess";
 import { bedrockAccountProvider } from "./bedrock";
 import type { BedrockResolver } from "./bedrockConnection";
+import { googleAiPlanGuard } from "./googleAiPlanGuard";
 import { withOpenCodeGoDecisions } from "./openCodeGoDecisions";
 import { storedKeyOnly } from "./storedKeyOnly";
 
@@ -143,6 +144,12 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       : model.provider !== BEDROCK_PROVIDER_ID && model.api !== "bedrock-converse-stream";
   runtime.getAvailableSnapshot = () =>
     options.bedrockRecheckPending?.() ? [] : snapshot().filter(allows);
+  // Every runtime kind registers the guard first, and the refresh that
+  // registration fires is awaited like keepKeysInTheStore's below.
+  registering = [];
+  runtime.registerNativeProvider(googleAiPlanGuard());
+  await Promise.all(registering);
+  registering = undefined;
   if (options.bedrockAccount) {
     const stock = runtime.getProvider(BEDROCK_PROVIDER_ID);
     if (!stock) throw new Error("Amazon Bedrock models could not be loaded.");
@@ -251,6 +258,18 @@ export async function createCatalogRuntime(options: {
     refreshOnCreate: true,
     allowModelNetwork: false,
   });
+  // The guard's registration fires a refresh of Pi's own; awaiting it keeps
+  // it from landing after this runtime is handed out.
+  const refresh = runtime.refresh.bind(runtime);
+  const fired: Promise<unknown>[] = [];
+  runtime.refresh = (refreshOptions) => {
+    const work = tracked(refresh(refreshOptions));
+    fired.push(work);
+    return work;
+  };
+  runtime.registerNativeProvider(googleAiPlanGuard());
+  runtime.refresh = refresh;
+  await Promise.all(fired);
   runtime.getModel = () => undefined;
   runtime.getAuth = (async () => undefined) as ModelRuntime["getAuth"];
   const fetch = (providers: readonly string[], stop?: AbortSignal) =>

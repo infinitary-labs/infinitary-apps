@@ -22,14 +22,22 @@ extension PhoneJourney {
         XCTAssertTrue(filter.waitForPresence(timeout: 20), "Two projects or more: Filter shows\n\(app.debugDescription)")
         let pager = app.buttons["card-pager"]
 
-        // At All projects Home holds the note and south-pier's decision; the decision is read, so it comes back seen.
+        // At All projects Home holds the note and south-pier's decision; both are read, so the decision comes back seen.
+        // Each is read only once it takes the stage, and the stack may open on either (run 46117747267 opened on the
+        // decision and left the note new), so the part shows each in turn and waits for the home's mark of it.
         XCTAssertTrue(pager.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(waitForPhonePager(pager, " of 2", suffix: true), pager.label)
         let decision = cardTitle(containing: "south pier")
         if !decision.exists { tapOnPhone(app.buttons["next-card"]) }
         XCTAssertTrue(decision.waitForPresence(timeout: 10), "South-pier's decision takes the stage\n\(app.debugDescription)")
         _ = try await home("seen-wait", body: decision.label)
+        tapOnPhone(app.buttons["next-card"])
+        let note = app.staticTexts.matching(NSPredicate(format: "identifier == 'card-title' AND NOT (label CONTAINS 'south pier')")).firstMatch
+        XCTAssertTrue(note.waitForPresence(timeout: 10), "The note takes the stage\n\(app.debugDescription)")
+        _ = try await home("seen-wait", body: note.label)
         XCTAssertTrue(app.buttons["card-new"].waitForAbsence(timeout: 10), "Both cards are read")
+        tapOnPhone(app.buttons["next-card"])
+        XCTAssertTrue(decision.waitForPresence(timeout: 10), "South-pier's decision takes the stage again\n\(app.debugDescription)")
         picture("1-home-all-projects")
 
         // Focused on north-pier, south-pier's decision leaves Home; the note about no task stays.

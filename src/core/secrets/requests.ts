@@ -216,6 +216,11 @@ export class SecretRequests {
     private readonly changed: (receipt: UseReceipt) => void = () => {},
     /** Waited on before a use runs, so a computer that takes over finds it recorded. */
     private readonly beforeUse: () => Promise<void> = async () => {},
+    /**
+     * Told once when a use's effect began: its program started here, or the
+     * computer that runs it took the values. Always before the use's end.
+     */
+    private readonly began: (request: string) => void = () => {},
   ) {
     for (const { intent, inputDigest, receipt } of backend.restored?.() ?? []) {
       const kept: Kept = {
@@ -492,7 +497,17 @@ export class SecretRequests {
       if (this.now() >= kept.expires || !current) {
         kept.receipt.state = "invalidated";
       } else {
-        const result = await kept.prepared.execute(launched);
+        let begun = false;
+        const result = await kept.prepared.execute(() => {
+          launched?.();
+          if (begun) return;
+          begun = true;
+          try {
+            this.began(kept.receipt.request);
+          } catch {
+            /* Observers cannot alter the effect's outcome. */
+          }
+        });
         if ("state" in result) kept.receipt.state = result.state;
         else if ("completed" in result)
           kept.receipt = { request: kept.receipt.request, state: "completed" };

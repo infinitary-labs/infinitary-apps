@@ -56,6 +56,7 @@ import type { ProtectedSecrets, ProtectedSecretsOptions, RecoveryRestore } from 
 import type { RecipientFacts } from "./recipient";
 import type { RecoveryFiles } from "./recoveryArchive";
 import { newReference } from "./references";
+import { cutOffTasks, intentTask, taskIntent, UseRequesters } from "./requesters";
 import {
   type EndedUseReceipt,
   type Injection,
@@ -81,8 +82,17 @@ export type SecretsSettingsOptions = {
   openCard?: (id: string) => Pick<Card, "actions"> | undefined;
   withdraw: (id: string, reason: string) => void;
   changed: () => void;
-  /** A waiting requester hears the terminal receipt through the existing task inbox, never values. */
-  settled?: (task: string, receipt: EndedUseReceipt) => void;
+  /**
+   * A waiting requester hears the terminal receipt through the existing task
+   * inbox, never values; `restarted` marks a use a restart ended, which its
+   * requester hears as Secrets opens again.
+   */
+  settled?: (task: string, receipt: EndedUseReceipt, restarted?: boolean) => void;
+  /**
+   * A requester told its use waits on the captain hears once when the
+   * approved program starts, so it no longer waits on the captain for it.
+   */
+  started?: (task: string, request: string) => void;
   /** A task's title, so the approval card says which task asks and the page which task last used a secret. */
   taskTitle?: (task: string) => string | undefined;
   /** Where the asks waiting for the captain are kept across a restart (`SecretAskBook`); none keeps them in memory. */
@@ -125,8 +135,7 @@ export class SecretsSettings {
   private opening: Promise<Owner> | undefined;
   private owner: Owner | undefined;
   private readonly offers = new Map<string, Offer>();
-  private readonly taskOf = new Map<string, Set<string>>();
-  private readonly awaiting = new Map<string, Set<string>>();
+  private readonly requesters = new UseRequesters();
   private readonly brokers = new Map<string, SecretBroker>();
   /** The sweep of left-over service entries now running, which never rejects. */
   private sweeping: Promise<void> = Promise.resolve();
@@ -191,7 +200,10 @@ export class SecretsSettings {
     const opening = this.options.open(initialize).then((protectedOwner) => {
       const changed = (receipt: UseReceipt) => this.receiptChanged(receipt);
       const before = this.options.beforeUse;
-      const requests = new SecretRequests(protectedOwner, this.now, changed, before);
+      const began = (request: string) => {
+        for (const task of this.requesters.began(request)) this.options.started?.(task, request);
+      };
+      const requests = new SecretRequests(protectedOwner, this.now, changed, before, began);
       return { protected: protectedOwner, requests };
     });
     this.opening = opening;
@@ -199,6 +211,9 @@ export class SecretsSettings {
       const opened = await opening;
       for (const broker of this.brokers.values()) opened.protected.registerBroker(broker);
       this.owner = opened;
+      const open = (task: string) => this.options.taskOpen?.(task) !== false;
+      for (const { task, receipt } of cutOffTasks(opened.protected.cutOff(), open))
+        this.options.settled?.(task, receipt, true);
       await this.sweepUnnamed(opened);
       return this.owner;
     } finally {
@@ -216,9 +231,7 @@ export class SecretsSettings {
       if (this.offeredCard === card) this.offeredCard = null;
       this.useCards.delete(receipt.request);
       this.ending.get(receipt.request)?.(receipt);
-      const tasks = this.awaiting.get(receipt.request);
-      this.awaiting.delete(receipt.request);
-      for (const task of tasks ?? []) {
+      for (const task of this.requesters.ended(receipt.request)) {
         this.options.settled?.(task, { ...receipt, state: receipt.state });
       }
     }
@@ -226,16 +239,22 @@ export class SecretsSettings {
   }
 
   private track(owner: Owner, receipt: UseReceipt, task: string): void {
-    const tasks = this.taskOf.get(receipt.request) ?? new Set<string>();
-    tasks.add(task);
-    this.taskOf.set(receipt.request, tasks);
-    if (receipt.state !== "waiting" && receipt.state !== "executing") return;
-    const waiting = this.awaiting.get(receipt.request) ?? new Set<string>();
-    waiting.add(task);
-    this.awaiting.set(receipt.request, waiting);
+    if (!this.requesters.heard(receipt, task)) return;
     // An allowed operation can finish between returning its initial receipt and this continuation.
     const settled = owner.requests.settled(receipt.request);
     if (settled) this.receiptChanged(settled);
+  }
+
+  /**
+   * Opens Secrets once as Infinitary starts, as Settings does, which shows no
+   * dialog: a use a restart ended is told to its requester now. Nobody asked
+   * for this open, so a store that reads locked or unavailable is not kept:
+   * its next use reads custody again, and tells the ended uses then.
+   */
+  async resumeUses(): Promise<void> {
+    const owner = await this.ready().catch(() => undefined);
+    if (owner && owner.protected.availability !== "available" && this.owner === owner)
+      this.owner = undefined;
   }
 
   /** Whether this build keeps protected storage at all; it never opens the storage to answer. */
@@ -430,7 +449,7 @@ export class SecretsSettings {
     lastTask?: string;
   } {
     if (!item) return { lastRequest: null };
-    const task = this.taskOf.get(item.request)?.values().next().value ?? intentTask(item.intent);
+    const task = this.requesters.first(item.request) ?? intentTask(item.intent);
     const title = task ? this.options.taskTitle?.(task) : undefined;
     return {
       lastRequest: item.requestedAt,
@@ -1036,7 +1055,7 @@ export class SecretsSettings {
 
   /** Who asks and what runs, for the card: from the use's checked facts, never the requester's words. */
   private ask(owner: Owner, request: string): SecretAsk & { operation: string } {
-    const task = this.taskOf.get(request)?.values().next().value;
+    const task = this.requesters.first(request);
     const title = task ? (this.options.taskTitle?.(task) ?? null) : null;
     const script = owner.protected.describe(request);
     if (script)
@@ -1180,7 +1199,7 @@ export class SecretsSettings {
           ? { label: SECRETS_WORDS.short, run: () => confirm(true), kind: "allow-short" }
           : { label: SECRETS_WORDS.always, run: always, kind: "allow-always" },
       ],
-      this.taskOf.get(request)?.values().next().value,
+      this.requesters.first(request),
     );
     // A phone reads which card is this use's once the card is up.
     this.options.changed();
@@ -1355,7 +1374,7 @@ export class SecretsSettings {
     return {
       receipts: () =>
         (this.owner?.requests.receipts() ?? []).filter((receipt) =>
-          this.taskOf.get(receipt.request)?.has(context.task),
+          this.requesters.names(receipt.request, context.task),
         ),
       list: async () => (await this.ready())?.protected.list() ?? [],
       // The crew's pre-check: the same checks a request meets, with no card or record.
@@ -1382,7 +1401,7 @@ export class SecretsSettings {
       cancel: async (request: string) => {
         const owner = await this.ready();
         // The caller receives its cancellation directly; other requesters still need the result.
-        this.awaiting.get(request)?.delete(context.task);
+        this.requesters.left(request, context.task);
         return owner?.requests.cancel(request);
       },
     };
@@ -1447,7 +1466,7 @@ export class SecretsSettings {
         };
       case "cancel": {
         if (!owner || !mine(input.request)) return { receipt: null };
-        this.awaiting.get(input.request)?.delete(context.task);
+        this.requesters.left(input.request, context.task);
         return { receipt: receipt(await owner.requests.cancel(input.request)) };
       }
       case "ended":
@@ -1728,27 +1747,6 @@ export class SecretsSettings {
 
 function exitOf(receipt: UseReceipt): { exitCode?: number } {
   return receipt.exitCode === undefined ? {} : { exitCode: receipt.exitCode };
-}
-
-/** Namespace idempotency, not authority: two tasks may choose the same local intent name. */
-function taskIntent(task: string, id: string): string {
-  return JSON.stringify([task, id]);
-}
-
-/** The task a crewmate's intent names (`taskIntent`), or undefined for any other intent. */
-function intentTask(intent: string): string | undefined {
-  try {
-    const parsed: unknown = JSON.parse(intent);
-    return Array.isArray(parsed) &&
-      parsed.length === 2 &&
-      typeof parsed[0] === "string" &&
-      parsed[0] !== "" &&
-      typeof parsed[1] === "string"
-      ? parsed[0]
-      : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 /**

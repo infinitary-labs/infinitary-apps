@@ -340,10 +340,11 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/axi/loadCommands.ts": 7,
   "src/core/axi/secretsCommands.ts": 15,
   "src/core/axi/stopCommands.ts": 26,
-  "src/core/batches/batches.ts": 16,
+  "src/core/batches/batches.ts": 14,
   "src/core/batches/combine.ts": 11,
   "src/core/batches/description.ts": 5,
-  // Split out of batches.ts with the words it held.
+  // Split out of batches.ts with the words each held.
+  "src/core/batches/stories.ts": 2,
   "src/core/batches/words.ts": 11,
   "src/core/bootRecovery.ts": 4,
   "src/core/browser/browserRecord.ts": 9,

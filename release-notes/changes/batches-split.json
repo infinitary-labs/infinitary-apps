@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "batches-split",
+      "reason": "Internal: the batch writer split into files by owner (the batch pull request's words, and a change rebuilt on an open batch), with the same behavior and the same tests; nothing a person sees changes."
+    }
+  ]
+}

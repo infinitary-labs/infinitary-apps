@@ -400,6 +400,25 @@ describe("the working copies a computer that runs work keeps", () => {
     expect(readdirSync(join(dataDir, "bundles"))).toEqual([]);
   });
 
+  // Intent: INF-7081's goal, a bug being fixed: a crewmate on this computer renamed its task's
+  // branch and pushed the new name, and the home, which reads only the checked-out branch's
+  // name, took it for another branch and opened a pull request that merged outside its batch.
+  it("names the branch the checkout was renamed from, oldest first, as its own log records it", async () => {
+    const { origin } = await project();
+    const { copies } = computer();
+    const { dir } = await copies.prepare("t-renamed", { origin });
+    writeFileSync(join(dir, "footer.html"), "<footer></footer>\n");
+    const tip = await commitAll(dir, "feat: add the footer");
+    await git(dir, ["branch", "-m", "inf/add-footer"]);
+    await git(dir, ["branch", "-m", "inf/footer"]);
+    expect((await copies.status("t-renamed")).checkedOut).toEqual({
+      branch: "inf/footer",
+      head: tip,
+      dirty: false,
+      renamedFrom: ["fm/task-t-renamed", "inf/add-footer"],
+    });
+  });
+
   // DOP-121: a reviewer checks out the version it reads, so its checkout
   // leaves its task's branch. On Kun's Mac mini 34 closed tasks' working
   // copies stayed for good, every one with its checkout off its branch.

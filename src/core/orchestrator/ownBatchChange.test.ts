@@ -5,6 +5,7 @@ import { BATCH_STATUS_WORDS } from "@shared/batches";
 import type { ChangePresentation } from "@shared/changePresentation";
 import { softHoldWords } from "@shared/holds";
 import type { HostedPresentationDestination } from "@shared/presentationDestination";
+import type { CheckedOut as CheckedOutReading } from "@shared/workCopies";
 import { describe, expect, it, type MockInstance, vi } from "vitest";
 import {
   BATCH_BASE,
@@ -15,6 +16,7 @@ import {
 import { gitRepo } from "../../../tests/helpers/crewHarnessGit";
 import { BUNDLED_NAMING } from "../../../tests/helpers/namingRunbook";
 import { BRANCH, HEAD, home, REPO, STORY, TASK } from "../../../tests/helpers/ownBatchChangeHome";
+import { insertTask } from "../../../tests/helpers/prCiHarness";
 import { BATCH_WORDS } from "../batches/batches";
 import { LEFT_OUT_WORDS } from "../batches/combine";
 import { BATCH_CHECK, BATCH_WAITING_WORDS, presentationCommitMessage } from "../forge";
@@ -1370,6 +1372,123 @@ describe("the merge of a change that joins a batch", () => {
     });
     await at.pass();
     expect(at.open()?.members).toMatchObject([{ taskId: TASK, head: HEAD }]);
+  });
+});
+
+// Intent: INF-7081's goal, a bug being fixed: "a batch-delivery task whose crewmate renamed
+// and pushed its branch still joins its batch at the merge card, or is told to push under the
+// task's branch, instead of opening a pull request of its own that merges alone". On INF-7042
+// a crewmate on another computer ran git branch -m and pushed the new name; its merge card
+// opened a pull request for it, and the captain's click merged it alone.
+describe("a change whose crewmate renamed its task's branch", () => {
+  const ID = "cd34ef56";
+  const OWN = `fm/task-${ID}`;
+  const RENAMED = "inf/split-core-connection-test";
+  /** The story prepare_change saved for `branch`, the one the working copy had checked out. */
+  const prepared = (at: ReturnType<typeof home>, taskId: string, branch: string, head = HEAD) =>
+    at.tasks.delivery.updateChangePresentation(
+      taskId,
+      () => ({ revisions: [{ ...STORY, taskId, head }], receipts: [] }),
+      branch,
+    );
+  /** The pull requests opened for the change's own branch, by either name; a batch's is not one. */
+  const opened = (at: ReturnType<typeof home>) =>
+    at.forge.calls.filter((call) =>
+      [OWN, RENAMED].some((branch) => call.startsWith(`openChange ${branch} `)),
+    );
+
+  it("on another computer is told to push under the task's branch, and goes in line once it does", async () => {
+    let there: CheckedOutReading = {
+      branch: RENAMED,
+      head: HEAD,
+      dirty: false,
+      renamedFrom: [OWN],
+    };
+    const at = home({ checkedOut: async () => there });
+    insertTask(at.tasks, { id: ID, repoId: REPO, branch: OWN, deviceId: "mini" });
+    prepared(at, ID, RENAMED);
+
+    const refused = BATCH_OPEN_WORDS.renamed(OWN, RENAMED);
+    expect(await at.service.mergeCard.walk(ID)).toEqual({
+      did: [],
+      stop: { step: "push", missing: refused, by: "crewmate" },
+    });
+    expect(await at.service.publication.open(ID, { title: STORY.title, presentation: 1 })).toBe(
+      refused,
+    );
+    expect(opened(at)).toEqual([]);
+
+    // The crewmate renames it back, pushes the task's branch and passes its story again there.
+    there = { branch: OWN, head: HEAD, dirty: false };
+    // The working copy there has the pushed version checked out; changePublication's tests own
+    // reading it with git.
+    vi.spyOn(at.service.publication, "presentationHead").mockResolvedValue(HEAD);
+    prepared(at, ID, OWN);
+    expect(await at.service.mergeCard.walk(ID)).toEqual({
+      did: [MERGE_CARD_WORDS.batchConfirmed(OWN)],
+      ready: { revision: 1, title: STORY.title, head: HEAD },
+    });
+    at.approvals.set(ID, HEAD);
+    expect(
+      await at.service.merges.merge(ID, {
+        head: HEAD,
+        unattended: false,
+        beforeDispatch: () => undefined,
+      }),
+    ).toMatchObject({ ok: false, stop: "queue" });
+    await at.pass();
+    expect(at.open()?.members).toMatchObject([{ taskId: ID, branch: OWN, head: HEAD }]);
+    expect(opened(at)).toEqual([]);
+  });
+
+  // The same reading must not take another branch the crewmate checked out to deliver
+  // (INF-2490) for a rename, nor guess one from a computer that sends no former names.
+  it.each([
+    ["renamed from another branch than the task's own", ["inf/draft"]],
+    ["read by a computer that sends no former names", undefined],
+  ])("on another computer opens its own pull request for a branch %s", async (_case, former) => {
+    const there: CheckedOutReading = {
+      branch: RENAMED,
+      head: HEAD,
+      dirty: false,
+      ...(former ? { renamedFrom: former } : {}),
+    };
+    const at = home({ checkedOut: async () => there });
+    insertTask(at.tasks, { id: ID, repoId: REPO, branch: OWN, deviceId: "mini" });
+    prepared(at, ID, RENAMED);
+    expect(await at.service.publication.open(ID, { title: STORY.title, presentation: 1 })).not.toBe(
+      BATCH_OPEN_WORDS.renamed(OWN, RENAMED),
+    );
+    expect(opened(at)).toEqual([`openChange ${RENAMED} ${STORY.title}`]);
+  });
+
+  it("on this Mac reads the rename from the branch's own log and is told the same", async () => {
+    const { dir } = gitRepo("meter");
+    const git = (...args: string[]) =>
+      execFileSync(
+        "git",
+        ["-C", dir, "-c", "user.name=Test", "-c", "user.email=test@localhost", ...args],
+        { encoding: "utf8" },
+      ).trim();
+    git("checkout", "-q", "-b", OWN);
+    writeFileSync(join(dir, "parser.ts"), "export const zone = true;\n");
+    git("add", "parser.ts");
+    git("commit", "-q", "-m", STORY.title);
+    git("branch", "-m", RENAMED);
+    const head = git("rev-parse", "HEAD");
+    const at = home({ head });
+    insertTask(at.tasks, { id: ID, repoId: REPO, branch: OWN, worktreeDir: dir });
+    prepared(at, ID, RENAMED, head);
+
+    const refused = BATCH_OPEN_WORDS.renamed(OWN, RENAMED);
+    expect(await at.service.mergeCard.walk(ID)).toEqual({
+      did: [],
+      stop: { step: "push", missing: refused, by: "crewmate" },
+    });
+    expect(await at.service.publication.open(ID, { title: STORY.title, presentation: 1 })).toBe(
+      refused,
+    );
+    expect(opened(at)).toEqual([]);
   });
 });
 

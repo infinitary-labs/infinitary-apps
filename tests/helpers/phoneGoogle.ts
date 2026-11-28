@@ -101,10 +101,15 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
    * What the person ticks on Google's page for the next sign-in: every box
    * but Drive (`false`), or every box (`true`), as INF-7009's row line
    * "Drive, Docs and Sheets not added" needs a sign-in that left Drive out.
+   * The row's date a client in Testing stops outranks that line, so the
+   * sign-in without Drive is made as a client in Production, which Google
+   * names no end for; every box goes back to the stand-in's Testing client.
    */
   const everyBox = [...stand.knobs.consent.grant];
+  const testingLasts = stand.knobs.lasts;
   const tickDrive = (drive: boolean): { grant: string[] } => {
     stand.knobs.consent.grant = drive ? [...everyBox] : everyBox.filter((scope) => scope !== DRIVE);
+    stand.knobs.lasts = drive ? testingLasts : undefined;
     return { grant: stand.knobs.consent.grant };
   };
   return {

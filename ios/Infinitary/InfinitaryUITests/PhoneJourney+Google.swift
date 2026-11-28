@@ -109,7 +109,8 @@ extension PhoneJourney {
         waitForSteadyTarget(next)
         picture("google-signed-in-without-drive")
 
-        // Sign in again with every box ticked adds Drive, and the line goes.
+        // Sign in again with every box ticked adds Drive: the Drive line goes, and the stand-in's client in Testing
+        // brings back the date it stops.
         _ = try await home("google-every-box")
         tapOnPhone(next, repeatDiscarded: false)
         XCTAssertTrue(accept.waitForPresence(timeout: 10), app.debugDescription)
@@ -120,7 +121,8 @@ extension PhoneJourney {
         focusForPhoneTyping(paste, in: app)
         paste.typeText(try XCTUnwrap(again["address"] as? String))
         tapOnPhone(app.buttons["google-paste-send"], repeatDiscarded: false)
-        XCTAssertTrue(line.waitForAbsence(timeout: 30), app.debugDescription)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label BEGINSWITH %@", "Stops "), object: line, timeout: 30),
+                       .completed, app.debugDescription)
         XCTAssertTrue(account.waitForPresence(timeout: 30), app.debugDescription)
         XCTAssertTrue(account.label.contains(who), account.label)
         picture("google-signed-in")

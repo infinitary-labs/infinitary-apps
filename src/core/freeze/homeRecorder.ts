@@ -1,5 +1,6 @@
 import type { SourceIdentity } from "@shared/selfSource";
 import type { HostCapabilities } from "../host";
+import { hostEnv } from "../hostEnv";
 import type { TypedWake } from "../orchestrator/wakes";
 import type { AppPaths } from "../paths";
 import { FreezeRecorder, freezeWake, infinitaryProject } from "./freezeRecorder";
@@ -45,6 +46,7 @@ export function startHomeFreezeRecorder(options: {
       ...(host.processFootprint ? { footprint: host.processFootprint } : {}),
     },
     ...(host.windowState ? { windowState: host.windowState } : {}),
+    childEnv: hostEnv(),
     onFreeze: () => {},
     steps: { source: options.steps, recordPath: paths.passRecordPath },
     tally: new FreezeTally(paths.freezeTallyPath, host.app.version, build),

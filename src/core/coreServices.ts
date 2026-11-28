@@ -41,6 +41,7 @@ import type { CardFileReads } from "./files/cardFileReads";
 import type { FirstRunService } from "./firstRun";
 import type { ForgeSignIns } from "./forge";
 import type { FreezeRecorder } from "./freeze/freezeRecorder";
+import type { StepRunner } from "./freeze/passSteps";
 import type { Inbox, IntegrationsService, SavedOutsideData } from "./integrations";
 import type { JobManager } from "./jobs/jobManager";
 import type { KnowledgeService } from "./knowledge/knowledgeService";
@@ -103,6 +104,11 @@ import type { WorkspaceService } from "./workspace/workspaceService";
  */
 export type CoreServices = {
   runbooks: Runbooks;
+  /**
+   * Runs work as a named step for the freeze recorder (docs/freeze-recorder.md,
+   * "Work outside the pass"); with no recorder, or absent, the work only runs.
+   */
+  step?: StepRunner;
   paths: AppPaths;
   /**
    * The record's one writer connection, for the copy on other computers

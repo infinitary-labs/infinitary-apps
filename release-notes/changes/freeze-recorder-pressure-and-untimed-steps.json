@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "freeze-recorder-pressure-and-untimed-steps",
+      "reason": "The alpha-only freeze recorder now notes the system's memory pressure and swap with each stall and memory reading, times crew and first mate turn ends, connection messages, card broadcasts and check readings as steps, and lists the steps that ran in each stall; it changes what the local diagnostic record holds, and nothing a person sees or does."
+    }
+  ]
+}

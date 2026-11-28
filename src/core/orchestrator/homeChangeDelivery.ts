@@ -3,6 +3,7 @@ import { englishOf, saidLine } from "@shared/i18n/said";
 import { PULL_REQUEST_COMMENTS_WAKE } from "@shared/pullComments";
 import { noChecksSaid, repoConfiguredEvent } from "@shared/repos";
 import { pushBatch } from "../batches/combine";
+import type { StepRunner } from "../freeze/passSteps";
 import type { StandingDirections } from "../knowledge/directions";
 import {
   type AppPaths,
@@ -45,6 +46,7 @@ export function startHomeChangeDelivery({
   broadcastEvent,
   beforeAct,
   later,
+  step,
 }: {
   tasks: TaskService;
   repos: RepoRegistry;
@@ -58,6 +60,8 @@ export function startHomeChangeDelivery({
   runbooks: Pick<Runbooks, "mapPart" | "wakes" | "subscribe">;
   ticker: Pick<Ticker, "now" | "register">;
   inbox: InboxStore;
+  /** The freeze recorder's step runner (docs/freeze-recorder.md, "Work outside the pass"). */
+  step: StepRunner;
   broadcastEvent: (event: FmEvent) => void;
   beforeAct: () => Promise<void>;
   /** Owners built after this one, read when a callback runs. */
@@ -115,6 +119,7 @@ export function startHomeChangeDelivery({
     },
   });
   const changeDelivery: ChangeDelivery = createChangeDelivery({
+    step,
     namingRule,
     tasks,
     repos,

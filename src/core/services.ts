@@ -55,7 +55,7 @@ import { startHomeFiles } from "./files/homeFiles";
 import { startFirstLaunch } from "./firstLaunch";
 import { startHomeForges } from "./forge/homeForges";
 import { startHomeFreezeRecorder } from "./freeze/homeRecorder";
-import { PassSteps } from "./freeze/passSteps";
+import { PassSteps, type StepRunner } from "./freeze/passSteps";
 import { startHomeNotifier } from "./homeNotifier";
 import { startHomeProjects } from "./homeProjects";
 import type { HostCapabilities } from "./host";
@@ -304,7 +304,7 @@ export async function createServices(
   // The freeze recorder times each pass and the work it sets off as steps
   // (docs/freeze-recorder.md, "The minute pass's steps").
   const passSteps = new PassSteps();
-  const step = <T>(name: string, run: () => T): T => passSteps.run(name, run);
+  const step: StepRunner = (name, run, options) => passSteps.run(name, run, options);
   const ticker = new Ticker({
     periodMs: tickPeriodFor(host.app.packaged, process.env),
     betweenPasses: () => new Promise((resolve) => setImmediate(resolve)),
@@ -763,6 +763,7 @@ export async function createServices(
     appPath: host.app.appDir,
   });
   const { workflowEvidence, batches, changeDelivery, githubGateway } = startHomeChangeDelivery({
+    step,
     tasks,
     repos,
     forgeFor,
@@ -1247,6 +1248,7 @@ export async function createServices(
   });
   const tagging = startTaskTagger({ ...decisionUses, broadcastEvent });
   const firstmate = startHomeFirstmate({
+    step,
     corrections,
     workDevices,
     computers,
@@ -1644,6 +1646,7 @@ export async function createServices(
     flagship,
     scheduler,
     ticker,
+    step,
     jobs,
     shellGroups,
     providerViews: () =>

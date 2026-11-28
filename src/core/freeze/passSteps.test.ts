@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TICK_PERIOD_MS, Ticker } from "../orchestrator/ticker";
-import { PassSteps, type PassTiming, type StepMark } from "./passSteps";
+import { PassSteps, type PassTiming, type RunEnded, type StepMark } from "./passSteps";
 
 // The captain's pick on INF-4076: "Start timing each minute-pass step" - time
 // each step of the once-a-minute pass, including the work each step sets off,
@@ -81,6 +81,46 @@ describe("the minute pass's steps", () => {
           { name: "board-push", startMs: 17, syncMs: 70, cpuMs: 65 },
         ],
       },
+    ]);
+  });
+
+  // INF-7202's diagnosis plan, which the captain started: time the work no
+  // step timed, such as messages on the app's connections and timers, which
+  // run many times a minute, and say which steps filled each stall.
+  it("adds up a tallied step's runs in the pass and hands over each run's own time, less the steps inside it", () => {
+    const { steps, spend } = manualClock();
+    const passes: PassTiming[] = [];
+    const ran: RunEnded[] = [];
+    steps.listen({
+      mark: () => {},
+      pass: (pass) => passes.push(pass),
+      ran: (run) => ran.push(run),
+    });
+    steps.passStarted();
+    steps.run("message:listTasks", () => spend(4, 3), { tally: true });
+    steps.run("message:listTasks", () => spend(9, 8), { tally: true });
+    steps.run("turn-end", () => {
+      spend(20, 18);
+      steps.run("board-push", () => spend(70, 65));
+      spend(5, 5);
+    });
+    steps.passStarted();
+
+    expect(passes).toEqual([
+      {
+        at: "2026-11-13T12:00:07.700Z",
+        steps: [
+          { name: "board-push", startMs: 33, syncMs: 70, cpuMs: 65 },
+          { name: "turn-end", startMs: 13, syncMs: 95, cpuMs: 88 },
+        ],
+        tallied: [{ name: "message:listTasks", runs: 2, syncMs: 13, cpuMs: 11, maxSyncMs: 9 }],
+      },
+    ]);
+    expect(ran).toEqual([
+      { name: "message:listTasks", selfMs: 4, cpuSelfMs: 3 },
+      { name: "message:listTasks", selfMs: 9, cpuSelfMs: 8 },
+      { name: "board-push", selfMs: 70, cpuSelfMs: 65 },
+      { name: "turn-end", selfMs: 25, cpuSelfMs: 23 },
     ]);
   });
 

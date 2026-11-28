@@ -4,6 +4,7 @@ import type { CoreServices } from "../coreServices";
 import type { startCorrections } from "../decisions/startCorrections";
 import type { Computers } from "../devices/computers";
 import type { HomeForges } from "../forge/homeForges";
+import type { StepRunner } from "../freeze/passSteps";
 import type { HostCapabilities } from "../host";
 import type { IntegrationsService } from "../integrations/service";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
@@ -54,6 +55,7 @@ import type { Ticker } from "./ticker";
  * installer exist; what reaches it later is late-bound by the caller.
  */
 export function startHomeFirstmate({
+  step,
   corrections,
   workDevices,
   computers,
@@ -159,8 +161,11 @@ export function startHomeFirstmate({
   panelMounts: HomePersonal["panelMounts"];
   projectSetups: Pick<ProjectSetups, "propose">;
   projectChanges: Pick<ProjectChanges, "request">;
+  /** The freeze recorder's step runner (docs/freeze-recorder.md, "Work outside the pass"). */
+  step: StepRunner;
 }): FirstmateAgent {
   const firstmate = new FirstmateAgent({
+    step,
     correctionCase: (request) => corrections.cases.handle(request),
     computerVersions: () => {
       const running = workDevices.runningVersions();

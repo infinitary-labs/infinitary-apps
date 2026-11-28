@@ -20,6 +20,7 @@ import {
   type ForgeRepo,
   isForkReview,
 } from "../forge";
+import type { StepRunner } from "../freeze/passSteps";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
 import { checkoutOf, git } from "../workspace/git";
@@ -40,6 +41,11 @@ import { mergesInOwnBatch } from "./workShape";
  * send-once effects remain host-owned.
  */
 export type ChangeDeliveryOptions = {
+  /**
+   * Runs a check reading's record writes as a named step for the freeze
+   * recorder (docs/freeze-recorder.md, "Work outside the pass"); absent, they only run.
+   */
+  step?: StepRunner;
   /** The active naming runbook's rule, read at each use; absent or null, no naming runbook is on. */
   namingRule?: () => NamingRule | null;
   prepareContribution?: (taskId: string) => Promise<string | undefined>;

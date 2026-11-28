@@ -651,6 +651,12 @@ export class CrewTurns {
    * failed turn, never an outcome.
    */
   private turnComplete(task: TaskRuntime, options: { interrupted?: boolean } = {}): void {
+    const step = this.core.options.step;
+    if (step) step("turn-end", () => this.endTurn(task, options));
+    else this.endTurn(task, options);
+  }
+
+  private endTurn(task: TaskRuntime, options: { interrupted?: boolean }): void {
     this.clearWait(task);
     const placement = this.core.options.tasks.get(task.id)?.placement;
     if (placement)

@@ -265,9 +265,9 @@ it("gates old checked models until the recovered account is checked again (INF-4
   expect((await runtime.getAuth("amazon-bedrock"))?.env?.AWS_PROFILE).toBe("fixture");
 });
 
-it("keeps a connected account to its checked models once its refreshes settle (INF-3451)", async () => {
-  // Registering another provider in this runtime fires refreshes that
-  // re-list every stock Bedrock model.
+it("keeps a connected account to its checked models from the moment its runtime is created (INF-3451, INF-6929)", async () => {
+  // Registering a provider fires refreshes that re-list every stock Bedrock
+  // model until their availability pass lands.
   const dir = scratchDir("bedrock-checked-");
   const authPath = join(dir, "auth.json");
   const id = "us.anthropic.claude-sonnet-5-5";
@@ -286,8 +286,20 @@ it("keeps a connected account to its checked models once its refreshes settle (I
     modelsPath: join(dir, "models.json"),
     bedrockAccount: true,
   });
-  await catalogRefreshesSettled();
-  expect(runtime.getAvailableSnapshot().map((model) => model.id)).toEqual([id]);
+  const listed = () => runtime.getAvailableSnapshot().map((model) => model.id);
+  expect(listed()).toEqual([id]);
+  // A session resolves its model through getModel, whose Bedrock gate reads the same list.
+  expect(runtime.getModel("amazon-bedrock", "us.anthropic.claude-opus-5-5")).toBeUndefined();
+  let settled = false;
+  const settling = catalogRefreshesSettled().then(() => {
+    settled = true;
+  });
+  while (!settled) {
+    expect(listed()).toEqual([id]);
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  await settling;
+  expect(listed()).toEqual([id]);
 });
 
 it("groups Bedrock regions by the actual AWS sign-in cache, not the profile name (INF-4973)", () => {

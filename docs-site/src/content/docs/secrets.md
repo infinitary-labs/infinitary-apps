@@ -89,7 +89,8 @@ Then choose:
 Each allow asks you to confirm first: on a Mac with Touch ID or your password, on Linux with your password, and on Windows with Windows Hello or your Windows password.
 What receives a secret can keep it.
 Allowing never approves a separate action, such as deploying or sending something.
-The crewmate hears only whether the run finished, not what it printed.
+The crewmate hears when its program starts, so it carries on, and whether the run finished, never what it printed.
+If Infinitary closes while a request waits or its program runs, the crewmate hears how it ended when Infinitary opens again.
 
 While a request waits, Settings → Secrets shows it at the top, with **Review request** to open its card.
 

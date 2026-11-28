@@ -1,5 +1,5 @@
 ---
-source: 91a924b8c4a1a2d6
+source: fae1b8cd31c6767c
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
@@ -90,7 +90,8 @@ Wähl dann:
 Jedes Erlauben bittet dich zuerst um eine Bestätigung: auf einem Mac mit Touch ID oder deinem Passwort, unter Linux mit deinem Passwort und unter Windows mit Windows Hello oder deinem Windows-Passwort.
 Was ein Geheimnis erhält, kann es behalten.
 Erlauben bestätigt nie eine eigene Handlung, etwa ein Deployment oder das Senden von etwas.
-Das Crewmitglied erfährt nur, ob der Lauf zu Ende gegangen ist, nicht, was er ausgegeben hat.
+Das Crewmitglied erfährt, wann sein Programm startet, damit es weiterarbeitet, und ob der Lauf zu Ende gegangen ist, nie, was er ausgegeben hat.
+Schließt sich Infinitary, während eine Anfrage wartet oder ihr Programm läuft, erfährt das Crewmitglied beim nächsten Öffnen von Infinitary, wie es ausgegangen ist.
 
 Solange eine Anfrage wartet, zeigt Einstellungen → Geheimnisse sie ganz oben, mit **Anfrage prüfen**, um ihre Karte zu öffnen.
 

@@ -49,6 +49,8 @@ function home() {
   const dir = scratchDir("secrets-elsewhere-home-");
   const cards: Raised[] = [];
   const ended: { task: string; receipt: EndedUseReceipt }[] = [];
+  /** What each task heard, in order: a use's start and its end. */
+  const told: string[] = [];
   const settings = new SecretsSettings({
     open: (initialize) =>
       ProtectedSecrets.open({
@@ -64,6 +66,10 @@ function home() {
     withdraw: () => {},
     settled: (task, receipt) => {
       ended.push({ task, receipt });
+      told.push(`${task} ended ${receipt.request}`);
+    },
+    started: (task, request) => {
+      told.push(`${task} started ${request}`);
     },
     changed: () => {},
     taskTitle: () => "Deploy the site",
@@ -74,7 +80,7 @@ function home() {
       throw new Error("No trusted action with that label.");
     await settings.decide(effect.arg);
   };
-  return { settings, cards, ended, click };
+  return { settings, cards, ended, told, click };
 }
 
 /**
@@ -169,6 +175,28 @@ describe("Secrets used from a computer that runs work", () => {
           { op: "status", request: asked.request },
         ),
       ).toEqual({ receipt: null });
+    },
+  );
+
+  // INF-7106: a crewmate told its run waits on the captain heard nothing
+  // more until the program ended.
+  it(
+    "the crewmate hears once that its run started when that computer takes the values, before the end",
+    BUDGET,
+    async () => {
+      const h = home();
+      await h.settings.put(INPUT);
+      const there = workComputer(h.settings, BUILD_MAC);
+      const run = await program();
+      const asked = await there.inject(run.use("deploy-started"));
+      expect(asked.state).toBe("waiting");
+      await h.click(SECRETS_WORDS.once);
+      await vi.waitFor(() => expect(h.ended).toHaveLength(1));
+      expect(h.told).toEqual([
+        `${TASK} started ${asked.request}`,
+        `${TASK} ended ${asked.request}`,
+      ]);
+      expect(await run.lines()).toEqual([TOKEN]);
     },
   );
 

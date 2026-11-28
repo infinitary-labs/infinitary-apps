@@ -5,7 +5,7 @@ import { secretHistorySchema } from "@shared/secrets";
 import { z } from "zod";
 import type { RuleEffect } from "./authority";
 import { canonical, type RootKeys, writePrivateFile } from "./custody";
-import type { UseReceipt, UseState } from "./requests";
+import type { EndedUseReceipt, UseReceipt, UseState } from "./requests";
 
 /** How a use was approved: fresh authentication here, a signed decision elsewhere, or a saved rule. */
 /** `sign-in`: the app spent its own sign-in, made in the app, which is the consent. */
@@ -125,6 +125,8 @@ export class UseJournal {
   private writable = true;
   /** True when a line failed its check: the lines after it were not read. */
   broken = false;
+  /** The uses this opening ended because the process before it stopped while they waited or ran. */
+  private readonly cut: { intent: string; receipt: EndedUseReceipt }[] = [];
 
   private constructor(
     private readonly path: string,
@@ -271,6 +273,11 @@ export class UseJournal {
     }));
   }
 
+  /** The uses this opening ended (`reconcile`), with the intent that named each. */
+  cutOff(): { intent: string; receipt: EndedUseReceipt }[] {
+    return this.cut.map(({ intent, receipt }) => ({ intent, receipt: { ...receipt } }));
+  }
+
   /** Bytes this history takes on disk, set-aside unreadable copies included, for the storage-use display. */
   async storageUse(): Promise<number> {
     let bytes = 0;
@@ -406,20 +413,11 @@ export class UseJournal {
 
   private async reconcile(): Promise<void> {
     for (const item of this.liveHistory()) {
-      if (item.state === "executing")
-        await this.append({
-          kind: "ended",
-          request: item.request,
-          state: "unknown",
-          reconciled: true,
-        });
-      else if (item.state === "waiting")
-        await this.append({
-          kind: "ended",
-          request: item.request,
-          state: "invalidated",
-          reconciled: true,
-        });
+      const state =
+        item.state === "executing" ? "unknown" : item.state === "waiting" ? "invalidated" : null;
+      if (!state) continue;
+      await this.append({ kind: "ended", request: item.request, state, reconciled: true });
+      this.cut.push({ intent: item.intent, receipt: { request: item.request, state } });
     }
   }
 }

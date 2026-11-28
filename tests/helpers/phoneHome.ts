@@ -3369,11 +3369,10 @@ export async function startPhoneHome(
           );
           break;
         case "POST scene-stage-finished":
-          result = await scene.finishParts();
-          break;
         case "POST scene-cleanup":
-          scene.cleanup();
-          result = { ok: true };
+        case "POST scene-one-project":
+        case "GET scene-grouping":
+          result = await scene.command(command);
           break;
         case "POST capture-orbit-gap-start":
           await controls?.start("native-orbit-gap");

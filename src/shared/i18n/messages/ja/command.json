@@ -71,6 +71,8 @@
   "commandCommandsSearch": "コマンドを検索",
   "commandComputersNext": "次の作業コンピューター",
   "commandComputersPrevious": "前の作業コンピューター",
+  "commandCrewGroupingToggle": "乗組員のアニメーションをプロジェクトごとまたはコンピューターごとにまとめる",
+  "commandCrewGroupingToggleWords": "乗組員, アニメーション, 軌道, プロジェクト, コンピューター, グループ",
   "commandDevicesTryAgain": "コンピューターへの接続を再試行",
   "commandDevicesTryAgainWords": "デバイス, 再接続, 接続, マック",
   "commandFeedbackStart": "フィードバックを送信",

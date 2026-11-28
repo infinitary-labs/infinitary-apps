@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "Buscar comandos";
 "commandComputersNext" = "Computadoras de trabajo siguientes";
 "commandComputersPrevious" = "Computadoras de trabajo anteriores";
+"commandCrewGroupingToggle" = "Agrupar la animación de la tripulación por proyecto o por computadora";
+"commandCrewGroupingToggleWords" = "tripulación, animación, órbita, proyecto, computadora, agrupar";
 "commandDevicesTryAgain" = "Volver a intentar llegar a tus computadoras";
 "commandDevicesTryAgainWords" = "dispositivos, reconectar, conectar, computadoras";
 "commandFeedbackStart" = "Enviar comentarios";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "Primer oficial - %1$@";
 "crewModelNames" = "Nombres de los modelos de la tripulación";
 "crewNextComputers" = "Computadoras siguientes";
+"crewNextProjects" = "Proyectos siguientes";
 "crewOrbitLabel" = "Tripulación - %2$@ trabajando, %1$@ en reposo";
 "crewOutOfReach" = "Fuera de alcance";
 "crewPartsCount" = "terminadas: %1$@, en ejecución: %2$@, en espera: %3$@";
 "crewPreviousComputers" = "Computadoras anteriores";
+"crewPreviousProjects" = "Proyectos anteriores";
 "crewProgramsAndParts" = "Programas y sus partes";
+"crewProjectGroups" = "Grupos de proyectos";
 "crewStateIdle" = "En reposo";
 "crewStateWorking" = "Trabajando";
 "crewSummaryAnotherTask" = "otra tarea";
@@ -1762,6 +1767,7 @@
 "panelChangeCardSize" = "Tamaño de las tarjetas";
 "panelChangeCopyStop" = "Dejar de guardar una copia en otra computadora";
 "panelChangeCostLimit" = "Cuándo una tarea pregunta antes de gastar más";
+"panelChangeCrewGrouping" = "Agrupar la animación de la tripulación por proyecto";
 "panelChangeCrewModelNames" = "Mostrar los nombres de modelo de la tripulación";
 "panelChangeCrewReasoning" = "Cuánto piensa la tripulación";
 "panelChangeCrewSlots" = "Los modelos de la tripulación";
@@ -2333,6 +2339,8 @@
 "phoneSettingsCapabilityRead" = "Lee tarjetas, Actividad y tareas. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "La conversación se queda en tu computadora.";
+"phoneSettingsCrewGrouping" = "Agrupar la animación de la tripulación por proyecto";
+"phoneSettingsCrewGroupingScope" = "En la animación de la tripulación, los tripulantes de cada proyecto orbitan juntos, sea cual sea la computadora que los ejecuta. Se ajusta en %1$@, así que sus ventanas también lo siguen.";
 "phoneSettingsDevices" = "Dispositivos";
 "phoneSettingsFoldSplit" = "Dividir en el pliegue";
 "phoneSettingsFoldSplitScope" = "Abierto como un libro, este teléfono muestra Tareas y Actividad a un lado del pliegue e Inicio al otro. Desactívalo para que se organice como un iPad.";
@@ -2622,6 +2630,7 @@
 "recordValidationScenario" = "Escenario";
 "recordValidationSupplementary" = "%1$@ (complementario)";
 "refuseACardCoversTheComputers" = "Una tarjeta tapa las computadoras";
+"refuseACardCoversTheProjects" = "Una tarjeta tapa los proyectos";
 "refuseARecordingIsRunning" = "Hay una grabación en curso";
 "refuseBrowserTabCannotBeFound" = "La pestaña Navegador muestra una imagen de una página, así que sus palabras no se pueden buscar";
 "refuseCloseTheOpenDialogFirst" = "Primero cierra el cuadro de diálogo abierto";
@@ -2658,7 +2667,9 @@
 "refuseThereIsNoOtherTabToGo" = "No hay otra pestaña a la que ir";
 "refuseThereIsOnlyOneProject" = "Solo hay un proyecto";
 "refuseTheseAreTheFirstComputers" = "Estas son las primeras computadoras";
+"refuseTheseAreTheFirstProjects" = "Estos son los primeros proyectos";
 "refuseTheseAreTheLastComputers" = "Estas son las últimas computadoras";
+"refuseTheseAreTheLastProjects" = "Estos son los últimos proyectos";
 "refuseThisCardAsksNoQuestions" = "Esta tarjeta no hace preguntas";
 "refuseThisCardCannotBeFound" = "Las palabras se buscan en una tarjeta, una tarjeta anterior o el registro de una tarea";
 "refuseThisCardHasNoButtons" = "Esta tarjeta no tiene botones";
@@ -2848,6 +2859,10 @@
 "settingsAppearanceCardSizeDescription" = "Elige cómo se abren las tarjetas. Igual puedes cambiar el tamaño de cada una.";
 "settingsAppearanceCardUsual" = "Habitual";
 "settingsAppearanceCardWide" = "Ancha";
+"settingsAppearanceCrewGroupedByComputer" = "Animación de la tripulación agrupada por computadora";
+"settingsAppearanceCrewGroupedByProject" = "Animación de la tripulación agrupada por proyecto";
+"settingsAppearanceCrewGrouping" = "Agrupar la animación de la tripulación por proyecto";
+"settingsAppearanceCrewGroupingDescription" = "En la animación de la tripulación, los tripulantes de cada proyecto orbitan juntos, sea cual sea la computadora que los ejecuta.";
 "settingsAppearanceCrewModelNames" = "Nombres de modelo de la tripulación";
 "settingsAppearanceCrewModelNamesDescription" = "Muestra los nombres de los modelos mientras los tripulantes usan una sola órbita.";
 "settingsAppearanceHeading" = "Apariencia";

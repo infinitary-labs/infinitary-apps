@@ -1239,6 +1239,21 @@ export const KEYBOARD_COMMANDS = {
       return searchWords(m.commandAmbientStyleWords());
     },
   },
+  // Settings → Appearance's Group crew animation by project switch
+  // (docs/crew-orbits.md, "Grouping by project"), flipped. No default key.
+  "crew-grouping.toggle": {
+    get label() {
+      return m.commandCrewGroupingToggle();
+    },
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [],
+    get searchWords() {
+      return searchWords(m.commandCrewGroupingToggleWords());
+    },
+  },
   // Tokens or estimated dollars, everywhere in Usage at once; it opens
   // Usage, so the switch is seen, and the core remembers the choice.
   "usage.unit": {

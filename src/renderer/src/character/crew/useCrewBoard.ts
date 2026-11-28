@@ -12,7 +12,7 @@ import { projectFact } from "./projectFact";
 export type CrewFacts = { task: TaskView; modelName: (model: string) => string };
 
 /** The board's project list, read again whenever the board changes. */
-function useBoardProjects(): readonly ProjectView[] {
+export function useBoardProjects(): readonly ProjectView[] {
   const [projects, setProjects] = useState<readonly ProjectView[]>([]);
   useEffect(
     () =>

@@ -21,6 +21,14 @@ describe("command search's list", () => {
     );
   });
 
+  // INF-6955's approved plan: the crew's page commands say projects while
+  // the crew animation is grouped by project.
+  it("shows and finds a command by the label the window gives it", () => {
+    const labels = { "computers.next": m.crewNextProjects() };
+    const rows = commandRows("next projects", () => null, DEFAULT_BINDINGS, {}, [], "mac", labels);
+    expect(rows.map((row) => [row.id, row.label])).toEqual([["computers.next", "Next projects"]]);
+  });
+
   it("finds the thread's command by the words a person might use for it", () => {
     expect(commandRows("collapse", () => null, DEFAULT_BINDINGS).map((row) => row.id)).toEqual([
       "cards.thread",

@@ -71,6 +71,8 @@
   "commandCommandsSearch": "Rechercher des commandes",
   "commandComputersNext": "Ordinateurs de travail suivants",
   "commandComputersPrevious": "Ordinateurs de travail précédents",
+  "commandCrewGroupingToggle": "Grouper l’animation de l’équipage par projet ou par ordinateur",
+  "commandCrewGroupingToggleWords": "équipage, animation, orbite, projet, ordinateur, grouper",
   "commandDevicesTryAgain": "Réessayer de joindre vos ordinateurs",
   "commandDevicesTryAgainWords": "appareils, ssh, reconnecter, connecter, ordinateurs",
   "commandFeedbackStart": "Envoyer un avis",

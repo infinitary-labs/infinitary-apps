@@ -71,6 +71,8 @@
   "commandCommandsSearch": "Buscar comandos",
   "commandComputersNext": "Computadoras de trabajo siguientes",
   "commandComputersPrevious": "Computadoras de trabajo anteriores",
+  "commandCrewGroupingToggle": "Agrupar la animación de la tripulación por proyecto o por computadora",
+  "commandCrewGroupingToggleWords": "tripulación, animación, órbita, proyecto, computadora, agrupar",
   "commandDevicesTryAgain": "Volver a intentar llegar a tus computadoras",
   "commandDevicesTryAgainWords": "dispositivos, reconectar, conectar, computadoras",
   "commandFeedbackStart": "Enviar comentarios",

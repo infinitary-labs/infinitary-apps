@@ -5,13 +5,14 @@ import SwiftUI
 /// Published task facts alone choose relationships; branches and bounds resolve actual placement.
 enum PhoneSceneCompanions {
     struct Cue { var blocker: String; var index: Int; var count: Int; var circles: Bool }
-    static func cues(_ tasks: [PhoneTask], parts: Set<String>) -> [String: Cue] {
+    /// `group` is where each crewmate sits (`PhoneSceneRoster.groupID`): a circle joins crew of one group only.
+    static func cues(_ tasks: [PhoneTask], parts: Set<String>, group: (PhoneTask) -> String = PhoneSceneRoster.computerID) -> [String: Cue] {
         let byKey = Dictionary(uniqueKeysWithValues: tasks.map { ($0.key, $0) })
         let byID = Dictionary(uniqueKeysWithValues: tasks.map { ($0.id, $0) })
         var cues: [String: Cue] = [:], waits: [String: [PhoneTask]] = [:]
         let limit = Int(CharacterCatalog.shared.dependency["maxCompanions"]!)
         for task in tasks where !task.blockedBy.isEmpty {
-            let blockers = task.blockedBy.compactMap { byKey[$0] }.filter { PhoneSceneRoster.computerID($0) == PhoneSceneRoster.computerID(task) }
+            let blockers = task.blockedBy.compactMap { byKey[$0] }.filter { group($0) == group(task) }
             guard let blocker = blockers.first else { continue }
             // The builder's merge hold is not a second circle back to its reviewer.
             if blockers.count == 1 && blocker.reviewOf == task.id { continue }
@@ -29,7 +30,7 @@ enum PhoneSceneCompanions {
         var reviews: [String: [String]] = [:]
         for task in tasks {
             guard let builder = task.reviewOf, builder != task.id, let other = byID[builder],
-                  PhoneSceneRoster.computerID(other) == PhoneSceneRoster.computerID(task), cues[task.id] == nil else { continue }
+                  group(other) == group(task), cues[task.id] == nil else { continue }
             reviews[builder, default: []].append(task.id)
         }
         for (builder, reviewers) in reviews {

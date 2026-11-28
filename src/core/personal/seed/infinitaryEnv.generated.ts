@@ -275,10 +275,7 @@ declare module "@infinitary/contracts" {
      * state. Absent while it is not pinned, and on an older home.
      */
     pinnedAt?: number;
-    /**
-     * Its parts: how many, how many are closed, and the closed ones' ids in the order they closed,
-     * oldest first (absent on an older home).
-     */
+    /** Its parts: how many, how many are closed, and the closed ones' ids in the order they closed, oldest first (absent on an older home). */
     children: { total: number; closed: number; closedIds?: string[] };
     /** Reachable shown ready decision, null on hidden/working/closed tasks. */
     waitingCardId: string | null;
@@ -1431,6 +1428,7 @@ declare module "@infinitary/contracts" {
     | "card-size"
     | "copy-stop"
     | "cost-limit"
+    | "crew-grouping"
     | "crew-model-names"
     | "crew-reasoning"
     | "crew-slots"

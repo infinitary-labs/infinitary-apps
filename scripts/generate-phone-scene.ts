@@ -44,6 +44,7 @@ try {
   const { CROWDED_PLANES, GROWING_RING, outerPlaneRadius, planeRadius } = await runner.import<typeof import("../src/renderer/src/character/crew/orbitalPlanes.ts")>(join(character, "crew/orbitalPlanes.ts"));
   const { CLUSTER_LAYOUT } = await runner.import<typeof import("../src/renderer/src/character/crew/computers.ts")>(join(character, "crew/computers.ts"));
   const { OUT_OF_FOCUS_LIGHT, lightFrame, restedLight } = await runner.import<typeof import("../src/renderer/src/character/crew/focusLight.ts")>(join(character, "crew/focusLight.ts"));
+  const { groupOf, groupPlanOf } = await runner.import<typeof import("../src/renderer/src/character/crew/crewGroups.ts")>(join(character, "crew/crewGroups.ts"));
   const { ORION, BIG_DIPPER } = await runner.import<typeof import("../src/renderer/src/character/constellations.ts")>(join(character, "constellations.ts"));
   const { SATURN } = await runner.import<typeof import("../src/renderer/src/character/saturn.ts")>(join(character, "saturn.ts"));
   const { GALAXY } = await runner.import<typeof import("../src/renderer/src/character/galaxy.ts")>(join(character, "galaxy.ts"));
@@ -118,6 +119,7 @@ try {
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneCinchTraces.generated.json": cinchTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneFocusLight.generated.json": focusLightTraces(),
+    "ios/Infinitary/InfinitaryTests/PhoneCrewGroups.generated.json": crewGroupReadings(),
     "ios/Infinitary/InfinitaryTests/PhoneSupernovaTraces.generated.json": supernovaTraces(),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
     "ios/Infinitary/InfinitaryTests/PhoneFixedStars.generated.json": fixedStarReadings(),
@@ -199,6 +201,45 @@ try {
     return { projects, durationMs, steps: steps.map((step) => {
       const lit = lightFrame(frame, restedLight({ project: step.held, projectOf }, step.rested), state, step.elapsedMs, durationMs);
       return { ...step, light: Object.fromEntries(lit.crew.map((c) => [c.id, Math.round(c.alpha * 1e9) / 1e9])) };
+    }) };
+  }
+  /**
+   * Grouping the crew animation by project (docs/crew-orbits.md, "Grouping by project"): the desktop's own groups for
+   * rosters across the captain's answers - one project of the person's own with crew sits with the first mate, the
+   * built-in projects always do, an away computer's crew stay in its frozen group - for the phone's port to replay.
+   */
+  function crewGroupReadings() {
+    const projects = [
+      { id: "scratch", name: "Scratch", builtIn: true },
+      { id: "workspace", name: "Workspace", builtIn: true },
+      { id: "website", name: "website", builtIn: false },
+      { id: "shop", name: "shop", builtIn: false },
+    ];
+    const ofTask: Record<string, string> = {
+      "web-home": "website", "web-studio": "website", "shop-home": "shop", "shop-studio": "shop",
+      "scratch-studio": "scratch", "workspace-home": "workspace", "web-away": "website", "shop-away": "shop",
+    };
+    type Crew = { id: string; computer: string; away: boolean };
+    const at = (id: string): Crew => ({ id, computer: id.endsWith("-home") ? "home" : id.endsWith("-studio") ? "studio" : "away-mac", away: id.endsWith("-away") });
+    const rosters: Array<{ name: string; grouping: "computer" | "project"; focus: string | null; crew: string[]; unknown?: string }> = [
+      { name: "by computer", grouping: "computer", focus: null, crew: ["web-home", "shop-studio"] },
+      { name: "one project of the person's own", grouping: "project", focus: null, crew: ["web-home", "web-studio", "scratch-studio", "workspace-home"] },
+      { name: "two projects, nothing focused", grouping: "project", focus: null, crew: ["web-home", "web-studio", "shop-home", "shop-studio", "scratch-studio"] },
+      { name: "two projects, one focused", grouping: "project", focus: "shop", crew: ["web-home", "web-studio", "shop-home", "shop-studio"] },
+      { name: "a built-in project focused", grouping: "project", focus: "scratch", crew: ["web-home", "shop-studio", "scratch-studio"] },
+      { name: "an away computer's crew", grouping: "project", focus: null, crew: ["web-home", "shop-studio", "web-away", "shop-away"] },
+      { name: "a project the board does not name yet", grouping: "project", focus: null, crew: ["web-home", "shop-home", "shop-studio"], unknown: "shop-studio" },
+    ];
+    return { projects, rosters: rosters.map((roster) => {
+      const projectOf = (id: string) => (id === roster.unknown ? "gone" : ofTask[id]);
+      const input = { grouping: roster.grouping, projects, projectOf, focus: roster.focus };
+      const crew = roster.crew.map(at);
+      const plan = groupPlanOf(input, crew);
+      return {
+        name: roster.name, grouping: roster.grouping, focus: roster.focus,
+        crew: crew.map((cm) => ({ ...cm, project: projectOf(cm.id) })),
+        plan, groups: plan ? Object.fromEntries(crew.map((cm) => [cm.id, groupOf(plan, input, cm)])) : null,
+      };
     }) };
   }
   /** INF-3011: the desktop cinch's frames and motes through a shortening that runs and one only heard ending, for the phone's to replay. */

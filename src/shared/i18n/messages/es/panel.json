@@ -16,6 +16,7 @@
   "panelChangeCardSize": "Tamaño de las tarjetas",
   "panelChangeCopyStop": "Dejar de guardar una copia en otra computadora",
   "panelChangeCostLimit": "Cuándo una tarea pregunta antes de gastar más",
+  "panelChangeCrewGrouping": "Agrupar la animación de la tripulación por proyecto",
   "panelChangeCrewModelNames": "Mostrar los nombres de modelo de la tripulación",
   "panelChangeCrewReasoning": "Cuánto piensa la tripulación",
   "panelChangeCrewSlots": "Los modelos de la tripulación",

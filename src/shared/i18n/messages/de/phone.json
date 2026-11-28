@@ -562,6 +562,8 @@
   "phoneSettingsCapabilityRead": "Liest Karten, Aktivität und Aufgaben. {update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "Die Unterhaltung bleibt auf deinem Computer.",
+  "phoneSettingsCrewGrouping": "Crew-Animation nach Projekt gruppieren",
+  "phoneSettingsCrewGroupingScope": "In der Crew-Animation kreist die Crew jedes Projekts gemeinsam, egal auf welchem Computer sie läuft. Auf {computer} eingestellt, daher folgen auch seine Fenster.",
   "phoneSettingsDevices": "Geräte",
   "phoneSettingsFoldSplit": "An der Falz teilen",
   "phoneSettingsFoldSplitScope": "Wie ein Buch aufgeklappt zeigt dieses Telefon Aufgaben und Aktivität auf der einen Seite der Falz und die Übersicht auf der anderen. Schalte es aus, damit es sich wie ein iPad anordnet.",

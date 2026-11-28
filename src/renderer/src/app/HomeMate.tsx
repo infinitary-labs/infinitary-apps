@@ -1,9 +1,10 @@
 import { HERE } from "@shared/deviceNames";
 import { memo, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { CrewOrbit } from "../character/crew/CrewOrbit";
+import { builtInProject } from "../character/crew/crewGroups";
 import { crewOrbit } from "../character/crew/crewSignal";
 import type { SummaryRoom } from "../character/crew/hover";
-import { useCrewBoard } from "../character/crew/useCrewBoard";
+import { useBoardProjects, useCrewBoard } from "../character/crew/useCrewBoard";
 import { requestStageClearedFidget } from "../character/emoteSignal";
 import { Firstmate } from "../character/Firstmate";
 import { setCharacterPaintHidden } from "../character/paintHidden";
@@ -146,6 +147,27 @@ export const HomeMate = memo(function HomeMate() {
     }),
     [litProject, facts],
   );
+  // Grouping the crew animation by project (docs/crew-orbits.md, "Grouping
+  // by project"): the focused project, not a rest, picks the middle.
+  const crewGrouping = useShellStore((s) => s.crewGrouping);
+  const projects = useBoardProjects();
+  const grouping = useMemo(
+    () =>
+      crewGrouping === "project"
+        ? {
+            grouping: crewGrouping,
+            projects: projects.map((project) => ({
+              id: project.id,
+              name: project.name,
+              builtIn: builtInProject(project),
+            })),
+            projectOf: (taskId: string) => facts[taskId]?.task.projectId,
+            focus,
+          }
+        : null,
+    [crewGrouping, projects, facts, focus],
+  );
+  useEffect(() => orbit.setGrouping(grouping), [orbit, grouping]);
   const openRecord = useShellStore((s) => s.openRecord);
   const showNames = useShellStore((s) => s.showCrewModelNames);
   const theme = useShellStore((s) => s.theme);

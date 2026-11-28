@@ -4,6 +4,7 @@ import type { FontChoices, FontSlot } from "@shared/fonts";
 import type { SavedOwnTheme } from "@shared/ownColorThemes";
 import {
   type Appearance,
+  type CrewGrouping,
   DEFAULT_AMBIENT_STYLE,
   DEFAULT_AMBIENT_VOLUME,
   DEFAULT_APPEARANCE,
@@ -49,6 +50,8 @@ export type AppearanceSlice = {
   setSize: (size: UiSize) => void;
   washStrength: number;
   showCrewModelNames: boolean;
+  /** How the crew animation groups the crew (docs/crew-orbits.md, "Grouping by project"). */
+  crewGrouping: CrewGrouping;
   /**
    * Whether the ambient music plays, and how loud, 0-100 (docs/ambient-music.md):
    * one on/off for the sound button, its key and Settings' switch.
@@ -90,6 +93,7 @@ export type AppearanceSlice = {
   setTheme: (theme: Theme) => void;
   setWashStrength: (strength: number) => void;
   setShowCrewModelNames: (shown: boolean) => void;
+  setCrewGrouping: (grouping: CrewGrouping) => void;
   setAmbientMusic: (on: boolean) => void;
   setAmbientPlaysWhenAway: (plays: boolean) => void;
   setAmbientVolume: (volume: number) => void;
@@ -111,6 +115,7 @@ function lookOf(s: ShellState, appearance: Appearance): Partial<ShellState> {
     size: appearance.size ?? 100,
     washStrength: appearance.washStrength ?? DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: appearance.showCrewModelNames ?? true,
+    crewGrouping: appearance.crewGrouping ?? "computer",
     ambientMusic: appearance.ambientMusic ?? false,
     ambientPlaysWhenAway: appearance.ambientPlaysWhenAway ?? false,
     ambientVolume: appearance.ambientVolume ?? DEFAULT_AMBIENT_VOLUME,
@@ -186,6 +191,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
         size: s.size,
         washStrength: s.washStrength,
         showCrewModelNames: s.showCrewModelNames,
+        crewGrouping: s.crewGrouping,
         ambientMusic: s.ambientMusic,
         ambientPlaysWhenAway: s.ambientPlaysWhenAway,
         ambientVolume: s.ambientVolume,
@@ -211,6 +217,7 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     size: 100,
     washStrength: DEFAULT_APPEARANCE.washStrength ?? 0,
     showCrewModelNames: DEFAULT_APPEARANCE.showCrewModelNames ?? true,
+    crewGrouping: "computer",
     ambientMusic: false,
     ambientPlaysWhenAway: false,
     ambientVolume: DEFAULT_AMBIENT_VOLUME,
@@ -270,6 +277,10 @@ export function appearanceSlice(set: ShellSet, get: ShellGet): AppearanceSlice {
     setShowCrewModelNames: (showCrewModelNames) => {
       set({ showCrewModelNames });
       saveAppearance("showCrewModelNames", { showCrewModelNames });
+    },
+    setCrewGrouping: (crewGrouping) => {
+      set({ crewGrouping });
+      saveAppearance("crewGrouping", { crewGrouping });
     },
     setAmbientMusic: (ambientMusic) => {
       set({ ambientMusic });

@@ -1,6 +1,7 @@
 import * as m from "@shared/i18n/messages.generated";
 import type React from "react";
 import { Fragment, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { crewOrbit } from "../character/crew/crewSignal";
 import { Input, KeyCap } from "../design";
 import { thisDesktop } from "../design/core/desktop";
 import { useInstalledKeymap } from "../design/core/installedKeys";
@@ -68,6 +69,10 @@ function SearchPanel({
     { devices: shell.devicesShown, secrets: shell.secretsShown },
     panels,
     thisDesktop().keys,
+    // The crew's pages are project groups while the crew animation is grouped by project.
+    crewOrbit().byProject
+      ? { "computers.previous": m.crewPreviousProjects(), "computers.next": m.crewNextProjects() }
+      : {},
   );
   const at = rows.length === 0 ? -1 : Math.min(selected, rows.length - 1);
   const chosen = at >= 0 ? rows[at] : undefined;

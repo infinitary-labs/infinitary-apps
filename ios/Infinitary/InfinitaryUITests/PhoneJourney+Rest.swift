@@ -187,8 +187,78 @@ extension PhoneJourney {
         _ = try await home("scene-stage-finished")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark, timeout: 10), .completed, app.debugDescription)
         picture("native-scene-between-program-stages")
+        try await verifyCrewGrouping()
         _ = try await home("scene-cleanup")
         XCTAssertTrue(remote.waitForAbsence(timeout: 10), "A departed task must leave the scene and its touch targets")
+    }
+
+    /// INF-6955's approved plan: the phone's Appearance turns the computer's Group crew animation by project, and the
+    /// phone's scene then groups the crew by project as the computer's does. The captain's answers on that plan: the
+    /// only project of the person's own with crew sits with the first mate, and the first mate's ring is "named for
+    /// the project sitting there, else no name". Data: the scene fixture's two projects on this computer and its
+    /// paired, absent computer, whose crewmate stays in that computer's group.
+    private func verifyCrewGrouping() async throws {
+        if app.otherElements["crew-preview"].exists { closeCrewSummary() }
+        let start = try await home("scene-grouping", method: "GET")
+        XCTAssertEqual(start["grouping"] as? String, "computer", "The switch starts off")
+        let projects = try XCTUnwrap(start["projects"] as? [String: String])
+        let ring = app.buttons["crew-computer-home"]
+        let harbour = app.buttons["crew-computer-project:" + (try XCTUnwrap(projects["harbour-charts"]))]
+        let offshore = app.buttons["crew-computer-project:" + (try XCTUnwrap(projects["offshore-survey"]))]
+        XCTAssertTrue(ring.exists, "Grouped by computer, this computer's ring is named beside the other computer's")
+        let homeName = ring.label
+
+        let toggle = try openCrewGrouping()
+        XCTAssertEqual(toggle.value as? String, "0")
+        tapOnPhone(toggle)
+        // The computer's setting is read before the switch's verdict, so a switch that stays put says whether the
+        // computer heard the tap.
+        let turnedOn = waitForPhonePredicate(NSPredicate(format: "value == '1'"), object: toggle, timeout: 10)
+        let on = try await home("scene-grouping", method: "GET")
+        XCTAssertEqual(on["grouping"] as? String, "project", "The phone's switch turns the computer's own setting")
+        XCTAssertEqual(turnedOn, .completed, app.debugDescription)
+        picture("native-scene-grouping-switch-on")
+        closeCrewGrouping()
+        XCTAssertTrue(harbour.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(offshore.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(harbour.label, "harbour-charts")
+        XCTAssertEqual(offshore.label, "offshore-survey")
+        XCTAssertFalse(ring.exists, "With two projects' crew and no focus, the first mate's ring has no name to press")
+        picture("native-scene-grouped-two-projects")
+
+        _ = try await home("scene-one-project")
+        XCTAssertTrue(offshore.waitForAbsence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(ring.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(ring.label, "harbour-charts", "The only project with crew sits with the first mate and names its ring")
+        XCTAssertFalse(harbour.exists)
+        picture("native-scene-grouped-one-project")
+
+        let again = try openCrewGrouping()
+        tapOnPhone(again)
+        let turnedOff = waitForPhonePredicate(NSPredicate(format: "value == '0'"), object: again, timeout: 10)
+        let off = try await home("scene-grouping", method: "GET")
+        XCTAssertEqual(off["grouping"] as? String, "computer")
+        XCTAssertEqual(turnedOff, .completed, app.debugDescription)
+        closeCrewGrouping()
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", homeName), object: ring, timeout: 10), .completed)
+    }
+
+    private func openCrewGrouping() throws -> XCUIElement {
+        tapOnPhone(app.buttons["phone-settings"], repeatDiscarded: false)
+        XCTAssertTrue(app.buttons["phone-settings-appearance"].waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(app.buttons["phone-settings-appearance"])
+        let toggle = app.switches["phone-crew-grouping"]
+        XCTAssertTrue(toggle.waitForPresence(timeout: 10), app.debugDescription)
+        if !toggle.isHittable { app.swipeUp() }
+        waitForSteadyTarget(toggle)
+        return toggle
+    }
+
+    private func closeCrewGrouping() {
+        let close = app.buttons["close-phone-settings"]
+        XCTAssertTrue(close.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(close)
+        XCTAssertTrue(close.waitForAbsence(timeout: 10))
     }
 
     /// INF-1066 and the project's keyboard rule: browse the same live scene without touching it.

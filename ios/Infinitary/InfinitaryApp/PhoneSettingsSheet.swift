@@ -23,10 +23,13 @@ struct PhoneSettingsSheet: View {
     @Environment(PhoneGoogle.self) private var google: PhoneGoogle?
     @Environment(PhoneSettings.self) private var settings: PhoneSettings?
     @Environment(PhonePushes.self) private var pushes: PhonePushes?
+    /// Why the computer refused the last turn of Group crew animation by project, shown under its switch.
+    @State private var groupingProblem: String?
     @FocusState private var themeFocused: Bool
     @FocusState private var languageFocused: Bool
     @FocusState private var foldFocused: Bool
     @FocusState private var pencilFocused: Bool
+    @FocusState private var groupingFocused: Bool
     @Environment(\.openURL) private var openURL
     @State private var section: Section?
     /// The pages opened inside a section, outermost first: an automation, its review, a project.
@@ -449,6 +452,48 @@ struct PhoneSettingsSheet: View {
             language
             if appearance.foldSeen { foldSplit(appearance) }
             if appearance.pencilSeen { pencilTop(appearance) }
+            if groupingShown { crewGrouping }
+        }
+    }
+
+    /// Group crew animation by project is the computer's own switch (docs/ios.md, "Grouping the crew by project"),
+    /// shown as the computer shows it: once it reads the switch and two projects of the person's own are on its board,
+    /// or once it is on. Tab reaches it; Return or Space turns it.
+    private var groupingShown: Bool {
+        session.homeGroupsCrew && (session.crewGrouping == "project"
+            || (session.board?.projects.filter { $0.archived != true && !PhoneCrewGroups.builtIn($0) }.count ?? 0) >= 2)
+    }
+
+    private var crewGrouping: some View {
+        let on = Binding(get: { session.crewGrouping == "project" }, set: { turnGrouping($0) })
+        return VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+            HStack(spacing: PhoneTheme.space3) {
+                Text(PhoneMessages.phoneSettingsCrewGrouping()).font(PhoneFont.headline)
+                Spacer(minLength: 0)
+                Toggle(PhoneMessages.phoneSettingsCrewGrouping(), isOn: on)
+                    .labelsHidden().tint(PhoneTheme.accent).disabled(!session.canChange)
+                    .focusable().focused($groupingFocused)
+                    .onKeyPress(.return) { turnGrouping(session.crewGrouping != "project"); return .handled }
+                    .onKeyPress(.space) { turnGrouping(session.crewGrouping != "project"); return .handled }
+                    .overlay { if groupingFocused { Capsule().strokeBorder(PhoneTheme.accent, lineWidth: 1.5).padding(-3) } }
+                    .accessibilityIdentifier("phone-crew-grouping")
+            }
+            .padding(.top, PhoneTheme.space3)
+            Text(PhoneMessages.phoneSettingsCrewGroupingScope(computer: session.mac.name))
+                .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary).fixedSize(horizontal: false, vertical: true)
+            if let groupingProblem {
+                Text(groupingProblem).font(PhoneFont.callout).foregroundStyle(PhoneTheme.danger)
+                    .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("phone-crew-grouping-problem")
+            }
+        }
+    }
+
+    private func turnGrouping(_ on: Bool) {
+        guard session.canChange else { return }
+        groupingProblem = nil
+        Task {
+            do { try await session.setCrewGrouping(on ? "project" : "computer") }
+            catch { groupingProblem = error.localizedDescription }
         }
     }
 

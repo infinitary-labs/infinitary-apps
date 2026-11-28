@@ -54,9 +54,9 @@ final class PhoneSceneTouchView: UIView, UIGestureRecognizerDelegate {
         guard let roster else { return [] }
         let frame = drawn
         let glyphs = frame.glyphs.map { glyph -> (Target, Int) in
-            let computer = roster.computers.first { $0.id == PhoneSceneRoster.computerID(glyph.task) }
+            let computer = roster.computers.first { $0.id == glyph.group }
             let words = computer.map { PhoneSceneRoster.words(glyph.task, computer: $0) } ?? glyph.task.state
-            return (Target(id: glyph.task.id, task: glyph.task, computer: PhoneSceneRoster.computerID(glyph.task), point: shifted(glyph.point),
+            return (Target(id: glyph.task.id, task: glyph.task, computer: glyph.group, point: shifted(glyph.point),
                            label: glyph.task.key + ", " + glyph.task.title, words: words), roster.order[glyph.task.id] ?? roster.tasks.count)
         }
         let marks = frame.marks.map { mark -> (Target, Int) in

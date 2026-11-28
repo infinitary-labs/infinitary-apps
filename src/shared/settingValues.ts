@@ -52,6 +52,9 @@ export const sizeValue = (c: unknown) => ({ size: look(c).size ?? DEFAULT_SIZE }
 export const crewModelNamesValue = (c: unknown) => ({
   visible: look(c).showCrewModelNames ?? true,
 });
+export const crewGroupingValue = (c: unknown) => ({
+  grouping: look(c).crewGrouping ?? ("computer" as const),
+});
 export const ambientMusicValue = (c: unknown) => ({
   on: look(c).ambientMusic ?? false,
   volume: look(c).ambientVolume ?? DEFAULT_AMBIENT_VOLUME,

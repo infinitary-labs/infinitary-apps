@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "A card covers the computers",
+  "refuseACardCoversTheProjects": "A card covers the projects",
   "refuseARecordingIsRunning": "A recording is running",
   "refuseBrowserTabCannotBeFound": "The Browser tab shows a picture of a page, so its words cannot be found",
   "refuseCloseTheOpenDialogFirst": "Close the open dialog first",
@@ -36,7 +37,9 @@
   "refuseThereIsNoOtherTabToGo": "There is no other tab to go to",
   "refuseThereIsOnlyOneProject": "There is only one project",
   "refuseTheseAreTheFirstComputers": "These are the first computers",
+  "refuseTheseAreTheFirstProjects": "These are the first projects",
   "refuseTheseAreTheLastComputers": "These are the last computers",
+  "refuseTheseAreTheLastProjects": "These are the last projects",
   "refuseThisCardAsksNoQuestions": "This card asks no questions",
   "refuseThisCardCannotBeFound": "Words are found in a card, a past card or a task's record",
   "refuseThisCardHasNoButtons": "This card has no buttons",

@@ -118,6 +118,7 @@ export const PANEL_CHANGES = {
   "window-wash": true,
   "window-size": true,
   "crew-model-names": true,
+  "crew-grouping": true,
   "ambient-music": true,
   // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
   "ambient-own-style": true,

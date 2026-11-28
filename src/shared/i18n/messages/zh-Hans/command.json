@@ -71,6 +71,8 @@
   "commandCommandsSearch": "搜索命令",
   "commandComputersNext": "下一组工作电脑",
   "commandComputersPrevious": "上一组工作电脑",
+  "commandCrewGroupingToggle": "按项目或按电脑分组船员动画",
+  "commandCrewGroupingToggleWords": "船员, 动画, 轨道, 项目, 电脑, 分组",
   "commandDevicesTryAgain": "再次尝试连接你的电脑",
   "commandDevicesTryAgainWords": "设备, 重新连接, 连接, 电脑",
   "commandFeedbackStart": "发送反馈",

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "group-crew-by-project",
+      "kind": "feature",
+      "title": "Group the crew animation by project",
+      "body": "Settings → Appearance now has Group crew animation by project. Turn it on, and each project's crew orbit together in the crew animation, whichever computer runs them. Scratch and your workspace stay with your first mate, and so does your only project with crew, or the project you focus on. A computer out of reach keeps its own group. The switch is off by default and shows while you have two projects or more. Command search, your first mate and the phone's Appearance can turn it too.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "group-crew-by-project-dark.webp",
+        "light": "group-crew-by-project-light.webp",
+        "alt": "The crew animation grouped by project: a shop group and a website group beside the first mate, and an out-of-reach computer keeping its own group"
+      },
+      "docsSite": ["settings"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

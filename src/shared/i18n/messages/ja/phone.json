@@ -541,6 +541,8 @@
   "phoneSettingsCapabilityRead": "カード、アクティビティ、タスクを読み込みます。{update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "会話はコンピューターに残ります。",
+  "phoneSettingsCrewGrouping": "乗組員のアニメーションをプロジェクトごとにまとめる",
+  "phoneSettingsCrewGroupingScope": "乗組員のアニメーションで、どのコンピューターで動いていても、プロジェクトごとの乗組員が一緒に周回します。{computer} で設定されるため、そのウインドウも同じになります。",
   "phoneSettingsDevices": "デバイス",
   "phoneSettingsFoldSplit": "折り目で分ける",
   "phoneSettingsFoldSplitScope": "本のように開くと、このスマートフォンは折り目の片側に「タスク」と「アクティビティ」、もう片側に「ホーム」を表示します。オフにすると iPad と同じ配置になります。",

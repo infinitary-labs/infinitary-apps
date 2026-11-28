@@ -1,5 +1,5 @@
 ---
-source: 0a2abffa6cee2faa
+source: b54d92169707b7c1
 title: Réglages
 description: Ce que contient chaque section des Réglages, avec Général et Apparence expliqués ici et un lien pour le reste.
 ---
@@ -65,6 +65,9 @@ Sur l’ordinateur où vit votre second, ils se trouvent sous **Sites connectés
   Vous pouvez toujours redimensionner chaque carte.
 - **Garder les cartes agrandies** garde chaque carte agrandie après que vous en avez agrandi une, jusqu’à ce que vous en restauriez une.
 - **Noms des modèles de l’équipage** affiche le nom des modèles tant que vos équipiers n’utilisent qu’une seule orbite.
+- **Grouper l’animation de l’équipage par projet** réunit les équipiers de chaque projet dans l’animation de l’équipage, quel que soit l’ordinateur qui les exécute.
+  Il est désactivé par défaut et apparaît tant que vous avez au moins deux projets.
+  La recherche de commandes et votre second peuvent aussi le basculer.
 - **Voile de la fenêtre**, sur un Mac, règle la part de la couleur du thème qui recouvre l’arrière-plan flouté.
   0 % est la valeur par défaut.
 - **Thème** est **Sombre**, **Clair** ou l’un de treize thèmes sous le nom que leur a donné leur auteur, comme **Dracula**, **Catppuccin Mocha** ou **Rosé Pine Dawn**.

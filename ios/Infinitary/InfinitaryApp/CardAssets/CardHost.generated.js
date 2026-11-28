@@ -27547,6 +27547,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Previous work computers`;
   }
+  function commandCrewGroupingToggle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجميع رسوم الطاقم المتحركة حسب المشروع أو حسب الحاسوب`;
+      case "de":
+        return `Crew-Animation nach Projekt oder nach Computer gruppieren`;
+      case "es":
+        return `Agrupar la animación de la tripulación por proyecto o por computadora`;
+      case "fr":
+        return `Grouper l’animation de l’équipage par projet ou par ordinateur`;
+      case "ja":
+        return `乗組員のアニメーションをプロジェクトごとまたはコンピューターごとにまとめる`;
+      case "ko":
+        return `선원 애니메이션을 프로젝트별 또는 컴퓨터별로 묶기`;
+      case "pt-BR":
+        return `Agrupar a animação da tripulação por projeto ou por computador`;
+      case "zh-Hans":
+        return `按项目或按电脑分组船员动画`;
+      case "zh-Hant":
+        return `按專案或按電腦分組船員動畫`;
+      case "en-XA":
+        return `[Ĝŕöûþ çŕéŵ áñîɱáţîöñ ƀý þŕöĵéçţ öŕ ƀý çöɱþûţéŕ ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Group crew animation by project or by computer‬`;
+    }
+    return `Group crew animation by project or by computer`;
+  }
+  function commandCrewGroupingToggleWords() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `طاقم, رسوم متحركة, مدار, مشروع, حاسوب, تجميع`;
+      case "de":
+        return `Crew, Animation, Umlaufbahn, Projekt, Computer, Gruppe`;
+      case "es":
+        return `tripulación, animación, órbita, proyecto, computadora, agrupar`;
+      case "fr":
+        return `équipage, animation, orbite, projet, ordinateur, grouper`;
+      case "ja":
+        return `乗組員, アニメーション, 軌道, プロジェクト, コンピューター, グループ`;
+      case "ko":
+        return `선원, 애니메이션, 궤도, 프로젝트, 컴퓨터, 그룹`;
+      case "pt-BR":
+        return `tripulação, animação, órbita, projeto, computador, agrupar`;
+      case "zh-Hans":
+        return `船员, 动画, 轨道, 项目, 电脑, 分组`;
+      case "zh-Hant":
+        return `船員, 動畫, 軌道, 專案, 電腦, 分組`;
+      case "en-XA":
+        return `[çŕéŵ, áñîɱáţîöñ, öŕƀîţ, þŕöĵéçţ, çöɱþûţéŕ, ĝŕöûþ ~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮crew, animation, orbit, project, computer, group‬`;
+    }
+    return `crew, animation, orbit, project, computer, group`;
+  }
   function commandDevicesTryAgain() {
     switch (currentLanguage()) {
       case "ar":
@@ -31342,6 +31396,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Next computers`;
   }
+  function crewNextProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المشاريع التالية`;
+      case "de":
+        return `Nächste Projekte`;
+      case "es":
+        return `Proyectos siguientes`;
+      case "fr":
+        return `Projets suivants`;
+      case "ja":
+        return `次のプロジェクト`;
+      case "ko":
+        return `다음 프로젝트`;
+      case "pt-BR":
+        return `Próximos projetos`;
+      case "zh-Hans":
+        return `下一组项目`;
+      case "zh-Hant":
+        return `下一組專案`;
+      case "en-XA":
+        return `[Ñéẋţ þŕöĵéçţš ~~~~~]`;
+      case "ar-XB":
+        return `‮Next projects‬`;
+    }
+    return `Next projects`;
+  }
   function crewOrbitLabel(input2) {
     const idle = input2.idle;
     const working = input2.working;
@@ -31455,6 +31536,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Previous computers`;
   }
+  function crewPreviousProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المشاريع السابقة`;
+      case "de":
+        return `Vorherige Projekte`;
+      case "es":
+        return `Proyectos anteriores`;
+      case "fr":
+        return `Projets précédents`;
+      case "ja":
+        return `前のプロジェクト`;
+      case "ko":
+        return `이전 프로젝트`;
+      case "pt-BR":
+        return `Projetos anteriores`;
+      case "zh-Hans":
+        return `上一组项目`;
+      case "zh-Hant":
+        return `上一組專案`;
+      case "en-XA":
+        return `[Þŕéṽîöûš þŕöĵéçţš ~~~~~~]`;
+      case "ar-XB":
+        return `‮Previous projects‬`;
+    }
+    return `Previous projects`;
+  }
   function crewProgramsAndParts() {
     switch (currentLanguage()) {
       case "ar":
@@ -31481,6 +31589,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Programs and their parts‬`;
     }
     return `Programs and their parts`;
+  }
+  function crewProjectGroups() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `مجموعات المشاريع`;
+      case "de":
+        return `Projektgruppen`;
+      case "es":
+        return `Grupos de proyectos`;
+      case "fr":
+        return `Groupes de projets`;
+      case "ja":
+        return `プロジェクトのグループ`;
+      case "ko":
+        return `프로젝트 그룹`;
+      case "pt-BR":
+        return `Grupos de projetos`;
+      case "zh-Hans":
+        return `项目分组`;
+      case "zh-Hant":
+        return `專案分組`;
+      case "en-XA":
+        return `[Þŕöĵéçţ ĝŕöûþš ~~~~~]`;
+      case "ar-XB":
+        return `‮Project groups‬`;
+    }
+    return `Project groups`;
   }
   function crewStateIdle() {
     switch (currentLanguage()) {
@@ -47589,6 +47724,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `When a task asks before it spends more`;
   }
+  function panelChangeCrewGrouping() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجميع رسوم الطاقم المتحركة حسب المشروع`;
+      case "de":
+        return `Crew-Animation nach Projekt gruppieren`;
+      case "es":
+        return `Agrupar la animación de la tripulación por proyecto`;
+      case "fr":
+        return `Grouper l’animation de l’équipage par projet`;
+      case "ja":
+        return `クルーのアニメーションをプロジェクトごとにまとめる`;
+      case "ko":
+        return `크루 애니메이션을 프로젝트별로 묶기`;
+      case "pt-BR":
+        return `Agrupar a animação da tripulação por projeto`;
+      case "zh-Hans":
+        return `按项目分组船员动画`;
+      case "zh-Hant":
+        return `按專案分組船員動畫`;
+      case "en-XA":
+        return `[Ĝŕöûþ ţĥé çŕéŵ áñîɱáţîöñ ƀý þŕöĵéçţ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Group the crew animation by project‬`;
+    }
+    return `Group the crew animation by project`;
+  }
   function panelChangeCrewModelNames() {
     switch (currentLanguage()) {
       case "ar":
@@ -56316,6 +56478,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `A card covers the computers`;
   }
+  function refuseACardCoversTheProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `بطاقة تغطي المشاريع`;
+      case "de":
+        return `Eine Karte verdeckt die Projekte`;
+      case "es":
+        return `Una tarjeta tapa los proyectos`;
+      case "fr":
+        return `Une carte recouvre les projets`;
+      case "ja":
+        return `カードがプロジェクトの表示を覆っています`;
+      case "ko":
+        return `카드가 프로젝트 목록을 가리고 있어요`;
+      case "pt-BR":
+        return `Um cartão está cobrindo os projetos`;
+      case "zh-Hans":
+        return `有卡片挡住了项目列表`;
+      case "zh-Hant":
+        return `有卡片擋住了專案清單`;
+      case "en-XA":
+        return `[Å çáŕð çöṽéŕš ţĥé þŕöĵéçţš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮A card covers the projects‬`;
+    }
+    return `A card covers the projects`;
+  }
   function refuseARecordingIsRunning() {
     switch (currentLanguage()) {
       case "ar":
@@ -57292,6 +57481,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `These are the first computers`;
   }
+  function refuseTheseAreTheFirstProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه المشاريع الأولى`;
+      case "de":
+        return `Das sind die ersten Projekte`;
+      case "es":
+        return `Estos son los primeros proyectos`;
+      case "fr":
+        return `Ce sont les premiers projets`;
+      case "ja":
+        return `最初のプロジェクトを表示しています`;
+      case "ko":
+        return `처음 프로젝트들이에요`;
+      case "pt-BR":
+        return `Estes são os primeiros projetos`;
+      case "zh-Hans":
+        return `这已是第一组项目`;
+      case "zh-Hant":
+        return `這已經是最前面的專案`;
+      case "en-XA":
+        return `[Ţĥéšé áŕé ţĥé ƒîŕšţ þŕöĵéçţš ~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These are the first projects‬`;
+    }
+    return `These are the first projects`;
+  }
   function refuseTheseAreTheLastComputers() {
     switch (currentLanguage()) {
       case "ar":
@@ -57318,6 +57534,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮These are the last computers‬`;
     }
     return `These are the last computers`;
+  }
+  function refuseTheseAreTheLastProjects() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `هذه المشاريع الأخيرة`;
+      case "de":
+        return `Das sind die letzten Projekte`;
+      case "es":
+        return `Estos son los últimos proyectos`;
+      case "fr":
+        return `Ce sont les derniers projets`;
+      case "ja":
+        return `最後のプロジェクトを表示しています`;
+      case "ko":
+        return `마지막 프로젝트들이에요`;
+      case "pt-BR":
+        return `Estes são os últimos projetos`;
+      case "zh-Hans":
+        return `这已是最后一组项目`;
+      case "zh-Hant":
+        return `這已經是最後面的專案`;
+      case "en-XA":
+        return `[Ţĥéšé áŕé ţĥé ļášţ þŕöĵéçţš ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮These are the last projects‬`;
+    }
+    return `These are the last projects`;
   }
   function refuseThisCardAsksNoQuestions() {
     switch (currentLanguage()) {
@@ -63218,6 +63461,114 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮Wide‬`;
     }
     return `Wide`;
+  }
+  function settingsAppearanceCrewGroupedByComputer() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جُمّعت رسوم الطاقم المتحركة حسب الحاسوب`;
+      case "de":
+        return `Crew-Animation nach Computer gruppiert`;
+      case "es":
+        return `Animación de la tripulación agrupada por computadora`;
+      case "fr":
+        return `Animation de l’équipage groupée par ordinateur`;
+      case "ja":
+        return `乗組員のアニメーションをコンピューターごとにまとめました`;
+      case "ko":
+        return `선원 애니메이션을 컴퓨터별로 묶었어요`;
+      case "pt-BR":
+        return `Animação da tripulação agrupada por computador`;
+      case "zh-Hans":
+        return `船员动画已按电脑分组`;
+      case "zh-Hant":
+        return `船員動畫已按電腦分組`;
+      case "en-XA":
+        return `[Çŕéŵ áñîɱáţîöñ ĝŕöûþéð ƀý çöɱþûţéŕ ~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Crew animation grouped by computer‬`;
+    }
+    return `Crew animation grouped by computer`;
+  }
+  function settingsAppearanceCrewGroupedByProject() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جُمّعت رسوم الطاقم المتحركة حسب المشروع`;
+      case "de":
+        return `Crew-Animation nach Projekt gruppiert`;
+      case "es":
+        return `Animación de la tripulación agrupada por proyecto`;
+      case "fr":
+        return `Animation de l’équipage groupée par projet`;
+      case "ja":
+        return `乗組員のアニメーションをプロジェクトごとにまとめました`;
+      case "ko":
+        return `선원 애니메이션을 프로젝트별로 묶었어요`;
+      case "pt-BR":
+        return `Animação da tripulação agrupada por projeto`;
+      case "zh-Hans":
+        return `船员动画已按项目分组`;
+      case "zh-Hant":
+        return `船員動畫已按專案分組`;
+      case "en-XA":
+        return `[Çŕéŵ áñîɱáţîöñ ĝŕöûþéð ƀý þŕöĵéçţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Crew animation grouped by project‬`;
+    }
+    return `Crew animation grouped by project`;
+  }
+  function settingsAppearanceCrewGrouping() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تجميع رسوم الطاقم المتحركة حسب المشروع`;
+      case "de":
+        return `Crew-Animation nach Projekt gruppieren`;
+      case "es":
+        return `Agrupar la animación de la tripulación por proyecto`;
+      case "fr":
+        return `Grouper l’animation de l’équipage par projet`;
+      case "ja":
+        return `乗組員のアニメーションをプロジェクトごとにまとめる`;
+      case "ko":
+        return `선원 애니메이션을 프로젝트별로 묶기`;
+      case "pt-BR":
+        return `Agrupar a animação da tripulação por projeto`;
+      case "zh-Hans":
+        return `按项目分组船员动画`;
+      case "zh-Hant":
+        return `按專案分組船員動畫`;
+      case "en-XA":
+        return `[Ĝŕöûþ çŕéŵ áñîɱáţîöñ ƀý þŕöĵéçţ ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Group crew animation by project‬`;
+    }
+    return `Group crew animation by project`;
+  }
+  function settingsAppearanceCrewGroupingDescription() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `في رسوم الطاقم المتحركة، يدور طاقم كل مشروع معًا، أيًّا كان الحاسوب الذي يشغّله.`;
+      case "de":
+        return `In der Crew-Animation kreist die Crew jedes Projekts gemeinsam, egal auf welchem Computer sie läuft.`;
+      case "es":
+        return `En la animación de la tripulación, los tripulantes de cada proyecto orbitan juntos, sea cual sea la computadora que los ejecuta.`;
+      case "fr":
+        return `Dans l’animation de l’équipage, les équipiers de chaque projet gravitent ensemble, quel que soit l’ordinateur qui les exécute.`;
+      case "ja":
+        return `乗組員のアニメーションで、どのコンピューターで動いていても、プロジェクトごとの乗組員が一緒に周回します。`;
+      case "ko":
+        return `선원 애니메이션에서 어느 컴퓨터에서 실행되든 프로젝트마다 선원들이 함께 궤도를 돌아요.`;
+      case "pt-BR":
+        return `Na animação da tripulação, os tripulantes de cada projeto orbitam juntos, seja qual for o computador que os executa.`;
+      case "zh-Hans":
+        return `在船员动画中，每个项目的船员一起环绕，无论它们在哪台电脑上运行。`;
+      case "zh-Hant":
+        return `在船員動畫中，每個專案的船員一起環繞，無論它們在哪台電腦上執行。`;
+      case "en-XA":
+        return `[Îñ ţĥé çŕéŵ áñîɱáţîöñ, éáçĥ þŕöĵéçţ'š çŕéŵ öŕƀîţ ţöĝéţĥéŕ, ŵĥîçĥéṽéŕ çöɱþûţéŕ ŕûñš ţĥéɱ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮In the crew animation, each project's crew orbit together, whichever computer runs them.‬`;
+    }
+    return `In the crew animation, each project's crew orbit together, whichever computer runs them.`;
   }
   function settingsAppearanceCrewModelNames() {
     switch (currentLanguage()) {
@@ -118810,6 +119161,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandCommandsSearch,
     commandComputersNext,
     commandComputersPrevious,
+    commandCrewGroupingToggle,
+    commandCrewGroupingToggleWords,
     commandDevicesTryAgain,
     commandDevicesTryAgainWords,
     commandFeedbackStart,
@@ -118948,11 +119301,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     crewFirstmateLabel,
     crewModelNames,
     crewNextComputers,
+    crewNextProjects,
     crewOrbitLabel,
     crewOutOfReach,
     crewPartsCount,
     crewPreviousComputers,
+    crewPreviousProjects,
     crewProgramsAndParts,
+    crewProjectGroups,
     crewStateIdle,
     crewStateWorking,
     crewSummaryAnotherTask,
@@ -119504,6 +119860,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     panelChangeCardSize,
     panelChangeCopyStop,
     panelChangeCostLimit,
+    panelChangeCrewGrouping,
     panelChangeCrewModelNames,
     panelChangeCrewReasoning,
     panelChangeCrewSlots,
@@ -119765,6 +120122,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     recordValidationScenario,
     recordValidationSupplementary,
     refuseACardCoversTheComputers,
+    refuseACardCoversTheProjects,
     refuseARecordingIsRunning,
     refuseBrowserTabCannotBeFound,
     refuseCloseTheOpenDialogFirst,
@@ -119801,7 +120159,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     refuseThereIsNoOtherTabToGo,
     refuseThereIsOnlyOneProject,
     refuseTheseAreTheFirstComputers,
+    refuseTheseAreTheFirstProjects,
     refuseTheseAreTheLastComputers,
+    refuseTheseAreTheLastProjects,
     refuseThisCardAsksNoQuestions,
     refuseThisCardCannotBeFound,
     refuseThisCardHasNoButtons,
@@ -119999,6 +120359,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAppearanceCardSizeDescription,
     settingsAppearanceCardUsual,
     settingsAppearanceCardWide,
+    settingsAppearanceCrewGroupedByComputer,
+    settingsAppearanceCrewGroupedByProject,
+    settingsAppearanceCrewGrouping,
+    settingsAppearanceCrewGroupingDescription,
     settingsAppearanceCrewModelNames,
     settingsAppearanceCrewModelNamesDescription,
     settingsAppearanceHeading,
@@ -122595,6 +122959,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandCommandsSearch": [],
     "commandComputersNext": [],
     "commandComputersPrevious": [],
+    "commandCrewGroupingToggle": [],
+    "commandCrewGroupingToggleWords": [],
     "commandDevicesTryAgain": [],
     "commandDevicesTryAgainWords": [],
     "commandFeedbackStart": [],
@@ -122733,11 +123099,14 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "crewFirstmateLabel": ["state"],
     "crewModelNames": [],
     "crewNextComputers": [],
+    "crewNextProjects": [],
     "crewOrbitLabel": ["idle", "working"],
     "crewOutOfReach": [],
     "crewPartsCount": ["finished", "running", "waiting"],
     "crewPreviousComputers": [],
+    "crewPreviousProjects": [],
     "crewProgramsAndParts": [],
+    "crewProjectGroups": [],
     "crewStateIdle": [],
     "crewStateWorking": [],
     "crewSummaryAnotherTask": [],
@@ -123289,6 +123658,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "panelChangeCardSize": [],
     "panelChangeCopyStop": [],
     "panelChangeCostLimit": [],
+    "panelChangeCrewGrouping": [],
     "panelChangeCrewModelNames": [],
     "panelChangeCrewReasoning": [],
     "panelChangeCrewSlots": [],
@@ -123550,6 +123920,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "recordValidationScenario": [],
     "recordValidationSupplementary": ["action"],
     "refuseACardCoversTheComputers": [],
+    "refuseACardCoversTheProjects": [],
     "refuseARecordingIsRunning": [],
     "refuseBrowserTabCannotBeFound": [],
     "refuseCloseTheOpenDialogFirst": [],
@@ -123586,7 +123957,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "refuseThereIsNoOtherTabToGo": [],
     "refuseThereIsOnlyOneProject": [],
     "refuseTheseAreTheFirstComputers": [],
+    "refuseTheseAreTheFirstProjects": [],
     "refuseTheseAreTheLastComputers": [],
+    "refuseTheseAreTheLastProjects": [],
     "refuseThisCardAsksNoQuestions": [],
     "refuseThisCardCannotBeFound": [],
     "refuseThisCardHasNoButtons": [],
@@ -123784,6 +124157,10 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAppearanceCardSizeDescription": [],
     "settingsAppearanceCardUsual": [],
     "settingsAppearanceCardWide": [],
+    "settingsAppearanceCrewGroupedByComputer": [],
+    "settingsAppearanceCrewGroupedByProject": [],
+    "settingsAppearanceCrewGrouping": [],
+    "settingsAppearanceCrewGroupingDescription": [],
     "settingsAppearanceCrewModelNames": [],
     "settingsAppearanceCrewModelNamesDescription": [],
     "settingsAppearanceHeading": [],
@@ -130870,6 +131247,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "window-wash": true,
     "window-size": true,
     "crew-model-names": true,
+    "crew-grouping": true,
     "ambient-music": true,
     // Saves only: panelChange.ts refuses a panel's `remove`, since a panel never deletes.
     "ambient-own-style": true,
@@ -132125,6 +132503,21 @@ ${FRAME_KEYBOARD_SCRIPT}
       keys: [],
       get searchWords() {
         return searchWords(commandAmbientStyleWords());
+      }
+    },
+    // Settings → Appearance's Group crew animation by project switch
+    // (docs/crew-orbits.md, "Grouping by project"), flipped. No default key.
+    "crew-grouping.toggle": {
+      get label() {
+        return commandCrewGroupingToggle();
+      },
+      scope: "window",
+      runs: "shell",
+      repeat: false,
+      risk: "view",
+      keys: [],
+      get searchWords() {
+        return searchWords(commandCrewGroupingToggleWords());
       }
     },
     // Tokens or estimated dollars, everywhere in Usage at once; it opens

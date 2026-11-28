@@ -646,6 +646,8 @@
   "phoneSettingsCapabilityRead": "يقرأ البطاقات والنشاط والمهام. {update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "تبقى المحادثة على حاسوبك.",
+  "phoneSettingsCrewGrouping": "تجميع رسوم الطاقم المتحركة حسب المشروع",
+  "phoneSettingsCrewGroupingScope": "يدور طاقم كل مشروع معًا في رسوم الطاقم المتحركة، أيًّا كان الحاسوب الذي يشغّله. يُضبط على {computer}، فتتبعه نوافذه أيضًا.",
   "phoneSettingsDevices": "الأجهزة",
   "phoneSettingsFoldSplit": "التقسيم عند الطيّة",
   "phoneSettingsFoldSplitScope": "عند فتح هذا الهاتف ككتاب، تظهر المهام والنشاط على جانب من الطيّة والرئيسية على الجانب الآخر. عند إيقافه، يُعرض كما يُعرض على iPad.",

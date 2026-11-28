@@ -138,6 +138,31 @@ All clusters and their controls hide with the character frame under cards.
 `tests/e2e/computer-clusters.spec.ts` drives actual saved placement through boot, keyboard inspection and record opening, minimum-width fitting and overflow paging, with every remote crewmate clear of the home crew and, at the minimum width, inside the window.
 `src/renderer/src/character/crew/computers.test.ts` holds the single-computer boundary: one computer draws the stage it drew before, with no names or paging.
 
+## Grouping by project
+
+Settings → Appearance's **Group crew animation by project** switch (the captain's INF-6955 plan, off by default) seats the crew by project instead of by computer, whichever computer runs each crewmate.
+It is one saved choice of the computer where the first mate lives, in its own settings row (`crew-grouping`, kept only while it is on), so every window and the phone follow it; a computer that controls the first mate from elsewhere keeps its own look and its own switch.
+The row shows while the project pill does (two projects or more, `docs/project-focus.md`) and stays while the switch is on.
+Command search's Group crew animation by project or by computer (`crew-grouping.toggle`, no default key) and the first mate's `crew-grouping` appearance action turn it too.
+
+The rule is `groupPlanOf` and `groupOf` in `character/crew/crewGroups.ts`, pure so the phone replays its own readings; `ComputerOrbits.setGrouping` hands it to the stage:
+
+- A crewmate whose computer is away (out of reach, updating, connecting or removed) stays in that computer's frozen group, as above.
+- The built-in projects, Scratch and the app's own workspace (`builtInProject`: no repository, or a `personal` one), always sit with the first mate (the captain: "the default built-in projects should always stay with first mate").
+- So does the middle project: the only project of the person's own with crew outside an away computer's frozen group, else the window's focused project, else none (the captain's written-in answer).
+- A crewmate whose project the board does not name yet, as when its spawn arrives before its board row, keeps its computer's group until the row arrives; the others keep theirs.
+- A crewmate the board has named a project for keeps the group it sits in, a project group or the first mate's ring, when the board stops naming it, as when a closing task's row goes before its fall home starts, so it falls home from there (`ComputerOrbits.groupOf`); one the board has never named still follows its computer's group, so a late placement moves it.
+- Every other crewmate sits in its project's group, `project:` and the project's id, named for the project and seated in the board's order.
+- The first mate's ring, which now holds crew from every computer, is named for the middle project while that project's crew sit there, and has no name otherwise (the captain's choice; `ComputerOrbits.computers`, `labeled`).
+
+A group is a cluster as above: the same wings, seats, half-size formation, paging, names, sparks and falls home, and a program whose parts run on two computers draws once in its project's group.
+A spark still flies from the first mate; the page controls and their commands in command search read Previous projects and Next projects.
+A project group whose last crewmate is leaving stays on the stage until its fall home lands, so its cue reaches the first mate (`ComputerOrbits.computers`).
+With one group of the person's own and nothing away, everyone sits on the first mate's ring and the stage is the single-computer one.
+Until the board names any project, as before the first board or with an older home, the stage stays grouped by computer.
+While a crewmate's summary is open, the light falls on its computer's crew across every group (the captain's answer: "Its computer's crew, across every group"; `restedLight` with the stage's `computerOf`), in place of its project's.
+`crewGroups.test.ts` holds the rule and the stage: one project across two computers in one group, an away computer's frozen group, a crewmate whose project is not named yet and its late placement, one the board stops naming as it closes in a project group or on the first mate's ring, a stage of one group, a program drawn once, a leaving group's fall home, switching off, and the rest light.
+
 ## Visible seats
 
 On desktop, iPhone and iPad, each main orbit spaces only the occupants drawn on it (INF-1375, approved A: keep small circles and close the gaps).

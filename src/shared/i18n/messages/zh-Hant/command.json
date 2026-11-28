@@ -71,6 +71,8 @@
   "commandCommandsSearch": "搜尋指令",
   "commandComputersNext": "下一組工作電腦",
   "commandComputersPrevious": "上一組工作電腦",
+  "commandCrewGroupingToggle": "按專案或按電腦分組船員動畫",
+  "commandCrewGroupingToggleWords": "船員, 動畫, 軌道, 專案, 電腦, 分組",
   "commandDevicesTryAgain": "再次嘗試連絡你的電腦",
   "commandDevicesTryAgainWords": "裝置, 重新連線, 連線, 電腦",
   "commandFeedbackStart": "傳送意見回饋",

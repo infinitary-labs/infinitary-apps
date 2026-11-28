@@ -71,6 +71,8 @@
   "commandCommandsSearch": "명령 검색",
   "commandComputersNext": "다음 작업 컴퓨터",
   "commandComputersPrevious": "이전 작업 컴퓨터",
+  "commandCrewGroupingToggle": "선원 애니메이션을 프로젝트별 또는 컴퓨터별로 묶기",
+  "commandCrewGroupingToggleWords": "선원, 애니메이션, 궤도, 프로젝트, 컴퓨터, 그룹",
   "commandDevicesTryAgain": "컴퓨터에 다시 연락하기",
   "commandDevicesTryAgainWords": "기기, 다시 연결, 연결, 맥",
   "commandFeedbackStart": "피드백 보내기",

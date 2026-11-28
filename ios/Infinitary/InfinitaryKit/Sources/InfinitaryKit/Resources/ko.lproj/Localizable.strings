@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "명령 검색";
 "commandComputersNext" = "다음 작업 컴퓨터";
 "commandComputersPrevious" = "이전 작업 컴퓨터";
+"commandCrewGroupingToggle" = "선원 애니메이션을 프로젝트별 또는 컴퓨터별로 묶기";
+"commandCrewGroupingToggleWords" = "선원, 애니메이션, 궤도, 프로젝트, 컴퓨터, 그룹";
 "commandDevicesTryAgain" = "컴퓨터에 다시 연락하기";
 "commandDevicesTryAgainWords" = "기기, 다시 연결, 연결, 맥";
 "commandFeedbackStart" = "피드백 보내기";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "일등항해사 - %1$@";
 "crewModelNames" = "선원 모델 이름";
 "crewNextComputers" = "다음 컴퓨터";
+"crewNextProjects" = "다음 프로젝트";
 "crewOrbitLabel" = "선원들 - 작업 중 %2$@, 대기 %1$@";
 "crewOutOfReach" = "연락 닿지 않음";
 "crewPartsCount" = "끝남 %1$@, 실행 중 %2$@, 대기 %3$@";
 "crewPreviousComputers" = "이전 컴퓨터";
+"crewPreviousProjects" = "이전 프로젝트";
 "crewProgramsAndParts" = "프로그램과 그 부분";
+"crewProjectGroups" = "프로젝트 그룹";
 "crewStateIdle" = "대기";
 "crewStateWorking" = "작업 중";
 "crewSummaryAnotherTask" = "다른 작업";
@@ -1762,6 +1767,7 @@
 "panelChangeCardSize" = "카드 크기";
 "panelChangeCopyStop" = "다른 컴퓨터의 사본 보관 중지";
 "panelChangeCostLimit" = "작업이 더 쓰기 전에 묻는 시점";
+"panelChangeCrewGrouping" = "크루 애니메이션을 프로젝트별로 묶기";
 "panelChangeCrewModelNames" = "크루의 모델 이름 표시";
 "panelChangeCrewReasoning" = "크루의 사고 수준";
 "panelChangeCrewSlots" = "크루의 모델";
@@ -2333,6 +2339,8 @@
 "phoneSettingsCapabilityRead" = "카드, 활동, 작업을 읽어요. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "대화는 컴퓨터에 머물러요.";
+"phoneSettingsCrewGrouping" = "선원 애니메이션을 프로젝트별로 묶기";
+"phoneSettingsCrewGroupingScope" = "선원 애니메이션에서 어느 컴퓨터에서 실행되든 프로젝트마다 선원들이 함께 궤도를 돌아요. %1$@에서 설정되므로 그 창들도 똑같이 따라요.";
 "phoneSettingsDevices" = "기기";
 "phoneSettingsFoldSplit" = "접히는 부분에서 나누기";
 "phoneSettingsFoldSplitScope" = "책처럼 펼치면 이 휴대폰은 접히는 부분 한쪽에 작업과 활동을, 다른 쪽에 홈을 표시해요. 끄면 iPad처럼 배치돼요.";
@@ -2622,6 +2630,7 @@
 "recordValidationScenario" = "시나리오";
 "recordValidationSupplementary" = "%1$@ (보충)";
 "refuseACardCoversTheComputers" = "카드가 컴퓨터 목록을 가리고 있어요";
+"refuseACardCoversTheProjects" = "카드가 프로젝트 목록을 가리고 있어요";
 "refuseARecordingIsRunning" = "녹음 중이에요";
 "refuseBrowserTabCannotBeFound" = "브라우저 탭은 페이지의 그림이라 그 안의 단어는 찾을 수 없어요";
 "refuseCloseTheOpenDialogFirst" = "열린 대화상자를 먼저 닫으세요";
@@ -2658,7 +2667,9 @@
 "refuseThereIsNoOtherTabToGo" = "이동할 다른 탭이 없어요";
 "refuseThereIsOnlyOneProject" = "프로젝트가 하나뿐이에요";
 "refuseTheseAreTheFirstComputers" = "처음 컴퓨터들이에요";
+"refuseTheseAreTheFirstProjects" = "처음 프로젝트들이에요";
 "refuseTheseAreTheLastComputers" = "마지막 컴퓨터들이에요";
+"refuseTheseAreTheLastProjects" = "마지막 프로젝트들이에요";
 "refuseThisCardAsksNoQuestions" = "이 카드에는 질문이 없어요";
 "refuseThisCardCannotBeFound" = "단어는 카드, 지난 카드, 작업 기록에서 찾을 수 있어요";
 "refuseThisCardHasNoButtons" = "이 카드에는 버튼이 없어요";
@@ -2848,6 +2859,10 @@
 "settingsAppearanceCardSizeDescription" = "카드가 열릴 때의 크기를 골라요. 카드마다 크기를 따로 바꿀 수도 있어요.";
 "settingsAppearanceCardUsual" = "보통";
 "settingsAppearanceCardWide" = "넓게";
+"settingsAppearanceCrewGroupedByComputer" = "선원 애니메이션을 컴퓨터별로 묶었어요";
+"settingsAppearanceCrewGroupedByProject" = "선원 애니메이션을 프로젝트별로 묶었어요";
+"settingsAppearanceCrewGrouping" = "선원 애니메이션을 프로젝트별로 묶기";
+"settingsAppearanceCrewGroupingDescription" = "선원 애니메이션에서 어느 컴퓨터에서 실행되든 프로젝트마다 선원들이 함께 궤도를 돌아요.";
 "settingsAppearanceCrewModelNames" = "선원 모델 이름";
 "settingsAppearanceCrewModelNamesDescription" = "선원들이 궤도 하나만 쓸 때 모델 이름을 보여 줘요.";
 "settingsAppearanceHeading" = "모양";

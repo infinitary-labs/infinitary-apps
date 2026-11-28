@@ -10,22 +10,30 @@ struct PhoneSceneRoster {
             let presence: [PhoneComputerPresence]
             let homeName: String
             let inReach: Bool
+            let grouping: String
         }
         private var key: Key?
         private var value: PhoneSceneRoster?
         private var retained: [String: Set<String>] = [:]
-        func read(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, revision: Int) -> PhoneSceneRoster {
-            let next = Key(revision: revision, generation: generation, presence: presence, homeName: homeName, inReach: inReach)
+        func read(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, revision: Int,
+                  grouping: String = "computer") -> PhoneSceneRoster {
+            let next = Key(revision: revision, generation: generation, presence: presence, homeName: homeName, inReach: inReach, grouping: grouping)
             if key == next, let value { return value }
-            if key?.generation != generation { retained = [:] }
+            // Programs are remembered by the group their parts ran in, so a new grouping remembers afresh.
+            if key?.generation != generation || key?.grouping != grouping { retained = [:] }
             let roots = Set((board?.tasks ?? []).filter { $0.program == true && ($0.status == "active" || $0.status == "open") }.map(\.id))
             retained = retained.filter { roots.contains($0.key) }
-            for task in board?.tasks ?? [] where task.kind == "work" && task.status == "active" && task.program != true && task.reviewOf == nil {
-                if let parent = task.parentId, roots.contains(parent) { retained[parent, default: []].insert(PhoneSceneRoster.computerID(task)) }
+            let crew = (board?.tasks ?? []).filter { $0.kind == "work" && $0.status == "active" && $0.program != true }
+            let grouped = PhoneCrewGroups.read(board: board, tasks: crew, presence: presence, grouping: grouping)
+            for task in crew where task.reviewOf == nil {
+                if let parent = task.parentId, roots.contains(parent) {
+                    retained[parent, default: []].insert(grouped?.groups[task.id] ?? PhoneSceneRoster.computerID(task))
+                }
             }
             // Seats are remembered from the last read of a real board, as the desktop remembers them; a new scene seats everyone afresh.
-            let books = key?.generation == generation && (value?.sequence ?? -1) >= 0 ? value?.books : nil
-            var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation, retainedPrograms: retained, seats: books)
+            let books = key?.generation == generation && key?.grouping == grouping && (value?.sequence ?? -1) >= 0 ? value?.books : nil
+            var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation,
+                                          retainedPrograms: retained, seats: books, grouping: grouping)
             if let previous = value, key?.generation == generation {
                 // Keep the panned extent while work departs; a removal must not clip its flight or move the viewport.
                 let left = max(roster.homeX, previous.homeX), right = max(roster.width - roster.homeX, previous.width - previous.homeX)
@@ -118,10 +126,15 @@ struct PhoneSceneRoster {
     let generation: Int
     let sequence: Int
     let inReach: Bool
+    /// Each crewmate's group while the crew animation is grouped by project (`PhoneCrewGroups`), by task id; empty
+    /// while it is grouped by computer.
+    let groups: [String: String]
+    var byProject: Bool { !groups.isEmpty }
 
     var books: [String: SeatBook] { Dictionary(uniqueKeysWithValues: computers.map { ($0.id, $0.book) }) }
 
-    init(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, retainedPrograms: [String: Set<String>] = [:], seats previous: [String: SeatBook]? = nil) {
+    init(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, retainedPrograms: [String: Set<String>] = [:], seats previous: [String: SeatBook]? = nil,
+         grouping: String = "computer") {
         self.generation = generation; sequence = board?.seq ?? -1; self.inReach = inReach
         let all = board?.tasks ?? []
         allTasks = all; links = board?.links ?? []
@@ -129,10 +142,22 @@ struct PhoneSceneRoster {
             .sorted { $0.createdAt == $1.createdAt ? $0.key < $1.key : $0.createdAt < $1.createdAt }
         order = Dictionary(uniqueKeysWithValues: tasks.enumerated().map { ($0.element.id, $0.offset) })
         let programs = all.filter { $0.program == true && ($0.status == "active" || $0.status == "open") }
-        let grouped = Dictionary(grouping: tasks, by: Self.computerID)
+        let plan = PhoneCrewGroups.read(board: board, tasks: tasks, presence: presence, grouping: grouping)
+        let groups = plan?.groups ?? [:]
+        self.groups = groups
+        let groupOf = { (task: PhoneTask) in groups[task.id] ?? Self.computerID(task) }
+        let grouped = Dictionary(grouping: tasks, by: groupOf)
         // The fixed stars, as the desktop's pinnedCrewOf reads them: the Tasks list's own Pinned rows, in its order.
         let pinnedOrder = Self.pinnedOrder(board)
-        let ids = ["home"] + Set(grouped.keys).union(retainedPrograms.values.flatMap { $0 }).filter { $0 != "home" }.sorted()
+        let held = Set(grouped.keys).union(retainedPrograms.values.flatMap { $0 })
+        // Grouped by project, as the desktop's: home, each project group in the board's order, then each away computer.
+        let projectGroups = (plan?.plan.groups ?? []).map(\.id).filter { held.contains($0) }
+        let ids = ["home"] + projectGroups + held.filter { $0 != "home" && !projectGroups.contains($0) }.sorted()
+        let groupNames = Dictionary((plan?.plan.groups ?? []).map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        // Grouped by project, the first mate's ring holds crew from every computer, so it takes the name of the middle
+        // project sitting there, or none, as the desktop's (the captain's answer on the review of INF-6955's build).
+        let middle = plan?.plan.middle.flatMap { id in (grouped["home"] ?? []).contains { $0.projectId == id } ? id : nil }
+        let homeLabel = plan == nil ? homeName : middle.flatMap { id in board?.projects.first { $0.id == id }?.name } ?? ""
         computers = ids.map { id in
             let members = grouped[id] ?? [], observed = presence.first { $0.id == id }
             let roots = programs.filter { program in members.contains { $0.parentId == program.id && $0.reviewOf == nil } || retainedPrograms[program.id]?.contains(id) == true }
@@ -150,8 +175,8 @@ struct PhoneSceneRoster {
             let pinned = pinnedOrder.filter { ids.contains($0) && !parts.contains($0) }
             let sky = PhoneFixedStars.places(pinned.count, orbits: PhoneFixedStars.orbits(counts: book.counts))
             let skyReach: Double = sky.points.map { Double(max(abs($0.x), abs($0.y))) * Self.ringScale * share }.max() ?? 0
-            return Computer(id: id, name: id == "home" ? homeName : observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? PhoneMessages.phoneSceneComputerFallback(),
-                            reachable: inReach && (id == "home" || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: parts,
+            return Computer(id: id, name: id == "home" ? homeLabel : groupNames[id] ?? observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? PhoneMessages.phoneSceneComputerFallback(),
+                            reachable: inReach && (id == "home" || groupNames[id] != nil || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: parts,
                             pinned: pinned, sky: sky, skyReach: skyReach, book: book, share: share, radius: radius)
         }
         var left = -computers[0].width / 2, right = computers[0].width / 2
@@ -177,6 +202,9 @@ struct PhoneSceneRoster {
         }
         return nil
     }
+    /// The group a crewmate sits in: its project's while grouped by project, else its computer's.
+    func groupID(_ task: PhoneTask) -> String { groups[task.id] ?? Self.computerID(task) }
+    /// The computer a crewmate runs on, whatever group it sits in.
     static func computerID(_ task: PhoneTask) -> String {
         if let id = task.executionDeviceId { return id }
         // An older home's named remote place is not this computer and its reach is unknown.
@@ -258,6 +286,8 @@ final class PhoneSceneMotion: @unchecked Sendable {
         var center: CGPoint
         /// Its place on the orbits; a program part drawn on its ring has none.
         var orbit: PhoneSceneRoster.Orbit?
+        /// The group it sits in (`PhoneSceneRoster.groupID`): `home` is the first mate's own ring.
+        var group = "home"
         var depth = 0.5, spin = 0.0, alpha = 1.0, unfold = 1.0, work = 0.0, flicker = 0.0, nudge = 0.0
         var unknown = false, programPart = false
         /// A background wait's eased blend (banked, inside the dashed wait ring) and the share of it that is local work (ember wires).
@@ -399,7 +429,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         if roster.sequence >= 0 && roster.inReach { rosterReady = true }
         var target: [String: Glyph] = [:], marks: [Mark] = []
         let parts = Set(roster.computers.flatMap { $0.programParts })
-        let cues = PhoneSceneCompanions.cues(roster.tasks, parts: parts)
+        let cues = PhoneSceneCompanions.cues(roster.tasks, parts: parts, group: roster.groupID)
         var circles: [String: (cue: PhoneSceneCompanions.Cue, share: Double, time: Double)] = [:]
         // Each computer hangs its own constellation over its own orbits (INF-3634): places from its center, and the joins.
         var starPlaces: [String: CGPoint] = [:], starJoins: [(from: String, to: String)] = []
@@ -491,7 +521,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
                 let unknown = PhoneSceneRoster.unknown(task, computer: computer)
                 // A background wait keeps it working at an idle pace, banked, as on the desktop.
                 let wait = unknown ? nil : PhoneSceneRoster.wait(task), hot = !unknown && wait == nil && PhoneSceneRoster.working(task)
-                target[task.id] = Glyph(task: task, point: point, center: center, orbit: place, depth: depth,
+                target[task.id] = Glyph(task: task, point: point, center: center, orbit: place, group: computer.id, depth: depth,
                     spin: localTime * (hot ? 1.6 : 0.35), work: hot ? 1 : 0,
                     unknown: unknown, programPart: computer.programParts.contains(task.id),
                     wait: wait == nil ? 0 : 1, job: wait == "job" ? 1 : 0,
@@ -621,7 +651,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
             guard let glyph = byID[packet.taskID], !glyph.unknown else { return nil }
             let progress = clamp01((now - packet.started) / Self.duration(orbit["packetMs"]!, glyph: glyph, home: firstmate))
             // A part's report goes to its program's ring, which carries the program's word home.
-            let home = marks.first { $0.computerID == PhoneSceneRoster.computerID(glyph.task) && $0.parts.contains(packet.taskID) }?.point ?? firstmate
+            let home = marks.first { $0.computerID == glyph.group && $0.parts.contains(packet.taskID) }?.point ?? firstmate
             return (Self.travel(from: packet.report ? glyph.point : home, to: packet.report ? home : glyph.point, at: easeInOut(progress)), sin(progress * .pi))
         }
         let lit = Set(glyphs.filter { $0.star > 0.01 }.map(\.task.id))
@@ -651,7 +681,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
     }
     /// A home crewmate on its orbit, which a warp or a supernova takes along; a fixed star holds its place.
     private static func rides(_ g: Glyph) -> Bool {
-        !g.unknown && !g.programPart && g.star < 0.5 && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && PhoneSceneRoster.computerID(g.task) == "home"
+        !g.unknown && !g.programPart && g.star < 0.5 && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && g.group == "home"
     }
     /// Ease each pinned crewmate to its place in the sky and back (INF-3634), as the desktop's applyStars: it rises once
     /// it has arrived, a little nearer than the orbit's middle; one leaving keeps its glint fading where it hangs. Returns
@@ -701,7 +731,7 @@ final class PhoneSceneMotion: @unchecked Sendable {
         place.turn = goal.turn
     }
     private static func duration(_ base: Double, glyph: Glyph, home: CGPoint, from: CGPoint? = nil) -> Double {
-        guard PhoneSceneRoster.computerID(glyph.task) != "home" else { return base / 1000 }
+        guard glyph.group != "home" else { return base / 1000 }
         let trip = CharacterCatalog.shared.remoteTrip, at = from ?? glyph.point
         let distance = hypot(at.x - home.x, at.y - home.y)
         let extra = (trip["acrossMs"]! - CharacterCatalog.shared.orbit["spawnMs"]!) * (distance - trip["homeDistancePx"]!) / (trip["acrossPx"]! - trip["homeDistancePx"]!)

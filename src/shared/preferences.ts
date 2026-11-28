@@ -90,6 +90,10 @@ export function ambientStyleIn(
   return own?.some((style) => style.id === saved) ? (saved as string) : ambientStyleOf(saved);
 }
 
+/** How the crew animation groups the crew: by computer, the default, or by project. */
+export const crewGroupingSchema = z.enum(["computer", "project"]);
+export type CrewGrouping = z.infer<typeof crewGroupingSchema>;
+
 /** How the app looks. The default handles records written before the wash control existed. */
 export const appearanceSchema = z.strictObject({
   /** Dark or Light; with a color theme chosen, that theme's base (docs/themes.md). */
@@ -123,6 +127,13 @@ export const appearanceSchema = z.strictObject({
   washStrength: washStrengthSchema.optional(),
   /** Missing on older installs means on, as on a fresh install. */
   showCrewModelNames: z.boolean().optional(),
+  /**
+   * How the crew animation groups the crew (docs/crew-orbits.md, "Grouping
+   * by project"): by the computer each runs on, or by project. Missing means
+   * by computer, on a fresh install and an older one. The core keeps it in a
+   * row of its own, so an older build never meets it.
+   */
+  crewGrouping: crewGroupingSchema.optional(),
   /**
    * Whether the ambient music plays in this window (docs/ambient-music.md);
    * missing means off, as on a fresh install. The core keeps it and

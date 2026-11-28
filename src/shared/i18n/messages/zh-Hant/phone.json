@@ -541,6 +541,8 @@
   "phoneSettingsCapabilityRead": "讀取卡片、動態和任務。{update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "對話會留在你的電腦上。",
+  "phoneSettingsCrewGrouping": "按專案分組船員動畫",
+  "phoneSettingsCrewGroupingScope": "在船員動畫中，每個專案的船員一起環繞，無論它們在哪台電腦上執行。此設定保存在 {computer} 上，因此它的視窗也會跟著變。",
   "phoneSettingsDevices": "裝置",
   "phoneSettingsFoldSplit": "在摺痕處分開",
   "phoneSettingsFoldSplitScope": "像書一樣展開時，這支手機會在摺痕一側顯示「任務」和「動態」，另一側顯示「首頁」。關閉後會以 iPad 的方式排列。",

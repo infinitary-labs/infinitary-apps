@@ -11,9 +11,10 @@ export type BackgroundWaitState = (typeof BACKGROUND_WAIT_STATES)[number];
 /**
  * Seeds a task whose wait is background work in one state: `started` (a known start, no check-back),
  * `check-back` (a crewmate's check-back owns the wait and the job began an hour earlier) or `unknown`
- * (running with no known start). A real job or client report needs a running crewmate, so a seeded
- * task reads its wait facts from here; the wait, the posture, the board read and the wire are the
- * real core's. The answer names the task and the wait as the board read gives it.
+ * (running with no known start). A real job or client report needs a running crewmate, so the wait
+ * facts and the job posture of a seeded task are fixture inputs read from here; the real wait
+ * projection and board read build the wait from them. The answer names the task, the job's start
+ * (absent when unknown) and the wait as the board read gives it.
  */
 export function phoneBackgroundWaits(core: Core) {
   const seeded = new Map<string, { jobSince?: number; timerOwned: boolean }>();
@@ -33,12 +34,9 @@ export function phoneBackgroundWaits(core: Core) {
       if (!BACKGROUND_WAIT_STATES.includes(state as BackgroundWaitState))
         throw new Error(`background-wait-fixture takes ${BACKGROUND_WAIT_STATES.join(", ")}`);
       const id = `native-background-${state}-${randomBytes(6).toString("hex")}`;
-      const startedAt = Date.now() - 22 * 60_000;
       const owned = state === "check-back";
-      seeded.set(id, {
-        timerOwned: owned,
-        ...(state === "unknown" ? {} : { jobSince: owned ? startedAt - 60 * 60_000 : startedAt }),
-      });
+      const jobSince = state === "unknown" ? undefined : Date.now() - (owned ? 82 : 22) * 60_000;
+      seeded.set(id, { timerOwned: owned, ...(jobSince !== undefined ? { jobSince } : {}) });
       const work = seedTask(core.services.tasks, {
         id,
         title: `Background work ${state}`,
@@ -51,7 +49,14 @@ export function phoneBackgroundWaits(core: Core) {
         });
       const board = await core.dispatch("inf:tasks:board", []);
       const wait = board.tasks.find((row) => row.id === id)?.waits?.find((w) => w.kind === "job");
-      return { taskId: id, key: work.key, title: work.title, state, startedAt, wait };
+      return {
+        taskId: id,
+        key: work.key,
+        title: work.title,
+        state,
+        ...(jobSince !== undefined ? { jobSince } : {}),
+        wait,
+      };
     },
   };
 }

@@ -2,9 +2,10 @@ import { expect, test, vi } from "vitest";
 import { startPhoneHome } from "./helpers/phoneHome";
 import { scratchDir } from "./helpers/scratchDirs";
 
-// The native phone check's record part selects one of three background-work wait states through the
-// test home's `background-wait-fixture`; each must reach the board read the phone's record is built from
-// as the wait the Mac's own projection gives: a known start, a check-back that owns the wait, no known start.
+// The test home's `background-wait-fixture` seeds the three background-work wait states the phone's
+// record words, for a native phone check to select by name; no checked-in native check calls it yet.
+// Each state must come out of the real wait projection and board read as the wait the Mac gives:
+// a known start, a check-back that owns the wait, no known start.
 test("the test home seeds the three background-work wait states the phone's record words", async () => {
   vi.stubEnv("PI_OFFLINE", "1");
   for (const name of ["INFINITARY_CONNECTION_LOOPBACK_PORT", "INFINITARY_DNS_SD"])
@@ -18,19 +19,26 @@ test("the test home seeds the three background-work wait states the phone's reco
       });
       expect(response.ok, await response.clone().text()).toBe(true);
       return (await response.json()) as {
-        startedAt: number;
-        wait?: { label: string; since?: number; next?: { kind: string } };
+        jobSince?: number;
+        wait?: { label: string; since?: number; next?: { kind: string; at: number } };
       };
     };
     const started = await seed("started");
-    expect(started.wait).toMatchObject({ label: "Background work", since: started.startedAt });
+    expect(started.jobSince).toBeDefined();
+    expect(started.wait).toMatchObject({ label: "Background work", since: started.jobSince });
     expect(started.wait?.next).toBeUndefined();
 
     const owned = await seed("check-back");
-    expect(owned.wait).toMatchObject({ label: "Website build", next: { kind: "check-back" } });
-    expect(owned.wait?.since).not.toBe(owned.startedAt - 60 * 60_000);
+    const own = owned.wait;
+    expect(own).toMatchObject({ label: "Website build", next: { kind: "check-back" } });
+    // The check-back keeps its own recorded time and its scheduled time, 30 minutes on; the job's
+    // earlier start does not replace either.
+    expect(own?.since).toBeDefined();
+    expect(own?.since).not.toBe(owned.jobSince);
+    expect((own?.next?.at ?? 0) - (own?.since ?? 0)).toBe(30 * 60_000);
 
     const unknown = await seed("unknown");
+    expect(unknown.jobSince).toBeUndefined();
     expect(unknown.wait).toMatchObject({ label: "Background work" });
     expect(unknown.wait).not.toHaveProperty("since");
     expect(unknown.wait).not.toHaveProperty("next");

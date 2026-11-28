@@ -186,6 +186,8 @@ const BUILD_ONCE = "Build the app once for this check's jobs";
 const SHARE_BUILD = "Share the build with this check's other jobs";
 const FETCH_BUILD = "Fetch the build this check's first job shared";
 const SHARED_BUILD_STEPS = [BUILD_ONCE, SHARE_BUILD, FETCH_BUILD];
+// INF-7175: only a dealt job keeps its passes' times for the joined part times; a call's job keeps its own record.
+const PASS_TIMES = "Keep the passes' times for the joined part times";
 // The steps a plain branch request skips: none since INF-2582, whose edited-part passes ride the
 // ordinary gate and its evidence.
 const SKIPPED_STEPS: string[] = [];
@@ -524,6 +526,7 @@ describe("the native gate on an affected request", () => {
             name !== KEEP_PASSES &&
             name !== "Restore the passes of this run's earlier attempts" &&
             !SHARED_BUILD_STEPS.includes(name) &&
+            name !== PASS_TIMES &&
             !SKIPPED_STEPS.includes(name),
         ),
       );

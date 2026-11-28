@@ -41,6 +41,8 @@ name: phone
 # way as a request of every part on every device, and replaces INF-4241 piece 8's one build on one phone Mac for it. It
 # keeps full discovery: its first failed job stops no other. A call naming a device and a wait-clock or tool request
 # keep a job of their device, or of every device.
+# INF-7175: a dealt job holds only some parts, so the `part-times` job joins the times each dealt job kept into the one
+# part-times.json a check of every part kept before it was dealt, the phone release's among them.
 on:
   workflow_call:
     inputs:
@@ -448,6 +450,17 @@ jobs:
         with:
           path: ${{ runner.temp }}/swift-packages
           key: ${{ steps.swift-packages.outputs.cache-primary-key }}
+      # INF-7175: a dealt job's gate keeps the minutes of each ordinary pass it ran to its end (pass-times.json,
+      # scripts/phone-test-plan.ts), which the `part-times` job joins; a failed upload only leaves that record out.
+      - name: Keep the passes' times for the joined part times
+        if: ${{ always() && matrix.passes }}
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-pass-times-${{ matrix.key }}
+          path: ${{ runner.temp }}/phone/pass-times.json
+          if-no-files-found: ignore
+          retention-days: 1
       # Keep diagnostics independently of screenshot-heavy xcresult bundles,
       # so a failed gate can be diagnosed within the workflow reader's limits.
       # A full gate's part times ride along (part-times.json, scripts/test-phone.ts).
@@ -507,6 +520,47 @@ jobs:
           path: ${{ runner.temp }}/phone/
           if-no-files-found: ignore
           retention-days: ${{ inputs.recording && 3 || 1 }}
+  # INF-7175: a check of every part dealt into jobs, the phone release's call (INF-7079's fix 5) or a request of every
+  # part, keeps the record a check of every part kept before it was dealt: each part's minutes on each device it runs on
+  # (part-times.json), which scripts/phone-part-times.json is refreshed from. It joins the times the dealt jobs kept
+  # once they end, failed ones included, as one full gate counts a failed part's time; a job that never kept its times
+  # leaves the record out and names the passes it lacks. The record holds no check: a failed step only leaves it out.
+  part-times:
+    needs: [request, native-phone]
+    name: ${{ format('{0} · Join the phone part times', inputs.trigger || 'Manual request') }}
+    if: ${{ !cancelled() && needs.request.outputs.jobs != '' && needs.request.outputs.jobs != '[]' && (inputs.source_commit != '' || !inputs.affected && inputs.parts == '') }}
+    # The phone release's call runs it on GitHub's hosted Ubuntu, as its request job.
+    runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').light || vars.LINUX_RUNNER || 'ubuntu-24.04' }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ inputs.source_commit || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      # One folder per dealt job's artifact; a pattern that matches none downloads nothing and passes.
+      - name: Fetch the times each dealt job kept
+        continue-on-error: true
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: phone-pass-times-*
+          path: ${{ runner.temp }}/phone-pass-times
+      - name: Join the dealt jobs' part times
+        continue-on-error: true
+        run: node scripts/join-phone-part-times.ts --jobs "$JOBS" --from "$RUNNER_TEMP/phone-pass-times" --out "$RUNNER_TEMP/part-times.json"
+        env:
+          JOBS: ${{ needs.request.outputs.jobs }}
+      - name: Keep the joined part times
+        continue-on-error: true
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: phone-part-times
+          path: ${{ runner.temp }}/part-times.json
+          if-no-files-found: ignore
+          retention-days: 14
   # INF-1066: result bundles can exceed the workflow reader's download bound.
   # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
   scene-evidence:

@@ -93,6 +93,7 @@ The repository's default for an upload that names no retention is 14 days.
 Download diagnostic evidence or export a recording within those three days if a task needs to keep it longer.
 Phone logs also carry the full gate's `part-times.json`, a record of each part's minutes on each device; no workflow reads it since INF-2539 removed the pull request's part budget.
 They carry its `part-work.json` too, each part's screen reads and app launches, from which `scripts/phone-work.json`'s recorded amounts are taken (`docs/ios.md`, INF-4326).
+A check of every part dealt into jobs, the phone release's among them, keeps its part times joined from its jobs as `phone-part-times` for 14 days, and each dealt job's own `phone-pass-times-<key>`, which only that join reads, for 1 day ("Native phone checks").
 Published release assets are independent of Actions artifact retention, but a release resuming after its Linux packages expire must rebuild them.
 Retention applies to new uploads only; existing artifacts keep their expiry dates, and repository storage still depends on upload volume and other artifact families.
 
@@ -1053,6 +1054,11 @@ Every request uses `MAC_QUEUES.phone`, currently `mini-mac-phone`, or `MAC_QUEUE
 Do not use local mini borrows for phone proof.
 The same-source unsigned call from `ios-release.yml` passes its resolved `source_commit` and no device; the `request` job checks out that source and deals every device's parts without repeats into jobs, as a request of every part is dealt, and each job takes its own phone Mac (INF-7079's fix 5, which replaced INF-4241 piece 8's one build on one phone Mac); every job must succeed before host signing starts.
 Each job names its key, a dealt job's number (`job-1`, `job-2` and so on) or a call's device, or every device, in each artifact (`phone-logs-job-2`, `phone-results-every` and so on), and keeps each device's evidence under its device's folder; a gate that ran every part of a device writes that device's `part-times.json` there, and the job of every device one `part-times.json` with every device's times, so a dealt job, which runs only some parts, usually writes none, the phone release's dealt jobs included.
+Every gate also keeps the minutes of each ordinary pass it ran to its end as `pass-times.json`, and a dealt job uploads it as `phone-pass-times-<key>` (INF-7175).
+For a check of every part dealt into jobs, the phone release's call or a request of every part, the `part-times` job joins them once the dealt jobs end, on a Linux machine of the `light` kind, or GitHub's hosted Ubuntu for the phone release (`scripts/join-phone-part-times.ts`).
+It keeps the `part-times.json` one gate of every part on the same devices would write as the `phone-part-times` artifact when every part on every dealt device has its time, a failed part's included, and otherwise names in a warning each pass that has none and keeps nothing.
+A rerun of a failed job keeps only the times of the passes it ran again, so that attempt's join names the others and keeps no record, as a rerun's own gate keeps no `part-times.json`.
+The joined record holds no check: each of its steps that fails only leaves the record out, so it never holds up the phone release.
 Only a request's first job runs the phone's Swift package tests, once for the request, and it holds the Mac part when one is dealt, since that part reuses their build.
 Two phone guests on the one rented computer reported memory pressure warnings in 5 of 29 readings while both ran (INF-2409).
 Status-only TestFlight requests start no phone or signing job.
@@ -1773,7 +1779,7 @@ The fresh-start sweep runs alone only the later tests of a file that shares one 
 
 | Kind | Jobs | Its old label |
 | --- | --- | --- |
-| `light` | `verify.yml`'s `request`, `size-warning.yml`'s `size-warning`, `batch-checks.yml`'s `watch` (it reads the batch's run for about 40 minutes, so it holds no hosted machine), and `docs-site.yml`'s `build-and-check` (an outside pull request still takes hosted Ubuntu first) | `LINUX_RUNNER` |
+| `light` | `verify.yml`'s `request`, `size-warning.yml`'s `size-warning`, `batch-checks.yml`'s `watch` (it reads the batch's run for about 40 minutes, so it holds no hosted machine), `docs-site.yml`'s `build-and-check` (an outside pull request still takes hosted Ubuntu first), and `phone.yml`'s `part-times` on a request (the phone release's call names hosted `ubuntu-24.04`) | `LINUX_RUNNER` |
 | `ci` | `ci.yml`'s `unit-tests`, `integration-tests` and `probe-tests`, `replay.yml`'s `replay-gate`, and `prompt-budget.yml`'s `prompt-budget` | `LINUX_RUNNER` |
 | `gate` | `journeys.yml`'s `choose-journeys`, and `phone.yml`'s `request` on a request (the phone release's call names hosted `ubuntu-24.04`), the two choosers a Mac job waits on (INF-5387's plan, piece 1) | `LINUX_RUNNER` with `-gate` |
 | `checks` | `verify.yml`'s `linux-checks` lane and its Linux test groups (`linux-tests`) | `LINUX_RUNNER` |

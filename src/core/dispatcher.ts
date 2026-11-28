@@ -21,7 +21,6 @@ import {
   type WorkInvokeChannel,
 } from "@shared/ipc";
 import { KNOWLEDGE_OFF } from "@shared/knowledge";
-import { ownThemesRead } from "@shared/ownColorThemes";
 import { OWN_WINDOW_WORDS } from "@shared/ownWindow";
 import { panelSettingsNow } from "@shared/panelSettings";
 import { type AuthPromptView, providerServesRole } from "@shared/providers";
@@ -42,6 +41,7 @@ import { isCaptainInput } from "./devices/captainPlaces";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import { accountHandlers } from "./dispatcher/accountHandlers";
 import { createActionTrail } from "./dispatcher/actionTrail";
+import { appearanceHandlers } from "./dispatcher/appearanceHandlers";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import { type CoreHandlers, createCatalogDispatch } from "./dispatcher/catalogDispatch";
 import { crewGroupingHandlers } from "./dispatcher/crewGroupingHandlers";
@@ -1029,12 +1029,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return services.settings.getRoutingSettings();
     },
 
-    // Every preference write goes through the one writer, which pushes the
-    // whole value back as `inf:shell:preferences` (talk-to-personalize Step 1).
-    "inf:settings:appearance:get": () => services.settings.getAppearance(),
-    "inf:settings:own-themes:get": () => ownThemesRead(services.settings.getAppearance()),
-
-    "inf:settings:appearance:set": (appearance) => services.preferences.setAppearance(appearance),
+    ...appearanceHandlers(services),
     ...crewGroupingHandlers(services, (look) => outer("inf:settings:appearance:set", [look])),
 
     // What a panel reads of each named setting (`settings.current`): the

@@ -7,7 +7,7 @@ import type { FolderRefreshRefusal } from "@shared/folderRefresh";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
 import { englishOf, type Said, said } from "@shared/i18n/said";
 import type { MergeReview } from "@shared/mergeReview";
-import { plainProblem } from "@shared/plainProblem";
+import { plainProblemSaid } from "@shared/plainProblem";
 import { hostedPresentation } from "@shared/presentationDestination";
 import { opensPullRequest } from "@shared/repos";
 import type { ForgePull } from "../forge";
@@ -73,7 +73,7 @@ export function settleFeedSaid(
 ): string | Said {
   // A hold's sentence tells an agent how it passes; his line leaves it out.
   if (!result.problem && !result.plain) return withoutHoldWords(result.text);
-  const plain = result.problem ? plainProblem(result.problem) : (result.plain as string);
+  const plain = result.problem ? plainProblemSaid(result.problem) : (result.plain as string);
   if (mode === "discard") {
     if (!result.ok) return said("settleCouldNotDiscard", { problem: plain });
     return result.followup

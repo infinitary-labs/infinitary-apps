@@ -5,7 +5,7 @@ import {
   folderRefreshWords,
 } from "@shared/folderRefresh";
 import { forgePlace } from "@shared/forge";
-import { englishOf, type Said, said, saidMark } from "@shared/i18n/said";
+import { englishOf, type Said, type SaidPart, said, saidMark } from "@shared/i18n/said";
 import type { TaskRecord } from "../storage/taskRecords";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import { escapeCardText } from "./cardText";
@@ -64,7 +64,7 @@ export function cannotMergeText(plain: string): string {
   return englishOf(cannotMergeSaid(plain));
 }
 
-export function cannotMergeSaid(plain: string): Said {
+export function cannotMergeSaid(plain: string | SaidPart): Said {
   return said("settleCannotMerge", { problem: plain });
 }
 

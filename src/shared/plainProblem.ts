@@ -7,7 +7,7 @@ import {
 import { CLAUDE_ACCESS_REFUSED_LINE, type ClaudeAccessSource } from "./claudeAccess";
 import { HERE } from "./deviceNames";
 import { formatTime } from "./i18n/format";
-import * as m from "./i18n/messages.generated.ts";
+import { englishOf, type SaidPart, saidPart } from "./i18n/said.ts";
 
 /**
  * What a failure means for the person, in the vocabulary's words (roadmap
@@ -68,8 +68,12 @@ export function isRunawayProviderError(error: string): boolean {
 
 type Rule = {
   test: (error: string) => boolean;
-  /** A function for a catalog line, read in the language chosen when it is shown. */
-  line: string | (() => string);
+  /**
+   * A catalog message where the line is the app's own words in every
+   * language, kept as a fact so a saved line is worded where it is shown
+   * (docs/i18n.md, "Saved facts").
+   */
+  line: string | SaidPart;
   /** The rule reads a cut-off class out of words; a typed failure never uses it. */
   readsClass?: true;
 };
@@ -157,7 +161,7 @@ const GIT_RULES: readonly Rule[] = [
   {
     test: (error) =>
       /^\S+ is checked out at .+; switch that folder to another branch first\./m.test(error),
-    line: () => m.settleBranchOpenElsewhere(),
+    line: saidPart("settleBranchOpenElsewhere"),
   },
 ];
 
@@ -274,14 +278,25 @@ const WORD_RULES = RULES.filter((rule) => !rule.readsClass);
 
 /** The plain line for a raw error, or the fallback; a typed failure by its class. */
 export function plainProblem(error: string | undefined, typed?: TypedFailure): string {
+  const line = plainProblemSaid(error, typed);
+  return typeof line === "string" ? line : englishOf(line);
+}
+
+/**
+ * The plain line as `plainProblem` finds it, a catalog line still a fact,
+ * for a saved fact to fill a blank with (`settleFeedSaid`).
+ */
+export function plainProblemSaid(
+  error: string | undefined,
+  typed?: TypedFailure,
+): string | SaidPart {
   if (typed?.cutOff?.class === "signed_out" && typed.access)
     return CLAUDE_ACCESS_REFUSED_LINE[typed.access];
   if (typed?.cutOff) return CUT_OFF_LINES[typed.cutOff.class];
   const raw = error?.trim() ?? "";
   if (!raw) return PLAIN_PROBLEM_FALLBACK;
   const rules = typed ? WORD_RULES : RULES;
-  const line = rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
-  return typeof line === "function" ? line() : line;
+  return rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
 }
 
 /**

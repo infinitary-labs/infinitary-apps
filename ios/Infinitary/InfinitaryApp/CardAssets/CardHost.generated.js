@@ -142169,7 +142169,7 @@ ${startersHtml()}`;
     },
     {
       test: (error2) => /^\S+ is checked out at .+; switch that folder to another branch first\./m.test(error2),
-      line: () => settleBranchOpenElsewhere()
+      line: saidPart("settleBranchOpenElsewhere")
     }
   ];
   const RULES = [
@@ -142226,11 +142226,14 @@ ${startersHtml()}`;
   const PLAIN_PROBLEM_FALLBACK = "something went wrong - try again";
   RULES.filter((rule) => !rule.readsClass);
   function plainProblem(error2, typed) {
+    const line2 = plainProblemSaid(error2);
+    return typeof line2 === "string" ? line2 : englishOf(line2);
+  }
+  function plainProblemSaid(error2, typed) {
     const raw = error2?.trim() ?? "";
     if (!raw) return PLAIN_PROBLEM_FALLBACK;
     const rules = RULES;
-    const line2 = rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
-    return typeof line2 === "function" ? line2() : line2;
+    return rules.find((rule) => rule.test(raw))?.line ?? PLAIN_PROBLEM_FALLBACK;
   }
   const checkStateSchema = _enum([
     "success",

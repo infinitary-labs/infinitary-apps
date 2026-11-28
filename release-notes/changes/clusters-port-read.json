@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "clusters-port-read",
+      "reason": "The computer clusters journey dials the loopback port the launcher already knows instead of asking the app's main process for it; no app behavior changes."
+    }
+  ]
+}

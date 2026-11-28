@@ -86,8 +86,7 @@ test("actual task placement groups work computers, and keyboard inspection opens
     }
     const peer = peers[0];
     if (!peer) throw new Error("No reachable peer fixture");
-    const port = await app.app.evaluate(() => process.env.INFINITARY_CONNECTION_LOOPBACK_PORT);
-    const connection = await connectClient({ ...peer, at: `127.0.0.1:${port}` });
+    const connection = await connectClient({ ...peer, at: `127.0.0.1:${app.connectionPort}` });
     try {
       await expect(page.locator(`[data-computer-cluster="${peer.deviceId}"]`)).toHaveAttribute(
         "data-computer-reachable",
@@ -359,8 +358,7 @@ test("grouping the crew animation by project seats each project's crew together 
     const { page } = app;
     const peer = peers[0];
     if (!peer) throw new Error("The fixture paired no work computer");
-    const port = await app.app.evaluate(() => process.env.INFINITARY_CONNECTION_LOOPBACK_PORT);
-    const connection = await connectClient({ ...peer, at: `127.0.0.1:${port}` });
+    const connection = await connectClient({ ...peer, at: `127.0.0.1:${app.connectionPort}` });
     let connected = true;
     try {
       const studio = page.locator(`[data-computer-cluster="${peer.deviceId}"]`);

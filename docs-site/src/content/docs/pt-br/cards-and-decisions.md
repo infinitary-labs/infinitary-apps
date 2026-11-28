@@ -1,5 +1,5 @@
 ---
-source: 8b70a675730a25eb
+source: cf25805d32836d90
 title: Cartões e decisões
 description: Como o seu imediato e a sua tripulação trazem respostas e decisões para você em cartões, e como respondê-los.
 ---
@@ -161,6 +161,7 @@ Depois que você mescla, cada um desses itens volta como um cartão próprio.
 Faça o que ele diz e depois pressione o botão dele para confirmar.
 Se não deu certo, cole o que você viu no campo dele e escolha **Falhou**, e o seu imediato providencia uma correção.
 **Agora não** deixa o cartão em Aguardando você, em Tarefas.
+**Recusar** diz que você não vai fazer: o cartão fecha, a etapa é descartada e o seu imediato recebe a sua recusa com o que você escreveu.
 
 ## Cartões anteriores {#past-cards}
 

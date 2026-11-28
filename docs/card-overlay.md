@@ -78,6 +78,7 @@ As a nonactivating panel it takes the keys while the game stays the front app.
 ## Keys and pointer
 
 The shown card takes focus as a card the window points at does (`focusCard`), so the first key reads or acts on that card.
+When a card closes in the panel, focus lands on the next one whole by the window's lost-focus fallback (`docs/keyboard.md`, "Where focus lands").
 In the panel the card's own installed keys run as in the window (`overlayRunsCommand`); every other window key does nothing.
 The menu's ⌘Q and ⌘W send the overlay away, and ⌘H, ⌘M and ⌘, do nothing, so no key quits, hides or opens the app from the panel.
 

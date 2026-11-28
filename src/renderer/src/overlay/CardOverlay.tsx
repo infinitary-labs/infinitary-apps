@@ -1,6 +1,8 @@
 import * as m from "@shared/i18n/messages.generated";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cardStage } from "../app/cardStage";
+import { focusLanding } from "../app/focusLanding";
+import { guardLostFocus } from "../app/focusRecovery";
 import { guardHeldPresses } from "../app/heldKeys";
 import { followNotTypingKeys } from "../app/notTypingKeys";
 import { followShellCommands } from "../app/shellCommands";
@@ -10,7 +12,7 @@ import { useShellStore } from "../app/store";
 import { closeCardFind, useCardFind } from "../cards/cardFind";
 import { focusWithRing } from "../design/focus";
 import { guardFrameActivation } from "../plugins/frames/frameActivation";
-import { guardFrameFocus } from "../plugins/frames/frameFocus";
+import { giveHandedFocusBack, guardFrameFocus } from "../plugins/frames/frameFocus";
 import { settleOverlayDrafts, startOverlayStore } from "./overlayStart";
 import { overlayTarget } from "./overlayTarget";
 import "./overlay.css";
@@ -29,6 +31,15 @@ type Phase = "starting" | "cards" | "nothing";
  * closes or Escape leaves, and sends its unsent words before it goes.
  */
 export function CardOverlay() {
+  // A card that closes here takes focus with it: it lands on the next card, as in the window.
+  useEffect(() => {
+    const landing = focusLanding();
+    const stopGuard = guardLostFocus(giveHandedFocusBack, landing);
+    return () => {
+      stopGuard();
+      landing.stop();
+    };
+  }, []);
   useEffect(() => guardFrameFocus(), []);
   useEffect(() => guardFrameActivation(), []);
   useEffect(() => guardHeldPresses(), []);

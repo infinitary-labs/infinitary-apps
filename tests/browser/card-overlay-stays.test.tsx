@@ -12,15 +12,16 @@ import { openWindow } from "./window";
  * "Going back"). The captain, after using it a few times: "the card stack
  * should stay after closing a card. it should go away only when the last
  * card is gone or when the user dismisses the overlay." A choice on the first
- * of two cards brings up the second in the same panel; the choice on the
- * last one sends the panel away, once.
+ * of two cards brings up the second in the same panel, with focus on it as
+ * the window lands it (docs/keyboard.md, "Where focus lands"); the choice
+ * on the last one sends the panel away, once.
  */
 
 const TITLES = ["Merge the login fix", "Turn on nightly backups"];
 /** The panel's width (`OVERLAY_WIDTH`, src/shared/cardOverlay.ts) and a laptop display's work area. */
 const PANEL = { width: 592, height: 945 };
 
-test("a choice on one of two cards brings up the other, and the choice on the last sends the overlay away once", async () => {
+test("a choice on one of two cards brings up the other with focus on it, and the choice on the last sends the overlay away once", async () => {
   const home = await seededHome({ titles: TITLES });
   const bridge = fakeBridge(home);
   answerStack(bridge, home);
@@ -43,12 +44,17 @@ test("a choice on one of two cards brings up the other, and the choice on the la
   await openWindow(bridge);
   const approve = () => page.getByRole("button", { name: "Approve", exact: true });
 
-  // Section: the first choice leaves the overlay up, on the other card.
+  // Section: the first choice, pressed by key, leaves the overlay up with focus on the other card.
   await expect.element(page.getByRole("region", { name: TITLES[0], exact: true })).toBeVisible();
   await stageAtRest();
-  await userEvent.click(approve());
+  (approve().element() as HTMLElement).focus();
+  await userEvent.keyboard("{Enter}");
   await expect.element(page.getByRole("region", { name: TITLES[1], exact: true })).toBeVisible();
   await stageAtRest();
+  // The card is entered whole: its shown entry holds focus, as `enterCard` lands it in the window.
+  await expect
+    .poll(() => (document.activeElement as HTMLElement | null)?.dataset.stageEntryId)
+    .toBe("stays-2");
   expect(bridge.requests("inf:cards:act").map(([id]) => id)).toEqual(["stays-1"]);
   expect(bridge.requests("inf:overlay:hide")).toEqual([]);
 

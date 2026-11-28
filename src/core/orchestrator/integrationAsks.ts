@@ -210,13 +210,14 @@ export class IntegrationAsks {
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
     pick?: string,
+    declined = choice === "deny",
   ): void {
     const send = this.options.sendTakenIntegrationAsk;
     if (!send) return;
     const kept = "ask" in taken ? taken.ask : undefined;
     // A panel's call: the panel hears the choice, the first mate nothing.
     const panel = kept?.kind === "integration" && kept.by === "panel";
-    if (panel) this.options.panelAskAnswered?.(askId, choice);
+    if (panel) this.options.panelAskAnswered?.(askId, declined);
     const tell = (sent: WriteAskSent) => {
       if (sent.ask)
         this.options.tasks.note(rowId, writeSentLine(sent), {

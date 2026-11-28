@@ -61,6 +61,33 @@ extension PhoneJourney {
         XCTAssertTrue(app.webViews.staticTexts[defaultLine].firstMatch.waitForPresence(timeout: 10), app.debugDescription)
         waitForCount("1 to answer · 1 default")
         picture("card-questions-default")
+
+        // INF-7092's approved plan: Google's question shows its choices as footer buttons in Google's own labels, checked
+        // "at phone width with Gmail's four labels". Data: the phone home's `google-question-card`, Gmail's question about
+        // a send with the Google stand-in's four choices. Completion: each choice is a button inside the screen's width
+        // that a tap can reach, and no two cover each other. It fails when a long label pushes a button off the screen or
+        // over another.
+        let google = try await home("google-question-card")
+        let googleTitle = try XCTUnwrap(google["title"] as? String)
+        let choices = try XCTUnwrap(google["actions"] as? [String])
+        XCTAssertEqual(choices.count, 4, "Gmail's question offers four choices")
+        XCTAssertTrue(cardHeading(googleTitle).waitForPresence(timeout: 10), app.debugDescription)
+        waitForShownBodyRevealed()
+        let screen = app.windows.firstMatch.frame
+        let buttons = choices.map { app.buttons["card-action-\($0)"].firstMatch }
+        for (id, button) in zip(choices, buttons) {
+            XCTAssertTrue(button.waitForPresence(timeout: 10), "No button for \(id)\n\(app.debugDescription)")
+            XCTAssertTrue(button.isHittable, "\(button.label) cannot be tapped")
+            XCTAssertTrue(screen.insetBy(dx: -0.5, dy: -0.5).contains(button.frame),
+                          "\(button.label) at \(button.frame) runs past the screen \(screen)")
+        }
+        for (index, one) in buttons.enumerated() {
+            for other in buttons[(index + 1)...] {
+                XCTAssertFalse(one.frame.insetBy(dx: 0.5, dy: 0.5).intersects(other.frame),
+                               "\(one.label) at \(one.frame) covers \(other.label) at \(other.frame)")
+            }
+        }
+        picture("card-questions-google-buttons")
     }
 
     /// The count's first part (3 to answer while required questions wait, INF-4425); later parts follow it after a dot.

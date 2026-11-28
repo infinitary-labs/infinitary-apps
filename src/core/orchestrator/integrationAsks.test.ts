@@ -510,10 +510,10 @@ describe("a place's own question on its confirmation card", () => {
           `${action.label} ${action.variant}${action.default ? " (default)" : ""}${action.declines ? " (declines)" : ""}`,
       ),
     ).toEqual([
-      "Don't allow secondary (declines)",
+      "Allow once primary (default)",
       "Always allow for these recipients ghost",
       "Always allow this tool ghost",
-      "Allow once primary (default)",
+      "Don't allow secondary (declines)",
     ]);
     expect(sent).toEqual([]);
 
@@ -522,6 +522,48 @@ describe("a place's own question on its confirmation card", () => {
     await tick();
     await tick();
     expect(sent).toEqual([{ askId: confirm.id, choice: "once", picked: "ALLOW_TOOL_ALWAYS" }]);
+  });
+
+  // INF-7093's review: a panel's Don't allow turns its ask down as Not now
+  // did, so a panel calling on a timer is not asked Google's question again,
+  // and the panel's card names the panel, since Google's words name no asker.
+  it("names the panel on its card, and a panel's Don't allow sends Google's DENY_ONCE and turns the panel's ask down", async () => {
+    const sent: { askId: string | null; choice: string; picked?: string }[] = [];
+    const panelAskAnswered = vi.fn();
+    const h = setup(fakeCrewmate(), {
+      sendTakenIntegrationAsk: async (_rowId, taken, choice, picked) => {
+        sent.push({ askId: "ask" in taken ? taken.ask.id : null, choice, picked });
+        return { ok: false, call: "", place: "", outcome: { kind: "refused", why: "unused" } };
+      },
+      panelAskAnswered,
+    });
+    const panel = { key: "inbox-panel", title: "Inbox glance" };
+    const raise = (id: string, at: number) =>
+      h.supervisor.integrationAsks.askIntegrationForPanel({
+        ...ask(id, at),
+        by: "panel",
+        panel,
+        confirm: question,
+      });
+
+    const denied = raise("ia-panel-deny", 4);
+    expect(h.supervisor.cards.get(denied)?.meta).toBe("Inbox glance");
+    const deny = h.supervisor.cards.get(denied)?.actions.find((action) => action.declines);
+    h.supervisor.cardActions.act(denied, deny?.id ?? "", "chrome", { answers: [] });
+    await tick();
+    const allowed = raise("ia-panel-allow", 5);
+    const once = h.supervisor.cards.get(allowed)?.actions.find((action) => action.default);
+    h.supervisor.cardActions.act(allowed, once?.id ?? "", "chrome", { answers: [] });
+    await tick();
+
+    expect(sent).toEqual([
+      { askId: "ia-panel-deny", choice: "once", picked: "DENY_ONCE" },
+      { askId: "ia-panel-allow", choice: "once", picked: "ALLOW_ONCE" },
+    ]);
+    expect(panelAskAnswered.mock.calls).toEqual([
+      ["ia-panel-deny", true],
+      ["ia-panel-allow", false],
+    ]);
   });
 
   // INF-7092's approved spec: "Not now goes when Google offers Don't allow

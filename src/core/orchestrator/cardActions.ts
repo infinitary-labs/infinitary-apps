@@ -647,7 +647,13 @@ export class CardActions {
       source === "chrome" &&
       effect?.kind === "request_write" &&
       effect.integration
-        ? { rowId: associated.id, ask: effect.ask, choice: effect.integration, pick: effect.pick }
+        ? {
+            rowId: associated.id,
+            ask: effect.ask,
+            choice: effect.integration,
+            pick: effect.pick,
+            declined: chosen.declines === true,
+          }
         : undefined;
     let takenFirstmateAsk: IntegrationAskTaken | undefined;
     // INF-4446: the captain's yes to a check, kept with their other yeses.
@@ -855,6 +861,7 @@ export class CardActions {
             takenFirstmateAsk,
             firstmateAsk.choice,
             firstmateAsk.pick,
+            firstmateAsk.declined,
           );
           return {};
         }

@@ -69,12 +69,8 @@ export function integrationConfirmCard(
     effect: { kind: "request_write", ask: ask.id, integration: "once", pick: choice.value },
   });
   const buttons = choices.map(button);
-  // Drawn as Google draws its card: Don't allow first, Allow once last, the
-  // Always choices between in Google's order. Every view keeps this order.
-  const rank = (action: CardAction) => (action.declines ? 0 : action.default ? 2 : 1);
-  const ordered = [...buttons].sort((a, b) => rank(a) - rank(b));
   const actions: CardAction[] = declines
-    ? ordered
+    ? buttons
     : [
         {
           id: "deny",
@@ -84,7 +80,7 @@ export function integrationConfirmCard(
           declines: true,
           effect: { kind: "request_write", ask: ask.id, integration: "deny" },
         },
-        ...ordered,
+        ...buttons,
       ];
   return {
     id: options.id ?? `integration-ask-${ask.id}`,
@@ -92,7 +88,8 @@ export function integrationConfirmCard(
     author: "host",
     priority: HOST_CARD_PRIORITY,
     title: m.integrationsConfirmTitle({ asker, action }),
-    meta: task ? task.title : APPROVAL_CARD_META,
+    // Google's words name no asker of ours, so a panel's card names the panel.
+    meta: task ? task.title : panel ? panel.title : APPROVAL_CARD_META,
     ...(task
       ? { answeredBy: "crewmate" as const }
       : panel

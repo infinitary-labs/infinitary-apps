@@ -176,48 +176,56 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
     for (const grandchild of child.children ?? []) add(grandchild, own);
   };
   for (const child of node.children ?? []) add(child, style);
-  const width = (line: Line): number =>
-    collapsed(line.glyphs).reduce((sum, glyph) => sum + glyphWidth(glyph), 0);
+  // Each row's text and width are measured once.
+  const rows = lines.map((line) => {
+    const kept = collapsed(line.glyphs);
+    return {
+      line,
+      text: kept.map((glyph) => glyph.char).join(""),
+      width: kept.reduce((sum, glyph) => sum + glyphWidth(glyph), 0),
+    };
+  });
   // A chunk anchors as one: its rows share the horizontal anchor, so the
   // whole chunk's width, not each row's, decides where each row starts.
-  const chunkOf = (line: Line): Line[] => {
-    const head = line.head ?? line;
-    return lines.filter((other) => (other.head ?? other) === head);
-  };
-  return lines.flatMap((line) => {
-    const kept = collapsed(line.glyphs);
-    if (kept.length === 0) return [];
-    const chunk = chunkOf(line);
-    const own = width(line);
-    if (chunk.length === 1)
-      return [
-        {
-          text: kept.map((glyph) => glyph.char).join(""),
-          x: line.x,
-          at: line.x,
-          y: line.y,
-          width: own,
-          anchor: line.anchor,
-        },
-      ];
-    const head = chunk[0] as Line;
-    const total = chunk.reduce((sum, other) => sum + width(other), 0);
-    const before = chunk
-      .slice(0, chunk.indexOf(line))
-      .reduce((sum, other) => sum + width(other), 0);
+  const labels: Label[] = [];
+  for (let from = 0; from < rows.length; ) {
+    const head = (rows[from] as (typeof rows)[number]).line;
+    let to = from + 1;
+    while (to < rows.length && rows[to]?.line.head === head) to++;
+    const chunk = rows.slice(from, to);
+    const total = chunk.reduce((sum, row) => sum + row.width, 0);
     const shift = head.anchor === "middle" ? total / 2 : head.anchor === "end" ? total : 0;
-    return [
-      {
-        text: kept.map((glyph) => glyph.char).join(""),
-        // Centred on its own span, so the left clearance is checked too.
-        x: head.x - shift + before + own / 2,
-        at: head.x,
-        y: line.y,
-        width: own,
-        anchor: "middle" as const,
-      },
-    ];
-  });
+    let before = 0;
+    for (const row of chunk) {
+      if (row.text !== "") {
+        const start = head.x - shift + before;
+        labels.push(
+          chunk.length === 1
+            ? {
+                text: row.text,
+                x: head.x,
+                at: head.x,
+                y: row.line.y,
+                width: row.width,
+                anchor: head.anchor,
+              }
+            : {
+                text: row.text,
+                // Centred on its own span, so the left clearance is checked too.
+                x: start + row.width / 2,
+                // The first row's box is the chunk's anchor point; a later row sits where it starts.
+                at: row.line === head ? head.x : start,
+                y: row.line.y,
+                width: row.width,
+                anchor: "middle" as const,
+              },
+        );
+      }
+      before += row.width;
+    }
+    from = to;
+  }
+  return labels;
 }
 
 /** A translate-only transform moves what it holds; any other is not measured. */

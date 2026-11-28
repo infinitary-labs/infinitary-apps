@@ -133,7 +133,7 @@ describe("figureLabelSpills", () => {
   });
 
   it("starts a row-moving tspan where the words before it end, not at the text's x", () => {
-    // Ten "n" at 12.5px are 66.6 units: from x=10 they would end well inside the 100-unit box,
+    // Ten "n" at 12.5px are 76.6 units: from x=10 they would end at 86.6, inside the 100-unit box,
     // so only a run that continues after "Step one" passes it.
     const run = "n".repeat(10);
     const body = (move: string) =>
@@ -149,6 +149,13 @@ describe("figureLabelSpills", () => {
     expect(figureLabelSpills(body).map((spill) => [spill.text, spill.side])).toEqual([
       ["Step one", "left"],
     ]);
+  });
+
+  it("looks up the box of a dy-only row at the place the row starts", () => {
+    // Start-anchored at x=10, "Step one" is followed by thirty "n" on the row below. The row starts
+    // after "Step one", past the 40-unit box under x=10 and inside the wide box beside it.
+    const body = `<svg viewBox="0 0 400 130"><rect x="0" y="0" width="300" height="50"/><rect x="0" y="60" width="40" height="50"/><rect x="40" y="60" width="360" height="50"/><text x="10" y="30">Step one<tspan dy="60">${"n".repeat(30)}</tspan></text></svg>`;
+    expect(figureLabelSpills(body)).toEqual([]);
   });
 
   it("takes the root's size from an inline style, not from a presentation attribute the frame overrides", () => {

@@ -343,12 +343,10 @@ Drop task and Discard ("One drop"), stronger-model retries, provider retries and
 
 ## What a background-work wait says of time
 
-A task's "Background work" wait (`id: "job"`) has no scheduled end: the app learns it ended only when the host's job finishes or the Claude client reports a count of zero.
-So the wait never carries a `next` event of its own, and a header never invents one.
-What the host does know is when the work began: `WorkPostures.workWaitFacts` reads `jobSince`, the earlier of the host job's start (`oldestRunningJob`) and the client's first reported work (`clientJobsSince`), and only while a job runs, so a start left over after the work ended is dropped.
-`taskWaitsOf` puts it in the wait's `since`.
+The one exception to "Recorded waits" ("a wait with no recorded event shows no time") is a "Background work" wait (`id: "job"`): it has no scheduled end, so it never carries a `next` event and nothing estimates when it finishes, but the host knows when it began.
+`WorkPostures.workWaitFacts` reads `jobSince`, the earlier of the host job's start (`oldestRunningJob`) and the client's first reported work (`clientJobsSince`), only while a job runs, so a start left over after the work ended is dropped; `taskWaitsOf` puts it in the wait's `since`.
 A crewmate's check-back that owns the wait keeps its own `since` and its `check-back` event instead.
-`taskWaitText` and the phone's `PhoneRecordRules.waitText` then say `Background work · running since <time>`, one catalog message (`taskWaitBackgroundRunningSince`) so every language words the whole line; a known start is told apart from a future event, which reads `check-back <time>`.
+Only the task card header and the phone's record say it, as `Background work · running since <time>`, one catalog message (`taskWaitBackgroundRunningSince`) so every language words the whole line; tiles and rows still show no time for it.
 
 ## Ready waiting is a presentation projection
 
@@ -859,8 +857,8 @@ Desktop kanban tiles replace their generic status reason with grouped standing w
 The Tasks list and board list rows retain their existing presentation.
 The task card reconciles every structured wait into its existing header, Checks and blocker or hold explanation, without another Wait section; the hover preview keeps its short status, blocker keys and one-row fact strip (INF-2528), its status naming where a lone wait's line stops and that task's hold (INF-5578).
 Checks keeps each named watch and its own next read separate from other runs’ results.
-Dependencies say `Waiting on` and their keys, with their recorded-since dates; a wait with no recorded event shows no time at all.
+Dependencies say `Waiting on` and their keys, with their recorded-since dates; a wait with no recorded event shows no time at all, except background work, which says when it started ("What a background-work wait says of time", above).
 A lone dependency whose line goes further or ends in a hold names where it stops in the blocker explanation, as its tile does, keeping when the wait was recorded (`waitStopsOf`, INF-5578).
-Only recorded events carry clock times: next read, check-back, reset or start time.
+Only recorded events carry clock times: next read, check-back, reset or start time. The one other time is a fact that already happened: when background work started, shown in the task card header and the phone's record, never on a tile and never as an estimate of when it ends.
 Past events say was due, not resumed; Backlog still requires Start, and a parent whose parts do its work never waits for a Start of its own (`taskWaitsOf`).
 Older homes without the optional projection retain the previous presentation.

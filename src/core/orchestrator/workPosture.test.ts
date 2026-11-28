@@ -286,16 +286,32 @@ describe("the wait facts of background work", () => {
       fixture.db.close();
     }
   });
-  it("ignores a client start left over after its work ended, and a host job that is gone", () => {
+  it("ignores an earlier client start left over after its work ended while a host job runs", () => {
     const fixture = record();
     try {
-      const facts = postures({ clientJobs: 0, clientJobsSince: clientStart }, {}).workWaitFacts(
+      const facts = postures(
+        { clientJobs: 0, clientJobsSince: clientStart },
+        {
+          running: true,
+        },
+      ).workWaitFacts(active(fixture.record));
+      expect(clientStart).toBeLessThan(hostStart);
+      expect(facts).toMatchObject({ job: true, jobSince: hostStart });
+    } finally {
+      fixture.db.close();
+    }
+  });
+  it("names no start when a client job runs but none of its time is known, or nothing runs", () => {
+    const fixture = record();
+    try {
+      const unknown = postures({ clientJobs: 1 }, {}).workWaitFacts(active(fixture.record));
+      expect(unknown.job).toBe(true);
+      expect("jobSince" in unknown).toBe(false);
+      const stale = postures({ clientJobs: 0, clientJobsSince: clientStart }, {}).workWaitFacts(
         active(fixture.record),
       );
-      expect(facts.job).toBe(false);
-      expect("jobSince" in facts).toBe(false);
-      const hostGone = postures({ clientJobs: 1 }, {}).workWaitFacts(active(fixture.record));
-      expect("jobSince" in hostGone).toBe(false);
+      expect(stale.job).toBe(false);
+      expect("jobSince" in stale).toBe(false);
     } finally {
       fixture.db.close();
     }

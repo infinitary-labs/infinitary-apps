@@ -51,8 +51,9 @@ export function taskWaitText(
     reset: "reset",
     start: "start time",
   };
-  // A wait with no next event says nothing of time: the captain found "time
-  // unknown" unnecessary on every task (INF-6805's plan, item 3).
+  // A wait with no next event says nothing of time (INF-6805's plan, item 3), and no
+  // line estimates an end. The one exception is below: background work says when it
+  // began, a fact that already happened.
   const event = wait.next
     ? `${words[wait.next.kind]}${wait.next.at <= now ? " was due" : ""} ${clock(wait.next.at)}`
     : null;

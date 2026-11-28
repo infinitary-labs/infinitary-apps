@@ -12,14 +12,14 @@ import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { IdleLadder, type IdleLadderHost } from "./idleLadder";
-import { standingWork, standingWorkText } from "./standingWork";
+import { IDLE_ROW_MS, standingWork, standingWorkText } from "./standingWork";
 
 const HOUR = 60 * 60_000;
 const DAY = 24 * HOUR;
 /** Nov 17, 2026, 7:11 PM UTC: when INF-4734 was filed and parked. */
 const T0 = Date.UTC(2026, 10, 17, 19, 11);
 
-function fixture() {
+function fixture(ladder: Partial<IdleLadderHost> = {}) {
   const db = freshDatabase();
   const clock = { now: T0 };
   const tasks = new TaskService({ db, strict: true, now: () => clock.now });
@@ -27,7 +27,16 @@ function fixture() {
   const at = (ms: number) => {
     clock.now = T0 + ms;
   };
-  const waits = new IdleLadder({ tasks } as IdleLadderHost);
+  // The ladder's witnesses read cards, threads and runtimes; none is up unless a case adds it.
+  const waits = new IdleLadder({
+    tasks,
+    inbox,
+    now: () => clock.now,
+    openCards: () => [],
+    threadsAwaitingAuthor: () => [],
+    runtime: () => undefined,
+    ...ladder,
+  } as IdleLadderHost);
   const read = () => standingWork({ tasks, inbox, waits }, clock.now);
   /** A part filed on request that the first mate recorded the captain's stop on. */
   const parked = (id: string, title: string, parentId: string, blockedBy?: string[]) => {
@@ -48,7 +57,7 @@ function fixture() {
   /** The idle ladder's last rung: it raised its stall card (`raiseStallCard`) after two wakes. */
   const laddered = (id: string) =>
     tasks.turns.recordRecovery(id, { rung: 3, count: 2, at: clock.now });
-  return { db, tasks, inbox, at, read, parked, merge, laddered };
+  return { db, tasks, inbox, waits, at, read, parked, merge, laddered };
 }
 
 describe("the standing list", () => {
@@ -549,6 +558,132 @@ describe("the standing list", () => {
     expect(text).toContain("ends_sooner_on_event: false");
     expect(text).toContain("kind: linked-wait");
     expect(text).toMatch(new RegExp(`${release.key},Promote stable,true`));
+  });
+
+  // INF-7116 fix 4: INF-6937 reported its Careful fix committed at 5:16 AM
+  // Nov 26 and sat idle 31 hours. A policy notice it had already heard stayed
+  // undelivered in its inbox, so every watcher read it as still moving and no
+  // Heartbeat beat listed it.
+  describe("idle work nothing runs or watches (INF-6937)", () => {
+    /** 5:16 AM Nov 26, 2026 (UTC-8): INF-6937's report. */
+    const REPORTED = Date.UTC(2026, 10, 26, 13, 16);
+    const reported = (ladder: Partial<IdleLadderHost> = {}) => {
+      const f = fixture(ladder);
+      f.at(REPORTED - T0);
+      const task = seedTask(f.tasks, {
+        id: "careful",
+        title: "Fix the merge card's proof line",
+        status: "completed",
+        outcome: "Committed and ready for the Careful code review.",
+      });
+      // The idle boundary at its turn's end starts the idle clock.
+      f.tasks.turns.markIdle("careful");
+      f.inbox.enqueue("careful", "This task's rigor is now Careful.");
+      return { ...f, task };
+    };
+
+    it("lists it once it has sat idle two hours (INF-7116's proposed bound), though a leftover notice reads as moving", () => {
+      const f = reported();
+      f.at(REPORTED - T0 + 2 * HOUR - 60_000);
+      expect(f.waits.witnesses("careful", REPORTED + 2 * HOUR).deliverable).toBe(true);
+      expect(f.read().rows).toEqual([]);
+      f.at(REPORTED - T0 + 2 * HOUR);
+      expect(f.read().rows).toEqual([
+        {
+          kind: "idle",
+          taskId: "careful",
+          key: f.task.key,
+          title: "Fix the merge card's proof line",
+          since: REPORTED,
+          new: true,
+          once: `standing:${REPORTED}:0`,
+        },
+      ]);
+    });
+
+    it.each([
+      ["a job running inside its bound", { hasRunningJobs: () => true }],
+      ["watched checks", { checksWatched: () => true }],
+      [
+        "a card for the captain",
+        {
+          openCards: () => [
+            {
+              id: "card-proof",
+              taskId: "careful",
+              title: "Choose the proof",
+              body: "<p>Which proof?</p>",
+              actions: [
+                { id: "a", label: "Run it", default: true },
+                { id: "b", label: "Skip it" },
+              ],
+            },
+          ],
+        },
+      ],
+    ] as [string, Partial<IdleLadderHost>][])(
+      "leaves it out while something runs or watches it: %s",
+      (_name, ladder) => {
+        const f = reported(ladder);
+        f.at(REPORTED - T0 + 3 * HOUR);
+        expect(f.read().rows).toEqual([]);
+      },
+    );
+
+    it("leaves it out while its review runs", () => {
+      const f = reported();
+      seedTask(f.tasks, {
+        id: "review",
+        title: "Review: Fix the merge card's proof line",
+        parentId: "careful",
+        status: "running",
+        shape: { kind: "review", kind_source: "host:review" },
+      });
+      f.at(REPORTED - T0 + 3 * HOUR);
+      expect(f.read().rows).toEqual([]);
+    });
+
+    it("lists a declared wait the idle ladder never acted on, leaves it out once a stall step fired, and lists it after a later turn fails", () => {
+      // The captain's choice on INF-7132's review: a declared wait keeps the
+      // row off only once a stall step fired, since at rung 0 the leftover row
+      // may be what keeps the ladder from acting.
+      const f = reported();
+      f.tasks.turns.recordReport("careful", {
+        text: "Waiting for the docs host.",
+        declared: {
+          workWait: {
+            owner: "the docs host",
+            end: "the deploy after the docs change merges",
+            observation: "The docs host still answers 404 for /ja/.",
+            cheapestWay: "Point Docs at the English pages.",
+          },
+        },
+      });
+      f.at(REPORTED - T0 + 3 * HOUR);
+      expect(f.read().rows).toMatchObject([{ kind: "idle", since: REPORTED }]);
+      f.tasks.turns.recordRecovery("careful", { rung: 1, count: 0, at: REPORTED + 3 * HOUR });
+      expect(f.read().rows).toEqual([]);
+      // A turn starts and the provider fails it; its idle boundary starts the clock again.
+      f.tasks.turns.endIdle("careful");
+      f.tasks.turns.recordTurnFailure("careful", "The provider refused the request.");
+      f.tasks.turns.markIdle("careful", { providerFailed: true });
+      f.at(REPORTED - T0 + 3 * HOUR + IDLE_ROW_MS - 60_000);
+      expect(f.read().rows).toEqual([]);
+      f.at(REPORTED - T0 + 3 * HOUR + IDLE_ROW_MS);
+      expect(f.read().rows).toMatchObject([{ kind: "idle", since: REPORTED + 3 * HOUR }]);
+    });
+
+    it("renders the row with its kind and how long it waited", () => {
+      const f = reported();
+      const now = REPORTED + 31 * HOUR;
+      f.at(now - T0);
+      const text = standingWorkText(f.tasks, f.read(), now);
+      expect(text).toContain("rows[1]{kind,task,title,since,waited,new}:");
+      expect(text).toContain(
+        `idle,${f.task.key},Fix the merge card's proof line,"2026-11-26T13:16:00.000Z",1d 7h,true`,
+      );
+      expect(text).toContain("work idle over 2 hours that nothing runs or watches");
+    });
   });
 
   it("compiles no statement for each live task when read again", () => {

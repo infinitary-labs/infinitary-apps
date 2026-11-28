@@ -9,8 +9,8 @@
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { AttachmentRef } from "@shared/attachments";
 import { REPLY_SETTINGS_HEAD } from "@shared/cardAnswerLines";
-import { CARD_ANSWERS_TOO_LONG, type Card } from "@shared/cards";
 import { DECLINE_ACTION_ID } from "@shared/cardLeave";
+import { CARD_ANSWERS_TOO_LONG, type Card } from "@shared/cards";
 import { PLAIN_PROBLEM_FALLBACK } from "@shared/plainProblem";
 import { describe, expect, it, vi } from "vitest";
 import {

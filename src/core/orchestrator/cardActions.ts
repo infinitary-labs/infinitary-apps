@@ -40,7 +40,7 @@ import type { IntegrationAskTaken } from "../integrations";
 import { type MessageFile, withPastedFiles } from "../overflow";
 import { checklistApprovesNothing, StaleValidationDecisionError } from "../tasks/liveValidation";
 import { TaskService } from "../tasks/taskService";
-import { carriedText, DECLINED_STEP_TEXT, type WakeChoice } from "./captainWakes";
+import { carriedText, type WakeChoice } from "./captainWakes";
 import { CardBrowserClicks } from "./cardBrowserClicks";
 import { cardEmitter, FIRSTMATE_CARD_PREFIX } from "./cardEmit";
 import type { CardInteractionEvidence } from "./cardEvidence";
@@ -727,7 +727,6 @@ export class CardActions {
                 status: "dropped",
                 reason: "cancelled",
                 actor: "captain",
-                text: DECLINED_STEP_TEXT,
               });
             else this.core.options.tasks.delivery.deferCaptainAction(card.taskId);
           }

@@ -283,10 +283,8 @@ export type CaptainFacts =
 export const DECLINE_WORDS =
   "The captain declined every choice on the card: go on without them, and ask again only with something new.";
 
-/** The close line of a step only the captain can do that their Decline dropped (INF-7234). */
-export const DECLINED_STEP_TEXT = "dropped - declined on its card";
-
 /** What the first mate hears beside `DECLINE_WORDS` when that Decline dropped a step (INF-7234). */
+// i18n-exempt: a wake served to the first mate, never shown to a person
 export const DECLINED_STEP_WORDS = "The app dropped the step's task and closed its card.";
 
 /** The steps waiting on a declined one, which its drop never clears (INF-7234). */
@@ -295,6 +293,7 @@ function declinedStepText(
 ): string {
   if (!declined) return "";
   const waiting = declined.waiting.map((step) => `${step.key} "${step.title}"`).join(", ");
+  // i18n-exempt: a wake served to the first mate, never shown to a person
   return ` ${DECLINED_STEP_WORDS}${waiting ? ` These steps wait on it and stay blocked, since a dropped step never clears a wait: ${waiting}.` : ""}`;
 }
 

@@ -45,7 +45,7 @@ Not now, the close control, navigation, replies and opening Devices do not compl
 Deferred actions stay under Waiting on you in Tasks, with Show the card on the record.
 Words typed in the card's field with Not now, the completion button or Open Devices reach the first mate in one card-choice wake marked carried out.
 The card marks none of its actions as its way to say no, so it carries the app's Decline (`docs/card-authoring.md`).
-Decline is the captain's no: in the closing interaction's transaction it drops the task as cancelled by the captain, marking the action cancelled, and closes the card.
+Decline is the captain's no: in the closing interaction's transaction it drops the task as cancelled, with the captain as its actor, marking the action cancelled, and closes the card.
 The first mate hears it once, in the card-choice wake with `DECLINE_WORDS`, the typed words and any pictures, and the required actions still waiting on the dropped one, which stay blocked.
 The existing card-button command and Tab/Enter reach the controls; reopening is a typed `show-card` task operation available to paired views too.
 The record survives restart without a worker, repeated cards or a new reminder scheduler.

@@ -154,7 +154,7 @@ describe("a replacement naming runbook decides every name", () => {
     writeFileSync(join(home, "notes.md"), "moved\n");
     await git(home, ["add", "-A"]);
     await git(home, ["commit", "-m", "[DOCS] Move main"]);
-    expect(await workspace.landTaskWork(task)).toEqual({ mode: "merge" });
+    expect(await workspace.landTaskWork(task)).toEqual({ mode: "merge", into: "main" });
     expect(await subject(home)).toBe("[APP] integrate task work");
     const kept = await workspace.createTaskWorktree("team2222");
     writeFileSync(join(kept.cwd, "draft.md"), "draft\n");
@@ -204,6 +204,6 @@ describe("a replacement naming runbook decides every name", () => {
     expect(await subject(home)).toBe("initialize default workspace");
     const task = await workspace.createTaskWorktree("none1111");
     await git(task.cwd, ["commit", "--allow-empty", "-m", "whatever the author chose"]);
-    expect(await workspace.landTaskWork(task)).toEqual({ mode: "fast-forward" });
+    expect(await workspace.landTaskWork(task)).toEqual({ mode: "fast-forward", into: "main" });
   });
 });

@@ -27,6 +27,7 @@ import {
   releaseTaskRemote,
   taskRemoteName,
 } from "./git";
+import { landBesideFolder } from "./localLand";
 import { composedName, requireNamedRange } from "./naming";
 import {
   defaultTaskBranch,
@@ -735,11 +736,17 @@ export class WorkspaceService {
    * local branch and `origin/<branch>` is further ahead, `origin` when they
    * diverged (treehouse's rule). A failed fetch falls back to what this
    * machine last saw and says so; it never fails the dispatch. Without an
-   * `origin`, the base is the repository's checked-out commit.
+   * `origin`, the base is the local default branch, whichever branch the
+   * folder has checked out, so a task merges back into the branch it
+   * started from (`landTaskWork`); the checked-out commit only when no
+   * default branch exists.
    */
   async dispatchBase(repo: string, remoteName = "origin"): Promise<DispatchBase> {
     const remotes = await git(repo, ["remote"]).catch(() => "");
     if (!remotes.split("\n").some((remote) => remote.trim() === remoteName)) {
+      const name = await defaultBranchName(repo);
+      const sha = await resolveCommit(repo, `refs/heads/${name}`);
+      if (sha) return { sha, ref: name, fetch: "none" };
       return {
         sha: await git(repo, ["rev-parse", "--verify", "HEAD^{commit}"]),
         ref: "HEAD",
@@ -1012,55 +1019,64 @@ export class WorkspaceService {
   }
 
   /**
-   * Lands a finished task's branch into the branch currently checked out in
-   * its repo (captain decision Q5). Deliberately forge-agnostic: pure local
-   * git - fast-forward when possible, a merge commit otherwise - and never
-   * a forge API, so GitHub, GitLab, Bitbucket, and plain remotes are all
-   * equal. Refuses loudly (with the concrete reason) on a dirty repo, a
-   * detached HEAD, or a merge conflict; a refused conflict is aborted so
-   * the repo is left exactly as found.
+   * Lands a finished task's branch into the project's default branch
+   * (`defaultBranchName`), whichever branch the folder has checked out: the
+   * branch its task started from (INF-7250's finding 4, replacing captain
+   * decision Q5's "the branch checked out"). Deliberately forge-agnostic:
+   * pure local git - fast-forward when possible, a merge commit otherwise -
+   * and never a forge API. With the default branch checked out the merge
+   * runs in the folder, which must be clean; on any other branch the folder
+   * is never touched (`landBesideFolder`). A conflict refuses with the
+   * concrete reason and leaves the project exactly as found.
    */
   async landTaskWork(
     workspace: TaskWorkspace,
     beforeDispatch?: (head?: string) => string | undefined,
-  ): Promise<{ mode: "fast-forward" | "merge" }> {
+  ): Promise<{ mode: "fast-forward" | "merge"; into: string }> {
     const { repoDir, branch } = workspace;
     const head = await git(repoDir, ["rev-parse", `${branch}^{commit}`]);
-    const base = await git(repoDir, ["merge-base", "HEAD", head]);
+    const current = await git(repoDir, ["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(
+      () => "",
+    );
+    const named = await defaultBranchName(repoDir);
+    // A default branch with no local branch here (a clone's remote default
+    // never checked out) leaves the checked-out branch as the one to land in.
+    const into = (await resolveCommit(repoDir, `refs/heads/${named}`)) ? named : current;
+    if (!into) throw new Error("The repository is on a detached HEAD; check out a branch first.");
+    const target = await git(repoDir, ["rev-parse", `refs/heads/${into}^{commit}`]);
+    const base = await git(repoDir, ["merge-base", target, head]);
     await requireNamedRange(repoDir, base, head, this.naming());
-    const dirty = await git(repoDir, ["status", "--porcelain"]);
-    if (dirty) {
-      throw new Error("The repository has uncommitted changes; commit or stash them first.");
-    }
-    let current: string;
-    try {
-      current = await git(repoDir, ["symbolic-ref", "--short", "HEAD"]);
-    } catch {
-      throw new Error("The repository is on a detached HEAD; check out a branch first.");
-    }
     const check = () => {
       const refusal = beforeDispatch?.(head);
       if (refusal) throw new Error(refusal);
     };
-    check();
-    try {
-      await git(repoDir, ["merge", "--ff-only", head]);
-      return { mode: "fast-forward" };
-    } catch {
-      // Fall through to a real merge commit.
+    const message = composedName("integrate task work", this.naming());
+    if (into === current) {
+      const dirty = await git(repoDir, ["status", "--porcelain"]);
+      if (dirty) {
+        throw new Error("The repository has uncommitted changes; commit or stash them first.");
+      }
+      check();
+      try {
+        await git(repoDir, ["merge", "--ff-only", head]);
+        return { mode: "fast-forward", into };
+      } catch {
+        // Fall through to a real merge commit.
+      }
+      check();
+      try {
+        await git(repoDir, ["merge", "--no-ff", "-m", message, head]);
+        return { mode: "merge", into };
+      } catch (caught) {
+        await git(repoDir, ["merge", "--abort"]).catch(() => {});
+        const said = caught instanceof Error ? caught.message : String(caught);
+        throw new Error(
+          `Merging ${branch} into ${into} hit a conflict; resolve it manually. ${firstGitError(said)}`,
+        );
+      }
     }
-    check();
-    try {
-      const name = composedName("integrate task work", this.naming());
-      await git(repoDir, ["merge", "--no-ff", "-m", name, head]);
-      return { mode: "merge" };
-    } catch (caught) {
-      await git(repoDir, ["merge", "--abort"]).catch(() => {});
-      const message = caught instanceof Error ? caught.message : String(caught);
-      throw new Error(
-        `Merging ${branch} into ${current} hit a conflict; resolve it manually. ${firstGitError(message)}`,
-      );
-    }
+    const mode = await landBesideFolder({ repoDir, branch, into, target, head, message, check });
+    return { mode, into };
   }
 
   /**
@@ -1083,7 +1099,7 @@ export class WorkspaceService {
   /**
    * What a discard would destroy: uncommitted edits in the worktree plus
    * branch commits not reachable from the repo's checked-out HEAD or its
-   * tracked remote integration refs. A missing worktree or branch counts as
+   * tracked integration refs (`trackedIntegrationRefs`). A missing worktree or branch counts as
    * nothing to lose - there is nothing left to protect, and discard must
    * still be able to clean up the bookkeeping.
    */
@@ -1655,9 +1671,10 @@ async function countCommits(repoDir: string, from: string[], not: string[]): Pro
 }
 
 /**
- * Remote destinations that can prove task commits were integrated without a
- * local pull: the checked-out branch's upstream and each remote's declared
- * default branch. The task branch's own tracking ref is never a destination.
+ * Destinations that can prove task commits were integrated: the local
+ * default branch a local merge lands in, and, without a local pull, the
+ * checked-out branch's upstream and each remote's declared default branch.
+ * The task branch's own tracking ref is never a destination.
  * Every optional ref is discovered and verified independently so one stale
  * remote does not hide work or invalidate the final reachability count.
  */
@@ -1669,6 +1686,9 @@ async function trackedIntegrationRefs(workspace: TaskWorkspace): Promise<string[
   // started, so it is merged work, not the task's.
   candidates.add(SEEDED_REF);
   candidates.add(OLDER_SEEDED_REF);
+  // The local default branch is where a local merge lands (`landTaskWork`),
+  // whichever branch the folder has checked out.
+  candidates.add(`refs/heads/${await defaultBranchName(repoDir).catch(() => "main")}`);
 
   try {
     const remotes = (await git(repoDir, ["remote"]))

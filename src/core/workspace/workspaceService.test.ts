@@ -1308,7 +1308,7 @@ describe("refreshManagedCheckout", () => {
   });
 });
 
-describe("landTaskWork (Q5, forge-agnostic local landing)", () => {
+describe("landTaskWork (forge-agnostic local landing)", () => {
   it("fast-forwards a clean branch and reports the mode", async () => {
     const { workspace } = await service();
     const task = await workspace.createTaskWorktree("land1111");
@@ -1395,5 +1395,101 @@ describe("landTaskWork (Q5, forge-agnostic local landing)", () => {
     const task = await workspace.createTaskWorktree("land4444");
     writeFileSync(join(task.repoDir, "wip.txt"), "uncommitted\n");
     await expect(workspace.landTaskWork(task)).rejects.toThrow(/uncommitted changes/);
+  });
+
+  // INF-7250's finding 4: a local merge goes into the default branch the task
+  // started from, whichever branch the folder is on, and leaves the folder's
+  // files alone.
+  describe("with the folder on another branch", () => {
+    async function onChapter(id: string) {
+      const { workspace } = await service();
+      const task = await workspace.createTaskWorktree(id);
+      expect(task.acquired?.base.ref).toBe("main");
+      await git(task.repoDir, ["checkout", "--quiet", "-b", "chapter-1"]);
+      writeFileSync(join(task.repoDir, "chapter.txt"), "chapter one\n");
+      await git(task.repoDir, ["add", "-A"]);
+      await git(task.repoDir, ["commit", "--quiet", "-m", "docs: chapter one"]);
+      const chapter = await git(task.repoDir, ["rev-parse", "chapter-1"]);
+      // An edit the person has not committed yet, on their own branch.
+      writeFileSync(join(task.repoDir, "draft.txt"), "half written\n");
+      return { workspace, task, chapter };
+    }
+
+    async function folderUnchanged(repoDir: string, chapter: string) {
+      expect(await git(repoDir, ["symbolic-ref", "--short", "HEAD"])).toBe("chapter-1");
+      expect(await git(repoDir, ["rev-parse", "HEAD"])).toBe(chapter);
+      expect(await git(repoDir, ["status", "--porcelain"])).toBe("?? draft.txt");
+      expect(existsSync(join(repoDir, "feature.txt"))).toBe(false);
+    }
+
+    it("fast-forwards main and counts the work as merged", async () => {
+      const { workspace, task, chapter } = await onChapter("away1111");
+      writeFileSync(join(task.cwd, "feature.txt"), "done\n");
+      await git(task.cwd, ["add", "-A"]);
+      await git(task.cwd, ["commit", "-m", "feat: land me"]);
+      const head = await git(task.cwd, ["rev-parse", "HEAD"]);
+
+      expect(await workspace.landTaskWork(task)).toEqual({ mode: "fast-forward", into: "main" });
+      expect(await git(task.repoDir, ["rev-parse", "main"])).toBe(head);
+      await folderUnchanged(task.repoDir, chapter);
+      expect((await workspace.taskWorkStatus(task)).unlandedCommits).toBe(0);
+    });
+
+    it("writes a merge commit on main when main moved on", async () => {
+      const { workspace, task, chapter } = await onChapter("away2222");
+      writeFileSync(join(task.cwd, "feature.txt"), "done\n");
+      await git(task.cwd, ["add", "-A"]);
+      await git(task.cwd, ["commit", "-m", "feat: branch work"]);
+      const head = await git(task.cwd, ["rev-parse", "HEAD"]);
+      const other = await workspace.createTaskWorktree("away2223");
+      writeFileSync(join(other.cwd, "elsewhere.txt"), "moved\n");
+      await git(other.cwd, ["add", "-A"]);
+      await git(other.cwd, ["commit", "-m", "chore: mainline moved"]);
+      await workspace.landTaskWork(other);
+      const moved = await git(task.repoDir, ["rev-parse", "main"]);
+
+      expect(await workspace.landTaskWork(task)).toEqual({ mode: "merge", into: "main" });
+      expect(await git(task.repoDir, ["log", "-1", "--format=%s", "main"])).toBe(
+        "chore: integrate task work",
+      );
+      expect(await git(task.repoDir, ["log", "-1", "--format=%P", "main"])).toBe(
+        `${moved} ${head}`,
+      );
+      expect(await git(task.repoDir, ["show", "main:feature.txt"])).toBe("done");
+      expect(await git(task.repoDir, ["show", "main:elsewhere.txt"])).toBe("moved");
+      await folderUnchanged(task.repoDir, chapter);
+    });
+
+    it("refuses a conflict naming main and moves nothing", async () => {
+      const { workspace, task, chapter } = await onChapter("away3333");
+      writeFileSync(join(task.cwd, "README.md"), "branch version\n");
+      await git(task.cwd, ["add", "-A"]);
+      await git(task.cwd, ["commit", "-m", "feat: branch readme"]);
+      const other = await workspace.createTaskWorktree("away3334");
+      writeFileSync(join(other.cwd, "README.md"), "main version\n");
+      await git(other.cwd, ["add", "-A"]);
+      await git(other.cwd, ["commit", "-m", "chore: main readme"]);
+      await workspace.landTaskWork(other);
+      const main = await git(task.repoDir, ["rev-parse", "main"]);
+
+      await expect(workspace.landTaskWork(task)).rejects.toThrow(
+        "Merging fm/task-away3333 into main hit a conflict; resolve it manually. CONFLICT in README.md",
+      );
+      expect(await git(task.repoDir, ["rev-parse", "main"])).toBe(main);
+      await folderUnchanged(task.repoDir, chapter);
+    });
+
+    it("refuses while another working copy has main checked out", async () => {
+      const { workspace, task } = await onChapter("away4444");
+      await git(task.cwd, ["commit", "--allow-empty", "-m", "feat: branch work"]);
+      const holder = join(dirname(task.repoDir), "holder");
+      await git(task.repoDir, ["worktree", "add", "--quiet", holder, "main"]);
+      const main = await git(task.repoDir, ["rev-parse", "main"]);
+
+      await expect(workspace.landTaskWork(task)).rejects.toThrow(
+        /^main is checked out in another working copy/,
+      );
+      expect(await git(task.repoDir, ["rev-parse", "main"])).toBe(main);
+    });
   });
 });

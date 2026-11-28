@@ -349,10 +349,25 @@ describe("dispatch base: fetch the default branch at dispatch (captain's board a
     expect(await git(ws.cwd, ["rev-parse", "HEAD"])).toBe(lastSeen);
   });
 
-  it("uses the repository's own commit when it has no origin, as before", async () => {
+  // INF-7250's finding 4: with no origin a task starts from the default
+  // branch, whichever branch the folder is on.
+  it("uses the local default branch when it has no origin, whatever is checked out", async () => {
     const repo = await project();
+    const main = await git(repo, ["rev-parse", "main"]);
+    await git(repo, ["checkout", "--quiet", "-b", "chapter-1"]);
+    await commitFile(repo, "chapter.txt", "chapter one\n");
     const { workspace } = service();
     const ws = await workspace.createTaskWorktree("efef1111", repo);
+    expect(ws.acquired?.base).toEqual({ sha: main, ref: "main", fetch: "none" });
+    expect(await git(ws.cwd, ["rev-parse", "HEAD"])).toBe(main);
+  });
+
+  it("uses the repository's own commit when it has no origin and no default branch", async () => {
+    const repo = await project();
+    await git(repo, ["checkout", "--quiet", "--detach"]);
+    await git(repo, ["branch", "--quiet", "-D", "main"]);
+    const { workspace } = service();
+    const ws = await workspace.createTaskWorktree("efef2222", repo);
     expect(ws.acquired?.base).toEqual({
       sha: await git(repo, ["rev-parse", "HEAD"]),
       ref: "HEAD",

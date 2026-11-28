@@ -729,6 +729,23 @@ describe("CrewSupervisor", () => {
     ).toContain("already landed");
   });
 
+  // INF-7250's finding 4: the answer names the branch the merge went into.
+  it("names the branch a local merge went into", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, workspace } = setup(crewmate);
+    vi.mocked(workspace.landTaskWork).mockResolvedValue({ mode: "merge", into: "master" });
+    const { taskId } = await supervisor.intake.commission({
+      title: "Land it",
+      intent: intentOf("work"),
+    });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    expect(await supervisor.settling.settle.settleTask(taskId, "land", undefined, "captain")).toBe(
+      'Merged "Land it" into master.',
+    );
+  });
+
   it("closes only explicitly verified external release work and keeps the evidence on its record", async () => {
     const { supervisor, tasks, workspace } = setup(fakeCrewmate());
     seedTask(tasks, {

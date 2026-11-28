@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "local-merge-default-branch",
+      "kind": "fix",
+      "area": "projects",
+      "title": "A change to a project kept on your computer merges into its main branch",
+      "body": "In a project with no copy elsewhere, a task now starts from the project's main branch and merges back into it, even when your folder is on another branch. Your folder's branch and files stay as they are, and the merge says which branch it went into. Before, the merge went into whichever branch your folder was on and always said main.",
+      "noPicture": "This changes which branch a local merge goes into and the words after it, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

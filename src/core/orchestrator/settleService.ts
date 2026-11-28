@@ -335,7 +335,7 @@ export class SettleService {
           throw new Error("The current local story cannot be checked.");
         storyHead = await this.host.validateLocalStory(taskId);
       }
-      const { mode } = await this.host.workspace.landTaskWork(
+      const { mode, into } = await this.host.workspace.landTaskWork(
         {
           taskId,
           cwd: record.worktreeDir,
@@ -357,7 +357,7 @@ export class SettleService {
         });
         const continued = {
           ok: true,
-          text: `Merged "${record.title}" into main.`,
+          text: `Merged "${record.title}" into ${into}.`,
           continued: true,
           stillOpen,
         };
@@ -372,7 +372,7 @@ export class SettleService {
       });
       // Landing releases any queued row waiting on this task (R1).
       void this.host.sweepGates(this.host.now());
-      return { ok: true, text: `Merged "${record.title}" into main.` };
+      return { ok: true, text: `Merged "${record.title}" into ${into}.` };
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       return { ok: false, text: `Cannot merge: ${message}`, problem: message };

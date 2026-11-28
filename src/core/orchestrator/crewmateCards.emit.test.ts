@@ -270,7 +270,7 @@ describe("CrewSupervisor", () => {
         action === "merge-pr" ? "direct-pr" : "local-only",
       );
       vi.mocked(workspace.landTaskWork).mockImplementation(() =>
-        operation.promise.then(() => ({ mode: "fast-forward" })),
+        operation.promise.then(() => ({ mode: "fast-forward", into: "main" })),
       );
       vi.mocked(workspace.taskWorkStatus).mockImplementation(() =>
         operation.promise.then(() => ({ dirty: false, unlandedCommits: 0 })),

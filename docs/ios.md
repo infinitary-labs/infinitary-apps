@@ -1528,7 +1528,7 @@ Its package install also uses a scratch HOME and an empty local-signing director
 `phone.yml`'s run-level group never makes a run wait behind another: a newer request on the same task branch with the same selection cancels the older run, and `main`, a rerun and each of the phone release's calls keep a group of their own (INF-3380; `docs/testing.md`, "What a task branch requests").
 Each run and attempt waits only for a free phone guest, and a device gate that started finishes and deletes the simulator it started for each device.
 Every native phone job takes a per-run, per-attempt concurrency group, with `queue: max` and cancellation disabled.
-Phone checks run side by side, one per free place serving the phone queue ("A phone check the placement service puts in a virtual Mac").
+Phone checks run side by side, one per free place serving the phone queues ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 Desktop journeys and native device gates run directly, without a command lease, so real and virtual Mac checks can overlap.
 The `test:phone` package script checks the configured execution mode before running `scripts/test-phone.ts` directly; the gate owns a scratch HOME and disposable simulators.
@@ -1556,18 +1556,18 @@ A rerun of an old workflow still uses its old routing, so use the current workfl
 
 ### A phone check the placement service puts in a virtual Mac
 
-The `phone` kind in `MAC_QUEUES` keeps the exact label `mini-mac-phone` (INF-2202, DOP-246).
-The fleet serves that label from every Mac place the placement service runs, the two rented vBoxx places and the compute Macs alike, never the captain's Mac mini VM; which places serve it is the fleet's setup, not this project's.
-The one native job, `native-phone`, requires that mapping with no per-run override, fixed-clone switch or generic-Mac fallback.
-An absent, empty or malformed mapping supplies no runnable destination instead of redirecting to the mini.
-The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
+The `phone` kind in `MAC_QUEUES` keeps the exact label `mini-mac-phone` (INF-2202, DOP-246), and the `phone_small` kind names `mini-mac-phone-small`, where a request the chooser dealt into one or two jobs waits; the placement service starts it before a bigger check's phone jobs (INF-7079's fix 1; `docs/testing.md`, "Each Mac job's kind and size").
+The fleet serves both labels from every phone place the placement service runs, one on each compute Mac, never the captain's Mac mini VM; which places serve it is the fleet's setup, not this project's.
+The one native job, `native-phone`, requires the `phone` mapping, reading `phone_small` first for a small check, with no per-run override, fixed-clone switch or generic-Mac fallback.
+An absent, empty or malformed `phone` mapping supplies no runnable destination instead of redirecting to the mini, and an absent `phone_small` mapping leaves a small check on `phone`.
+The other queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
 Each guest runs `scripts/test-phone.ts` directly, with as many simulators as the guest holds, two on a compute Mac VM of 10 cores and 9 GiB, where an iPhone Duo runs alone, and one on a rented VM of 5 cores (INF-4241 piece 3).
 A request runs each dealt job's passes with `--plan`, and only its first job runs the phone's Swift package tests (INF-5387's plan, piece 2).
 The unsigned TestFlight call names no device, and the `request` job deals every part on every device into jobs of at most 20 recorded minutes, each on its own guest side by side, as a request of every part is dealt (INF-7079's fix 5, replacing INF-4241 piece 8's one job of every device from one build); its first failed job stops no other.
 The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
 Those places also take other kinds of Mac work, such as the merge batch's Mac lanes, so a phone check and a batch lane wait for the same free places (INF-3726); a phone retry after a failure therefore runs only what failed: a rerun of the failed jobs runs only the parts that did not pass, and a retry at a repaired version names only the failing part and device (`docs/testing.md`, "A retry after a failed phone request").
 `tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.
-Other workflows' operator-controlled overrides must never point at the phone queue.
+Other workflows' operator-controlled overrides must never point at either phone queue.
 The disposable guests have no captain signing material; the ordinary GitHub job token permits checkout and result uploads.
 Every run and attempt has its own concurrency group, so the places may check independently without a shared one-at-a-time line.
 

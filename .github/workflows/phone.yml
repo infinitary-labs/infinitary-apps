@@ -141,9 +141,11 @@ jobs:
     runs-on: ${{ inputs.source_commit != '' && 'ubuntu-24.04' || fromJSON(vars.LINUX_QUEUES || '{}').gate || vars.LINUX_RUNNER && format('{0}-gate', vars.LINUX_RUNNER) || 'ubuntu-24.04' }}
     # INF-5387's plan, piece 2: the dealt jobs, each with its key, its name and its passes, and whether the first
     # failed job cancels the others. The chooser's parts, devices and passes stay in its summary and placement.
+    # INF-7079's fix 1: `small`, a request dealt into one or two jobs, which waits in the small phone queue.
     outputs:
       jobs: ${{ steps.request-select.outputs.jobs || steps.release-select.outputs.jobs }}
       stop_early: ${{ steps.request-select.outputs.stop_early }}
+      small: ${{ steps.request-select.outputs.small }}
     steps:
       - name: Validate and record the manual phone request
         env:
@@ -246,9 +248,12 @@ jobs:
       fail-fast: ${{ needs.request.outputs.stop_early == 'true' }}
       matrix:
         include: ${{ fromJSON(needs.request.outputs.jobs || format('[{{"device":"{0}","key":"{0}"}}]', inputs.device || 'every')) }}
-    # Required: no override or local fallback. The fleet serves this label only
-    # from the two vBoxx VMs; a missing mapping supplies no runnable destination.
-    runs-on: ${{ fromJSON(vars.MAC_QUEUES).phone }}
+    # Required: no override or local fallback; a missing phone mapping supplies no runnable destination. INF-7079's fix 1
+    # (the captain's "When the phone places are full, start phone checks of one or two jobs before bigger ones"): a
+    # request the chooser dealt into one or two jobs asks for the small phone queue, which the same phone places serve
+    # and the placement service starts ahead of bigger phone checks; until MAC_QUEUES names it, the phone queue. Every
+    # other phone check, the phone release's call and a wait-clock or tool request among them, asks for the phone queue.
+    runs-on: ${{ needs.request.outputs.small == 'true' && fromJSON(vars.MAC_QUEUES).phone_small || fromJSON(vars.MAC_QUEUES).phone }}
     # Each run, attempt and job waits only for a free vBoxx place, not another run's group.
     concurrency:
       group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.key) }}

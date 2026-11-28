@@ -1538,12 +1538,14 @@ export async function startApp(
       // A panel drawn in the frame realm reads the lib this build made
       // (out/frame-lib, beside out/main) and, for one of the captain's own or
       // one he added, the built files the first mate answers at exactly the
-      // version asked for, whichever computer it is on.
+      // version asked for, whichever computer it is on - with the first mate's
+      // panel library when those files were built for another version.
       const frameMounts = new FrameMountRegistry({
         panels: {
           libPins: frameLibPins,
           version: app.getVersion(),
           panelFiles: (request) => shell.panelFiles(request),
+          panelLibrary: (version) => shell.panelLibrary(version),
         },
       });
       const reminders = new KeyReminderStore(join(app.getPath("userData"), "key-reminders.json"));

@@ -1558,8 +1558,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         })),
       };
     },
-    // The library a panel's files import, for a phone (docs/view.md, "Panels
-    // on the phone"): only at this computer's version, read once a run.
+    // The library a panel's files import, for a phone or a window on another
+    // version (docs/view.md): only at this computer's version, read once a run.
     "inf:plugins:library": async ({ version }) => {
       const lib = host.frameLib;
       if (!lib || version !== host.app.version) return null;

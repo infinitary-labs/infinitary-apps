@@ -283,8 +283,12 @@ The first mate keeps each panel, builds it and holds its data; a window asks for
   The first mate reads them where they are (`readPanelGraph`, `src/core/personal/panelGraph.ts`) and answers the bytes with the version of the app they were built for, or nothing for a panel it does not serve from that source at exactly that version.
   The first mate names no folder, so every window draws from the same answer: the window serves those bytes to the panel's frame by their hashes, under the same bounds the first mate's read keeps (`src/main/frames/frameMounts.ts`; `docs/ui-plugins.md`, "The frame realm").
 - **Versions.**
-  The files are built for the panel library of the first mate's version of the app, which only a window on that version serves.
-  A window on another version draws the panel's place with one line instead: "This panel opens once Infinitary here and on the computer where your first mate lives are on the same version."
+  The files are built for the panel library of the first mate's version of the app.
+  A window on that version draws them from its own library; a window on another version asks the first mate for its library at the version the files name (`inf:plugins:library`, "Panels on the phone" below; `Shell.panelLibrary`, `src/main/shell.ts`), as a phone does.
+  The window holds that library only whole: every file must match the pin the answer names, or none of it is held.
+  It keeps one copy per version in memory, while a panel draws from it, and serves it at a host of that version's own, `app-frame://lib-<16 hex of the version's SHA-256>/`, never at `app-frame://lib/`, whose files only its own build made (`docs/ui-plugins.md`, "The frame realm").
+  The app's own panels always draw from the window's own library.
+  When the library cannot be had, such as from a first mate too old to answer it, the window draws the panel's place with one line instead: "This panel opens once Infinitary here and on the computer where your first mate lives are on the same version."
 - **A panel that cannot open.**
   The mount answers why from a closed set (`PANEL_MOUNT_REFUSALS`, `src/shared/plugins/frameDocument.ts`): `other-version`, `first-mate-out-of-reach`, `not-served-now`, `too-large`, `no-entry` or `too-many-open`.
   The window words each from its catalog (`panelMount*`), with Retry where asking again can clear it, and never shows the main process's own words.
@@ -313,12 +317,12 @@ It answers a phone a panel's files whatever the phone's own version, since a pho
 Infinitary on iPhone and iPad draws them on its Panels tab (`docs/ios.md`, "Panels").
 
 - **The library.**
-  A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which only a window on that version serves, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version.
+  A panel's files import the frame realm's library of the version they were built for (`PanelFiles.builtFor`), which a window on that version serves from its own build, so the first mate also answers that library by its version (`inf:plugins:library`, `src/shared/personal/panelFiles.ts`), for a device that keeps one copy per version and for a window on another version ("Versions" above).
   It answers every file of the library its own build made, each with its pin, but the app's own panels under `builtin/` (`readPanelLibrary`, `src/core/personal/panelLibrary.ts`), which it answers one panel at a time ("The app's own panels on the phone" below).
   It answers nothing for another version, and refuses a file whose bytes no longer match its pin, as the shell never serves one to its own frames.
   It reads the library once a run, from where the host says this build put it (`HostCapabilities.frameLib`).
 - **Desktop windows.**
-  A window on another computer still draws a panel only on the first mate's own version and never asks for the library ("Versions" above).
+  A window on another computer on another version asks for the library the same way and serves it to the panel's frame ("Versions" above).
 - **An older first mate.**
   A first mate older than major 16 that does not list `panels-on-the-phone` refuses the library as not a request it answers.
 
@@ -577,7 +581,7 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `src/main/shell.test.ts`, "shows a task's browser from the other Mac": two windows watch one task through one watch there, only a watching window sizes the page, a drop watches again with its room, and the last window's end stops the pictures; an older first mate is told apart and asked nothing.
 - `tests/e2e/view.spec.ts`, "a Mac that controls another takes over a task's browser there": the second app opens a crewmate's page from its card, takes control, and types a town into the page on the first app, whose button, pressed from the second app, answers with it.
 - `tests/e2e/panels-every-window.spec.ts`: the window opened beside a command and a window on another computer each draw a panel from the first mate's built files, run its action there and show its data, and draw it anew once it is built again; the second window's own folder holds no panel.
-  `src/main/frames/panelMounts.test.ts` holds the mount: the files asked by source, panel and version, a draft asked only as one, the typed reason for each refusal, and the bounds held again.
+  `src/main/frames/panelMounts.test.ts` holds the mount: the files asked by source, panel and version, a draft asked only as one, the typed reason for each refusal, the bounds held again, and a panel built for another version drawn from the first mate's library at that version's own host, refused when the library cannot be had whole.
   `tests/browser/panel-refused-words.test.tsx` and `tests/browser/panel-mount-failed-retry.test.tsx` hold what the panel's place says for a refusal and for any other failure.
   `src/core/core.connection.test.ts` holds the first mate's side with a real panel: a view is answered the same files as its own window, nothing for another version, and its word on where a panel was drawn is not kept; `src/main/shell.test.ts` the view's side, the files asked there, its panels switch followed, no panel being built heard, and an older first mate's panels left off.
 - `tests/e2e/update-channels.spec.ts`, "a Mac controlling a newer Firstmate on another Mac is offered its own update": the other Mac's newer contract named in the top bar, this Mac's own offer there, its release page opened here, and the other Mac offered nothing.

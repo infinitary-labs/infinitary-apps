@@ -92,12 +92,38 @@ const builtinRequest: PanelMountRequest = {
   config: { id: "activity", reads: ["feed.recent"], sql: [] },
 };
 
+/** The first mate's version in the tests where the window is on another one. */
+const FIRST_MATE_VERSION = "0.6.9";
+/** `lib-` and 16 hex of the SHA-256 of "0.6.9", worked out apart from the code under test. */
+const FIRST_MATE_LIB_HOST = "lib-ee1c413148b2131f";
+
+/** The first mate's panel library at its version: what its build made, but the app's own panels. */
+const firstMateLib: Record<string, string> = {
+  "boot.mjs": "import './chunks/react-b.mjs'; /* 0.6.9 */",
+  "react.mjs": "export default { version: '0.6.9' };",
+  "chunks/react-b.mjs": "export const react = 2;",
+};
+
+function libraryAnswer(files: Record<string, string> = firstMateLib) {
+  return {
+    version: FIRST_MATE_VERSION,
+    files: Object.entries(files).map(([path, text]) => ({
+      path,
+      integrity: bytesHash(new TextEncoder().encode(text)),
+      data: Buffer.from(text).toString("base64"),
+    })),
+  };
+}
+
 function inlineJson(body: string, id: string): unknown {
   const match = new RegExp(`<script type="application/json" id="${id}">(.*?)</script>`).exec(body);
   return match ? JSON.parse(match[1] ?? "") : null;
 }
 
-function importMapOf(body: string): { text: string; map: { integrity: Record<string, string> } } {
+function importMapOf(body: string): {
+  text: string;
+  map: { imports: Record<string, string>; integrity: Record<string, string> };
+} {
   const text = /<script type="importmap">(.*?)<\/script>/.exec(body)?.[1] ?? "";
   return { text, map: JSON.parse(text) };
 }
@@ -273,16 +299,37 @@ describe("a panel mount", () => {
       }).mountPanel(installedRequest()),
     ).resolves.toEqual({ refused: "no-entry" });
 
-    // A window on a different version from the first mate draws none of its
-    // panels' files: they import the panel library of the version they were built for.
+    // INF-7113's approved plan, Part 2, item 7: a window on a different
+    // version from the first mate draws a panel's files only from the panel
+    // library they were built for; when it cannot have that library whole,
+    // the window words the panel as other-version and holds nothing for it.
     const built = graph({ "panel.mjs": "export default () => null;" });
-    const otherVersion = new FrameMountRegistry({
-      panels: sources({ "token-meter@0123456789abcdef": built }, libPins, "0.6.9"),
-    });
-    await expect(otherVersion.mountPanel(installedRequest())).resolves.toEqual({
-      refused: "other-version",
-    });
-    expect(otherVersion.size).toBe(0);
+    const crossVersion = (panelLibrary?: PanelSources["panelLibrary"]) =>
+      new FrameMountRegistry({
+        panels: {
+          ...sources({ "token-meter@0123456789abcdef": built }, libPins, FIRST_MATE_VERSION),
+          ...(panelLibrary ? { panelLibrary } : {}),
+        },
+      });
+    const oneByteChanged = libraryAnswer();
+    const react = oneByteChanged.files[1];
+    if (react) react.data = Buffer.from("export default { version: '0.6.8' };").toString("base64");
+    const withoutBoot = libraryAnswer({ "react.mjs": firstMateLib["react.mjs"] ?? "" });
+    for (const [why, panelLibrary] of [
+      ["no way to ask", undefined],
+      ["the first mate is on another version now", async () => null],
+      ["the asking failed", async () => Promise.reject(new Error("inf:plugins:library refused"))],
+      ["one file fails its pin", async () => oneByteChanged],
+      ["no boot module", async () => withoutBoot],
+      ["answered for another version", async () => ({ ...libraryAnswer(), version: "0.6.8" })],
+    ] as const) {
+      const otherVersion = crossVersion(panelLibrary);
+      await expect(otherVersion.mountPanel(installedRequest()), why).resolves.toEqual({
+        refused: "other-version",
+      });
+      expect(otherVersion.size, why).toBe(0);
+      expect(otherVersion.libraryFile(FIRST_MATE_LIB_HOST, "react.mjs"), why).toBeUndefined();
+    }
 
     // A first mate that does not answer is out of reach, whatever its words.
     await expect(
@@ -312,6 +359,81 @@ describe("a panel mount", () => {
     await expect(capped.mountPanel(builtinRequest)).resolves.toEqual({ refused: "too-many-open" });
     // Panels have a cap of their own: templates still mount.
     expect(() => capped.mount({ ...base, template: { html: "<p>x</p>" } })).not.toThrow();
+  });
+
+  // INF-7113's approved plan, Part 2 (the captain picked "draw"): a window
+  // on another version from its first mate draws the first mate's panels
+  // from the first mate's panel library, served at that version's own host.
+  it("draws a panel built for the first mate's version from its library, at that version's own host", async () => {
+    const ids = ["x1", "x2"];
+    let asked = 0;
+    const mounts = new FrameMountRegistry({
+      newId: () => ids.shift() ?? "",
+      panels: {
+        ...sources(
+          {
+            "token-meter@0123456789abcdef": graph({
+              "panel.mjs": "import R from 'app-frame://lib/react.mjs'; export default () => R;",
+            }),
+          },
+          libPins,
+          FIRST_MATE_VERSION,
+        ),
+        panelLibrary: async (version) => {
+          asked += 1;
+          return version === FIRST_MATE_VERSION ? libraryAnswer() : null;
+        },
+      },
+    });
+    // Two panels at once ask the first mate once, and share one copy.
+    await Promise.all([
+      mounts.mountPanel(installedRequest()),
+      mounts.mountPanel(installedRequest()),
+    ]);
+    expect(asked).toBe(1);
+
+    const served = mounts.panelDocument("x1");
+    const body = served?.body ?? "";
+    const { text, map } = importMapOf(body);
+    // Every `lib/` URL the panel's files may import goes to the version
+    // host by an exact key, and only the first mate's files are pinned there.
+    expect(map.imports).toEqual({
+      "app-frame://lib/boot.mjs": `app-frame://${FIRST_MATE_LIB_HOST}/boot.mjs`,
+      "app-frame://lib/react.mjs": `app-frame://${FIRST_MATE_LIB_HOST}/react.mjs`,
+      "app-frame://lib/chunks/react-b.mjs": `app-frame://${FIRST_MATE_LIB_HOST}/chunks/react-b.mjs`,
+    });
+    const pin = (file: string) => bytesHash(new TextEncoder().encode(firstMateLib[file] ?? ""));
+    expect(map.integrity).toEqual({
+      [`app-frame://${FIRST_MATE_LIB_HOST}/boot.mjs`]: pin("boot.mjs"),
+      [`app-frame://${FIRST_MATE_LIB_HOST}/react.mjs`]: pin("react.mjs"),
+      [`app-frame://${FIRST_MATE_LIB_HOST}/chunks/react-b.mjs`]: pin("chunks/react-b.mjs"),
+      "app-frame://panel-x1/panel.mjs": bytesHash(
+        new TextEncoder().encode(
+          "import R from 'app-frame://lib/react.mjs'; export default () => R;",
+        ),
+      ),
+    });
+    // The policy admits the version host and this mount's own, never this build's lib.
+    expect(served?.csp).toBe(
+      `default-src 'none'; style-src 'unsafe-inline'; font-src app-frame:; img-src data: app-frame:; script-src '${FRAME_BRIDGE_SHA256}' '${scriptHash(text)}' app-frame://${FIRST_MATE_LIB_HOST}/ app-frame://panel-x1/`,
+    );
+    expect(body).toContain(
+      `<script type="module" src="app-frame://${FIRST_MATE_LIB_HOST}/boot.mjs" integrity="${pin("boot.mjs")}">`,
+    );
+    expect(body).not.toContain('src="app-frame://lib/boot.mjs"');
+
+    // The library stays while any mount draws from it, and goes with the last.
+    expect(new TextDecoder().decode(mounts.libraryFile(FIRST_MATE_LIB_HOST, "react.mjs"))).toBe(
+      firstMateLib["react.mjs"],
+    );
+    mounts.unmount("x1");
+    expect(mounts.libraryFile(FIRST_MATE_LIB_HOST, "react.mjs")).toBeDefined();
+    mounts.unmount("x2");
+    expect(mounts.libraryFile(FIRST_MATE_LIB_HOST, "react.mjs")).toBeUndefined();
+
+    // The window's own panels still draw from this build's lib, asking nothing.
+    await mounts.mountPanel(builtinRequest);
+    expect(asked).toBe(1);
   });
 
   it("rejects a mount this build cannot assemble at all", async () => {
@@ -392,6 +514,46 @@ describe("the frame scheme's panel and lib hosts", () => {
       read,
     );
     expect(bare.status).toBe(404);
+  });
+
+  it("serves another version's library at its own host only while a mount draws from it", async () => {
+    const mounts = new FrameMountRegistry({
+      newId: () => "v1",
+      panels: {
+        ...sources(
+          { "token-meter@0123456789abcdef": graph({ "panel.mjs": "export default 1;" }) },
+          libPins,
+          FIRST_MATE_VERSION,
+        ),
+        panelLibrary: async () => libraryAnswer(),
+      },
+    });
+    await mounts.mountPanel(installedRequest());
+    const module = await answerFrameRequest(
+      `app-frame://${FIRST_MATE_LIB_HOST}/chunks/react-b.mjs`,
+      hosts(mounts),
+      read,
+    );
+    expect(module.status).toBe(200);
+    expect(module.headers.get("content-type")).toBe("text/javascript; charset=utf-8");
+    expect(module.headers.get("access-control-allow-origin")).toBe("*");
+    expect(await module.text()).toBe(firstMateLib["chunks/react-b.mjs"]);
+    for (const url of [
+      `app-frame://${FIRST_MATE_LIB_HOST}/evil.mjs`,
+      `app-frame://${FIRST_MATE_LIB_HOST}/`,
+      // This build's own lib files are not under another version's host.
+      `app-frame://${FIRST_MATE_LIB_HOST}/builtin/activity/panel.mjs`,
+      "app-frame://lib-0000000000000000/react.mjs",
+    ]) {
+      expect((await answerFrameRequest(url, hosts(mounts), read)).status, url).toBe(404);
+    }
+    mounts.unmount("v1");
+    const gone = await answerFrameRequest(
+      `app-frame://${FIRST_MATE_LIB_HOST}/react.mjs`,
+      hosts(mounts),
+      read,
+    );
+    expect(gone.status).toBe(404);
   });
 
   it("answers a panel host with its document and its own modules, and nothing of another mount", async () => {

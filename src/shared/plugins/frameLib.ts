@@ -11,13 +11,16 @@ import { panelCardViewModule } from "./panelCards";
  * the JSX runtime, the design library (`@infinitary/ui`), and a runtime that
  * turns the bridge into `PanelProps`.
  *
- * The shell serves those as ES modules from ONE host, `app-frame://lib/`,
- * built with the app (electron.vite.config.ts builds `out/frame-lib/` and
- * bakes every file's SHA-256 into the main bundle). The host answers only a
- * file whose bytes still match its baked pin, and every panel document
- * carries the same pins as its import map's `integrity`, so a lib module is
- * pinned twice: by the server that will not serve anything else, and by the
- * frame that will not run anything else.
+ * The shell serves this build's lib as ES modules from ONE host,
+ * `app-frame://lib/`, built with the app (electron.vite.config.ts builds
+ * `out/frame-lib/` and bakes every file's SHA-256 into the main bundle). The
+ * host answers only a file whose bytes still match its baked pin, and every
+ * panel document drawing from it carries the same pins as its import map's
+ * `integrity`, so a lib module is pinned twice: by the server that will not
+ * serve anything else, and by the frame that will not run anything else. A
+ * panel built for another version draws from the first mate's library at
+ * that version's own host instead (`FRAME_LIB_VERSION_HOST_PREFIX`), pinned
+ * the same two ways by the pins the first mate's answer names.
  *
  * The file names are the contract between the build, the compiler (which
  * rewrites an added panel's host imports to these URLs) and the shell.
@@ -25,6 +28,16 @@ import { panelCardViewModule } from "./panelCards";
 
 /** The host the lib is served from: `app-frame://lib/<file>`. */
 export const FRAME_LIB_HOST = "lib";
+
+/**
+ * The host prefix of another version's panel library, which a window on a
+ * different version from its first mate serves for a panel built for the
+ * first mate's (docs/view.md, "Panels in every window"): the rest of the
+ * host is 16 hex of the SHA-256 of that version, minted by the main process
+ * (`frameMounts.ts`), so each version has a site of its own and none is
+ * `lib/`, whose files only this build made.
+ */
+export const FRAME_LIB_VERSION_HOST_PREFIX = "lib-";
 
 /** The module every panel document boots from. */
 export const FRAME_LIB_BOOT = "boot.mjs";
@@ -88,8 +101,9 @@ export function builtinPanelFile(id: BuiltinFramePanel, view?: string): string {
 /** File -> `sha256-<base64>`, every file the lib serves and nothing else. */
 export type FrameLibPins = Readonly<Record<string, string>>;
 
-export function frameLibUrl(file: string): string {
-  return `${APP_FRAME_SCHEME}://${FRAME_LIB_HOST}/${file}`;
+/** A lib file's URL: this build's own lib, or another version's at its own host. */
+export function frameLibUrl(file: string, host: string = FRAME_LIB_HOST): string {
+  return `${APP_FRAME_SCHEME}://${host}/${file}`;
 }
 
 /** The URL an added panel's host import is rewritten to for the frame realm. */

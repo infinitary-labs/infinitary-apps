@@ -158,4 +158,33 @@ describe("the main build's bundled packages", () => {
       /looks-up\/index\.js looks itself up in a way a bundle cannot carry/,
     );
   });
+
+  test("on Windows a bundled file is found by the forward-slash id Vite names it with", async () => {
+    // Images read as omitted in Windows builds: Vite hands a plugin
+    // forward-slash ids there, while Node's separator is a backslash, so
+    // Photon's loader went unrewritten and never found its wasm.
+    vi.resetModules();
+    vi.doMock("node:path", async () => {
+      const real = await vi.importActual<typeof import("node:path")>("node:path");
+      return { ...real.win32, default: real.win32 };
+    });
+    try {
+      const { packageOf } = await import("../scripts/bundled-packages.ts");
+      expect(
+        packageOf("C:/Users/runner/app/node_modules/@silvia-odwyer/photon-node/photon_rs.js"),
+      ).toEqual({
+        root: "C:/Users/runner/app/node_modules/@silvia-odwyer/photon-node",
+        name: "@silvia-odwyer/photon-node",
+        inside: "photon_rs.js",
+      });
+      expect(packageOf("C:\\Users\\runner\\app\\node_modules\\typebox\\build\\index.mjs")).toEqual({
+        root: "C:/Users/runner/app/node_modules/typebox",
+        name: "typebox",
+        inside: "build/index.mjs",
+      });
+    } finally {
+      vi.doUnmock("node:path");
+      vi.resetModules();
+    }
+  });
 });

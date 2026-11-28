@@ -28,7 +28,8 @@ export type OutboxOptions = {
   now?: () => number;
 };
 
-type Piece = { data: Buffer; fin: boolean; done?: (error?: Error) => void };
+/** `first` marks the piece a frame begins with: the frames behind one being written start there. */
+type Piece = { data: Buffer; fin: boolean; first?: true; done?: (error?: Error) => void };
 /** A ping the device has not answered: the bytes written before it, and since when they were going. */
 type Mark = { n: number; end: number; from: number };
 
@@ -39,6 +40,8 @@ export class Outbox {
   /** Who waits for the device to answer for every byte up to `end` (`whenAnswered`). */
   private awaited: { end: number; go: (answered: boolean) => void }[] = [];
   private releasing = false;
+  /** `last` sent its frame: nothing is written after it. */
+  private ended = false;
   private queuedBytes = 0;
   private written = 0;
   private answered = 0;
@@ -79,14 +82,17 @@ export class Outbox {
    * never will be.
    */
   send(text: string, done?: (error?: Error) => void): void {
-    if (this.ws.readyState !== WebSocket.OPEN) {
-      if (done) queueMicrotask(() => done(new Error("The connection is closed.")));
+    if (this.ws.readyState !== WebSocket.OPEN || this.ended) {
+      const error = this.ended
+        ? new Error("The connection is closing.")
+        : new Error("The connection is closed.");
+      if (done) queueMicrotask(() => done(error));
       return;
     }
     const data = Buffer.from(text, "utf8");
     const size = this.pieceSize();
     const parted = this.parts && data.length > size;
-    if (parted) this.queuePiece({ data: partsHeader(data.length), fin: true });
+    if (parted) this.queuePiece({ data: partsHeader(data.length), fin: true, first: true });
     let at = 0;
     do {
       let end = Math.min(at + size, data.length);
@@ -96,11 +102,29 @@ export class Outbox {
       this.queuePiece({
         data: data.subarray(at, end),
         fin: parted || last,
+        ...(at === 0 && !parted ? { first: true as const } : {}),
         ...(last && done ? { done } : {}),
       });
       at = end;
     } while (at < data.length);
     this.pump();
+  }
+
+  /**
+   * Sends `text` as the last frame the device is written: the frames waiting
+   * here that have not begun are dropped, as a close drops them, and `text`
+   * follows the frame being written, which still ends whole, so a device
+   * that reads parts never reads `text` as a piece. Nothing is written after
+   * it, and pings still are, so `whenAnswered` hears the device has it.
+   */
+  last(text: string): void {
+    const at = this.queue.findIndex((piece) => piece.first);
+    const dropped = at < 0 ? [] : this.queue.splice(at);
+    for (const piece of dropped) this.queuedBytes -= piece.data.length;
+    this.send(text);
+    this.ended = true;
+    // Heard only once `ended` holds, so a sender that tries again on hearing it adds nothing behind `text`.
+    for (const piece of dropped) piece.done?.(new Error("The connection is closing."));
   }
 
   /**

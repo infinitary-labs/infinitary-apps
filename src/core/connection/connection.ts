@@ -33,6 +33,7 @@ import {
   PAIR_BODY_MAX_BYTES,
   PAIR_PATH,
   PAIR_REFUSAL_STATUS,
+  REMOVAL_NOTICE,
   REPLACED_PUSH_CHANNEL,
 } from "@shared/connection";
 import {
@@ -107,6 +108,8 @@ import { type OpenLocalDoor, openLocalDoor } from "./localDoor";
 
 /** A phone says how long its catch-up took (`catch-up-shown.md`). */
 const CATCH_UP_SHOWN_CHANGE = contractChange(CATCH_UP_SHOWN);
+/** A device hears its removal as a frame and closes itself (`removal-notice.md`). */
+const REMOVAL_NOTICE_CHANGE = contractChange(REMOVAL_NOTICE);
 
 /** The name on the local door's own certificate. */
 const LOCAL_DOOR_NAME = "Infinitary local door";
@@ -370,6 +373,7 @@ function readBody(request: IncomingMessage): Promise<string | null | undefined> 
 export function startConnection(options: ConnectionOptions): HomeConnection {
   const { dispatch, events, devices } = options;
   const heartbeatMs = options.heartbeatMs ?? 30_000;
+  const removalGraceMs = options.removalGraceMs ?? 1_000;
   const maxBufferedBytes = options.maxBufferedBytes ?? 32 * 1024 * 1024;
   // Half the limit goes ahead of an answer at most, leaving the other half
   // for the one order that waits in the outbox (`whenClear`) and pushes.
@@ -1572,6 +1576,25 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   function cut(client: Client, code: number, reason: string) {
     if (client.closing) return;
     client.closing = true;
+    if (
+      code === CONNECTION_CLOSE.unpaired &&
+      client.welcomed &&
+      listsChange(client.changes, REMOVAL_NOTICE_CHANGE) &&
+      client.ws.readyState === WebSocket.OPEN
+    ) {
+      // A phone's socket loses a close that arrives while its own send is
+      // still going, as a read answering the frame before it, and then hears
+      // a lost connection; a frame ahead of the close it always reads. So it
+      // is told first, and the close waits for it to close itself.
+      client.out.last(JSON.stringify({ t: "unpaired" }));
+      client.out.whenAnswered((answered) => {
+        if (!answered) return;
+        const late = setTimeout(() => client.ws.close(code, reason), removalGraceMs);
+        late.unref();
+        client.ws.once("close", () => clearTimeout(late));
+      });
+      return;
+    }
     client.ws.close(code, reason);
   }
 

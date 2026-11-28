@@ -4518,6 +4518,9 @@
 "taskPinPin" = "고정";
 "taskPinUnpin" = "고정 해제";
 "taskQueueWaitRelease" = "%1$@ 릴리스 대기 중";
+"taskReleaseCheckClosed" = "릴리스 확인이 보고했어요";
+"taskReleaseCheckReported" = "릴리스 확인이 찾은 내용을 보고했어요.";
+"taskReleaseCheckTitle" = "병합된 작업이 처음 포함된 릴리스 찾기";
 "taskStatusComputerUpdating" = "%1$@ 업데이트 중";
 "taskTabActivity" = "활동";
 "taskTabCards" = "카드";

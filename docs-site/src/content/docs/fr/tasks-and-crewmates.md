@@ -1,5 +1,5 @@
 ---
-source: 0f80b78b2636fcc9
+source: 721907725b3f9d3a
 title: Tâches et équipiers
 description: Ce qu’est une tâche, comment elle passe de la réserve à terminée, où la suivre et comment orienter l’équipier qui s’en charge.
 ---
@@ -167,6 +167,7 @@ Elle attend chaque tâche qui fait le travail, y compris les parties ajoutées p
 - Elle ne démarre qu’une fois que chacune de ces tâches a fusionné son changement, ou s’est terminée sans rien à fusionner.
 - Si l’une d’elles est abandonnée, l’étape ne fait rien et votre second vous prévient.
 - Si vous avez demandé l’étape pour quand le travail sera dans une version publiée, elle attend que votre équipage enregistre une version qui contient le travail ; voir [Automatisation](/fr/automation/#when-it-runs).
+  Pendant qu’elle attend, Infinitary lance une courte tâche, **Trouver la première version contenant le travail fusionné**, peu après l’apparition d’une nouvelle étiquette dans votre projet et au moins une fois par jour ; elle cherche cette version comme votre projet publie les siennes, puis se ferme d’elle-même.
 
 Infinitary n’ajoute à un changement fusionné aucun mot qui ferme un ticket, donc un ticket se ferme par la tâche propre à cette étape.
 

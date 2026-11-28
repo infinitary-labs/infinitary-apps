@@ -4696,6 +4696,9 @@ public enum PhoneMessages {
     public static func `taskPinPin`() -> String { PhoneWords.format("taskPinPin", []) }
     public static func `taskPinUnpin`() -> String { PhoneWords.format("taskPinUnpin", []) }
     public static func `taskQueueWaitRelease`(`tasks`: String) -> String { PhoneWords.format("taskQueueWaitRelease", [`tasks`]) }
+    public static func `taskReleaseCheckClosed`() -> String { PhoneWords.format("taskReleaseCheckClosed", []) }
+    public static func `taskReleaseCheckReported`() -> String { PhoneWords.format("taskReleaseCheckReported", []) }
+    public static func `taskReleaseCheckTitle`() -> String { PhoneWords.format("taskReleaseCheckTitle", []) }
     public static func `taskStatusComputerUpdating`(`computer`: String) -> String { PhoneWords.format("taskStatusComputerUpdating", [`computer`]) }
     public static func `taskTabActivity`() -> String { PhoneWords.format("taskTabActivity", []) }
     public static func `taskTabCards`() -> String { PhoneWords.format("taskTabCards", []) }
@@ -9616,6 +9619,9 @@ extension PhoneWords {
         "taskPinPin": [],
         "taskPinUnpin": [],
         "taskQueueWaitRelease": ["tasks"],
+        "taskReleaseCheckClosed": [],
+        "taskReleaseCheckReported": [],
+        "taskReleaseCheckTitle": [],
         "taskStatusComputerUpdating": ["computer"],
         "taskTabActivity": [],
         "taskTabCards": [],

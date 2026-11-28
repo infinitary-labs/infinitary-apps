@@ -4516,6 +4516,9 @@
 "taskPinPin" = "تثبيت";
 "taskPinUnpin" = "إلغاء التثبيت";
 "taskQueueWaitRelease" = "بانتظار صدور %1$@ في إصدار";
+"taskReleaseCheckClosed" = "أبلغ فحص الإصدار";
+"taskReleaseCheckReported" = "أبلغ فحص الإصدار بما وجده.";
+"taskReleaseCheckTitle" = "البحث عن أول إصدار يضم العمل المدمج";
 "taskStatusComputerUpdating" = "%1$@ قيد التحديث";
 "taskTabActivity" = "النشاط";
 "taskTabCards" = "البطاقات";

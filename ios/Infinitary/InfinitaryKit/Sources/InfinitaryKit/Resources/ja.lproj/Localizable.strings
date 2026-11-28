@@ -4516,6 +4516,9 @@
 "taskPinPin" = "固定";
 "taskPinUnpin" = "固定を解除";
 "taskQueueWaitRelease" = "%1$@ のリリース待ち";
+"taskReleaseCheckClosed" = "リリース確認が報告しました";
+"taskReleaseCheckReported" = "リリース確認が見つけた内容を報告しました。";
+"taskReleaseCheckTitle" = "マージ済みの作業を最初に含んだリリースを探す";
 "taskStatusComputerUpdating" = "%1$@ は更新中";
 "taskTabActivity" = "アクティビティ";
 "taskTabCards" = "カード";

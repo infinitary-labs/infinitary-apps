@@ -1,5 +1,5 @@
 ---
-source: 0f80b78b2636fcc9
+source: 721907725b3f9d3a
 title: Aufgaben und Crewmitglieder
 description: Was eine Aufgabe ist, wie sie vom Backlog bis zu „Fertig“ wandert, wo du sie verfolgst und wie du das Crewmitglied lenkst, das sie bearbeitet.
 ---
@@ -167,6 +167,7 @@ Sie wartet auf jede Aufgabe, die die Arbeit macht, auch auf Teile, die später d
 - Sie startet erst, wenn jede dieser Aufgaben ihre Änderung zusammengeführt hat oder ohne etwas zum Zusammenführen fertig ist.
 - Wird eine davon aufgegeben, tut der Schritt nichts, und dein erster Offizier sagt es dir.
 - Hast du den Schritt erst verlangt, wenn die Arbeit in einem Release ist, wartet er, bis deine Crew ein Release mit der Arbeit festhält; siehe [Automatisierung](/de/automation/#when-it-runs).
+  Solange er wartet, startet Infinitary eine kurze Aufgabe, **Erste Version mit der zusammengeführten Arbeit finden**, bald nachdem ein neuer Tag in deinem Projekt erscheint und mindestens einmal am Tag; sie sucht dieses Release so, wie dein Projekt veröffentlicht, und schließt sich selbst.
 
 Infinitary fügt einer zusammengeführten Änderung keine Worte hinzu, die ein Issue schließen, also schließt sich ein Issue über die eigene Aufgabe dieses Schritts.
 

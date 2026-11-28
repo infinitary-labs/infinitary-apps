@@ -166,6 +166,7 @@ It waits on every task that does the work, including parts added later.
 - It starts only once each of those tasks has merged its change, or finished with nothing to merge.
 - If one of them is dropped, the step does nothing and your first mate tells you.
 - If you asked for the step once the work is in a release, it waits until your crew records a release that has the work; see [Automation](/automation/#when-it-runs).
+  While it waits, Infinitary starts a short task, **Find the first release of merged work**, soon after a new tag appears in your project and at least once a day, which looks for that release however your project ships and closes itself.
 
 Infinitary adds no closing words to a merged change, so an issue closes through that step's own task.
 

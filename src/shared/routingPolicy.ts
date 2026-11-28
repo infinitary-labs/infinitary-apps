@@ -406,7 +406,7 @@ export const workShapeSchema = z.object({
    * The host filed this task to work in place, in its project's own folder,
    * with no working copy, branch, pull request or completion decision
    * (INF-549, docs/task-record.md "A folder a merge left behind"). Only the
-   * host writes it, in one of two shapes.
+   * host writes it, in one of three shapes.
    *
    * A folder a merge left behind, or one missing or behind where other work
    * found it (INF-572), carries the facts the folder was refused on: the default branch, the merged version the folder must reach
@@ -417,7 +417,12 @@ export const workShapeSchema = z.object({
    * A pull request an abandoned task could not close carries that pull
    * request (`pull`): the host closes the task once it reads it closed.
    *
-   * The host renders the brief from either at each start.
+   * A release check carries the merged tasks it was filed for (`release`):
+   * work a release-moment side-effect task waits on with no recorded first
+   * release (docs/task-record.md, "A release check"). The host closes it once
+   * its crewmate reported.
+   *
+   * The host renders the brief from each at each start.
    *
    * Work the first mate declared works in the project's folder
    * (`in_folder` on its ask, INF-567) carries `folder: true`: its brief is
@@ -459,6 +464,17 @@ export const workShapeSchema = z.object({
         after: z.string().optional(),
         after_id: z.string(),
       }),
+      z.object({
+        release: z.object({
+          /** The merged tasks it looks for, by id, as the host listed them when it filed the check. */
+          tasks: z.array(z.string()),
+          /**
+           * A digest of the tags origin held when the host filed it, or absent
+           * when the read failed: another digest starts the next check sooner.
+           */
+          tags: z.string().optional(),
+        }),
+      }),
       z.object({ folder: z.literal(true) }),
     ])
     .optional(),
@@ -483,6 +499,13 @@ export function isFolderWork(
 
 export function isPullRepair(facts: InPlaceWork | undefined): facts is InPlacePull {
   return facts !== undefined && "pull" in facts;
+}
+
+/** The facts of the host's release check for a project (docs/task-record.md, "A release check"). */
+export type InPlaceRelease = Extract<InPlaceWork, { release: unknown }>;
+
+export function isReleaseCheck(facts: InPlaceWork | undefined): facts is InPlaceRelease {
+  return facts !== undefined && "release" in facts;
 }
 
 /**

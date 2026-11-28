@@ -103,7 +103,7 @@ It declares `atOnce`, and every close looks at once at the rules listening to it
 ## Work ships in a release
 
 The app's own tasks tell a second event beside "A task closes": `tasks/task_released`, "Work ships in a release", with the same required `task` filter (`TASK_RELEASED_EVENT` in `src/core/integrations/appEvents.ts`, looked at by `taskEvents`).
-It fires once the record holds the named task's first release (`delivery.firstRelease`), which a crewmate records after verifying a published release (`docs/task-record.md`, `report.first_release`), never from merge time.
+It fires once the record holds the named task's first release (`delivery.firstRelease`), which a crewmate records after verifying a published release (`docs/task-record.md`, `report.first_release`), never from merge time; while a release-moment task waits on that work, the host's release check is the crewmate that looks (`docs/task-record.md`, "A release check").
 A task closed without a release, and a task the record no longer holds, never fires it.
 Its item names the task, the release's version and its page, carried once, so it never fires twice.
 Its look runs every minute, so it fires within about a minute of the release being recorded.

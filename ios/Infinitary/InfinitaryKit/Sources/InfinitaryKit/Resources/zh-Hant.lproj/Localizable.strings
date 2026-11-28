@@ -4516,6 +4516,9 @@
 "taskPinPin" = "釘選";
 "taskPinUnpin" = "取消釘選";
 "taskQueueWaitRelease" = "正在等待 %1$@ 隨版本發布";
+"taskReleaseCheckClosed" = "版本檢查已回報";
+"taskReleaseCheckReported" = "版本檢查已回報它的發現。";
+"taskReleaseCheckTitle" = "查找首個包含已合併工作的版本";
 "taskStatusComputerUpdating" = "%1$@ 正在更新";
 "taskTabActivity" = "動態";
 "taskTabCards" = "卡片";

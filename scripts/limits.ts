@@ -326,6 +326,13 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
       "read again at the largest page that fits; refused in words naming per_page, one item or a narrower path",
     ),
   },
+  // The captain's pick on INF-7198's plan, Part 2: a release check runs "at least daily" while work waits on a release.
+  "src/core/orchestrator/releaseChecks.ts": {
+    RELEASE_CHECK_FLOOR_MS: {
+      rests: "consent",
+      way: "the project's next check starts a day after its last one; a new tag at origin starts one sooner, and a release report from any crewmate ends the wait at once",
+    },
+  },
   "src/core/orchestrator/scheduler.ts": {
     MISSED_COUNT_CAP: physical("none in practice: a longer gap reads as 10,000 missed"),
   },

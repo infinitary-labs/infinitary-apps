@@ -1,4 +1,5 @@
 import { recoveryWay, waitStall } from "@shared/recovery";
+import { isReleaseCheck } from "@shared/routingPolicy";
 import { capWithOverflow } from "../overflow";
 import { startedProgramBranches } from "../program/programRunner";
 import { builtOnRows } from "../tasks/taskQuery";
@@ -294,6 +295,7 @@ export class ReportSorting {
         !handed &&
         !(declared?.wait !== undefined && witnesses.decisionCardOpen),
       programPart,
+      hostCheck: isReleaseCheck(record?.shape?.in_place),
       // A session that is gone cannot prove anything either; the record
       // keeps that the host could not tell, and the report still wakes.
       workObservable: task.session?.controlProfile.backgroundWork === "host",
@@ -304,6 +306,8 @@ export class ReportSorting {
     // Follow-ups it filed wake the first mate; the program still reads its answer.
     if (programPart && (sort.rule === "program-part" || sort.rule === "filed-followups"))
       void this.core.crewPrograms.closeProgramPart(task.id);
+    // The host's release check closes on its report rather than at the next minute's read.
+    if (sort.rule === "host-check") void this.core.inPlaceWork.closeCurrentFolders();
   }
 
   /**

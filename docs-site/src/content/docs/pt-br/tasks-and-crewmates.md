@@ -1,5 +1,5 @@
 ---
-source: 0f80b78b2636fcc9
+source: 721907725b3f9d3a
 title: Tarefas e tripulantes
 description: O que é uma tarefa, como ela vai do backlog até concluída, onde acompanhá-la e como orientar o tripulante que a faz.
 ---
@@ -167,6 +167,7 @@ Ela espera cada tarefa que faz o trabalho, inclusive as partes adicionadas depoi
 - Ela só começa quando cada uma dessas tarefas mesclou a sua mudança, ou terminou sem nada para mesclar.
 - Se uma delas for abandonada, o passo não faz nada e seu imediato avisa você.
 - Se você pediu o passo para quando o trabalho estiver em uma versão publicada, ele espera até sua tripulação registrar uma versão que contenha o trabalho; veja [Automação](/pt-br/automation/#when-it-runs).
+  Enquanto espera, o Infinitary inicia uma tarefa curta, **Encontrar a primeira versão com o trabalho mesclado**, logo depois que uma etiqueta nova aparece no seu projeto e pelo menos uma vez por dia; ela procura essa versão do jeito que seu projeto publica e se fecha sozinha.
 
 O Infinitary não adiciona a uma mudança mesclada palavras que fechem uma issue, então uma issue se fecha pela própria tarefa desse passo.
 

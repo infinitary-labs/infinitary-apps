@@ -1,5 +1,5 @@
 ---
-source: 0f80b78b2636fcc9
+source: 721907725b3f9d3a
 title: Tareas y tripulantes
 description: Qué es una tarea, cómo pasa de pendiente a terminada, dónde seguirla y cómo orientar al tripulante que la hace.
 ---
@@ -167,6 +167,7 @@ Espera a cada tarea que hace el trabajo, incluidas las partes que se añadan des
 - Empieza solo cuando cada una de esas tareas ha fusionado su cambio, o ha terminado sin nada que fusionar.
 - Si una de ellas se abandona, el paso no hace nada y tu primer oficial te avisa.
 - Si pediste el paso para cuando el trabajo esté en una versión publicada, espera hasta que tu tripulación registre una versión que contenga el trabajo; consulta [Automatización](/es/automation/#when-it-runs).
+  Mientras espera, Infinitary inicia una tarea corta, **Encontrar la primera versión con el trabajo fusionado**, poco después de que aparezca una etiqueta nueva en tu proyecto y al menos una vez al día; busca esa versión de la forma en que publica tu proyecto y se cierra sola.
 
 Infinitary no añade a un cambio fusionado palabras que cierren una incidencia, así que una incidencia se cierra mediante la tarea propia de ese paso.
 

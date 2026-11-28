@@ -4,7 +4,7 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import { type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import { COMPUTER, HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
-import { isPullRepair } from "@shared/routingPolicy";
+import { isPullRepair, isReleaseCheck } from "@shared/routingPolicy";
 import { protectedPlaces } from "../files/fileReach";
 import type {
   DownloadArtifactInput,
@@ -539,12 +539,20 @@ export class CrewToolHooks {
     }
     // A task that works in place ships nothing; the one that closes a pull
     // request an abandoned task left open reads and writes where the project
-    // lives, and nothing else (INF-549's sibling).
+    // lives, and nothing else (INF-549's sibling), and a release check only
+    // reads there, since what it finds is a report.
     if (
       this.core.facts.worksInPlace(task.id) &&
       deliverableOf(this.core.options.tasks.get(task.id)) !== "operation"
     ) {
-      if (!isPullRepair(this.core.options.tasks.get(task.id)?.shape?.in_place)) return {};
+      const inPlace = this.core.options.tasks.get(task.id)?.shape?.in_place;
+      if (isReleaseCheck(inPlace)) {
+        const { githubRead } = this.core.options;
+        return githubRead
+          ? { onGithubRead: (input: GithubReadInput) => githubRead(task.id, input) }
+          : {};
+      }
+      if (!isPullRepair(inPlace)) return {};
       const { githubRead, githubWrite } = this.core.options;
       return {
         ...(githubRead

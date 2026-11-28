@@ -832,6 +832,18 @@ Repeating an attribution adds no event.
 Old tasks and projects with no verified release remain unknown until that verification, and no release attribution changes their closed status or merge permissions.
 The crewmate's `tasks skip` pages row lists beyond the per-read limit; release verifiers collect all keys before attribution writes change the list's ordering.
 
+## A release check
+
+While an open release-moment side-effect task waits on merged work with no recorded first release (`TaskGraph.awaitingRelease`), the host files one short read-only check in that work's project, "Find the first release of merged work" (`ReleaseChecks`, `src/core/orchestrator/releaseChecks.ts`).
+A project with nothing listed is never read, and a project whose folder is missing gets no check.
+The host looks every five minutes: a project gets a check when origin shows tags its last check did not see and that check started at least three hours ago, or when a day has passed since its last check or, with none, since its oldest listed merge.
+The host reads origin's tags itself (`WorkspaceService.originTags`), since the folder's own fetches skip tags; a tag is only a hint to look sooner, never a release, and the host knows nothing else of how a project ships.
+At most one check of a project is open at a time.
+It is a task that works in place, like "Close the pull request" ("A folder a merge left behind"): its shape's `in_place.release` names the listed tasks and the tags it was filed on, and it ships nothing.
+Its brief lists each listed task still merged with no first release, with its key, title, merge time and merge commit, and tells the crewmate to find how the project publishes from the project itself, to count only a published release and to declare what it verifies through `report.first_release` ("First release of merged work").
+Its report wakes nobody (`docs/report-sort.md`, `rule:host-check`) and the host closes it as soon as it reported; a declared release fires "Work ships in a release" (`docs/automation.md`) and the next start sweep starts the waiting task.
+A task still in no published release keeps its waiting task unstarted until a later check finds it.
+
 ## A task waiting to start
 
 Every open work row waiting to start carries `queueWait`, derived by `src/core/tasks/queueWait.ts` from its prerequisites, parts, gate, start policy and recorded placement wait.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "release-check-while-work-waits",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Your crew looks for the release that work waits on",
+      "body": "When a task waits for merged work to ship in a release, such as a thank-you to the person who reported an issue, Infinitary now starts a short task, Find the first release of merged work, that looks for that release however your project ships and records it. It runs soon after a new tag appears in your project, at most every few hours, and at least once a day while something waits, and it closes itself. The waiting task then starts.",
+      "docsSite": ["tasks-and-crewmates"],
+      "noPicture": "The only trace on screen is one more task in the Tasks list, which starts and closes by itself.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

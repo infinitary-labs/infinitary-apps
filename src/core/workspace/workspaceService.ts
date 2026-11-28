@@ -942,6 +942,25 @@ export class WorkspaceService {
   }
 
   /**
+   * A digest of the tags `origin` holds now, each name with its commit, read
+   * where the project lives without changing the folder (docs/task-record.md,
+   * "A release check"). The folder's own fetches skip tags (`--no-tags`), so
+   * its local tags say nothing of a new one. Throws when origin cannot be read.
+   */
+  async originTags(repoDir: string): Promise<string> {
+    const listed = await git(repoDir, ["ls-remote", "--tags", "--refs", "--", "origin"], {
+      timeoutMs: this.options.fetchTimeoutMs ?? REMOTE_TIMEOUT_MS,
+      env: { GIT_TERMINAL_PROMPT: "0" },
+    });
+    const lines = listed
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .sort();
+    return createHash("sha256").update(lines.join("\n")).digest("hex");
+  }
+
+  /**
    * Whether a project's folder is up to date, read without changing it
    * (INF-549): clean, on `branch`, and at or past `reach` - or, with no
    * `reach` known, at or past origin's `branch` as last fetched.

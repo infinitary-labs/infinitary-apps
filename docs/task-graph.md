@@ -101,6 +101,7 @@ A release-moment task stays unstarted while any merged work it waits on has no r
 A wait closed done without a merge, such as an answer, waits for no release; a merge is the record's own fact (`TaskGraph.workMerged`): a merge that spent its approval, or a done close the record calls `merged` or `landed`, the same closes a first release is recorded on.
 Its queue line reads "Waiting for X to ship in a release", naming those merges, once nothing else it waits on is unfinished (`queueWaitOf`).
 The first release is the one a crewmate verifies and declares through `report.first_release` (`docs/task-record.md`), and the next start sweep starts the task once every such merge has one.
+While it waits, the host's release check finds and declares that first release in the work's project (`docs/task-record.md`, "A release check").
 A replaced piece's wait moves to its replacement (`TaskService.moveWaits`), as every wait does.
 
 When every wait closed done and none merged, such as a plan never built or a reproduce step that did not reproduce, nothing shipped for the action to tell, so the task stays unstarted instead of starting only to say so (INF-7198's plan, part 3).

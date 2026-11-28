@@ -4516,6 +4516,9 @@
 "taskPinPin" = "Pin";
 "taskPinUnpin" = "Unpin";
 "taskQueueWaitRelease" = "Waiting for %1$@ to ship in a release";
+"taskReleaseCheckClosed" = "the release check reported";
+"taskReleaseCheckReported" = "The release check reported what it found.";
+"taskReleaseCheckTitle" = "Find the first release of merged work";
 "taskStatusComputerUpdating" = "%1$@ is updating";
 "taskTabActivity" = "Activity";
 "taskTabCards" = "Cards";

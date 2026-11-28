@@ -112108,6 +112108,87 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Waiting for ${tasks} to ship in a release`;
   }
+  function taskReleaseCheckClosed() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أبلغ فحص الإصدار`;
+      case "de":
+        return `die Versionsprüfung hat gemeldet`;
+      case "es":
+        return `la comprobación de versiones informó`;
+      case "fr":
+        return `la vérification des versions a répondu`;
+      case "ja":
+        return `リリース確認が報告しました`;
+      case "ko":
+        return `릴리스 확인이 보고했어요`;
+      case "pt-BR":
+        return `a verificação de versões informou`;
+      case "zh-Hans":
+        return `版本检查已报告`;
+      case "zh-Hant":
+        return `版本檢查已回報`;
+      case "en-XA":
+        return `[ţĥé ŕéļéášé çĥéçķ ŕéþöŕţéð ~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮the release check reported‬`;
+    }
+    return `the release check reported`;
+  }
+  function taskReleaseCheckReported() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `أبلغ فحص الإصدار بما وجده.`;
+      case "de":
+        return `Die Versionsprüfung hat gemeldet, was sie gefunden hat.`;
+      case "es":
+        return `La comprobación de versiones informó de lo que encontró.`;
+      case "fr":
+        return `La vérification des versions a indiqué ce qu’elle a trouvé.`;
+      case "ja":
+        return `リリース確認が見つけた内容を報告しました。`;
+      case "ko":
+        return `릴리스 확인이 찾은 내용을 보고했어요.`;
+      case "pt-BR":
+        return `A verificação de versões informou o que encontrou.`;
+      case "zh-Hans":
+        return `版本检查已报告它的发现。`;
+      case "zh-Hant":
+        return `版本檢查已回報它的發現。`;
+      case "en-XA":
+        return `[Ţĥé ŕéļéášé çĥéçķ ŕéþöŕţéð ŵĥáţ îţ ƒöûñð. ~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮The release check reported what it found.‬`;
+    }
+    return `The release check reported what it found.`;
+  }
+  function taskReleaseCheckTitle() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `البحث عن أول إصدار يضم العمل المدمج`;
+      case "de":
+        return `Erste Version mit der zusammengeführten Arbeit finden`;
+      case "es":
+        return `Encontrar la primera versión con el trabajo fusionado`;
+      case "fr":
+        return `Trouver la première version contenant le travail fusionné`;
+      case "ja":
+        return `マージ済みの作業を最初に含んだリリースを探す`;
+      case "ko":
+        return `병합된 작업이 처음 포함된 릴리스 찾기`;
+      case "pt-BR":
+        return `Encontrar a primeira versão com o trabalho mesclado`;
+      case "zh-Hans":
+        return `查找首个包含已合并工作的版本`;
+      case "zh-Hant":
+        return `查找首個包含已合併工作的版本`;
+      case "en-XA":
+        return `[Ƒîñð ţĥé ƒîŕšţ ŕéļéášé öƒ ɱéŕĝéð ŵöŕķ ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Find the first release of merged work‬`;
+    }
+    return `Find the first release of merged work`;
+  }
   function taskStatusComputerUpdating(input2) {
     const computer = input2.computer;
     switch (currentLanguage()) {
@@ -122289,6 +122370,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskPinPin,
     taskPinUnpin,
     taskQueueWaitRelease,
+    taskReleaseCheckClosed,
+    taskReleaseCheckReported,
+    taskReleaseCheckTitle,
     taskStatusComputerUpdating,
     taskTabActivity,
     taskTabCards,
@@ -126096,6 +126180,9 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskPinPin": [],
     "taskPinUnpin": [],
     "taskQueueWaitRelease": ["tasks"],
+    "taskReleaseCheckClosed": [],
+    "taskReleaseCheckReported": [],
+    "taskReleaseCheckTitle": [],
     "taskStatusComputerUpdating": ["computer"],
     "taskTabActivity": [],
     "taskTabCards": [],
@@ -143007,7 +143094,7 @@ ${startersHtml()}`;
      * The host filed this task to work in place, in its project's own folder,
      * with no working copy, branch, pull request or completion decision
      * (INF-549, docs/task-record.md "A folder a merge left behind"). Only the
-     * host writes it, in one of two shapes.
+     * host writes it, in one of three shapes.
      *
      * A folder a merge left behind, or one missing or behind where other work
      * found it (INF-572), carries the facts the folder was refused on: the default branch, the merged version the folder must reach
@@ -143018,7 +143105,12 @@ ${startersHtml()}`;
      * A pull request an abandoned task could not close carries that pull
      * request (`pull`): the host closes the task once it reads it closed.
      *
-     * The host renders the brief from either at each start.
+     * A release check carries the merged tasks it was filed for (`release`):
+     * work a release-moment side-effect task waits on with no recorded first
+     * release (docs/task-record.md, "A release check"). The host closes it once
+     * its crewmate reported.
+     *
+     * The host renders the brief from each at each start.
      *
      * Work the first mate declared works in the project's folder
      * (`in_folder` on its ask, INF-567) carries `folder: true`: its brief is
@@ -143058,6 +143150,17 @@ ${startersHtml()}`;
         /** The abandoned task that opened it, by key and by id. */
         after: string().optional(),
         after_id: string()
+      }),
+      object({
+        release: object({
+          /** The merged tasks it looks for, by id, as the host listed them when it filed the check. */
+          tasks: array(string()),
+          /**
+           * A digest of the tags origin held when the host filed it, or absent
+           * when the read failed: another digest starts the next check sooner.
+           */
+          tags: string().optional()
+        })
       }),
       object({ folder: literal(true) })
     ]).optional()

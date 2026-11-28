@@ -13,6 +13,7 @@ import {
   isFolderRepair,
   isFolderWork,
   isPullRepair,
+  isReleaseCheck,
   levelDefaultReasoning,
   type WorkShape,
 } from "@shared/routingPolicy";
@@ -919,6 +920,8 @@ export class CrewStarts {
           ? renderIntentBrief(record.intent, undefined, undefined, where)
           : record.prompt;
       }
+      if (isReleaseCheck(shape.in_place))
+        return this.core.inPlaceWork.releaseChecks.brief(repo, shape.in_place);
       return isPullRepair(shape.in_place)
         ? renderPullRepairBrief({ ...shape.in_place, ...where })
         : this.core.inPlaceWork.folderRepairBrief(repo, shape.in_place);

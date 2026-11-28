@@ -130,6 +130,7 @@ export type ReportSortRule =
   | "in-backlog"
   | "waits-unstarted"
   | "program-part"
+  | "host-check"
   | "still-moving"
   | "captain-gate"
   | "step-answered"
@@ -375,6 +376,11 @@ export type ReportSortFacts = Witnesses & {
    * its call waits for (`ProgramRunner.awaits`, INF-799 piece 2).
    */
   programPart?: boolean;
+  /**
+   * The task is the host's own release check (`in_place.release`,
+   * docs/task-record.md "A release check"): the host closes it on its report.
+   */
+  hostCheck?: boolean;
 };
 
 export type ReportSortResult = {
@@ -529,6 +535,16 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       verdict: "routine",
       wake: false,
       reason: "a program's part reported the answer its program waits for; the program reads it.",
+    };
+  }
+  if (facts.hostCheck) {
+    return {
+      rule: "host-check",
+      verdict: "routine",
+      wake: false,
+      // i18n-exempt: the sort's record for the first mate and the replay scorer
+      reason:
+        "the host's own release check reported; the record already holds what it declared and the host closes it.",
     };
   }
   if (stillMoving(facts)) {

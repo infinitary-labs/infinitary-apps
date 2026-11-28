@@ -23,6 +23,7 @@ import { SUPERVISOR_STEER, type TaskRuntime } from "./crewRuntime";
 import { JOB_BOUND_MS } from "./idleLadder";
 import { retireLeftoverBranches } from "./leftoverBranches";
 import { MainCheckWatcher } from "./mainCheckWake";
+import { RELEASE_LOOK_MS } from "./releaseChecks";
 import { RunWatcher } from "./runWatch";
 import { ModelWaitError, NotAcceptedError } from "./taskMoves";
 import type { Ticker } from "./ticker";
@@ -321,6 +322,9 @@ export class CrewWatch {
       ticker.register("gate-sweep", WATCHDOG_TICK_MS, (now) => this.sweepGates(now)),
       ticker.register("in-place-folders", WATCHDOG_TICK_MS, () =>
         this.core.inPlaceWork.closeCurrentFolders(),
+      ),
+      ticker.register("release-checks", RELEASE_LOOK_MS, () =>
+        this.core.inPlaceWork.releaseChecks.look(),
       ),
       ticker.register("check-watch", WATCHDOG_TICK_MS, (now) => this.pollCheckWatches(now)),
       ticker.register("kept-merges", WATCHDOG_TICK_MS, (now) =>

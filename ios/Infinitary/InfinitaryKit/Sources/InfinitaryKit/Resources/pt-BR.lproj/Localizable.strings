@@ -4516,6 +4516,9 @@
 "taskPinPin" = "Fixar";
 "taskPinUnpin" = "Desafixar";
 "taskQueueWaitRelease" = "Aguardando %1$@ sair em uma versão";
+"taskReleaseCheckClosed" = "a verificação de versões informou";
+"taskReleaseCheckReported" = "A verificação de versões informou o que encontrou.";
+"taskReleaseCheckTitle" = "Encontrar a primeira versão com o trabalho mesclado";
 "taskStatusComputerUpdating" = "%1$@ está atualizando";
 "taskTabActivity" = "Atividade";
 "taskTabCards" = "Cartões";

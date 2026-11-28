@@ -4516,6 +4516,9 @@
 "taskPinPin" = "Anheften";
 "taskPinUnpin" = "Nicht mehr anheften";
 "taskQueueWaitRelease" = "Wartet, bis %1$@ in einer Version erscheint";
+"taskReleaseCheckClosed" = "die Versionsprüfung hat gemeldet";
+"taskReleaseCheckReported" = "Die Versionsprüfung hat gemeldet, was sie gefunden hat.";
+"taskReleaseCheckTitle" = "Erste Version mit der zusammengeführten Arbeit finden";
 "taskStatusComputerUpdating" = "%1$@ wird aktualisiert";
 "taskTabActivity" = "Aktivität";
 "taskTabCards" = "Karten";

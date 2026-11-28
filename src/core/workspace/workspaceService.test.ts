@@ -1220,6 +1220,20 @@ describe("refreshManagedCheckout", () => {
       });
       expect(await workspace.folderDefaultBranch(local)).toBe("");
     });
+
+    // INF-7198's plan, Part 2: a release check starts sooner once origin holds a tag its last
+    // check did not see, read without changing the folder.
+    it("reads origin's tags without changing the folder: another tag there changes the read", async () => {
+      const { workspace, local, merged } = await behindOrigin();
+      const remote = await git(local, ["remote", "get-url", "origin"]);
+      const before = await workspace.originTags(local);
+      expect(await workspace.originTags(local)).toBe(before);
+      await git(remote, ["tag", "v1.4.0", merged]);
+      expect(await workspace.originTags(local)).not.toBe(before);
+      expect(await git(local, ["tag", "--list"])).toBe("");
+      rmSync(remote, { recursive: true, force: true });
+      await expect(workspace.originTags(local)).rejects.toThrow();
+    });
   });
 
   /**

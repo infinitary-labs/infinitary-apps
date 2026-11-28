@@ -5,6 +5,7 @@ import {
   type FolderRefreshRefusal,
   folderRefreshWords,
 } from "@shared/folderRefresh";
+import * as m from "@shared/i18n/messages.generated";
 import type { RepoView } from "@shared/repos";
 import {
   type InPlaceFacts,
@@ -12,6 +13,7 @@ import {
   isFolderRepair,
   isFolderWork,
   isPullRepair,
+  isReleaseCheck,
   type WorkShape,
 } from "@shared/routingPolicy";
 import { KIND_SOURCE } from "../routing/kindClassifier";
@@ -28,6 +30,7 @@ import {
   renderFolderRepairBrief,
   renderPullRepairBrief,
 } from "./intentBrief";
+import { ReleaseChecks } from "./releaseChecks";
 import type { SettleOwners } from "./settleOwners";
 import { folderMissingText } from "./settleWords";
 
@@ -59,11 +62,15 @@ export type InPlaceWorkHost = {
 export class InPlaceWork {
   /** Folder repairs whose folder is being read now, so one tick reads each once. */
   private readonly closingFolders = new Set<string>();
+  /** The host's release check for each project with work waiting on a release. */
+  readonly releaseChecks: ReleaseChecks;
 
   constructor(
     private readonly options: CrewSupervisorOptions,
     private readonly host: InPlaceWorkHost,
-  ) {}
+  ) {
+    this.releaseChecks = new ReleaseChecks(options, host);
+  }
 
   /**
    * The host's own task for a project folder a merge could not bring up to
@@ -337,7 +344,8 @@ export class InPlaceWork {
    * The closing half of a task that works in place (INF-549): it closes as
    * settled, with a feed line, once the host reads what it was for done - a
    * folder clean, on the default branch and at or past the merged version,
-   * or a pull request closed where the project lives. A crewmate mid-turn,
+   * a pull request closed where the project lives, or a release check that
+   * reported. A crewmate mid-turn,
    * or a card of the task's still up, keeps it open.
    */
   async closeCurrentFolders(): Promise<void> {
@@ -352,7 +360,9 @@ export class InPlaceWork {
       if (this.host.cards.snapshot().some((card) => card.taskId === record.id)) continue;
       this.closingFolders.add(record.id);
       try {
-        const line = await this.inPlaceDone(facts, repo.path);
+        const line = isReleaseCheck(facts)
+          ? this.releaseCheckDone(record)
+          : await this.inPlaceDone(facts, repo.path);
         if (!line) continue;
         const now = this.options.tasks.get(record.id);
         if (!now || TaskService.isClosed(now)) continue;
@@ -367,13 +377,28 @@ export class InPlaceWork {
           status: "done",
           reason: "finished",
           actor: "host",
-          text: isPullRepair(facts) ? "the pull request is closed" : "the folder is up to date",
+          text: isPullRepair(facts)
+            ? "the pull request is closed"
+            : isReleaseCheck(facts)
+              ? m.taskReleaseCheckClosed()
+              : "the folder is up to date",
           feed: false,
         });
       } finally {
         this.closingFolders.delete(record.id);
       }
     }
+  }
+
+  /**
+   * A release check is done once its crewmate reported what it found: each
+   * release it verified is already recorded from that report, and work still
+   * unreleased waits for the next check (docs/task-record.md, "A release check").
+   */
+  private releaseCheckDone(record: TaskRecord): string | undefined {
+    return this.options.tasks.lastReportAt(record.id) === undefined
+      ? undefined
+      : m.taskReleaseCheckReported();
   }
 
   /**

@@ -71,8 +71,15 @@ public struct PhoneNotice: Equatable, Sendable {
     /// INF-2820 piece 2, the captain's "Its own, saved on the phone for each computer": the project last picked in the
     /// Filter sheet for this computer, kept on the phone by its pin; `projectFocus` is the one that holds.
     public var savedProjectFocus: String? {
-        didSet { PhoneProjectFocus.save(savedProjectFocus, computer: mac.pin) }
+        didSet {
+            PhoneProjectFocus.save(savedProjectFocus, computer: mac.pin)
+            // A card pointed at stays on Home only until the focus changes (INF-2820 piece 3), so a return to the
+            // earlier project holds it again.
+            if savedProjectFocus != oldValue { letThrough = PhoneProjectFocus.LetThrough() }
+        }
     }
+    /// The held cards the captain pointed at under the focus that holds now (`pointAt`).
+    public private(set) var letThrough = PhoneProjectFocus.LetThrough()
     public private(set) var lastTurn: PhoneLastTurn?
     /// INF-6366: the conversation's newest rounds for the strip, nil before the first read and while the computer
     /// cannot answer it; the strip then shows the last turn alone (`stripRounds`).
@@ -168,7 +175,17 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var homeGroupsCrew = false
     /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
     /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
-    public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
+    public var openStack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
+    /// Home's row, pager and NEW count: `openStack` less the cards the project focus holds back (INF-2820 piece 3). A
+    /// held card is neither closed, put aside nor written, so every other screen sees it as before.
+    public var stack: [PhoneCard] {
+        PhoneProjectFocus.shown(openStack, focus: projectFocus, board: board, letThrough: letThrough)
+    }
+
+    /// A card the captain pointed at comes forward on Home without moving the focus, until the focus changes: a
+    /// notification's or the in-app notice's tap, a Tasks row, a record's Cards row, a Conversation tile, a panel or the
+    /// first mate showing it. Called before the card is looked for on the stack, so a held one is there to show.
+    public func pointAt(_ card: String) { letThrough.point(at: card, under: projectFocus) }
     public var unreadCards: Int { stack.filter { !hasSeen($0) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     /// The computer's welcome said it hears a phone's plain-text messages while the phone only reads (the

@@ -132,5 +132,8 @@
   "project-filter": {
     "iphone": 106324,
     "ipad": 118927
+  },
+  "project-filter-cards": {
+    "iphone": 120000
   }
 }

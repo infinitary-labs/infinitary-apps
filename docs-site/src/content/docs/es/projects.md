@@ -1,5 +1,5 @@
 ---
-source: 5f14e68d0589e6f3
+source: 072cf3b1f029fa0a
 title: Proyectos
 description: Cómo agregar un proyecto a Infinitary, reunir varios repositorios en uno, darle etiquetas, centrar la ventana en uno, elegir cómo se fusionan sus cambios y quitarlo.
 ---
@@ -147,6 +147,7 @@ Infinitary recuerda tu centro cuando lo reinicias.
 En tu iPhone o iPad, toca **Filtro** a la derecha de la barra superior para centrar el teléfono en un proyecto.
 El teléfono guarda su propio enfoque para cada computadora, aparte del de tu computadora.
 Mientras está activo, una fila bajo la barra superior nombra el proyecto; toca su **×** para volver a ver todos los proyectos.
+Como en tu computadora, las tarjetas de otros proyectos esperan fuera de **Inicio** hasta que eliges su proyecto o **Todos los proyectos**; toca la notificación de una tarjeta para verla de todos modos.
 
 ## Cómo llegan los cambios a tu proyecto {#how-changes-reach-your-project}
 

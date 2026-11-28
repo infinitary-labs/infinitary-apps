@@ -23,6 +23,21 @@ const MESSAGES = {
   all: "Which pier needs the most work this week?",
 } as const;
 
+/**
+ * INF-2820 piece 3's project-filter-cards part: south-pier's later decisions, each arriving while the phone is focused
+ * on north-pier, so Home holds it back until All projects or a tap on its notice.
+ */
+const LATER_CARDS = {
+  "project-filter-card-post": {
+    id: "south-pier-post",
+    title: "Which post should hold the new lamp?",
+  },
+  "project-filter-card-hour": {
+    id: "south-pier-hour",
+    title: "What hour should the new lamp light?",
+  },
+} as const;
+
 type Writes = readonly { channel: string; args: unknown[] }[];
 
 /** One control request of this part, or undefined for one it does not own. */
@@ -47,10 +62,35 @@ export async function projectFilterCommand(
       await until(() => sent() !== undefined);
       return sent();
     }
+    case "project-filter-card-post":
+    case "project-filter-card-hour": {
+      const { id, title } = LATER_CARDS[command];
+      const task = core.services.tasks.get(SOUTH_PIER_TASK);
+      if (!task) throw new Error("The project-filter fixture is not seeded");
+      const cards = core.services.supervisor.cards;
+      cards.emitCrewmateCard(
+        task.id,
+        {
+          id,
+          title,
+          body: "<p>Both fit; the captain picks.</p>",
+          actions: [
+            { id: "first", label: "The first", default: true },
+            { id: "second", label: "The second" },
+          ],
+        },
+        "crew",
+      );
+      cards.closeOut({ kind: "crewmate", taskId: task.id }, "idle");
+      return { title };
+    }
     default:
       return undefined;
   }
 }
+
+/** South-pier's one task, whose decision waits on the captain (`seedProjects`). */
+const SOUTH_PIER_TASK = "project-filter-spr-0";
 
 /** Added through the setup a person uses, once per home: a later call finds each project by name. */
 async function seedProjects(core: Core) {

@@ -768,6 +768,8 @@
 "commandMoveRightWords" = "方向键, 右, 下一个";
 "commandMoveUp" = "向上移动";
 "commandMoveUpWords" = "方向键, 上, 上一个";
+"commandNoticeMacLogUnreadable" = "无法启动你的大副。此账户无法读取可能说明原因的 macOS 日志。";
+"commandNoticeMacReason" = "macOS 无法启动你的大副：%1$@";
 "commandNoticeNotAnsweringRetry" = "你的大副正在运行，但没有响应。等它，或者在这里开始以重新连接它。";
 "commandNoticeStopping" = "正在停止你的大副。它停止后，这个窗口会在这里开始它。";
 "commandNoticeWindowCrashed" = "你的大副没有说明原因就停止了，尚未重新开始。在这里开始它，即可让它重新开始。";

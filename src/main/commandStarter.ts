@@ -17,6 +17,7 @@ import { hostPlatform } from "@core/platform";
 import { runLabelOf } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
 import type { BuildFlavor } from "@shared/userDataFolders";
+import { type MacStartReason, readMacStartReason } from "./macStartReason";
 import { userUnitsDir } from "./startAtBoot";
 import { carriedRunEnv, windowsSchtasks } from "./startAtBootContext";
 import type { WorkContext } from "./workContext";
@@ -30,6 +31,7 @@ import type { WorkContext } from "./workContext";
 export type CommandStarter = {
   /** Sets the agent up and starts the run; false where it cannot start here. */
   start: () => Promise<boolean>;
+  macStartReason?: (startedAt: number) => Promise<MacStartReason>;
   /** Start at login, for the command rather than the window. */
   atLogin: { get: () => boolean; set: (enabled: boolean) => void };
   /** Whether its agent is in place, as a start entry that starts the run again. */
@@ -131,6 +133,12 @@ export function commandStarter(options: {
     ...manager,
   };
   return {
+    ...(hostPlatform() === "darwin" && options.packaged
+      ? {
+          macStartReason: (startedAt: number) =>
+            readMacStartReason(context.uid, context.label, startedAt),
+        }
+      : {}),
     start: async () => {
       try {
         return (await startRunAgent(context)) === "running";

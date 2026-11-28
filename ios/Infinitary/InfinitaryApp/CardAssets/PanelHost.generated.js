@@ -28780,6 +28780,61 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `arrow, up, previous`;
   }
+  function commandNoticeMacLogUnreadable() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `تعذّر بدء نائب القبطان. لا يستطيع هذا الحساب قراءة سجل macOS الذي قد يوضح السبب.`;
+      case "de":
+        return `Dein erster Offizier konnte nicht starten. Dieses Konto kann das macOS-Protokoll, das den Grund nennen könnte, nicht lesen.`;
+      case "es":
+        return `Tu primer oficial no pudo iniciarse. Esta cuenta no puede leer el registro de macOS que podría explicar por qué.`;
+      case "fr":
+        return `Votre second n’a pas pu démarrer. Ce compte ne peut pas lire le journal macOS qui pourrait en indiquer la raison.`;
+      case "ja":
+        return `一等航海士を開始できませんでした。このアカウントでは、理由が記録されている可能性があるmacOSのログを読めません。`;
+      case "ko":
+        return `일등항해사를 시작하지 못했어요. 이 계정은 이유가 있을 수 있는 macOS 로그를 읽을 수 없어요.`;
+      case "pt-BR":
+        return `Seu imediato não conseguiu iniciar. Esta conta não pode ler o registro do macOS que pode explicar por quê.`;
+      case "zh-Hans":
+        return `无法启动你的大副。此账户无法读取可能说明原因的 macOS 日志。`;
+      case "zh-Hant":
+        return `無法啟動你的大副。此帳號無法讀取可能說明原因的 macOS 記錄。`;
+      case "en-XA":
+        return `[Ýöûŕ ƒîŕšţ ɱáţé çöûļð ñöţ šţáŕţ. Ţĥîš áççöûñţ çáññöţ ŕéáð ţĥé ɱáçÖŠ ļöĝ ţĥáţ ɱáý šáý ŵĥý. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your first mate could not start. This account cannot read the macOS log that may say why.‬`;
+    }
+    return `Your first mate could not start. This account cannot read the macOS log that may say why.`;
+  }
+  function commandNoticeMacReason(input2) {
+    const reason = input2.reason;
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم يتمكن macOS من بدء نائب القبطان: ${reason}`;
+      case "de":
+        return `macOS konnte deinen ersten Offizier nicht starten: ${reason}`;
+      case "es":
+        return `macOS no pudo iniciar a tu primer oficial: ${reason}`;
+      case "fr":
+        return `macOS n’a pas pu démarrer votre second : ${reason}`;
+      case "ja":
+        return `macOSは一等航海士を開始できませんでした: ${reason}`;
+      case "ko":
+        return `macOS가 일등항해사를 시작하지 못했어요: ${reason}`;
+      case "pt-BR":
+        return `O macOS não conseguiu iniciar seu imediato: ${reason}`;
+      case "zh-Hans":
+        return `macOS 无法启动你的大副：${reason}`;
+      case "zh-Hant":
+        return `macOS 無法啟動你的大副：${reason}`;
+      case "en-XA":
+        return `[ɱáçÖŠ çöûļð ñöţ šţáŕţ ýöûŕ ƒîŕšţ ɱáţé: ${reason} ~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮macOS could not start your first mate: ‬${reason}`;
+    }
+    return `macOS could not start your first mate: ${reason}`;
+  }
   function commandNoticeNotAnsweringRetry() {
     switch (currentLanguage()) {
       case "ar":
@@ -119563,6 +119618,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     commandMoveRightWords,
     commandMoveUp,
     commandMoveUpWords,
+    commandNoticeMacLogUnreadable,
+    commandNoticeMacReason,
     commandNoticeNotAnsweringRetry,
     commandNoticeStopping,
     commandNoticeWindowCrashed,
@@ -123367,6 +123424,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "commandMoveRightWords": [],
     "commandMoveUp": [],
     "commandMoveUpWords": [],
+    "commandNoticeMacLogUnreadable": [],
+    "commandNoticeMacReason": ["reason"],
     "commandNoticeNotAnsweringRetry": [],
     "commandNoticeStopping": [],
     "commandNoticeWindowCrashed": [],
@@ -133861,7 +133920,11 @@ ${FRAME_KEYBOARD_SCRIPT}
      * Start it here then stops nothing, and the app starting again connects
      * to whichever run is there; the line says so.
      */
-    retries: literal(true).optional()
+    retries: literal(true).optional(),
+    macStartDiagnostic: discriminatedUnion("kind", [
+      strictObject({ kind: literal("reason"), text: string() }),
+      strictObject({ kind: literal("unreadable") })
+    ]).optional()
   });
   const saidTimeSchema = strictObject({ time: number() });
   const leafFillSchema = union([string(), number(), saidTimeSchema]);

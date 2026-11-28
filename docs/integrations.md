@@ -192,6 +192,7 @@ What happens next is the rule's own words: the app names no workflow, branch, re
 ## MCP servers
 
 An MCP server is added by its name and what it runs (`src/core/integrations/providers/mcp/`, INF-781): a program and its arguments, or the server's https address.
+The name takes at most 64 characters and what it runs at most 2,048 (`INTEGRATION_NAME_MAX` and `MCP_RUNS_MAX` in `src/shared/integrations.ts`): Settings' form says which field is over before Connect can send, and the boundary's refusal of a longer one names the field and its limit (`parseInvokeRequest` in `src/shared/ipc.ts`).
 Each successful addition through Settings or `app_change` keeps its own completed operation and attributed Activity line, naming the added server; a refused addition writes neither.
 The binding speaks MCP through the SDK's second version (`@modelcontextprotocol/client`), which reaches a server in either protocol era, the 2025 one or 2026-07-28's; the first version stays for the in-process Claude tool server.
 What it runs is read by no shell (`runs.ts`): quotes group words, leading `NAME=value` words set the program's environment, and a pipe, a redirect, a `$` or a backtick is refused in words.

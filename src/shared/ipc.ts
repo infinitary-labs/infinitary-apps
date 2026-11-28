@@ -257,9 +257,29 @@ export function parseInvokeRequest<C extends InvokeChannel>(
 ): InvokeRequest<C> {
   const parsed = invokeContract[channel].request.safeParse(rawArgs);
   if (!parsed.success) {
-    throw new Error(`Rejected ${channel}: malformed request`);
+    throw new Error(`Rejected ${channel}: ${refusalReason(parsed.error.issues)}`);
   }
   return parsed.data as InvokeRequest<C>;
+}
+
+/**
+ * Why a request was refused. A string over its limit names its field and
+ * the limit, since a caller can fix that by itself (INF-7147: an MCP
+ * server's long name read as "malformed request"); any other refusal stays
+ * "malformed request", which says nothing of the request's shape.
+ */
+function refusalReason(issues: readonly z.core.$ZodIssue[]): string {
+  const tooLong = issues.map((issue) => {
+    const field = issue.path.findLast((key) => typeof key === "string");
+    return issue.code === "too_big" && issue.origin === "string" && field !== undefined
+      ? // i18n-exempt: a refusal for the program that sent the request; a form words its own limit first
+        `${field} is longer than ${issue.maximum} characters`
+      : undefined;
+  });
+  return tooLong.length > 0 && tooLong.every((reason) => reason !== undefined)
+    ? tooLong.join("; ")
+    : // i18n-exempt: a refusal for the program that sent the request, as it always read
+      "malformed request";
 }
 
 /**

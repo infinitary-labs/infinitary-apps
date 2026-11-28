@@ -1315,6 +1315,7 @@
 "integrationsGoogleStops" = "يتوقف %1$@";
 "integrationsGoogleStopsDetail" = "هذا العميل ليس في الوضع الشخصي، لذا تُنهي Google تسجيل دخوله %1$@. أعدّ عميلًا في الوضع الشخصي ليبقى Google متصلًا.";
 "integrationsMcpAdd" = "إضافة %1$@";
+"integrationsMcpNameTooLong" = "يمكن أن يصل طول الاسم إلى %1$@ حرفًا على الأكثر.";
 "integrationsMcpNeedsSignIn" = "يحتاج إلى تسجيل الدخول مجددًا";
 "integrationsMcpOfferBody" = "يطلب %1$@ تسجيل الدخول، وتُجريه في متصفحك. بعدها تسألك أدواته في بطاقة حتى تختار «مسموح دائمًا».";
 "integrationsMcpOfferButton" = "فتح التكاملات";
@@ -1326,6 +1327,7 @@
 "integrationsMcpRevokeOperation" = "إبلاغ %1$@ بنسيان تسجيل الدخول الذي أزلته";
 "integrationsMcpRevokeReason" = "يطلب Infinitary من %1$@ نسيان تسجيل الدخول الذي أزلته.";
 "integrationsMcpRevokeResult" = "لا يُحفظ شيء: ينتهي تسجيل الدخول هناك";
+"integrationsMcpRunsTooLong" = "يمكن أن يصل طول ما يشغّله إلى %1$@ حرفًا على الأكثر.";
 "integrationsSignInAgain" = "فتح الصفحة مرة أخرى";
 "integrationsSignInCancel" = "إلغاء";
 "integrationsSignInCancelled" = "أُلغي تسجيل الدخول.";

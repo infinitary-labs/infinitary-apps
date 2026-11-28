@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "idle-crewmate-behind-heard-notice",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Your first mate notices a crewmate that stopped while an old notice still waited for it",
+      "body": "A crewmate that reported and stopped could look busy to your first mate for hours when only a notice it had already heard, such as a change to the task's rigor, or a message left long undelivered, still waited for it. Your first mate is now told when such a crewmate reports, and reminded if it stays idle.",
+      "noPicture": "This changes when your first mate hears about idle work, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

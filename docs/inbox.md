@@ -74,7 +74,8 @@ The same provider refusal in a row is no outage that waiting ends: the retry wou
 - While nobody answers, the lane holds nothing deliverable, so the task counts as idle and the idle ladder's reminders and then the stall card follow.
 - A task on a computer that runs work moves among that computer's own sign-ins, so its notice names another model only when one of those serves it.
 
-While a lane's guidance is deliverable, the idle ladder reads the task as moving (`docs/report-sort.md`, "The idle ladder").
+While a lane holds guidance a turn would serve, due or last tried within the last 15 minutes or waiting out its backoff, the idle ladder reads the task as moving (`docs/report-sort.md`, "The idle ladder").
+A notice alone, or a row the sweep left past that bound, does not count: it would hide idle work for as long as it stayed.
 The inbox sweep keeps an unfinished task's lane when its saved conversation is absent or its recorded activity is not yet resumable; neither fact makes the task gone.
 A newly due wake, including an observed prerequisite merge, cannot send that task's older escalated guidance to orphan cleanup.
 

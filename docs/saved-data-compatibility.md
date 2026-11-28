@@ -636,6 +636,10 @@ Such an ask is saved already taken, so an older build ignores the field and neve
 
 An integration ask among a task's `writeAsks` may carry an optional `confirm`: a place's own question about that call, its choices and the state that answers it (`docs/integrations.md`, "Google"); it rides the existing JSON and adds no migration.
 An older build shows such an ask as an ordinary approval card, and its Only this time runs the call without the answer, so Google asks again and the call stays unrun.
+`confirm` may also carry `question`, Google's question line, and `asker`, the service that asks (Gmail, Google Calendar); a question kept before them lacks both, and its card names the place and shows no question line.
+A card action's `request_write` effect may carry `pick`, the one Google choice its button sends; it rides the card's existing JSON.
+A Google question card left open from a build before `pick` keeps its old Send to Google button, which carries no pick: its click is refused as picking none of Google's choices, nothing runs, and the asker can call again to raise the new card.
+An older build drops `pick` as an unknown field and reads the choice from the card's form, which the new card has none of, so its click is refused the same way and the call stays unrun.
 
 ## Task tags
 

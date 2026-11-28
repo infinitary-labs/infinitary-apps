@@ -1,10 +1,5 @@
 import { type IntegrationApprovalChoice, NOT_ALLOWED_WHY } from "@shared/integrations";
-import {
-  allowanceCovers,
-  buildRowChoiceOf,
-  confirmPickOf,
-  type IntegrationAllowance,
-} from "@shared/writeAsk";
+import { allowanceCovers, buildRowChoiceOf, type IntegrationAllowance } from "@shared/writeAsk";
 import type { IntegrationAskTaken } from "../integrations";
 import { TaskService } from "../tasks/taskService";
 import { addressesRowIssue, heldForDontFileWhy } from "./buildRows";
@@ -51,6 +46,8 @@ export class CardWriteAsks {
    * A reader's Build row is never sent: the click files it as the captain
    * picked on its row (`BuildRows.answer`). A write to an issue whose row
    * the captain marked Don't file on this click is held back, never sent.
+   * `pick` is the place's own choice the clicked button carries, for the
+   * question `askId` names (Google's confirmation).
    */
   async answerIntegrationCard(
     cardId: string,
@@ -59,6 +56,7 @@ export class CardWriteAsks {
     choice: IntegrationApprovalChoice,
     notAllowed: readonly string[],
     answers?: readonly { name: string; values: readonly string[] }[],
+    pick?: string,
   ): Promise<void> {
     const delivery = this.core.options.tasks.delivery;
     const send = this.core.options.sendTakenIntegrationAsk;
@@ -106,7 +104,7 @@ export class CardWriteAsks {
       }
       const sending = build
         ? this.core.buildRows.answer(taskId, build, as, buildRowChoiceOf(answers, id))
-        : send(taskId, took, as, confirmPickOf(answers, id));
+        : send(taskId, took, as, id === askId ? pick : undefined);
       const sent: WriteAskSent = await sending.catch((caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in took ? took.ask : undefined;

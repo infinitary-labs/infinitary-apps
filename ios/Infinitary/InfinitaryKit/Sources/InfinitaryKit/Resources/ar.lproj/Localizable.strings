@@ -1276,15 +1276,9 @@
 "handoverWontStopText" = "طلب %1$@ منه أن يحفظ ويتوقف، ولا يزال يُبقي عملك المحفوظ مفتوحًا. يُنهيه «إيقافه الآن» دون انتظار. لم يتغير شيء.";
 "handoverWontStopTitle" = "لم يتوقف %1$@";
 "integrationsClientFileNotTaken" = "لا يقبل %1$@ ملف عميل في هذا الإصدار من Infinitary.";
-"integrationsConfirmChoice" = "ردّك على %1$@";
-"integrationsConfirmLeadFirstmate" = "طلب نائب القبطان تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف %1$@ الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.";
-"integrationsConfirmLeadPanel" = "طلبت لوحتك «%1$@» تشغيل هذا، وسمح لها Infinitary بالمتابعة. أوقف %2$@ الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.";
-"integrationsConfirmLeadTask" = "طلب فرد الطاقم في «%2$@» تشغيل هذا، وسمح له Infinitary بالمتابعة. أوقف %1$@ الاستدعاء ليسألك أولًا، لذا لم يُشغَّل شيء بعد.";
+"integrationsConfirmKeeps" = "يحتفظ %1$@ بأي خيار «دائمًا»، لا Infinitary.";
 "integrationsConfirmNotNow" = "ليس الآن";
-"integrationsConfirmSend" = "إرسال إلى %1$@";
-"integrationsConfirmTitle" = "يطلب منك %2$@ تأكيد «%1$@»";
-"integrationsConfirmWays" = "يرسل «إرسال إلى %1$@» الردّ الذي اخترته مرة واحدة، ثم يشغّل %1$@ الاستدعاء أو يوقفه حسب اختيارك. ولا يرسل «ليس الآن» شيئًا، ولا يُشغَّل الاستدعاء.";
-"integrationsConfirmWords" = "بكلمات %1$@";
+"integrationsConfirmTitle" = "يسأل %2$@ قبل «%1$@»";
 "integrationsConnectOfferBody" = "بعدها يستطيع نائب القبطان والطاقم الوصول إلى %1$@ بتسجيل دخولك. كل إجراء من إجراءاته، بما في ذلك إجراءات القراءة، يسألك في بطاقة حتى تختار «مسموح دائمًا».";
 "integrationsConnectOfferButton" = "فتح التكاملات";
 "integrationsConnectOfferNotNow" = "ليس الآن";

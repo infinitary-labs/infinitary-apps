@@ -1276,15 +1276,9 @@
 "handoverWontStopText" = "%1$@ le pidió que guardara y se detuviera, y todavía tiene abierto tu trabajo guardado. Detenerlo ahora lo cierra sin esperar. No se ha cambiado nada.";
 "handoverWontStopTitle" = "%1$@ no se ha detenido";
 "integrationsClientFileNotTaken" = "%1$@ no acepta archivos de cliente en esta versión de Infinitary.";
-"integrationsConfirmChoice" = "Tu respuesta a %1$@";
-"integrationsConfirmLeadFirstmate" = "Tu primer oficial pidió ejecutar esto, e Infinitary lo dejó seguir. %1$@ detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.";
-"integrationsConfirmLeadPanel" = "Tu panel «%1$@» pidió ejecutar esto, e Infinitary lo dejó seguir. %2$@ detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.";
-"integrationsConfirmLeadTask" = "El tripulante de «%2$@» pidió ejecutar esto, e Infinitary lo dejó seguir. %1$@ detuvo la llamada para preguntarte primero, así que todavía no se ha ejecutado nada.";
+"integrationsConfirmKeeps" = "Una opción de «siempre» la guarda %1$@, no Infinitary.";
 "integrationsConfirmNotNow" = "Ahora no";
-"integrationsConfirmSend" = "Enviar a %1$@";
-"integrationsConfirmTitle" = "%2$@ te pide que confirmes «%1$@»";
-"integrationsConfirmWays" = "«Enviar a %1$@» envía una sola vez la respuesta que elegiste, y %1$@ ejecuta o detiene la llamada según tu elección. «Ahora no» no envía nada, y la llamada no se ejecuta.";
-"integrationsConfirmWords" = "En palabras de %1$@";
+"integrationsConfirmTitle" = "%2$@ pregunta antes de «%1$@»";
 "integrationsConnectOfferBody" = "Después, tu primer oficial y tu tripulación pueden acceder a %1$@ con tu sesión. Cada una de sus acciones, incluidas las lecturas, te pregunta en una tarjeta hasta que eliges «Siempre permitida».";
 "integrationsConnectOfferButton" = "Abrir Integraciones";
 "integrationsConnectOfferNotNow" = "Ahora no";

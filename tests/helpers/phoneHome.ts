@@ -65,7 +65,7 @@ import { standInDnsSd } from "./dnsSdStandIn";
 import { phoneCardReadControls } from "./phoneCardReads";
 import { carriedHeard, raiseCarriedCard, showCarriedPast } from "./phoneCarried";
 import { awayTraffic, closeCatchUpBoard, openCatchUpBoard } from "./phoneCatchUp";
-import { clearPhoneCards, raiseReaderCard } from "./phoneCrewCards";
+import { clearPhoneCards, raiseGoogleQuestionCard, raiseReaderCard } from "./phoneCrewCards";
 import { phoneGoogleControls, startPhoneGoogle } from "./phoneGoogle";
 import type {
   PhoneCaretOutcome,
@@ -2161,13 +2161,7 @@ export async function startPhoneHome(
         }
         // INF-4425: a decision with one required question and one the captain may skip, its Default marked.
         case "POST default-card": {
-          for (const card of await core.dispatch("inf:cards:list", []))
-            await core.dispatch(
-              card.noteDone && !card.noteDone.closesTask
-                ? "inf:cards:note-done"
-                : "inf:cards:close",
-              [card.id],
-            );
+          await clearPhoneCards(core);
           const title = "Send the harbour report";
           core.services.supervisor.addFirstmateCard({
             id: "phone-default-card",
@@ -2185,6 +2179,11 @@ export async function startPhoneHome(
           core.services.supervisor.cards.closeOut({ kind: "firstmate" }, "turn-end");
           core.services.supervisor.cards.flushBroadcast();
           result = { title, defaultLine: "Default: Friday" };
+          break;
+        }
+        case "POST google-question-card": {
+          await clearPhoneCards(core);
+          result = raiseGoogleQuestionCard(core);
           break;
         }
         // INF-5445 piece 2: a decision with two required questions, whose draft the phone shares with every other screen.

@@ -18367,6 +18367,11 @@
                               "once",
                               "deny"
                             ]
+                          },
+                          "pick": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
                           }
                         },
                         "required": [
@@ -19859,6 +19864,11 @@
                                 "once",
                                 "deny"
                               ]
+                            },
+                            "pick": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 256
                             }
                           },
                           "required": [
@@ -89002,6 +89012,11 @@
                                     "once",
                                     "deny"
                                   ]
+                                },
+                                "pick": {
+                                  "type": "string",
+                                  "minLength": 1,
+                                  "maxLength": 256
                                 }
                               },
                               "required": [
@@ -104622,6 +104637,11 @@
                               "once",
                               "deny"
                             ]
+                          },
+                          "pick": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
                           }
                         },
                         "required": [

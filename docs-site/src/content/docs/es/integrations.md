@@ -1,5 +1,5 @@
 ---
-source: b1df1c08a3c3c75f
+source: 0304225f18fea486
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -98,9 +98,9 @@ En Calendar pueden enumerar tus calendarios y eventos, leer un evento, encontrar
 Ninguna acción elimina un evento del calendario.
 
 Google puede detener una llamada para preguntarte primero, incluso una que permitiste.
-Entonces Infinitary muestra la pregunta de Google en una tarjeta, con las propias opciones de Google y ninguna elegida.
-No se ejecuta nada hasta que eliges una y presionas **Enviar a Google**; **Ahora no** no envía nada.
-Lo que elijas responde solo a esa llamada.
+Entonces Infinitary muestra la pregunta en una tarjeta que nombra a Gmail o Calendar como quien pregunta, con cada opción de Google como un botón propio, en las palabras de Google.
+No se ejecuta nada hasta que presionas uno, y lo que elijas responde solo a esa llamada.
+Una opción de permitir siempre la guarda Google, no Infinitary.
 
 Lo que leen tu primer oficial y tu tripulación se queda en sus conversaciones guardadas durante 30 días.
 Luego una nota ocupa su lugar.

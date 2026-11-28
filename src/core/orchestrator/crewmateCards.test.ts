@@ -1009,7 +1009,7 @@ describe("integration calls held for the captain", () => {
     h.supervisor.cardActions.act(cardId, "once");
     await tick();
     expect(sendTakenIntegrationAsk).toHaveBeenCalledTimes(1);
-    expect(panelAskAnswered.mock.calls).toEqual([[ask.id, "once"]]);
+    expect(panelAskAnswered.mock.calls).toEqual([[ask.id, false]]);
     expect(h.ops).toEqual([]);
   });
 

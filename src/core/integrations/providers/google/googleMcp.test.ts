@@ -1,7 +1,7 @@
 import { GOOGLE_CLIENTS_PAGE, GOOGLE_MCP_ENABLE_PAGE, NOTICE_ACCEPTED } from "@shared/integrations";
 import { fencedSpans } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
-import { APPROVAL_CHOICES } from "../../../../../tests/helpers/googleMcpStandIn";
+import { APPROVAL_CHOICES, approvalQuestion } from "../../../../../tests/helpers/googleMcpStandIn";
 import { STAND_IN_PROJECT } from "../../../../../tests/helpers/googleStandIn";
 import {
   type GoogleWorld,
@@ -91,7 +91,10 @@ describe("Google's MCP servers", () => {
       input: JSON.stringify({ id, add: ["receipts"] }),
       confirm: {
         message: "Change this message's labels?",
+        // Google's question line, and the service the call went to, which the card names as asking.
+        question: approvalQuestion("update_message_labels"),
         options: APPROVAL_CHOICES.map(([value, label]) => ({ value, label })),
+        asker: "Gmail",
       },
     });
     // A question's ask offers no Allow for the rest of this task.

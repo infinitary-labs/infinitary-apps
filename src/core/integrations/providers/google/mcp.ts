@@ -83,8 +83,19 @@ export class GoogleToolRefused extends Error {}
 /** One of the choices Google's question offers, as Google names and words it. */
 export type GoogleChoice = { value: string; label: string };
 
-/** Google's question about one tool call, for the captain: its words, its choices, and the call to retry. */
-export type GoogleConfirm = { message: string; options: GoogleChoice[]; state: string };
+/**
+ * Google's question about one tool call, for the captain: its words, its
+ * question line, its choices, and the call to retry. `asker` is the service
+ * the call went to, in the words its card names it by (Gmail, Google
+ * Calendar), never read from Google's words.
+ */
+export type GoogleConfirm = {
+  message: string;
+  question?: string;
+  options: GoogleChoice[];
+  state: string;
+  asker: string;
+};
 
 /** The tool call stopped to ask the captain (`GoogleConfirm`). */
 export class GoogleAsksToConfirm extends Error {
@@ -215,6 +226,7 @@ function confirmOf(
   const [property, schema] = properties[0] as [
     string,
     {
+      title?: unknown;
       enum?: unknown;
       enumNames?: unknown;
       oneOf?: { const?: unknown; title?: unknown }[];
@@ -248,7 +260,14 @@ function confirmOf(
     property,
     ...(typeof result.requestState === "string" ? { requestState: result.requestState } : {}),
   };
-  return { message: params.message, options, state: JSON.stringify(state) };
+  return {
+    message: params.message,
+    // Google words its question line in the choice's own title.
+    ...(typeof schema.title === "string" && schema.title.trim() ? { question: schema.title } : {}),
+    options,
+    state: JSON.stringify(state),
+    asker: label,
+  };
 }
 
 function stateOf(answer: GoogleAnswer): ConfirmState {

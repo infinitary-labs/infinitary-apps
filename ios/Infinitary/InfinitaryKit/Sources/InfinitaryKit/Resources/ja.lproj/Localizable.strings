@@ -1276,15 +1276,9 @@
 "handoverWontStopText" = "%1$@ は保存して停止するよう求めましたが、保存した作業をまだ開いたままです。「今すぐ停止」を選ぶと、待たずに終了させます。何も変更していません。";
 "handoverWontStopTitle" = "%1$@ が停止していません";
 "integrationsClientFileNotTaken" = "このバージョンの Infinitary では、%1$@ はクライアント ファイルを受け付けません。";
-"integrationsConfirmChoice" = "%1$@ への回答";
-"integrationsConfirmLeadFirstmate" = "一等航海士がこの実行を求め、Infinitary は実行を許可しました。%1$@ が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。";
-"integrationsConfirmLeadPanel" = "パネル「%1$@」がこの実行を求め、Infinitary は実行を許可しました。%2$@ が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。";
-"integrationsConfirmLeadTask" = "「%2$@」の担当の乗組員がこの実行を求め、Infinitary は実行を許可しました。%1$@ が先にあなたに確認するためにこの呼び出しを停止したので、まだ何も実行されていません。";
+"integrationsConfirmKeeps" = "「常に」の選択は Infinitary ではなく %1$@ が保持します。";
 "integrationsConfirmNotNow" = "今はしない";
-"integrationsConfirmSend" = "%1$@ に送信";
-"integrationsConfirmTitle" = "%2$@ が「%1$@」の確認を求めています";
-"integrationsConfirmWays" = "「%1$@ に送信」を押すと、選んだ回答が 1 回だけ送られ、%1$@ は選んだとおりに呼び出しを実行または停止します。「今はしない」を押すと何も送られず、呼び出しは実行されません。";
-"integrationsConfirmWords" = "%1$@ の言葉";
+"integrationsConfirmTitle" = "%2$@ が「%1$@」の前に確認しています";
 "integrationsConnectOfferBody" = "その後、一等航海士と乗組員はあなたのサインインで %1$@ を利用できます。読み取りも含め、どの操作も「常に許可」を選ぶまでカードで確認します。";
 "integrationsConnectOfferButton" = "連携を開く";
 "integrationsConnectOfferNotNow" = "今はしない";

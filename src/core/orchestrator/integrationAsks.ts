@@ -2,7 +2,6 @@ import * as m from "@shared/i18n/messages.generated";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import {
   type BuildRowAsk,
-  confirmPickOf,
   DROPPED_ASK_WHY,
   type ForgeWriteAsk,
   type IntegrationAsk,
@@ -210,14 +209,15 @@ export class IntegrationAsks {
     askId: string,
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
-    answers?: readonly { name: string; values: readonly string[] }[],
+    pick: string | undefined,
+    declined: boolean,
   ): void {
     const send = this.options.sendTakenIntegrationAsk;
     if (!send) return;
     const kept = "ask" in taken ? taken.ask : undefined;
     // A panel's call: the panel hears the choice, the first mate nothing.
     const panel = kept?.kind === "integration" && kept.by === "panel";
-    if (panel) this.options.panelAskAnswered?.(askId, choice);
+    if (panel) this.options.panelAskAnswered?.(askId, declined);
     const tell = (sent: WriteAskSent) => {
       if (sent.ask)
         this.options.tasks.note(rowId, writeSentLine(sent), {
@@ -249,7 +249,7 @@ export class IntegrationAsks {
         rowId,
       );
     };
-    void send(rowId, taken, choice, confirmPickOf(answers, askId))
+    void send(rowId, taken, choice, pick)
       .then(tell, (caught: unknown) => {
         const why = caught instanceof Error ? caught.message : String(caught);
         const ask = "ask" in taken ? taken.ask : undefined;

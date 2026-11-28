@@ -1276,15 +1276,9 @@
 "handoverWontStopText" = "%1$@ lui a demandé d’enregistrer et de s’arrêter, et il garde encore votre travail enregistré ouvert. L’arrêter maintenant le ferme sans attendre. Rien n’a été modifié.";
 "handoverWontStopTitle" = "%1$@ ne s’est pas arrêté";
 "integrationsClientFileNotTaken" = "%1$@ n’accepte pas de fichier de client dans cette version d’Infinitary.";
-"integrationsConfirmChoice" = "Votre réponse à %1$@";
-"integrationsConfirmLeadFirstmate" = "Votre second a demandé à exécuter ceci, et Infinitary l’a laissé faire. %1$@ a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.";
-"integrationsConfirmLeadPanel" = "Votre panneau « %1$@ » a demandé à exécuter ceci, et Infinitary l’a laissé faire. %2$@ a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.";
-"integrationsConfirmLeadTask" = "L’équipier de « %2$@ » a demandé à exécuter ceci, et Infinitary l’a laissé faire. %1$@ a arrêté l’appel pour vous consulter d’abord, donc rien n’a encore été exécuté.";
+"integrationsConfirmKeeps" = "Un choix « toujours » est gardé par %1$@, pas par Infinitary.";
 "integrationsConfirmNotNow" = "Pas maintenant";
-"integrationsConfirmSend" = "Envoyer à %1$@";
-"integrationsConfirmTitle" = "%2$@ vous demande de confirmer « %1$@ »";
-"integrationsConfirmWays" = "« Envoyer à %1$@ » envoie une seule fois la réponse choisie, et %1$@ exécute ou arrête l’appel selon votre choix. « Pas maintenant » n’envoie rien, et l’appel ne s’exécute pas.";
-"integrationsConfirmWords" = "Dans les mots de %1$@";
+"integrationsConfirmTitle" = "%2$@ demande avant « %1$@ »";
 "integrationsConnectOfferBody" = "Votre second et votre équipage pourront alors accéder à %1$@ avec votre connexion. Chacune de ses actions, y compris les lectures, vous demande sur une carte, jusqu’à ce que vous choisissiez « Toujours autorisée ».";
 "integrationsConnectOfferButton" = "Ouvrir Intégrations";
 "integrationsConnectOfferNotNow" = "Pas maintenant";

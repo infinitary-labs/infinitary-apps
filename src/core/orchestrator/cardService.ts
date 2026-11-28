@@ -30,6 +30,7 @@ import {
   type PastCard,
 } from "@shared/cards";
 import { shortTaskTitle } from "@shared/taskTitle";
+import { unstepped } from "../freeze/passSteps";
 import { decidedCardWidth } from "../pi/cardWidth";
 import type { EmittedCardInput } from "../session/tools";
 import type { CardResolution, DuplicateResult, ResolutionHead } from "../storage/cardStore";
@@ -1638,7 +1639,10 @@ export class CardService {
   scheduleBroadcast(): void {
     this.comparePresentation();
     if (this.broadcastTimer) return;
-    this.broadcastTimer = setTimeout(() => this.flushBroadcast(), 60);
+    this.broadcastTimer = setTimeout(
+      () => (this.host.step ?? unstepped)("card-broadcast", () => this.flushBroadcast()),
+      60,
+    );
   }
 
   /**
@@ -1652,13 +1656,15 @@ export class CardService {
    */
   private comparePresentation(): void {
     if (this.presentationCheck) return;
-    this.presentationCheck = setImmediate(() => {
-      this.presentationCheck = undefined;
-      const presentation = JSON.stringify(this.snapshot());
-      if (presentation === this.presentation) return;
-      this.presentation = presentation;
-      this.host.presentationChanged?.();
-    });
+    this.presentationCheck = setImmediate(() =>
+      (this.host.step ?? unstepped)("card-presentation", () => {
+        this.presentationCheck = undefined;
+        const presentation = JSON.stringify(this.snapshot());
+        if (presentation === this.presentation) return;
+        this.presentation = presentation;
+        this.host.presentationChanged?.();
+      }),
+    );
   }
 }
 

@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { getHeapStatistics } from "node:v8";
 import { type SourceIdentity, sourceIdentitySchema } from "@shared/selfSource";
 import { z } from "zod";
+import { type SystemMemory, systemMemorySchema } from "./systemMemory";
 
 /**
  * The freeze recorder's memory reading (docs/freeze-recorder.md, "The memory
@@ -47,6 +48,9 @@ export const memoryLineSchema = z.object({
   externalBytes: z.number().int().nonnegative(),
   arrayBuffersBytes: z.number().int().nonnegative(),
   mallocedBytes: z.number().int().nonnegative(),
+  // The whole computer's newest memory reading, from the freeze recorder's
+  // watchdog; absent when no watchdog runs or it has not read one yet.
+  system: systemMemorySchema.optional(),
 });
 export type MemoryLine = z.infer<typeof memoryLineSchema>;
 
@@ -73,6 +77,7 @@ export async function readMemory(options: {
   now: () => Date;
   footprint?: () => Promise<number | null>;
   build?: SourceIdentity;
+  system?: () => SystemMemory | undefined;
 }): Promise<MemoryLine> {
   let footprint: number | null = null;
   try {
@@ -83,6 +88,7 @@ export async function readMemory(options: {
   const usage = process.memoryUsage();
   const heap = getHeapStatistics();
   const whole = (bytes: number) => Math.max(0, Math.round(bytes));
+  const system = options.system?.();
   return {
     at: options.now().toISOString(),
     pid: process.pid,
@@ -97,6 +103,7 @@ export async function readMemory(options: {
     externalBytes: whole(usage.external),
     arrayBuffersBytes: whole(usage.arrayBuffers),
     mallocedBytes: whole(heap.malloced_memory),
+    ...(system ? { system } : {}),
   };
 }
 
@@ -115,6 +122,7 @@ export class MemoryRecorder {
       recordPath: string;
       build?: SourceIdentity;
       footprint?: () => Promise<number | null>;
+      system?: () => SystemMemory | undefined;
       now?: () => Date;
       maxLines?: number;
     },
@@ -140,6 +148,7 @@ export class MemoryRecorder {
           now: this.options.now ?? (() => new Date()),
           ...(this.options.footprint ? { footprint: this.options.footprint } : {}),
           ...(this.options.build ? { build: this.options.build } : {}),
+          ...(this.options.system ? { system: this.options.system } : {}),
         });
         await this.append(line);
       } catch {

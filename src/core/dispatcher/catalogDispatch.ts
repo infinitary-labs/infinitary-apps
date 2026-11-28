@@ -42,6 +42,7 @@ import {
 } from "@shared/windowAsks";
 import { addedPrivateSite } from "../browser/privateSites";
 import type { CoreServices } from "../coreServices";
+import { unstepped } from "../freeze/passSteps";
 import { appPanelGatesOf } from "../personal/appPanelsServed";
 import { actionValue } from "../pi/appTools";
 import { listSurfaces, type SurfaceView } from "../pi/personalizeTool";
@@ -138,7 +139,14 @@ export function createCatalogDispatch({
         : WINDOW_ONLY_CHANNELS.has(asked)
           ? Promise.reject(new Error("A key reminder is asked of a window."))
           : Promise.resolve(
-              (handlers[asked as keyof CoreHandlers] as (...a: unknown[]) => unknown)(...callArgs),
+              (services.step ?? unstepped)(
+                `handler:${asked}`,
+                () =>
+                  (handlers[asked as keyof CoreHandlers] as (...a: unknown[]) => unknown)(
+                    ...callArgs,
+                  ),
+                { tally: true },
+              ),
             );
     const args = heardFromActor(channel, parseInvokeRequest(channel, rawArgs), actor);
     const names = ACTION_NAMES.filter(

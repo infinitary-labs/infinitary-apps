@@ -14,6 +14,12 @@ const WATCH_MS = 20;
 /** How long the watchdog waits for a call path after the stall ended before writing the line without one. */
 const LATE_NAMES_MS = 1_000;
 /**
+ * How often the watchdog reads the whole computer's memory state
+ * (./systemMemory.ts), besides once as each stall begins. A macOS reading
+ * starts one short sysctl on the watchdog's thread, never the main one.
+ */
+const SYSTEM_READING_MS = 5_000;
+/**
  * How long arming waits for the watchdog to start and connect to the main
  * thread. A physical bound, not a judgment: armed before the app's code
  * loads, a watchdog thread starts in tens of milliseconds, and one that
@@ -53,7 +59,9 @@ export function isFreezeRecorderEnabled(build: {
  * collections that heartbeat says ran since the one before, and the
  * process's page faults and resident memory across the stall. Each line notes the newest
  * time the computer slept, seen as its wall clock running on past the
- * monotonic one, which stops in sleep. A gap the watchdog's
+ * monotonic one, which stops in sleep, and the newest reading of the whole
+ * computer's memory pressure and swap, read here every few seconds and again
+ * as each stall begins. A gap the watchdog's
  * own timer also slept through is the whole computer pausing, such as
  * sleep, and is no freeze.
  */
@@ -63,7 +71,8 @@ const inspector = require("node:inspector");
 const fs = require("node:fs");
 const { randomUUID } = require("node:crypto");
 const { performance } = require("node:perf_hooks");
-const { watchMs, lateMs, armed } = workerData;
+const { execFile } = require("node:child_process");
+const { watchMs, lateMs, systemMs, armed } = workerData;
 
 function sayArmed(state) {
   Atomics.store(armed, 0, state);
@@ -114,6 +123,10 @@ let windowState = null;
 // The minute pass's step running and the steps whose work is unsettled, as
 // the main thread last said (./passSteps.ts), and its pass record.
 let stepMark = null;
+// The steps that ended since the last heartbeat, each with its own time less
+// that of the steps inside it: a stall's are those ended before the beat
+// that ends it.
+let ranSinceBeat = [];
 let passLines = null;
 let passWriting = Promise.resolve();
 let tickAt = performance.now();
@@ -126,6 +139,9 @@ let lastSleep = null;
 let beatMemory = null;
 let stall = null;
 let capturing = null;
+// The whole computer's memory state, newest first read (./systemMemory.ts).
+let systemMemory = null;
+let systemReading = false;
 
 const cpuOf = (usage) => usage.user + usage.system;
 
@@ -134,12 +150,90 @@ function memoryNow() {
   return { major: usage.majorPageFault, minor: usage.minorPageFault, rss: process.memoryUsage.rss() };
 }
 
+const SIZE_UNIT = { K: 1024, M: 1024 * 1024, G: 1024 * 1024 * 1024 };
+const PRESSURE_LEVEL = { 1: "normal", 2: "warn", 4: "critical" };
+
+function readMacMemory(env) {
+  return new Promise((resolve) => {
+    execFile("/usr/sbin/sysctl", ["kern.memorystatus_vm_pressure_level", "kern.memorystatus_level",
+      "vm.swapusage", "vm.compressor_bytes_used"], { env, timeout: 2000 }, (_error, stdout) => {
+      // sysctl exits non-zero when one name is unknown, and still prints the others.
+      const values = {};
+      for (const text of String(stdout || "").split("\n")) {
+        const at = text.indexOf(":");
+        if (at > 0) values[text.slice(0, at).trim()] = text.slice(at + 1).trim();
+      }
+      const reading = {};
+      const pressure = PRESSURE_LEVEL[values["kern.memorystatus_vm_pressure_level"]];
+      if (pressure) reading.pressure = pressure;
+      const available = Number.parseInt(values["kern.memorystatus_level"], 10);
+      if (Number.isFinite(available) && available >= 0) reading.availablePercent = available;
+      const swap = /total = ([\d.]+)([KMG])\s+used = ([\d.]+)([KMG])/.exec(values["vm.swapusage"] || "");
+      if (swap) {
+        reading.swapUsedBytes = Math.round(Number(swap[3]) * SIZE_UNIT[swap[4]]);
+        reading.swapTotalBytes = Math.round(Number(swap[1]) * SIZE_UNIT[swap[2]]);
+      }
+      const compressed = Number.parseInt(values["vm.compressor_bytes_used"], 10);
+      if (Number.isFinite(compressed) && compressed >= 0) reading.compressedBytes = compressed;
+      resolve(reading);
+    });
+  });
+}
+
+async function readLinuxMemory() {
+  const reading = {};
+  try {
+    const info = await fs.promises.readFile("/proc/meminfo", "utf8");
+    const bytes = (name) => {
+      const found = new RegExp("^" + name + ":\\s+(\\d+) kB", "m").exec(info);
+      return found ? Number(found[1]) * 1024 : undefined;
+    };
+    const total = bytes("MemTotal");
+    const available = bytes("MemAvailable");
+    if (total && available !== undefined) reading.availablePercent = Math.round((available / total) * 100);
+    const swapTotal = bytes("SwapTotal");
+    const swapFree = bytes("SwapFree");
+    if (swapTotal !== undefined && swapFree !== undefined) {
+      reading.swapUsedBytes = Math.max(0, swapTotal - swapFree);
+      reading.swapTotalBytes = swapTotal;
+    }
+  } catch {}
+  try {
+    const pressure = await fs.promises.readFile("/proc/pressure/memory", "utf8");
+    const some = /^some avg10=([\d.]+)/m.exec(pressure);
+    const full = /^full avg10=([\d.]+)/m.exec(pressure);
+    if (some && full) reading.pressureStall = { someAvg10: Number(some[1]), fullAvg10: Number(full[1]) };
+  } catch {}
+  return reading;
+}
+
+// One reading at a time; the main thread hears each for its memory record.
+function readSystem() {
+  if (systemReading || !record) return;
+  const read = process.platform === "darwin" ? readMacMemory(record.childEnv || {})
+    : process.platform === "linux" ? readLinuxMemory() : null;
+  if (!read) return;
+  systemReading = true;
+  const readAt = new Date().toISOString();
+  read.then((reading) => {
+    systemReading = false;
+    if (Object.keys(reading).length === 0) return;
+    systemMemory = { readAt, ...reading };
+    parentPort.postMessage({ systemReading: systemMemory });
+  }, () => { systemReading = false; });
+}
+
 // What the main thread's heartbeats said about the windows and its speed
 // just before a stall, and the speed in the heartbeat that ended it.
 function noteContext(line, target) {
   if (target.window) line.window = target.window;
-  if (target.step) line.step = target.step;
+  if (target.step) line.step = { ...target.step };
+  if (target.ran && target.ran.length) {
+    if (!line.step) line.step = {};
+    line.step.ran = target.ran;
+  }
   if (lastSleep) line.sleep = { ...lastSleep };
+  if (systemMemory) line.system = { ...systemMemory };
   if (target.gc) line.gc = { ...target.gc };
   if (target.memoryBefore && target.memoryAfter) {
     line.paging = {
@@ -153,6 +247,22 @@ function noteContext(line, target) {
     line.speed = { beforeNs: target.probeBefore, fastestNs: fastestProbe };
     if (target.probeAfter !== undefined) line.speed.afterNs = target.probeAfter;
   }
+}
+
+// The steps that ran in a stall, added up by name, most time first.
+const tenths = (ms) => Math.round(ms * 10) / 10;
+function ranOf(runs) {
+  const byName = new Map();
+  for (const run of runs) {
+    const sum = byName.get(run.name) || { name: run.name, runs: 0, ms: 0, cpuMs: 0 };
+    sum.runs += 1;
+    sum.ms += run.selfMs;
+    sum.cpuMs += run.cpuSelfMs;
+    byName.set(run.name, sum);
+  }
+  return [...byName.values()]
+    .map((sum) => ({ name: sum.name, runs: sum.runs, ms: tenths(sum.ms), cpuMs: tenths(sum.cpuMs) }))
+    .sort((a, b) => b.ms - a.ms);
 }
 
 // Replace an incident's snapshot atomically: a crash keeps either its start
@@ -261,11 +371,14 @@ parentPort.on("message", (message) => {
       parentPort.postMessage(interrupted);
     }
     parentPort.postMessage({ recovered: true });
+    readSystem();
+    setInterval(readSystem, systemMs);
     return;
   }
   // A step mark or a finished pass is not a heartbeat.
   if (message.steps) {
     stepMark = message.steps;
+    if (message.ran) ranSinceBeat.push(message.ran);
     return;
   }
   if (message.pass) {
@@ -283,6 +396,7 @@ parentPort.on("message", (message) => {
     done.cpuAfter = message.cpu;
     // The collections the main thread ran since its heartbeat before the stall.
     if (message.gc) done.gc = message.gc;
+    done.ran = ranOf(ranSinceBeat);
     done.memoryAfter = memoryNow();
     if (probe !== null) done.probeAfter = probe;
     done.completedAt = new Date().toISOString();
@@ -294,6 +408,7 @@ parentPort.on("message", (message) => {
   beatCpu = message.cpu;
   beatProbe = probe;
   beatMemory = memoryNow();
+  ranSinceBeat = [];
 });
 
 setInterval(() => {
@@ -325,6 +440,7 @@ setInterval(() => {
   // answer it, and the whole process may end before another heartbeat.
   persistStarted(stall);
   capture(stall);
+  readSystem();
 }, watchMs);
 `;
 
@@ -341,7 +457,12 @@ function startWatchdog(wait: boolean): Worker | undefined {
   try {
     worker = new Worker(WATCHDOG_SOURCE, {
       eval: true,
-      workerData: { watchMs: WATCH_MS, lateMs: LATE_NAMES_MS, armed: state },
+      workerData: {
+        watchMs: WATCH_MS,
+        lateMs: LATE_NAMES_MS,
+        systemMs: SYSTEM_READING_MS,
+        armed: state,
+      },
     });
   } catch {
     return undefined;

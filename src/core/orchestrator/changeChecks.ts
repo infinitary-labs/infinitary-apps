@@ -29,6 +29,7 @@ import {
   isSignInForgeFailure,
   isTransientForgeFailure,
 } from "../forge";
+import { unstepped } from "../freeze/passSteps";
 import { currentChange } from "../storage/changeProjection";
 import type { CiWatch, TaskDelivery, TaskRecord } from "../storage/taskRecords";
 import type { TaskService } from "../tasks/taskService";
@@ -189,21 +190,25 @@ export class ChangeChecks {
         this.assertCheckTarget(record);
         this.observeContribution(record, forge, pull);
       }
-      const observationId = this.observeChecks(taskId, change.headSha, checks, false);
       const words = changeWords(forge, change);
-      // The watch's own reading leaves the watch as it is (`watchAfter`),
-      // whether its checks still run or not.
-      this.record(
-        record.id,
-        "pending",
-        { change, forge, ...project },
-        "watch",
-        false,
-        checks.items,
-        checks.complete,
-        checks.problem,
-        main,
-      );
+      // The reading's record writes run as one step, after every read came back.
+      const observationId = (this.options.step ?? unstepped)("evidence-record", () => {
+        const observed = this.observeChecks(taskId, change.headSha, checks, false);
+        // The watch's own reading leaves the watch as it is (`watchAfter`),
+        // whether its checks still run or not.
+        this.record(
+          record.id,
+          "pending",
+          { change, forge, ...project },
+          "watch",
+          false,
+          checks.items,
+          checks.complete,
+          checks.problem,
+          main,
+        );
+        return observed;
+      });
       if (checks.problem)
         return {
           kind: "failed",

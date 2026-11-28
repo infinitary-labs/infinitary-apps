@@ -7,6 +7,7 @@ import type {
 } from "@shared/cards";
 import type { CrewResponse } from "@shared/crewResponses";
 import type { FmEvent } from "@shared/events";
+import type { StepRunner } from "../freeze/passSteps";
 import type { CardStore } from "../storage/cardStore";
 import type { TaskService } from "../tasks/taskService";
 import type { AskEnding } from "./askEnding";
@@ -36,6 +37,11 @@ export type CloseOut = "report" | "idle" | "turn-end" | "restart";
 export type CardServiceHost = {
   /** The host's one clock (the ticker's). */
   now: () => number;
+  /**
+   * Runs the stack's broadcast and presentation check as named steps for the
+   * freeze recorder (docs/freeze-recorder.md, "Work outside the pass"); absent, they only run.
+   */
+  step?: StepRunner;
   tasks: TaskService;
   cardStore: CardStore;
   /** A card placed, revised or gone on a task: the ladder's captain gate follows. */

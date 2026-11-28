@@ -7,7 +7,8 @@ import releaseConfig from "../../../packaging/release-source.json" with { type: 
 import type { TypedWake } from "../orchestrator/wakes";
 import type { VersionSummary } from "./freezeTally";
 import { MemoryRecorder } from "./memoryRecorder";
-import type { PassSteps } from "./passSteps";
+import type { PassSteps, RunEnded } from "./passSteps";
+import { type SystemMemory, systemMemorySchema } from "./systemMemory";
 import { takeWatchdog } from "./watchdog";
 
 /**
@@ -70,6 +71,19 @@ const speedSchema = z.object({
 const stepSchema = z.object({
   running: z.string().optional(),
   unsettled: z.array(z.string()).optional(),
+  // The steps that ran in a completed stall, by name: their runs, and their
+  // own time and processor time less that of steps inside them, most first.
+  // Their sum against `wallMs` is the share of the stall the steps account for.
+  ran: z
+    .array(
+      z.object({
+        name: z.string(),
+        runs: z.number().int().positive(),
+        ms: z.number().nonnegative(),
+        cpuMs: z.number().nonnegative(),
+      }),
+    )
+    .optional(),
 });
 
 /**
@@ -149,6 +163,8 @@ export const freezeLineSchema = z.object({
   paging: pagingSchema.optional(),
   // Optional for old records and stalls with no collection in them.
   gc: gcSchema.optional(),
+  // Optional for old records, hosts the watchdog cannot read, and stalls before its first reading.
+  system: systemMemorySchema.optional(),
 });
 export type FreezeLine = z.infer<typeof freezeLineSchema>;
 
@@ -167,6 +183,7 @@ export const freezeIncidentSchema = z.union([
     speed: speedSchema.optional(),
     step: stepSchema.optional(),
     sleep: sleepSchema.optional(),
+    system: systemMemorySchema.optional(),
   }),
 ]);
 export type FreezeIncident = z.infer<typeof freezeIncidentSchema>;
@@ -255,6 +272,8 @@ export class FreezeRecorder {
    * app's build.
    */
   private probeSink = 1;
+  /** The watchdog's newest reading of the whole computer's memory, for the memory record. */
+  private system: SystemMemory | undefined;
 
   constructor(
     private readonly options: {
@@ -272,6 +291,8 @@ export class FreezeRecorder {
        */
       steps?: { source: Pick<PassSteps, "listen">; recordPath: string };
       memory?: { recordPath: string; footprint?: () => Promise<number | null> };
+      /** The environment of the watchdog's system memory reading (`hostEnv()`). */
+      childEnv?: NodeJS.ProcessEnv;
     },
   ) {
     this.memory = options.memory
@@ -279,6 +300,7 @@ export class FreezeRecorder {
           recordPath: options.memory.recordPath,
           ...(options.build ? { build: options.build } : {}),
           ...(options.memory.footprint ? { footprint: options.memory.footprint } : {}),
+          system: () => this.system,
         })
       : undefined;
   }
@@ -315,6 +337,12 @@ export class FreezeRecorder {
         versionsEnded();
         return;
       }
+      // A stall's line carries a reading too, as `system`; a reading alone comes as `systemReading`.
+      if (message && typeof message === "object" && "systemReading" in message) {
+        const system = systemMemorySchema.safeParse(message.systemReading);
+        if (system.success) this.system = system.data;
+        return;
+      }
       const line = freezeIncidentSchema.safeParse(message);
       if (!line.success) return;
       tally?.add(line.data);
@@ -329,10 +357,19 @@ export class FreezeRecorder {
         maxLines: RECORD_MAX_LINES,
         passPath: this.options.steps?.recordPath,
         passMaxLines: PASS_RECORD_MAX_LINES,
+        childEnv: this.options.childEnv,
       },
     });
+    // A run's end is always followed by a mark, so it rides with that mark.
+    let ended: RunEnded | undefined;
     this.stopSteps = this.options.steps?.source.listen({
-      mark: (steps) => worker.postMessage({ steps }),
+      mark: (steps) => {
+        worker.postMessage(ended ? { steps, ran: ended } : { steps });
+        ended = undefined;
+      },
+      ran: (run) => {
+        ended = run;
+      },
       pass: (pass) => worker.postMessage({ pass }),
     });
     // Each heartbeat carries the speed probe's time, the main thread's

@@ -4,6 +4,7 @@ import type { CoreServices } from "./coreServices";
 import { ownComputerName } from "./devices/computerName";
 import { type CoreDispatch, createCoreDispatcher } from "./dispatcher";
 import { CoreEventBus } from "./events";
+import { unstepped } from "./freeze/passSteps";
 import type { HomeHandOver } from "./homeMove/outgoing";
 import { movePending } from "./homeMove/outgoing";
 import { askSignInsAgainAt, homeMoveStaging, outgoingHomeMove } from "./homeMove/wiring";
@@ -170,7 +171,7 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
   const stopSendingCustom = events.subscribe((channel) => {
     if (channel === "inf:models:changed") services.deviceSignIns.sendCustomDefinitions();
   });
-  const dispatch = createCoreDispatcher({
+  const answer = createCoreDispatcher({
     services,
     host,
     signInReturns,
@@ -182,6 +183,14 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
     onActionRecorded: (id, action, value) =>
       services.firstmate.appActionRecorded(id, action, value),
   });
+  // Every message on the app's connections is a step for the freeze recorder
+  // (docs/freeze-recorder.md, "Work outside the pass"): its synchronous start
+  // here, and a queued request's handler as `handler:` in `catalogDispatch`.
+  const step = services.step ?? unstepped;
+  const dispatch = ((channel, rawArgs, actor, viewer) =>
+    step(`message:${channel}`, () => answer(channel, rawArgs, actor, viewer), {
+      tally: true,
+    })) as CoreDispatch;
   services.firstmate.bindAppDispatch(dispatch);
   const stopAppPanels = watchAppPanels({
     subscribe: (sink) => events.subscribe(sink),

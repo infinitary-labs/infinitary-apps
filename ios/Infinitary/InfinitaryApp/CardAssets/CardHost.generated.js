@@ -65113,6 +65113,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `- (a summary of each event that arrived)`;
   }
+  function settingsAutomationFilterGmailSearch() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `كلمات البحث (بصيغة Gmail، مثل from:ada@example.com؛ اتركها فارغة لكل رسالة)`;
+      case "de":
+        return `Suchbegriffe (in Gmails Form, etwa from:ada@example.com; leer für jede Nachricht)`;
+      case "es":
+        return `Palabras de búsqueda (con el formato de Gmail, como from:ada@example.com; vacío para cada mensaje)`;
+      case "fr":
+        return `Mots de recherche (au format de Gmail, comme from:ada@example.com ; vide pour chaque message)`;
+      case "ja":
+        return `検索語（Gmail の形式。例：from:ada@example.com。空欄ならすべてのメッセージ）`;
+      case "ko":
+        return `검색어(Gmail 형식, 예: from:ada@example.com. 비워 두면 모든 메시지)`;
+      case "pt-BR":
+        return `Palavras de busca (no formato do Gmail, como from:ada@example.com; vazio para toda mensagem)`;
+      case "zh-Hans":
+        return `搜索词（Gmail 自己的格式，例如 from:ada@example.com；留空则接收每封邮件）`;
+      case "zh-Hant":
+        return `搜尋字詞（Gmail 自己的格式，例如 from:ada@example.com；留空則接收每封郵件）`;
+      case "en-XA":
+        return `[Šéáŕçĥ ŵöŕðš (Ĝɱáîļ'š öŵñ, šûçĥ áš ƒŕöɱ:áðá@éẋáɱþļé.çöɱ; éɱþţý ƒöŕ éṽéŕý ɱéššáĝé) ~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Search words (Gmail's own, such as from:ada@example.com; empty for every message)‬`;
+    }
+    return `Search words (Gmail's own, such as from:ada@example.com; empty for every message)`;
+  }
   function settingsAutomationFirstMateGets() {
     switch (currentLanguage()) {
       case "ar":
@@ -120632,6 +120659,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsAutomationEventTaskClosed,
     settingsAutomationEventTaskReleased,
     settingsAutomationEventsPreview,
+    settingsAutomationFilterGmailSearch,
     settingsAutomationFirstMateGets,
     settingsAutomationFri,
     settingsAutomationFriday,
@@ -124438,6 +124466,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsAutomationEventTaskClosed": [],
     "settingsAutomationEventTaskReleased": [],
     "settingsAutomationEventsPreview": [],
+    "settingsAutomationFilterGmailSearch": [],
     "settingsAutomationFirstMateGets": [],
     "settingsAutomationFri": [],
     "settingsAutomationFriday": [],

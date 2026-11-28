@@ -74,35 +74,6 @@ export type ForgeChange = {
 };
 
 /**
- * The events a pull request's own runs carry on GitHub (INF-1891): the ones
- * the host starts for the pull request itself. A run a person or a tool
- * started on the branch by hand, or a schedule, is not the change's check.
- */
-const CHANGE_RUN_EVENTS = new Set(["pull_request", "pull_request_target"]);
-
-/**
- * The checks that are a proposed change's own (INF-1891, the captain: "for
- * merge we only care about the PR checks"): a check whose run the host named
- * an event for stays only when that event is the change's own, while one
- * with no event - a commit status, a check an app posted - stays as read.
- * A branch's own checks, such as the default branch's, are never read
- * through this: their runs carry the push that made them.
- *
- * `pushed` is a batch's pull request (docs/forge.md, "Batches of your own"):
- * its branch is one the app itself pushed, so the run the host started for
- * that push is the batch's check as much as one its pull request started.
- * A project that checks every pushed branch starts no other run for it.
- */
-export function ownChecksOf(items: ForgeCheck[], pushed = false): ForgeCheck[] {
-  return items.filter(
-    (check) =>
-      check.event === undefined ||
-      CHANGE_RUN_EVENTS.has(check.event) ||
-      (pushed && check.event === "push"),
-  );
-}
-
-/**
  * One check's state, normalised: `success`, `skipped` and a finished
  * `neutral` permit green, as GitHub's required checks pass on them; terminal
  * failures are red; anything still queued or running is `pending`. A check

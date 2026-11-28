@@ -1,9 +1,12 @@
 import { BATCH_CHECK, BATCH_STATUS_WORDS, BATCH_WAITING_WORDS } from "@shared/batches";
 import { describe, expect, it } from "vitest";
 import { openInMemoryDatabase } from "../storage/db";
+import type { TaskRecord } from "../storage/taskRecords";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { deriveWorkPosture } from "./workPosture";
+import type { TaskRuntime } from "./crewRuntime";
+import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
+import { deriveWorkPosture, WorkPostures } from "./workPosture";
 
 const base = {
   threadAwaitingAuthor: false,
@@ -205,6 +208,75 @@ describe("pending batch presentation", () => {
         state: "idle",
         reason: "inactive",
       });
+    } finally {
+      fixture.db.close();
+    }
+  });
+});
+
+// A running task's wait carries when its background work started, as the first
+// mate's "running since" line reads it, so the record header can say so.
+describe("the wait facts of background work", () => {
+  const hostStart = Date.parse("2026-11-28T01:05:00Z");
+  const clientStart = Date.parse("2026-11-28T00:51:15Z");
+  function postures(runtime: Partial<TaskRuntime>, host: { running?: boolean }) {
+    const options = {
+      tasks: {
+        projectedFact: (_record: unknown, _key: symbol, read: () => unknown) => read(),
+        graph: { flagsOf: () => ({ blocked: false }) },
+      },
+      inbox: { stuck: () => false, outage: () => ({ failures: 0 }) },
+      hasRunningJobs: () => host.running === true,
+      oldestRunningJob: () =>
+        host.running ? { jobId: "j1", command: "pnpm test", startedAt: hostStart } : undefined,
+    } as unknown as CrewSupervisorOptions;
+    return new WorkPostures(options, {
+      now: () => Date.parse("2026-11-28T01:13:00Z"),
+      witnesses: () => ({}),
+      heldBy: () => undefined,
+      runtime: () =>
+        ({
+          turn: { busy: false },
+          session: { controlProfile: { backgroundWork: "host" } },
+          ...runtime,
+        }) as TaskRuntime,
+    } as never);
+  }
+  const active = (r: TaskRecord) => ({ ...r, status: "active" as const });
+
+  it("carries the client's start time while only the client reports background work", () => {
+    const fixture = record();
+    try {
+      const facts = postures({ clientJobs: 1, clientJobsSince: clientStart }, {}).workWaitFacts(
+        active(fixture.record),
+      );
+      expect(facts).toMatchObject({ job: true, jobSince: clientStart });
+    } finally {
+      fixture.db.close();
+    }
+  });
+  it("carries the earlier of the host's job and the client's work", () => {
+    const fixture = record();
+    try {
+      const facts = postures(
+        { clientJobs: 1, clientJobsSince: clientStart },
+        {
+          running: true,
+        },
+      ).workWaitFacts(active(fixture.record));
+      expect(facts).toMatchObject({ job: true, jobSince: clientStart });
+      const hostOnly = postures({}, { running: true }).workWaitFacts(active(fixture.record));
+      expect(hostOnly).toMatchObject({ job: true, jobSince: hostStart });
+    } finally {
+      fixture.db.close();
+    }
+  });
+  it("names no start when no job runs", () => {
+    const fixture = record();
+    try {
+      const facts = postures({ clientJobs: 0 }, {}).workWaitFacts(active(fixture.record));
+      expect(facts.job).toBe(false);
+      expect("jobSince" in facts).toBe(false);
     } finally {
       fixture.db.close();
     }

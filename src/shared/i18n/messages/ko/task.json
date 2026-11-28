@@ -50,5 +50,6 @@
   "taskWaitChainVia": "{on} 기다리는 중 · 그 작업은 {end} 대기",
   "taskWaitOn": "{on} 기다리는 중",
   "taskWaitOnUntil": "{on} 기다리는 중 · {time}까지 대기",
-  "taskWaitOnUpdate": "{on} 기다리는 중 · 앱 업데이트 대기"
+  "taskWaitOnUpdate": "{on} 기다리는 중 · 앱 업데이트 대기",
+  "taskWaitRunningSince": "{label} · {time}부터 실행 중"
 }

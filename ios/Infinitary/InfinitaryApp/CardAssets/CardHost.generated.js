@@ -112052,6 +112052,35 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Waiting on ${on} · it waits for an app update`;
   }
+  function taskWaitRunningSince(input2) {
+    const label = input2.label;
+    const time2 = input2.time;
+    switch (currentLanguage()) {
+      case "ar":
+        return `${label} · قيد التشغيل منذ ${time2}`;
+      case "de":
+        return `${label} · läuft seit ${time2}`;
+      case "es":
+        return `${label} · en ejecución desde ${time2}`;
+      case "fr":
+        return `${label} · en cours depuis ${time2}`;
+      case "ja":
+        return `${label} · ${time2} から実行中`;
+      case "ko":
+        return `${label} · ${time2}부터 실행 중`;
+      case "pt-BR":
+        return `${label} · em execução desde ${time2}`;
+      case "zh-Hans":
+        return `${label} · 自 ${time2} 起运行`;
+      case "zh-Hant":
+        return `${label} · 自 ${time2} 起執行中`;
+      case "en-XA":
+        return `[${label} · ŕûññîñĝ šîñçé ${time2} ~~~~~~]`;
+      case "ar-XB":
+        return `${label}‮ · running since ‬${time2}`;
+    }
+    return `${label} · running since ${time2}`;
+  }
   function trayOpen() {
     switch (currentLanguage()) {
       case "ar":
@@ -121695,6 +121724,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskWaitOn,
     taskWaitOnUntil,
     taskWaitOnUpdate,
+    taskWaitRunningSince,
     trayOpen,
     trayQuit,
     uiButtonPending,
@@ -125480,6 +125510,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskWaitOn": ["on"],
     "taskWaitOnUntil": ["on", "time"],
     "taskWaitOnUpdate": ["on"],
+    "taskWaitRunningSince": ["label", "time"],
     "trayOpen": [],
     "trayQuit": [],
     "uiButtonPending": [],

@@ -447,6 +447,7 @@
   "phoneRecordWaitDueReset": "Zurücksetzung war fällig {time}",
   "phoneRecordWaitDueStart": "Startzeit war fällig {time}",
   "phoneRecordWaitLabelRecorded": "{label} · Warten festgehalten {time}",
+  "phoneRecordWaitLabelRunningSince": "{label} · läuft seit {time}",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · Warten festgehalten {time}",
   "phoneRecordWaitNextCheckBack": "nächster Blick {time}",

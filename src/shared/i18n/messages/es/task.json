@@ -50,5 +50,6 @@
   "taskWaitChainVia": "Esperando a {on} · que espera a {end}",
   "taskWaitOn": "Esperando a {on}",
   "taskWaitOnUntil": "Esperando a {on} · espera hasta {time}",
-  "taskWaitOnUpdate": "Esperando a {on} · espera una actualización de la app"
+  "taskWaitOnUpdate": "Esperando a {on} · espera una actualización de la app",
+  "taskWaitRunningSince": "{label} · en ejecución desde {time}"
 }

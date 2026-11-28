@@ -50,5 +50,6 @@
   "taskWaitChainVia": "正在等待 {on} · 它在等待 {end}",
   "taskWaitOn": "正在等待 {on}",
   "taskWaitOnUntil": "正在等待 {on} · 它等到 {time}",
-  "taskWaitOnUpdate": "正在等待 {on} · 它在等待应用更新"
+  "taskWaitOnUpdate": "正在等待 {on} · 它在等待应用更新",
+  "taskWaitRunningSince": "{label} · 自 {time} 起运行"
 }

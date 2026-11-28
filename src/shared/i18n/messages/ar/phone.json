@@ -523,6 +523,7 @@
   "phoneRecordWaitDueReset": "كانت إعادة التعيين مستحقة {time}",
   "phoneRecordWaitDueStart": "كان وقت البدء مستحقًا {time}",
   "phoneRecordWaitLabelRecorded": "{label} · سُجّل الانتظار {time}",
+  "phoneRecordWaitLabelRunningSince": "{label} · قيد التشغيل منذ {time}",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · سُجّل الانتظار {time}",
   "phoneRecordWaitNextCheckBack": "العودة للتحقق {time}",

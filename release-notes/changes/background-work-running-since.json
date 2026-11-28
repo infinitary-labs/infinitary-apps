@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "background-work-running-since",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task's background work says when it started",
+      "body": "While a crewmate's work runs in the background, its task now shows \"Background work · running since\" and the time it began, on your computer and on your phone. Before, the line gave no time at all.",
+      "noPicture": "The change adds a few words to an existing status line, so no view changes shape.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

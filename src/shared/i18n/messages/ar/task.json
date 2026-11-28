@@ -50,5 +50,6 @@
   "taskWaitChainVia": "بانتظار {on} · الذي ينتظر {end}",
   "taskWaitOn": "بانتظار {on}",
   "taskWaitOnUntil": "بانتظار {on} · الذي ينتظر حتى {time}",
-  "taskWaitOnUpdate": "بانتظار {on} · الذي ينتظر تحديث التطبيق"
+  "taskWaitOnUpdate": "بانتظار {on} · الذي ينتظر تحديث التطبيق",
+  "taskWaitRunningSince": "{label} · قيد التشغيل منذ {time}"
 }

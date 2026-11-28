@@ -3920,6 +3920,7 @@
   {"said":{"m":"taskWaitOn","a":{"on":"‹on›"}},"words":"Waiting on ‹on›"},
   {"said":{"m":"taskWaitOnUntil","a":{"on":"‹on›","time":"‹time›"}},"words":"Waiting on ‹on› · it waits until ‹time›"},
   {"said":{"m":"taskWaitOnUpdate","a":{"on":"‹on›"}},"words":"Waiting on ‹on› · it waits for an app update"},
+  {"said":{"m":"taskWaitRunningSince","a":{"label":"‹label›","time":"‹time›"}},"words":"‹label› · running since ‹time›"},
   {"said":{"m":"trayOpen"},"words":"Open Infinitary"},
   {"said":{"m":"trayQuit"},"words":"Quit Infinitary"},
   {"said":{"m":"uiButtonPending"},"words":"Working..."},

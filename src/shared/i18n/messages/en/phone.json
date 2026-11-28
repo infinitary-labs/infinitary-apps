@@ -447,6 +447,7 @@
   "phoneRecordWaitDueReset": "reset was due {time}",
   "phoneRecordWaitDueStart": "start time was due {time}",
   "phoneRecordWaitLabelRecorded": "{label} · wait recorded {time}",
+  "phoneRecordWaitLabelRunningSince": "{label} · running since {time}",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · wait recorded {time}",
   "phoneRecordWaitNextCheckBack": "check-back {time}",

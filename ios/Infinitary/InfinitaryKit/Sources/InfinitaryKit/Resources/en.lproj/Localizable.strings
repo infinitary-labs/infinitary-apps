@@ -2228,6 +2228,7 @@
 "phoneRecordWaitDueReset" = "reset was due %1$@";
 "phoneRecordWaitDueStart" = "start time was due %1$@";
 "phoneRecordWaitLabelRecorded" = "%1$@ · wait recorded %2$@";
+"phoneRecordWaitLabelRunningSince" = "%1$@ · running since %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · wait recorded %3$@";
 "phoneRecordWaitNextCheckBack" = "check-back %1$@";
@@ -4507,6 +4508,7 @@
 "taskWaitOn" = "Waiting on %1$@";
 "taskWaitOnUntil" = "Waiting on %1$@ · it waits until %2$@";
 "taskWaitOnUpdate" = "Waiting on %1$@ · it waits for an app update";
+"taskWaitRunningSince" = "%1$@ · running since %2$@";
 "trayOpen" = "Open Infinitary";
 "trayQuit" = "Quit Infinitary";
 "uiButtonPending" = "Working...";

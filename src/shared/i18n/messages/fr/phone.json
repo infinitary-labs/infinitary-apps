@@ -466,6 +466,7 @@
   "phoneRecordWaitDueReset": "renouvellement en retard depuis {time}",
   "phoneRecordWaitDueStart": "démarrage en retard depuis {time}",
   "phoneRecordWaitLabelRecorded": "{label} · attente enregistrée {time}",
+  "phoneRecordWaitLabelRunningSince": "{label} · en cours depuis {time}",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · attente enregistrée {time}",
   "phoneRecordWaitNextCheckBack": "nouveau point {time}",

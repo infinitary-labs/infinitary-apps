@@ -211,6 +211,43 @@ it("publishes fresh dependency waits from the cached graph and retains untouched
   }
 });
 
+// A task header read "Background work" with no time while background work ran: the host
+// knew when it started, and the wait dropped it.
+describe("a job wait with no check-back", () => {
+  it("carries when the work started, and a check-back that owns the wait keeps its own time", () => {
+    const db = openInMemoryDatabase();
+    try {
+      const tasks = new TaskService({ db, strict: true, now: () => 1_000_000 });
+      seedTask(tasks, { id: "work", title: "Build", status: "running" });
+      const record = mustTask(tasks, "work");
+      const started = Date.parse("2026-11-28T00:51:15Z");
+      const waits = taskWaitsOf({
+        record,
+        holding: [],
+        since: {},
+        decision: false,
+        facts: { job: true, timerOwned: false, jobSince: started },
+      });
+      expect(waits.find((wait) => wait.kind === "job")).toEqual({
+        id: "job",
+        kind: "job",
+        label: "Background work",
+        since: started,
+      });
+      const none = taskWaitsOf({
+        record,
+        holding: [],
+        since: {},
+        decision: false,
+        facts: { job: true, timerOwned: false },
+      });
+      expect(none.find((wait) => wait.kind === "job")).not.toHaveProperty("since");
+    } finally {
+      db.close();
+    }
+  });
+});
+
 function mustTask(tasks: TaskService, id: string) {
   const record = tasks.get(id);
   if (!record) throw new Error(`Missing task ${id}`);

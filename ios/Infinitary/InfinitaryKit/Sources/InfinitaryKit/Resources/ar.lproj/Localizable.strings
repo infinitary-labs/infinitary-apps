@@ -2228,6 +2228,7 @@
 "phoneRecordWaitDueReset" = "كانت إعادة التعيين مستحقة %1$@";
 "phoneRecordWaitDueStart" = "كان وقت البدء مستحقًا %1$@";
 "phoneRecordWaitLabelRecorded" = "%1$@ · سُجّل الانتظار %2$@";
+"phoneRecordWaitLabelRunningSince" = "%1$@ · قيد التشغيل منذ %2$@";
 "phoneRecordWaitLine" = "%2$@ · %1$@";
 "phoneRecordWaitLineRecorded" = "%2$@ · %1$@ · سُجّل الانتظار %3$@";
 "phoneRecordWaitNextCheckBack" = "العودة للتحقق %1$@";
@@ -4507,6 +4508,7 @@
 "taskWaitOn" = "بانتظار %1$@";
 "taskWaitOnUntil" = "بانتظار %1$@ · الذي ينتظر حتى %2$@";
 "taskWaitOnUpdate" = "بانتظار %1$@ · الذي ينتظر تحديث التطبيق";
+"taskWaitRunningSince" = "%1$@ · قيد التشغيل منذ %2$@";
 "trayOpen" = "فتح Infinitary";
 "trayQuit" = "إنهاء Infinitary";
 "uiButtonPending" = "جارٍ العمل...";

@@ -50,5 +50,6 @@
   "taskWaitChainVia": "{on} 待ち · その先は {end} 待ち",
   "taskWaitOn": "{on} 待ち",
   "taskWaitOnUntil": "{on} 待ち · {time} まで待機",
-  "taskWaitOnUpdate": "{on} 待ち · アプリのアップデート待ち"
+  "taskWaitOnUpdate": "{on} 待ち · アプリのアップデート待ち",
+  "taskWaitRunningSince": "{label} · {time} から実行中"
 }

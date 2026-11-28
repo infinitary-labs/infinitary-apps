@@ -63,6 +63,16 @@ describe("recorded task wait presentation", () => {
     expect(taskWaitText(equal[0], now)).toContain("next read");
     expect(taskWaitText(equal[1], now)).toContain("check-back");
   });
+  it("says when background work with no check-back started", () => {
+    const started = Date.parse("2026-11-01T07:51:00Z");
+    const job: TaskWait = { id: "job", kind: "job", label: "Background work", since: started };
+    expect(taskWaitText(job, now, true, "UTC")).toBe("Background work · running since 7:51 AM UTC");
+    const owned: TaskWait = {
+      ...job,
+      next: { kind: "check-back", at: now + 60000 },
+    };
+    expect(taskWaitText(owned, now, true, "UTC")).toContain("wait recorded 7:51 AM UTC");
+  });
   it("identifies both occurrences of a repeated local hour, and dates another day", () => {
     const one: TaskWait = {
       id: "start",

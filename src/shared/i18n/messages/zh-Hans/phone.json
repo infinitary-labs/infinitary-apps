@@ -428,6 +428,7 @@
   "phoneRecordWaitDueReset": "重置原定于 {time}",
   "phoneRecordWaitDueStart": "开始时间原定于 {time}",
   "phoneRecordWaitLabelRecorded": "{label} · 等待记录于 {time}",
+  "phoneRecordWaitLabelRunningSince": "{label} · 自 {time} 起运行",
   "phoneRecordWaitLine": "{label} · {event}",
   "phoneRecordWaitLineRecorded": "{label} · {event} · 等待记录于 {time}",
   "phoneRecordWaitNextCheckBack": "回头查看 {time}",

@@ -116,7 +116,7 @@ extension PhoneJourney {
         openIntegrationsAgain()
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "label == %@", "Mark your client for agents"), object: line, timeout: 20),
                        .completed, app.debugDescription)
-        XCTAssertTrue(app.staticTexts["google-client-detail"].label.hasPrefix("Google's Gmail and Calendar servers only take a client marked"),
+        XCTAssertTrue(app.staticTexts["google-client-detail"].label.hasPrefix("Google's Gmail, Calendar and Drive servers only take a client marked"),
                       app.staticTexts["google-client-detail"].label)
         XCTAssertEqual(next.label, "Open Google Cloud")
         XCTAssertTrue(next.isEnabled, "Google Cloud's page reads nothing on the computer")

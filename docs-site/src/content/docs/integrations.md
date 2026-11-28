@@ -97,9 +97,9 @@ In Calendar they can list your calendars and events, read an event, find times w
 No action deletes a calendar event.
 
 Google can stop a call to ask you first, even one you allowed.
-Infinitary then shows Google's question on a card, with Google's own choices and none picked.
-Nothing runs until you pick one and press **Send to Google**; **Not now** sends nothing.
-Your pick answers that one call.
+Infinitary then shows the question on a card that names Gmail or Calendar as asking, with each of Google's choices as its own button, in Google's words.
+Nothing runs until you press one, and your choice answers that one call.
+Google, not Infinitary, keeps a choice to always allow.
 
 What your first mate and crew read stays in their saved conversations for 30 days.
 Then a note takes its place.

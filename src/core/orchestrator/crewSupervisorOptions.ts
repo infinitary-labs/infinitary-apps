@@ -462,10 +462,11 @@ export type CrewSupervisorOptions = {
     picked?: string,
   ) => Promise<WriteAskSent>;
   /**
-   * What the captain chose on a panel's approval card (docs/integrations.md,
-   * "Panels"): the panel's next call hears it, never the first mate.
+   * Whether the captain turned down a panel's approval card, with Not now
+   * or a place's own Don't allow (docs/integrations.md, "Panels"): the
+   * panel's next call hears it, never the first mate.
    */
-  panelAskAnswered?: (askId: string, choice: IntegrationApprovalChoice) => void;
+  panelAskAnswered?: (askId: string, declined: boolean) => void;
   /**
    * The pinned pull request by its number, for a kept approval's reconcile,
    * in the repository it pinned (`place`) when named. `mergeTask` asks the

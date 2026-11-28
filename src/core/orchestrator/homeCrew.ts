@@ -331,7 +331,7 @@ export function startHomeCrew({
         : "ask" in taken && taken.ask.kind !== "integration"
           ? githubGateway.sendTaken(rowId, taken, choice)
           : integrations.sendTaken(rowId, taken, choice, picked),
-    panelAskAnswered: (askId, choice) => panelAsks.answered(askId, choice === "deny"),
+    panelAskAnswered: (askId, declined) => panelAsks.answered(askId, declined),
     reviewGate: (taskId, reviewId) => changeDelivery.reviews.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber, mergeTask, place) =>
       changeDelivery.merges.pullState(taskId, prNumber, mergeTask, place),

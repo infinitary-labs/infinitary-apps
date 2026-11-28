@@ -647,7 +647,14 @@ export class CardActions {
       source === "chrome" &&
       effect?.kind === "request_write" &&
       effect.integration
-        ? { rowId: associated.id, ask: effect.ask, choice: effect.integration }
+        ? {
+            rowId: associated.id,
+            ask: effect.ask,
+            choice: effect.integration,
+            pick: effect.pick,
+            // Not now refuses on any approval card; a place's own Don't allow sends its answer and declines.
+            declined: chosen.declines === true || effect.integration === "deny",
+          }
         : undefined;
     let takenFirstmateAsk: IntegrationAskTaken | undefined;
     // INF-4446: the captain's yes to a check, kept with their other yeses.
@@ -854,7 +861,8 @@ export class CardActions {
             firstmateAsk.ask,
             takenFirstmateAsk,
             firstmateAsk.choice,
-            answers,
+            firstmateAsk.pick,
+            firstmateAsk.declined,
           );
           return {};
         }
@@ -874,6 +882,7 @@ export class CardActions {
             effect.integration,
             refused,
             answers,
+            effect.pick,
           );
           return {};
         }

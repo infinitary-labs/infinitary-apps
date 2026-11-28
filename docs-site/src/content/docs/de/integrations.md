@@ -1,5 +1,5 @@
 ---
-source: b1df1c08a3c3c75f
+source: 0304225f18fea486
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -98,9 +98,9 @@ Im Kalender können sie deine Kalender und Termine auflisten, einen Termin lesen
 Keine Aktion löscht einen Kalendertermin.
 
 Google kann einen Aufruf stoppen, um zuerst dich zu fragen, auch einen, den du erlaubt hast.
-Infinitary zeigt Googles Frage dann auf einer Karte, mit Googles eigenen Antwortmöglichkeiten, von denen keine ausgewählt ist.
-Nichts läuft, bis du eine auswählst und **An Google senden** drückst; **Nicht jetzt** sendet nichts.
-Deine Auswahl beantwortet nur diesen einen Aufruf.
+Infinitary zeigt die Frage dann auf einer Karte, die Gmail oder Kalender als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
+Nichts läuft, bis du eine drückst, und deine Auswahl beantwortet nur diesen einen Aufruf.
+Eine Auswahl, immer zu erlauben, speichert Google, nicht Infinitary.
 
 Was dein erster Offizier und deine Crew lesen, bleibt 30 Tage in ihren gespeicherten Unterhaltungen.
 Danach tritt ein Vermerk an die Stelle.

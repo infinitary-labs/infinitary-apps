@@ -1,5 +1,5 @@
 ---
-source: b1df1c08a3c3c75f
+source: 0304225f18fea486
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -98,9 +98,9 @@ Na Agenda, eles podem listar suas agendas e eventos, ler um evento, encontrar ho
 Nenhuma ação exclui um evento da agenda.
 
 O Google pode parar uma chamada para perguntar a você primeiro, mesmo uma que você permitiu.
-Então o Infinitary mostra a pergunta do Google em um cartão, com as próprias opções do Google e nenhuma escolhida.
-Nada é executado até você escolher uma e apertar **Enviar ao Google**; **Agora não** não envia nada.
-Sua escolha responde só a essa chamada.
+Então o Infinitary mostra a pergunta em um cartão que diz que é o Gmail ou a Agenda que pergunta, com cada opção do Google como um botão próprio, nas palavras do Google.
+Nada é executado até você apertar um deles, e sua escolha responde só a essa chamada.
+Uma escolha de sempre permitir fica guardada pelo Google, não pelo Infinitary.
 
 O que seu imediato e sua tripulação leem fica nas conversas salvas deles por 30 dias.
 Depois, uma nota toma o lugar disso.

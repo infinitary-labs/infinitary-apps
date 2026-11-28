@@ -1276,15 +1276,9 @@
 "handoverWontStopText" = "%1$@ 已请它保存并停止，但它仍占用着你保存的工作。“立即停止”会直接结束它，不再等待。没有做任何更改。";
 "handoverWontStopTitle" = "%1$@ 没有停止";
 "integrationsClientFileNotTaken" = "此版本的 Infinitary 中，%1$@ 不接受客户端文件。";
-"integrationsConfirmChoice" = "你给 %1$@ 的回答";
-"integrationsConfirmLeadFirstmate" = "你的大副请求运行此操作，Infinitary 已允许它继续。%1$@ 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。";
-"integrationsConfirmLeadPanel" = "你的面板“%1$@”请求运行此操作，Infinitary 已允许它继续。%2$@ 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。";
-"integrationsConfirmLeadTask" = "“%2$@”上的船员请求运行此操作，Infinitary 已允许它继续。%1$@ 停止了这次调用，要先征求你的意见，所以还没有运行任何内容。";
+"integrationsConfirmKeeps" = "“始终”类选择由 %1$@ 保存，而不是 Infinitary。";
 "integrationsConfirmNotNow" = "暂不";
-"integrationsConfirmSend" = "发送给 %1$@";
-"integrationsConfirmTitle" = "%2$@ 请你确认“%1$@”";
-"integrationsConfirmWays" = "“发送给 %1$@”会把你选的回答发送一次，%1$@ 会按你的选择运行或停止这次调用。“暂不”不发送任何内容，这次调用也不会运行。";
-"integrationsConfirmWords" = "%1$@ 的原话";
+"integrationsConfirmTitle" = "%2$@ 在“%1$@”前询问你";
 "integrationsConnectOfferBody" = "之后，你的大副和船员可以用你的登录访问 %1$@。它的每个操作，包括读取，都会在卡片上询问你，直到你选择“始终允许”。";
 "integrationsConnectOfferButton" = "打开集成";
 "integrationsConnectOfferNotNow" = "暂不";

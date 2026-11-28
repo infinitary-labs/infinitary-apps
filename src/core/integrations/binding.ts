@@ -180,11 +180,18 @@ export type IntegrationAnswer = {
   confirm?: IntegrationConfirm;
 };
 
-/** A place's question for the person about one call: its words, its choices, and the state to answer it with. */
+/**
+ * A place's question for the person about one call: its words, its question
+ * line, its choices, and the state to answer it with. `asker` is the
+ * service within the place that asks, such as Gmail within Google, which
+ * the card names as the one asking.
+ */
 export type IntegrationConfirm = {
   message: string;
+  question?: string;
   options: { value: string; label: string }[];
   state: string;
+  asker?: string;
 };
 
 /** The captain's pick for a place's question, with the state the question came with. */

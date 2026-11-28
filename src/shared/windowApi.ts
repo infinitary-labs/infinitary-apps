@@ -443,8 +443,17 @@ export type FirstmateApi = {
     set: (
       next: import("./cardOverlay").SavedCardOverlay,
     ) => Promise<import("./cardOverlay").CardOverlaySet>;
-    /** The card the newest notification on this computer was about, which the overlay shows first. */
-    start: () => Promise<{ cardId: string | null }>;
+    /**
+     * The card the newest notification on this computer was about, which the
+     * overlay shows first, and this opening's message: the window's unsent one,
+     * words kept from an earlier overlay, or an empty one.
+     */
+    start: () => Promise<{
+      cardId: string | null;
+      lent?: import("./overlayDraft").LentDraft | null;
+    }>;
+    /** The overlay's message box hands its message back as the overlay goes, to the window or to be kept. */
+    handBack: (lent: import("./overlayDraft").LentDraft) => Promise<{ ok: true }>;
     /** The overlay drew its card, or found none waiting. */
     ready: (cards: boolean) => Promise<{ ok: true }>;
     /** The overlay let go: its panel goes. */
@@ -455,6 +464,16 @@ export type FirstmateApi = {
     wide: (wide: boolean) => Promise<{ ok: true }>;
     /** The panel is going: settle unsent words, then `hide`. */
     onLeave: (listener: () => void) => () => void;
+    /** The window: the overlay asks for its unsent message; answer with `lend`. */
+    onLendAsk: (listener: (ask: number) => void) => () => void;
+    /** The window lends its unsent message for the overlay's opening `ask`. */
+    lend: (lent: import("./overlayDraft").LentDraft) => Promise<{ ok: true }>;
+    /** The window: the overlay handed back the message it was lent. */
+    onHandBack: (listener: (lent: import("./overlayDraft").LentDraft) => void) => () => void;
+    /** The window: the overlay went with words no window lent for; take them into an empty box with `takeKept`. */
+    onKept: (listener: () => void) => () => void;
+    /** The window: takes the kept words, once, or null when none are kept. */
+    takeKept: () => Promise<import("./overlayDraft").MainDraft | null>;
   };
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {

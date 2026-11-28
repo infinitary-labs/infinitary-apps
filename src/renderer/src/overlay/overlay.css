@@ -11,13 +11,18 @@ html[data-card-overlay] {
   /* The pager's lane under the card: its 10 px gap (CardStack) and its
      pill, the 28 px row inside a 1 px border. */
   --overlay-pager-lane: 40px;
+  /* The message box's lane under the pager: its 12 px gap and its height
+     with any round above its field, which OverlayMessage measures. */
+  --overlay-box-lane: 0px;
   /* The panel's whole height, less air, the hide lane above and, centred
-     with the card, the pager's lane under it: the tallest card gives up both. */
+     with the card, the pager's and the box's lanes under it: the tallest
+     card gives up all three. */
   --card-max-height: calc(
     100vh -
     2 *
     (var(--space-4) + var(--overlay-hide-lane)) -
-    var(--overlay-pager-lane)
+    var(--overlay-pager-lane) -
+    var(--overlay-box-lane)
   );
 }
 /* No composer lifts the stack: the card is centred in the panel's height. */
@@ -43,6 +48,9 @@ html[data-card-overlay] [data-card-layer-leaving] {
 html[data-card-overlay] [data-card-slot] {
   anchor-name: --overlay-card;
 }
+html[data-card-overlay] [data-card-pager] {
+  anchor-name: --overlay-pager;
+}
 /* The pager hangs under the card and moves with it, the two centred
    together, instead of under the window's fixed lane, which here is nearly
    the panel's height. The envelope keeps the cap's height: the card's
@@ -51,6 +59,13 @@ html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] {
   display: flex;
   flex-direction: column;
   justify-content: center;
+}
+/* The message box's room under the pager, inside the centred group, so
+   card, pager and box are centred together as the box grows. */
+html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope]::after {
+  content: "";
+  flex: none;
+  block-size: var(--overlay-box-lane);
 }
 html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] > [data-card-slot],
 html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] > [data-card-pager] {
@@ -176,4 +191,62 @@ html:not([data-card-maximized]) [data-card-overlay-hide] {
   font-family: var(--font-ui);
   font-size: var(--text-sm);
   box-shadow: var(--shadow-2);
+}
+
+/* The first mate's message box (docs/card-overlay.md, "The message box"):
+   12 px under the pager, or under the card when no pager shows, centred
+   under the card and never wider than it or the window's 560 px message.
+   The field stands on the overlay's own surface so it reads over any scene.
+   With no card it stands alone where a card would, centred in the panel,
+   and anchors the hide button. A card made
+   large hides it. */
+[data-overlay-message] {
+  position: fixed;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  inline-size: min(560px, calc(100vw - 32px));
+  block-size: fit-content;
+  inset: 0;
+  margin: auto;
+  anchor-name: --overlay-box;
+}
+html:not([data-card-maximized]) [data-overlay-message]:not([data-overlay-message-alone]) {
+  inline-size: min(560px, anchor-size(--overlay-card width));
+  inset-block: calc(anchor(--overlay-pager bottom, anchor(--overlay-card bottom)) + 12px) auto;
+  margin: 0;
+  inset-inline: anchor(--overlay-card center) auto;
+  translate: -50% 0;
+}
+html[dir="rtl"]:not([data-card-maximized])
+  [data-overlay-message]:not([data-overlay-message-alone]) {
+  translate: 50% 0;
+}
+html[data-card-maximized] [data-overlay-message] {
+  display: none;
+}
+/* The round a send from the box brought: on the same surface, opening nothing. */
+[data-overlay-message] [data-overlay-round] {
+  margin: 0;
+  padding: 6px 14px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-m);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-2);
+}
+[data-overlay-message] [data-overlay-round]::before {
+  display: none;
+}
+[data-overlay-message] [data-overlay-round] [data-last-turn-pair] {
+  cursor: auto;
+}
+/* The box alone anchors the hide button, just above its top corner. */
+[data-card-overlay-root]:has([data-overlay-message-alone]) [data-card-overlay-hide] {
+  position-anchor: --overlay-box;
+}
+html:not([data-card-maximized])
+  [data-card-overlay-root]:has([data-overlay-message-alone])
+  [data-card-overlay-hide] {
+  inset-block-start: calc(anchor(top) - 28px - var(--space-2));
 }

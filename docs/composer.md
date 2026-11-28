@@ -3,6 +3,7 @@
 The task prompt at the foot of the home stage: how it takes more than one line, makes room for itself, holds long pastes, meets voice, and never loses a draft.
 The last turn, the captain's message and the first mate's reply above it, is part of the same dock (below, "The last turn").
 A card's one field uses the same field (below, "The card reply row").
+The card overlay's message box is this same message, lent to the overlay as it opens and handed back as it goes (`docs/card-overlay.md`, "The message box").
 The captain's decisions are the board review of 2026-09-28 (scout `fm3000-multiline-input-s1`): key model A, the stage lifts by half the growth with the shell kept clear, a long paste becomes a chip, and Up brings back the last message.
 How it looks is the design skill's `components/voice/VoiceInput.prompt.md`; this page is how it behaves and where that lives.
 

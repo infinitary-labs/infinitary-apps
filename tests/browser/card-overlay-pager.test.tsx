@@ -13,6 +13,8 @@ import { openWindow } from "./window";
  * the overlay is nearly the panel's whole height. The approved plan puts it
  * 10 px under the card, the hide button just above the card's top corner,
  * and lets a click in the stack's empty boxes through to the app behind.
+ * The first mate's message box hangs under the pager, and the card, pager and
+ * box are centred together (INF-7222's plan: "centred with card and pager").
  */
 
 const TITLES = ["Overlay card 1", "Overlay card 2", "Overlay card 3"];
@@ -50,12 +52,15 @@ function checkPlace(bridge: ReturnType<typeof fakeBridge>, height: number, which
   const card = box(shownEntry(), "card");
   const pager = box(document.querySelector("[data-card-pager] > div"), "pager");
   const hide = box(document.querySelector("[data-card-overlay-hide]"), "hide button");
+  const message = box(document.querySelector("[data-overlay-message]"), "message box");
 
   expect(Math.round(pager.top - card.bottom), `the pager's gap under ${at}`).toBe(PAGER_GAP);
-  expect(pager.bottom, `the pager stays inside the panel, ${at}`).toBeLessThanOrEqual(height);
+  expect(message.bottom, `the message box stays inside the panel, ${at}`).toBeLessThanOrEqual(
+    height,
+  );
   expect(
-    Math.abs(card.top - (height - pager.bottom)),
-    `card and pager are centred together, ${at}`,
+    Math.abs(card.top - (height - message.bottom)),
+    `card, pager and message box are centred together, ${at}`,
   ).toBeLessThanOrEqual(1);
   expect(hide.bottom, `the hide button clears the peeks, ${at}`).toBeLessThan(card.top - PEEKS);
   expect(hide.top, `the hide button stays inside the panel, ${at}`).toBeGreaterThanOrEqual(0);

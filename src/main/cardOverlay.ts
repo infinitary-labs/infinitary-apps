@@ -209,9 +209,9 @@ export class CardOverlayController {
   }
 
   /**
-   * The panel's page has its cards: with one to answer the panel takes the
-   * keys, and with none it only says so and goes, the keys staying where
-   * they were.
+   * The panel's page has its cards: with a card to answer, or the first
+   * mate's message box alone, the panel takes the keys; when its first reads
+   * failed it only says so and goes, the keys staying where they were.
    */
   ready(panelAsking: OverlayPanel, cards: boolean): void {
     const phase = this.phase;

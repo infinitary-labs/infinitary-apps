@@ -29,8 +29,8 @@ countPresses();
 // The app's own UI is the first plugin (docs/ui-plugins.md); it registers
 // before the first render so every registry is populated when read.
 registerBuiltinPlugin(pluginHost);
-// The card overlay's page draws the stack alone (docs/card-overlay.md): no
-// panel, no music, nothing of the window's own beyond the cards.
+// The card overlay's page draws the stack and the first mate's message box
+// (docs/card-overlay.md): no panel, no music, nothing else of the window's own.
 const overlay = isCardOverlayPage();
 if (!overlay) startWindow();
 

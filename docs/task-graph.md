@@ -96,11 +96,11 @@ It starts as any task does once each wait closed done and at least one of them m
 A replaced piece's wait moves to its replacement (`TaskService.moveWaits`), as every wait does.
 
 When every wait closed done and none merged, such as a plan never built or a reproduce step that did not reproduce, nothing shipped for the action to tell, so the task stays unstarted instead of starting only to say so (INF-7198's plan, part 3).
-`TaskGraph.nothingMerged` names those waits, the ready query leaves the task out, and its row reads neither blocked nor ready, so only a start begins it.
-The ready sweep tells the first mate once for that set of waits (the `nothing-merged` wake, `TaskGraph.listNothingMerged`); it links the work that ships the change, drops the task, or starts it with `update_task start_now` on the captain's word.
-A wait counts as merged by `TaskGraph.workMerged`: closed done by a merge that spent its approval, or with the closed reason merged or landed.
+`TaskGraph.nothingMerged` names those waits, the ready query leaves the task out, its row reads neither blocked nor ready, and its queue line reads "Waiting for the first mate's go", so only a start begins it.
+The ready sweep tells the first mate once for that set of waits (the `nothing-merged` wake, `TaskGraph.listNothingMerged`), once the first mate has finished a turn on each wait's close, since that turn may file the work built on it; it links the work that ships the change, drops the task, or starts it with `update_task start_now` on the captain's word.
+A wait counts as shipped by `TaskGraph.workShipped`: closed done by a merge that spent its approval, or with the closed reason merged or landed (`TaskGraph.workMerged`), or done with a part under it that shipped, as a parent the host closes when its last part merges.
 
-A wait whose answer carries on in other work moves to that work: before the ready query reads it, the sweep turns each wait of open, unheld, when-ready side-effect work on a task that closed done with no merge into a wait on each task whose basis names it and that is live or merged (`TaskGraph.carryAnswers`), as a replaced piece's wait moves.
+A wait whose answer carries on in other work moves to that work: before the ready query reads it, the sweep turns each wait of open, unheld, when-ready side-effect work on a task that closed done with nothing shipped into a wait on each task whose basis names it and that is live or shipped (`TaskGraph.carryAnswers`), as a replaced piece's wait moves.
 Work built on it that closed without a merge, a dropped one, the host's own delivery machinery and other side-effect work take no wait, so a wait never moves back; a move that would close a cycle is skipped.
 The waiter's timeline records each move as a carried wait's does.
 

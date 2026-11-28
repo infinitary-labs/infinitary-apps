@@ -721,6 +721,12 @@ describe("the task graph (R1)", () => {
       shape: { kind: "unclear", side_effect: true },
     });
     tasks.close("plan", { status: "done", reason: "answered", actor: "host" });
+    // The careful review's finding f3: while the first mate has not finished a turn on the
+    // plan's close, that turn may still file the build, so the wake waits.
+    const news = inbox.enqueue(FIRSTMATE_RECIPIENT, "the plan closed", "plan", "agent");
+    await supervisor.watch.sweepGates(Date.now());
+    expect(wakes()).toEqual([]);
+    inbox.ack([news]);
     await supervisor.watch.sweepGates(Date.now());
     await supervisor.watch.sweepGates(Date.now());
     await tick();

@@ -405,12 +405,35 @@ describe("the task graph (task-system P2)", () => {
       const record = tasks.get(tell.id)!;
       expect(tasks.graph.flagsOf(record)).toMatchObject({ blocked: false, ready: false });
       expect(tasks.graph.awaitsStart(record)).toBe(true);
+      // The careful review's finding f2: its queue line says only the first mate starts it.
+      expect(queryTasks(tasks, { key: tell.key }).rows[0]?.waiting).toMatch(
+        /^Waiting for the first mate’s go · /,
+      );
 
       // One wait that merged is work to tell: the task starts.
       const fix = work("fix", { startPolicy: "on-request" });
       tasks.graph.link(fix.id, tell.id, "blocks", "firstmate");
       tasks.close(fix.id, { status: "done", reason: "merged", actor: "host" });
       expect(tasks.graph.listNothingMerged()).toEqual([]);
+      expect(tasks.graph.listReady().map((r) => r.id)).toContain(tell.id);
+    });
+
+    // The careful review's finding f1: a parent the host closes done when its last part
+    // merges has no delivery of its own, yet its work shipped, so its waiter starts as before.
+    it("starts a side-effect task waiting on a parent whose part merged", () => {
+      const { tasks, work } = setup();
+      const parent = work("parent", { startPolicy: "on-request" });
+      const part = work("part", { startPolicy: "on-request", parentId: parent.id });
+      const tell = work("tell-item", {
+        blockedBy: ["parent"],
+        shape: { kind: "unclear", side_effect: true },
+      });
+      work("other", { startPolicy: "on-request", shape: { kind: "implement", basis: parent.key } });
+      tasks.close(part.id, { status: "done", reason: "merged", actor: "host" });
+      tasks.close(parent.id, { status: "done", reason: "finished", actor: "host" });
+
+      expect(tasks.graph.nothingMerged(tasks.get(tell.id)!)).toBeUndefined();
+      expect(tasks.graph.carryAnswers("host")).toEqual([]);
       expect(tasks.graph.listReady().map((r) => r.id)).toContain(tell.id);
     });
 

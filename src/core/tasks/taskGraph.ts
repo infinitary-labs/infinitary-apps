@@ -800,6 +800,21 @@ export class TaskGraph {
   }
 
   /**
+   * Whether a closed task's work shipped: its own merge (`workMerged`), or
+   * the merge of any part under it, read down its parts, since a parent the
+   * host closes done when its last part merges has no delivery of its own.
+   * The host's own delivery machinery is no part.
+   */
+  workShipped(task: TaskRecord, seen = new Set<string>()): boolean {
+    if (TaskGraph.workMerged(task)) return true;
+    if (task.status !== "done" || seen.has(task.id)) return false;
+    seen.add(task.id);
+    return this.writer.store
+      .listChildren(task.id)
+      .some((part) => !TaskService.isDeliveryChild(part) && this.workShipped(part, seen));
+  }
+
+  /**
    * The waits of open side-effect work that every closed done with nothing
    * merged (docs/task-graph.md, "A side-effect task"): there is nothing for
    * its outside action to tell, so it stays unstarted and the first mate
@@ -811,7 +826,7 @@ export class TaskGraph {
       return undefined;
     const waits = this.blockers(record.id);
     if (waits.length === 0) return undefined;
-    if (waits.some((wait) => !TaskService.blockerCleared(wait) || TaskGraph.workMerged(wait)))
+    if (waits.some((wait) => !TaskService.blockerCleared(wait) || this.workShipped(wait)))
       return undefined;
     return waits;
   }
@@ -830,9 +845,9 @@ export class TaskGraph {
   /**
    * A side-effect task's wait whose answer carries on in other work moves to
    * that work (docs/task-graph.md, "A side-effect task"): each wait that
-   * closed done with no merge, on open, unheld, when-ready side-effect work,
+   * closed done with nothing shipped, on open, unheld, when-ready side-effect work,
    * becomes a wait on every task whose basis names it and that is still live
-   * or merged, as a replaced task's wait moves to its replacement. Work
+   * or shipped, as a replaced task's wait moves to its replacement. Work
    * built on it that closed without a merge, a dropped one, the host's own
    * delivery machinery and other side-effect work take no wait, so a wait
    * never moves back and forth. A move that would close a cycle is skipped.
@@ -850,12 +865,12 @@ export class TaskGraph {
     const run = this.writer.write(() =>
       candidates.flatMap((waiter) =>
         this.blocksIn(waiter.id, ["done"]).flatMap(({ task: from }) => {
-          if (TaskGraph.workMerged(from)) return [];
+          if (this.workShipped(from)) return [];
           const carriers = this.builtOn(from.id).filter(
             (other) =>
               other.id !== waiter.id &&
               !other.shape?.side_effect &&
-              (TaskService.blockerHoldsClose(other) || TaskGraph.workMerged(other)),
+              (TaskService.blockerHoldsClose(other) || this.workShipped(other)),
           );
           const [first, ...rest] = carriers;
           if (!first || !this.carryWait(from.id, waiter.id, first.id, actor, at)) return [];

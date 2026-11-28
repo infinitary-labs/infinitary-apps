@@ -14,7 +14,10 @@ html[data-card-overlay] {
   /* The panel's whole height, less air, the hide lane above and, centred
      with the card, the pager's lane under it: the tallest card gives up both. */
   --card-max-height: calc(
-    100vh - 2 * (var(--space-4) + var(--overlay-hide-lane)) - var(--overlay-pager-lane)
+    100vh -
+    2 *
+    (var(--space-4) + var(--overlay-hide-lane)) -
+    var(--overlay-pager-lane)
   );
 }
 /* No composer lifts the stack: the card is centred in the panel's height. */
@@ -22,6 +25,9 @@ html[data-card-overlay]:not([data-card-maximized]) [data-card-layer],
 html[data-card-overlay] [data-card-layer-leaving] {
   /* biome-ignore lint/complexity/noImportantStyles: the stack sets its top inline (STAGE_TOP), which only !important outranks */
   top: 50% !important;
+}
+html[data-card-overlay] [data-card-slot] {
+  anchor-name: --overlay-card;
 }
 /* The pager hangs under the card and moves with it, the two centred
    together, instead of under the window's fixed lane, which here is nearly
@@ -42,9 +48,6 @@ html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] > [data-
   transform: none !important;
   flex: none;
 }
-html[data-card-overlay] [data-card-slot] {
-  anchor-name: --overlay-card;
-}
 /* Over another app the pager stands on the overlay's own pill surface, as
    the hide button does, so it reads on any scene. */
 html[data-card-overlay] [data-card-pager] > div {
@@ -63,7 +66,8 @@ html[data-card-overlay] [data-card-pager] [role="status"] > * {
   border-radius: var(--radius-s);
   box-shadow: var(--shadow-2);
 }
-html[data-card-overlay] [data-card-pager] [role="status"] :is(> span, > button > span) {
+html[data-card-overlay] [data-card-pager] [role="status"] > span,
+html[data-card-overlay] [data-card-pager] [role="status"] > button > span {
   /* biome-ignore lint/complexity/noImportantStyles: the badge's ground is inline (Badge) and see-through */
   background: linear-gradient(var(--accent-dim), var(--accent-dim)), var(--bg-1) !important;
   /* biome-ignore lint/complexity/noImportantStyles: as above */
@@ -134,7 +138,8 @@ html[data-card-overlay] [data-stage] {
 }
 html:not([data-card-maximized]) [data-card-overlay-hide] {
   inset-block-start: calc(
-    anchor(top, calc(var(--space-4) + var(--overlay-hide-lane))) - var(--overlay-hide-lane)
+    anchor(top, calc(var(--space-4) + var(--overlay-hide-lane))) -
+    var(--overlay-hide-lane)
   );
   inset-inline-end: anchor(inside, var(--space-4));
 }

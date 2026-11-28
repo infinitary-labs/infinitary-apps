@@ -18,7 +18,7 @@ export default function seed(userDataDir: string, { titles, paragraphs }: Input)
   const db = openDatabase(userDataDir);
   try {
     const cards = new CardStore(db);
-    titles.forEach((title, i) =>
+    for (const [i, title] of titles.entries())
       cards.upsert({
         id: `overlay-${i + 1}`,
         author: "firstmate",
@@ -32,8 +32,7 @@ export default function seed(userDataDir: string, { titles, paragraphs }: Input)
         status: "ready",
         createdAt: i + 1,
         actions: [],
-      }),
-    );
+      });
   } finally {
     db.close();
   }

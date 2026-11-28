@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-part-times-joined",
+      "reason": "Internal: a phone check of every part dealt into jobs joins its jobs' part times into one record on the project's own test machines; nothing in the app changes."
+    }
+  ]
+}

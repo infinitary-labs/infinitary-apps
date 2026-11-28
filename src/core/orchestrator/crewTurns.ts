@@ -694,11 +694,12 @@ export class CrewTurns {
     // The words the stuck count compares a refusal by: the backend's typed
     // refusal of the conversation, whose words name a fresh message each
     // time, else a request refused as malformed, read from its words.
+    const modelRefused = providerError !== undefined ? task.lastTurnRefused : undefined;
     const refusal =
       providerError === undefined
         ? undefined
-        : task.lastTurnRefused
-          ? modelRefusalWords(task.lastTurnRefused)
+        : modelRefused
+          ? modelRefusalWords(modelRefused)
           : isProviderRefusal(providerError)
             ? refusalWords(providerError)
             : undefined;
@@ -849,6 +850,8 @@ export class CrewTurns {
       this.core.ladder.endOutage(task, outage.failures, outage.since);
     // A refusal is told once per account and words (docs/inbox.md, "The
     // same refusal on one account"); a turn that went through ends that.
+    // A model's typed refusal belongs to its conversation, never the
+    // account, so only a refusal read from its words counts here.
     const account = this.core.ladder.accountOf(task.id);
     if (account && !providerError && !paused) this.accountRefusals.answered(account);
     const accountRefusal =
@@ -892,6 +895,9 @@ export class CrewTurns {
         // class too, so the feed line reads the class and not the words.
         typed = { cutOff };
       }
+      // A model's refusal is a typed fact whatever backend reported it, so
+      // the feed line names the refusal the stuck count read.
+      if (modelRefused) typed = { ...typed, refused: modelRefused };
       this.core.options.tasks.turns.recordTurnFailure(task.id, turnError, typed, retry);
     } else if (report) {
       reportEventId = this.core.options.tasks.turns.recordReport(task.id, {

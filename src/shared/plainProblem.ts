@@ -75,9 +75,14 @@ type Rule = {
 /**
  * A typed failure: its cut-off class and, for a lost sign-in on Claude
  * access set up for Claude Code, where that access comes from, which is
- * renewed there and never by a sign-in here.
+ * renewed there and never by a sign-in here. `refused` is the model
+ * refusing the conversation, with the provider's category when it named one.
  */
-export type TypedFailure = { cutOff?: CutOff; access?: ClaudeAccessSource };
+export type TypedFailure = {
+  cutOff?: CutOff;
+  access?: ClaudeAccessSource;
+  refused?: { category?: string };
+};
 
 const PROVIDER_REFUSED_LINE = "the provider refused the crewmate's request";
 const SIGN_IN_LINE = "the provider did not accept your sign-in - sign in again";
@@ -288,10 +293,12 @@ const PROVIDER_REFUSAL =
  * The plain line for a crewmate's failed turn at its provider: `plainProblem`'s,
  * except that a request the provider refused (a 400 no other rule names)
  * reads as the provider refusing the crewmate's request, which the app retries
- * on its own (INF-3714). Only a crewmate's turn reads it: the first mate's own
+ * on its own (INF-3714), and so does a model's typed refusal of the
+ * conversation. Only a crewmate's turn reads it: the first mate's own
  * failure and a forge's answer keep `plainProblem`'s words.
  */
 export function crewProblem(error: string | undefined, typed?: TypedFailure): string {
+  if (typed?.refused && !typed.cutOff) return PROVIDER_REFUSED_LINE;
   const line = plainProblem(error, typed);
   return line === PLAIN_PROBLEM_FALLBACK && !typed?.cutOff && PROVIDER_REFUSAL.test(error ?? "")
     ? PROVIDER_REFUSED_LINE
@@ -336,6 +343,7 @@ export function typedFailureOf(
   data: Record<string, unknown> | null | undefined,
 ): TypedFailure | undefined {
   if (data?.failureSignals !== "typed") return undefined;
+  const refused = refusedOf(data.refused);
   const cutOff = data.cutOff;
   if (
     cutOff &&
@@ -347,7 +355,14 @@ export function typedFailureOf(
     return {
       cutOff: { class: cls, ...(typeof resetsAt === "number" ? { resetsAt } : {}) },
       ...(access === "organization" || access === "claude-settings" ? { access } : {}),
+      ...(refused ? { refused } : {}),
     };
   }
-  return {};
+  return refused ? { refused } : {};
+}
+
+function refusedOf(value: unknown): { category?: string } | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const category = (value as { category?: unknown }).category;
+  return typeof category === "string" && category ? { category } : {};
 }

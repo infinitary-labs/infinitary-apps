@@ -180,6 +180,12 @@ describe("a crewmate stuck at its provider", () => {
     }
     expect(inbox.stuck(taskId)).toMatchObject({ refusals: STUCK_REFUSAL_LIMIT });
     expect(statusOf(harness)).toBe(AT_PROVIDER_WORDS.stuck);
+    // The feed names the refusal as a stuck 400 refusal's line does.
+    expect(feedOf(harness).filter((line) => line.startsWith("Stuck at its provider"))).toEqual([
+      expect.stringMatching(
+        /^Stuck at its provider: the provider refused the crewmate's request, 3 tries in a row since .+ - the app stopped retrying, and your first mate is choosing what to do$/,
+      ),
+    ]);
     // The first mate hears once, with the refusal's own words, which name
     // the two ways out, and both answers that take them.
     expect(stuckWakes(ops)).toHaveLength(1);

@@ -544,6 +544,7 @@ export class TaskTurns {
           ...(typed ? { failureSignals: "typed" } : {}),
           ...(typed?.cutOff ? { cutOff: typed.cutOff } : {}),
           ...(typed?.access ? { access: typed.access } : {}),
+          ...(typed?.refused ? { refused: typed.refused } : {}),
           ...(retry ? { retry, feedOnce: providerOutageFold(retry.since) } : {}),
         },
       });

@@ -64,6 +64,7 @@ The same provider refusal in a row is no outage that waiting ends: the retry wou
 - Each task-lane row counts the provider refusals in a row that met the same words (`refusal`, their hash, and `refusals`, migration `addProviderRefusals`); a failure in other words starts the count again, and a turn that goes through clears it (`endOutage`).
   A refusal is a request the provider refused, its 400 in Pi's words or the Claude client's (`isProviderRefusal`, the same reading as the crewmate's feed line, `crewProblem`), compared without the provider's per-response request id (`refusalWords`): an outage, such as an overloaded provider, keeps the honest retry however often its words repeat, and a sign-in failure, a typed cut-off and a full conversation keep their own ways back.
   A model's safety filter refusing the conversation is a refusal too, read only from the typed fact the Claude client attaches, the turn's own assistant message stopping with `stop_reason` `refusal` (`ClaudeTurnFailure.refused`, carried on `turn_failed`), and compared by that fact and its category (`modelRefusalWords`), never by its words, which name a fresh message id each time.
+  The recorded failure keeps that fact (`TypedFailure.refused`), so its feed line reads the provider refusing the crewmate's request, as a refused 400's does.
   The same words without that fact, such as a prose backend's, keep the honest retry.
 - At `STUCK_REFUSAL_LIMIT` (three, the captain's "after the third identical failure") the lane is stuck (`InboxStore.holdStuck`): its rows are kept and never attempted (`stuck_at`), so there is no fourth try and no still-failing wake.
   Its status reads "Stuck at its provider" (`workPosture.atProvider` `stuck`, the `idle` state), the task record opens with that sentence and what happens next (`recordAttentionOf`), and the outage's feed line says it is stuck.
@@ -92,6 +93,7 @@ The host does not judge which kind a refusal is: it compares the account that se
 - A later refusal in the same words on that account wakes nobody, whichever task meets it, and its failure still lands on that task's timeline.
 - A lane that gets stuck in those words (`STUCK_REFUSAL_LIMIT`) is told only when it is the task the first mate first heard about; the others stop retrying silently, keeping their guidance until a steer.
 - A turn on the account that goes through ends it, so a later refusal there is heard again.
+- A model's typed refusal of a conversation (its safety filter, "Stuck at its provider" above) belongs to that conversation, never to the account, so it never counts here: each task that meets one is told as its own.
 - The record is in memory: after a restart the next such refusal is told once more.
 
 ## A steer no turn took in

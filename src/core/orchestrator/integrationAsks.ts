@@ -209,8 +209,8 @@ export class IntegrationAsks {
     askId: string,
     taken: IntegrationAskTaken,
     choice: IntegrationApprovalChoice,
-    pick?: string,
-    declined = choice === "deny",
+    pick: string | undefined,
+    declined: boolean,
   ): void {
     const send = this.options.sendTakenIntegrationAsk;
     if (!send) return;

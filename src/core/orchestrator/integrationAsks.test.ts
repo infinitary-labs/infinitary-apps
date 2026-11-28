@@ -525,9 +525,10 @@ describe("a place's own question on its confirmation card", () => {
   });
 
   // INF-7093's review: a panel's Don't allow turns its ask down as Not now
-  // did, so a panel calling on a timer is not asked Google's question again,
-  // and the panel's card names the panel, since Google's words name no asker.
-  it("names the panel on its card, and a panel's Don't allow sends Google's DENY_ONCE and turns the panel's ask down", async () => {
+  // does on any approval card, so a panel calling on a timer is not asked
+  // again, and the panel's card names the panel, since Google's words name
+  // no asker.
+  it("names the panel on its card, and a panel's Don't allow or Not now turns the panel's ask down", async () => {
     const sent: { askId: string | null; choice: string; picked?: string }[] = [];
     const panelAskAnswered = vi.fn();
     const h = setup(fakeCrewmate(), {
@@ -556,13 +557,24 @@ describe("a place's own question on its confirmation card", () => {
     h.supervisor.cardActions.act(allowed, once?.id ?? "", "chrome", { answers: [] });
     await tick();
 
+    // An ordinary approval card, with no question of the place's own.
+    const ordinary = h.supervisor.integrationAsks.askIntegrationForPanel({
+      ...ask("ia-panel-not-now", 6),
+      by: "panel",
+      panel,
+    });
+    h.supervisor.cardActions.act(ordinary, "deny", "chrome", { answers: [] });
+    await tick();
+
     expect(sent).toEqual([
       { askId: "ia-panel-deny", choice: "once", picked: "DENY_ONCE" },
       { askId: "ia-panel-allow", choice: "once", picked: "ALLOW_ONCE" },
+      { askId: "ia-panel-not-now", choice: "deny", picked: undefined },
     ]);
     expect(panelAskAnswered.mock.calls).toEqual([
       ["ia-panel-deny", true],
       ["ia-panel-allow", false],
+      ["ia-panel-not-now", true],
     ]);
   });
 

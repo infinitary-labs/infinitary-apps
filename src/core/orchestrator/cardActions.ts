@@ -652,7 +652,8 @@ export class CardActions {
             ask: effect.ask,
             choice: effect.integration,
             pick: effect.pick,
-            declined: chosen.declines === true,
+            // Not now refuses on any approval card; a place's own Don't allow sends its answer and declines.
+            declined: chosen.declines === true || effect.integration === "deny",
           }
         : undefined;
     let takenFirstmateAsk: IntegrationAskTaken | undefined;

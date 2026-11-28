@@ -17,7 +17,7 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
-import type { BundledRef, ReadableRef } from "@shared/workCopies";
+import type { BundledRef, CheckedOut, ReadableRef } from "@shared/workCopies";
 import { DeviceOutOfReachError } from "../connection/connection";
 import { ComputerBehindError, listsChange } from "../connection/contractChanges";
 import { type AppPaths, crewmatePlacedDir } from "../paths";
@@ -377,10 +377,7 @@ export class PlacedCopies {
     return (await commitOf(repoDir, head)) ? [head] : [];
   }
 
-  private async checkoutAt(
-    deviceId: string,
-    taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null> {
+  private async checkoutAt(deviceId: string, taskId: string): Promise<CheckedOut | null> {
     const status = await this.ask(deviceId, "inf:working-copy:status", [{ task: taskId }]);
     return status.present ? (status.checkedOut ?? null) : null;
   }
@@ -579,9 +576,7 @@ export class PlacedCopies {
    * checkout: what a story is prepared for, as this Mac's own working copy
    * reads its checkout. Null when that computer is out of reach or cannot say.
    */
-  async checkoutThere(
-    taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null> {
+  async checkoutThere(taskId: string): Promise<CheckedOut | null> {
     const deviceId = this.options.tasks.get(taskId)?.deviceId;
     if (!deviceId || !this.options.devices.inReach(deviceId) || !this.sendsCheckedOut(deviceId))
       return null;

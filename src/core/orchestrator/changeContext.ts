@@ -7,6 +7,7 @@ import { notSignedInText } from "@shared/forges";
 import { acceptedValidation } from "@shared/liveValidation";
 import { MERGE_REVIEW_CAP, type MergeReview } from "@shared/mergeReview";
 import { deliveryForRecord, opensPullRequest, type RepoView } from "@shared/repos";
+import type { CheckedOut } from "@shared/workCopies";
 import type { NamingRule } from "../../shared/runbooks";
 import type { Batches } from "../batches/batches";
 import { fixBase } from "../batches/combine";
@@ -98,9 +99,7 @@ export type ChangeDeliveryOptions = {
    * when detached, its commit (INF-2490), and whether it holds work left to
    * commit; null when that computer is out of reach or cannot say.
    */
-  checkedOut?: (
-    taskId: string,
-  ) => Promise<{ branch: string | null; head: string; dirty?: boolean } | null>;
+  checkedOut?: (taskId: string) => Promise<CheckedOut | null>;
 };
 
 /** Where a sign-in was missing, and the project it was for. */

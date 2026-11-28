@@ -882,6 +882,7 @@ A task runs in a working copy of its own on the computer that runs it, made from
   With `branch`, it bundles another branch of the working copy's repository in place of the task's own: one the crewmate checked out to deliver (INF-2490).
   `inf:working-copy:status` answers, with what the working copy holds, the branch it has checked out and that commit (`checkedOut`).
   One reading answers that branch, that commit and whether work is left to commit there (`checkedOut.dirty`, `checkoutOf`, `src/core/workspace/git.ts`), untracked files included whatever the repository's settings, as the home reads its own checkout.
+  It also names the branch's former names, oldest first, as the branch's own log records each `git branch -m` (`checkedOut.renamedFrom`, `renamedFrom`), so the home can tell the task's own branch under a new name from another branch the crewmate checked out (docs/forge.md, "Batches of your own"); a computer without the change sends none.
 - **Keeping and deleting.**
   Once the task's conversation is closed for good, `inf:working-copy:keep` saves what the working copy holds that never merged - uncommitted edits, its checkout's commits and its branch's - as one commit on the task's kept ref, as the home saves its own.
   The task's branch is the one marked as the task's, or `fm/task-<task>`, wherever the checkout points, as a reviewer's checks out the version it reads.

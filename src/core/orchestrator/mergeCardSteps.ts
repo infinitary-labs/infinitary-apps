@@ -279,6 +279,18 @@ export class MergeCardSteps {
       }
     }
 
+    // A branch renamed from the task's own would open a pull request that
+    // merges alone, outside its batch (INF-7081): it goes back under the
+    // task's branch name before any story is saved for it.
+    if (!local && branch && branch !== ownBranch) {
+      const renamed = await this.publication.renamedBranchRefusal(taskId, branch);
+      if (renamed) {
+        const given = takeStory();
+        if (given) await presentations.discardStaged(taskId, given);
+        return stop("push", renamed, "crewmate");
+      }
+    }
+
     // 2. Story words: the ones given, or the newest saved.
     const story = takeStory();
     if (story) {

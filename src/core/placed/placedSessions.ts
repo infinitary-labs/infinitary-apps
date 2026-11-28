@@ -18,6 +18,7 @@ import {
   type WorkOrderResponse,
   workOrders,
 } from "@shared/work";
+import type { CheckedOut } from "@shared/workCopies";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import {
   type ContractChangeName,
@@ -618,9 +619,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.bringBranchHome(taskId, strict, branch);
   }
 
-  checkedOut(
-    taskId: string,
-  ): Promise<{ branch: string | null; head: string; dirty?: boolean } | null> {
+  checkedOut(taskId: string): Promise<CheckedOut | null> {
     return this.copies.checkoutThere(taskId);
   }
 

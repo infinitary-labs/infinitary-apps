@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "renamed-branch-joins-its-batch",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A change whose crewmate renamed its branch joins its batch instead of merging alone",
+      "body": "On a project that merges your approved changes in batches, a crewmate that renamed its task's branch is now told to put the work back under the task's branch before its merge card goes up, so the change joins the next batch. Before, the renamed branch opened a pull request of its own, and your merge click merged it alone, outside the batch.",
+      "noPicture": "No view changes; the difference is whether a pull request of its own appears where the project lives and which batch takes the change.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

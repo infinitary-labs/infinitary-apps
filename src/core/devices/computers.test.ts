@@ -6,6 +6,7 @@ import { APP_UPDATE_LIVE } from "@shared/appFollow";
 import {
   computerPresenceOf,
   type DeviceKind,
+  type DeviceSystem,
   type DeviceView,
   deviceLabel,
   parsePairingLink,
@@ -26,6 +27,8 @@ import {
   type WorkDeviceVersion,
 } from "../connection/connection";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
+import { diagnosticsLines } from "../feedback/diagnostics";
+import { startHomeFeedback } from "../feedback/feedbackHost";
 import { foldProof } from "../helper/fromWindow";
 import { type WorkDeviceLink, WorkDevices } from "../placed/workDevices";
 import { seedTask } from "../tasks/seedTask";
@@ -1171,5 +1174,81 @@ describe("matching a computer to this Mac's source", () => {
     connection.tellVersion(deviceId, hello({ commit: OTHER }));
     computers.allowSource(deviceId);
     expect(computers.sourceAllowed(deviceId)).toBe(true);
+  });
+});
+
+// Intent: docs/feedback.md, "What a report holds": a report names the other computers by system
+// and app version. INF-7190 reproduced every one printing "unknown": the report read the saved
+// list, which keeps no version, and missed a computer on another version than this one's.
+describe("a feedback report's other computers", () => {
+  const HOME = { app: "0.8.8", contract: PROTOCOL_VERSION };
+  const joinAs = (pairing: DevicePairing, kind: DeviceKind, name: string, system: DeviceSystem) => {
+    const joined = pairing.claim(
+      {
+        code: parsePairingLink(pairing.invite({ kind }).link).code,
+        kind,
+        name,
+        user: { name: "sam", uid: 501 },
+        ...(kind === "mac" ? { window: true } : {}),
+      },
+      shown(createKeyIdentity(name), "::ffff:192.168.65.9"),
+    );
+    if (!joined.ok) throw new Error(joined.reason);
+    pairing.noteSystem(joined.grant.deviceId, { system });
+    return joined.grant.deviceId;
+  };
+  const none = () => [];
+  const feedbackOf = (computers: Computers) =>
+    startHomeFeedback({
+      host: {
+        app: {
+          version: HOME.app,
+          userDataDir: scratchDir("infinitary-feedback-"),
+          packaged: false,
+          platform: "darwin",
+          resourcesDir: "",
+        },
+      } as Parameters<typeof startHomeFeedback>[0]["host"],
+      computerName: "Home Mac",
+      computers: () => computers,
+      vault: { list: none },
+      repos: { list: none },
+      forgeSignIns: {
+        view: () => ({ signIns: [] }),
+        isSignedIn: () => false,
+        loginOf: () => null,
+      } as unknown as Parameters<typeof startHomeFeedback>[0]["forgeSignIns"],
+      accountForge: () => {
+        throw new Error("no GitHub read in this test");
+      },
+      secrets: () => undefined,
+      integrations: { view: () => ({ integrations: [] }) } as unknown as Parameters<
+        typeof startHomeFeedback
+      >[0]["integrations"],
+      tasks: { byKey: () => undefined, policiesOf: () => null },
+      timeline: { entries: none },
+      githubGateway: { keepFeedback: () => "ask" },
+    });
+
+  it("names each computer's system and the version it runs, on this computer's version or another", () => {
+    const { pairing, connection, computers, deviceId: mini } = homeAt("192.168.65.2", HOME);
+    pairing.noteSystem(mini, { system: "macos" });
+    // A Windows PC on a newer alpha with no app open there, and a Linux computer on this version.
+    const pc = joinAs(pairing, "mac", "Windows PC", "windows");
+    const linux = joinAs(pairing, "work", "Ubuntu box", "linux");
+    connection.tell({ deviceId: pc, contact: "in-reach" });
+    connection.tellVersion(pc, {
+      contract: PROTOCOL_VERSION,
+      app: "0.8.9-alpha.42",
+      takesWork: true,
+    });
+    connection.tell({ deviceId: linux, contact: "in-reach" });
+    connection.tellVersion(linux, { contract: PROTOCOL_VERSION, app: "0.8.8", takesWork: true });
+
+    const facts = feedbackOf(computers).diagnostics();
+    if ("unknownTask" in facts) throw new Error("no task was asked for");
+    expect(diagnosticsLines(facts)).toContain(
+      "- Other computers: linux 0.8.8, macos unknown, windows 0.8.9-alpha.42",
+    );
   });
 });

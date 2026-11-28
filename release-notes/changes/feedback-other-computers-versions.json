@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "feedback-other-computers-versions",
+      "kind": "fix",
+      "title": "Feedback reports name each of your other computers' versions",
+      "body": "A /feedback report now lists each of your other computers with its system and the Infinitary version it runs, even when that version differs from this computer's, instead of \"unknown\". Its App and System lines now say they describe the computer the report was written on.",
+      "area": "message-box",
+      "noPicture": "This changes the words in a drafted report's diagnostics, not any view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -89,10 +89,12 @@ describe("the feedback command's draft", () => {
     const sent = JSON.parse(kept[0]?.body ?? "{}") as { title: string; body: string };
     expect(sent.title).toBe("Reply box loses focus while checks run");
     expect(sent.body.startsWith(WORDS)).toBe(true);
-    expect(sent.body).toContain("- App: Infinitary 0.8.6-alpha.23 · alpha · app · en");
+    expect(sent.body).toContain(
+      "- App (this computer): Infinitary 0.8.6-alpha.23 · alpha · app · en",
+    );
     expect(sent.body).toContain("- Model connections: anthropic, openai-codex");
     expect(sent.body).toContain("- Project hosts: github ×2, this computer");
-    expect(sent.body).toContain("- System: macOS 26.1 · arm64");
+    expect(sent.body).toContain("- System (this computer): macOS 26.1 · arm64");
     expect(sent.body).toContain("- Task: work · active · careful · queue-pr");
     expect(sent.body).toContain("- Checks: red · failure, pending, success ×2");
     expect(

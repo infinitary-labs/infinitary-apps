@@ -52,9 +52,8 @@ The destination is the build's own release project (`releaseSource.repository`),
 
 The crewmate's words, then a folded block of typed facts (`FeedbackDiagnostics`, `src/core/feedback/diagnostics.ts`):
 
-- the app's version, update channel, kind of installation and language;
-- this computer's system, its version as the system names it (the kernel's, marked as such, where that is all that is known) and chip;
-- the other computers by system and app version, the phones by app version;
+- this computer's app version, update channel, kind of installation and language, and its system, the system's version as the system names it (the kernel's, marked as such, where that is all that is known) and chip, on lines labeled "(this computer)", since the report is drafted on the computer that holds the first mate, which need not be the one the problem is about;
+- the other computers by system and the app version their work or open app runs now, read from the live computers list (`Computers.list`), which alone holds versions, whether or not a computer runs this computer's version; the phones by app version;
 - model connections by provider kind, and project hosts by kind;
 - with `--task`, that task's kind, state, how it closed, care and delivery, its pull request's check summary and each check's state (never a check's name, which can name the project), and its steps as minute and kind; the earliest go first when the issue would pass GitHub's 65,536 characters, or the link its 8,000.
 

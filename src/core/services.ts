@@ -966,7 +966,7 @@ export async function createServices(
   const feedbackHost = startHomeFeedback({
     host,
     computerName: sourceComputer,
-    devices,
+    computers: () => computers,
     vault,
     repos,
     forgeSignIns,

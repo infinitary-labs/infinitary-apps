@@ -2,6 +2,7 @@ import { resolve as resolvePath } from "node:path";
 import { reportSummary } from "@shared/feed";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { cutText } from "@shared/textCut";
+import { unstepped } from "../freeze/passSteps";
 import { capWithOverflow } from "../overflow";
 import { errorText } from "../personal/errorText";
 import { NotOpenThere } from "../placed/crewMachines";
@@ -886,10 +887,12 @@ export class CrewWatch {
       this.runWatch?.poll(now),
       this.mainCheckWake?.poll(now),
     ]);
-    this.core.cards.refreshSettleFacts();
+    // The work after the reads come back is outside the pass's own step.
+    const step = this.core.options.step ?? unstepped;
+    step("settle-facts", () => this.core.cards.refreshSettleFacts());
     // A hold whose end writes nothing - a failed read, a lane that can no
     // longer deliver - ends on the tick (INF-6241).
-    this.core.cards.recheckHeld();
+    step("held-recheck", () => this.core.cards.recheckHeld());
   }
 
   /**

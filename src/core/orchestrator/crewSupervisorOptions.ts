@@ -24,6 +24,7 @@ import type {
   ReadWorkflowInput,
   WorkflowRun,
 } from "../forge";
+import type { StepRunner } from "../freeze/passSteps";
 import type { IntegrationAskTaken, TaskIntegrations } from "../integrations";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { MessageFile } from "../overflow";
@@ -418,10 +419,11 @@ export type CrewSupervisorOptions = {
     settled(taskId: string): Promise<void>;
   };
   /**
-   * Runs each part of a task's close as a named step for the freeze recorder
-   * (docs/freeze-recorder.md, "A task's close"); absent, the parts only run.
+   * Runs each part of a task's close, and each crewmate turn's end, as a
+   * named step for the freeze recorder (docs/freeze-recorder.md, "A task's
+   * close" and "Work outside the pass"); absent, the work only runs.
    */
-  step?: <T>(name: string, run: () => T) => T;
+  step?: StepRunner;
   /**
    * Put the change in where the project lives (the forge seam), injected
    * beside check_pr_ci; a merge under the captain's kept approval passes

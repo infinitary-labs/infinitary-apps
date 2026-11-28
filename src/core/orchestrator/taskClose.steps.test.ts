@@ -70,7 +70,11 @@ describe("a task's close, timed for the freeze recorder", () => {
     await tick();
     steps.passStarted();
 
-    const timed = passes.at(-1)?.steps ?? [];
+    // The close also sets off the card broadcast, timed as steps of its own
+    // (docs/freeze-recorder.md, "Work outside the pass"); this test owns the
+    // close's parts.
+    const isClosePart = (name: string | null) => name?.startsWith("close-") ?? false;
+    const timed = (passes.at(-1)?.steps ?? []).filter((timing) => isClosePart(timing.name));
     expect(timed.map((timing) => timing.name)).toEqual(CLOSE_PARTS);
     expect(timed.find((timing) => timing.name === "close-stop")).toMatchObject({
       syncMs: 600,
@@ -80,7 +84,7 @@ describe("a task's close, timed for the freeze recorder", () => {
       expect(timing.syncMs).toBe(0);
     }
     // A stall in any part is tagged with that part while it runs.
-    const running = marks.map((mark) => mark.running).filter((name) => name !== null);
+    const running = marks.map((mark) => mark.running).filter(isClosePart);
     expect([...new Set(running)]).toEqual(CLOSE_PARTS);
     expect(marks.at(-1)).toEqual({ running: null, unsettled: [] });
   });

@@ -53,6 +53,7 @@ import {
 
 export type { FirstmateTurn } from "./firstmateTurn";
 
+import { unstepped } from "../freeze/passSteps";
 import { FIRSTMATE_FAILURE_CARD_ID } from "./hostCards";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
 import type { ProjectFilter } from "./projectFilter";
@@ -1055,14 +1056,16 @@ export class FirstmateAgent {
       // A quit cut this turn: nothing it read is answered, acknowledged or
       // judged now. Its lane rows stay in flight and its messages open, so the
       // next boot reconciles it as it does a crash (docs/task-capture.md).
-      if (this.disposed) this.running = false;
-      else
-        this.closeTurn(
-          session,
-          endedTurn(this.turn, threw, this.contextRecoveryAttempted),
-          inboxRows,
-        );
-      this.options.supervisor.intake.firstmateTurnEnded(!this.disposed);
+      (this.options.step ?? unstepped)("firstmate-turn-end", () => {
+        if (this.disposed) this.running = false;
+        else
+          this.closeTurn(
+            session,
+            endedTurn(this.turn, threw, this.contextRecoveryAttempted),
+            inboxRows,
+          );
+        this.options.supervisor.intake.firstmateTurnEnded(!this.disposed);
+      });
     }
   }
 

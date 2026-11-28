@@ -65,6 +65,7 @@ A completion also notes `gc` when the main thread collected garbage between the 
 `ms` is the collections' whole time, `fullMs` the part in full collections (V8's mark-compact), and `count` how many ran.
 The main thread reads them from V8's collection profile at each heartbeat and sends them with it; their time is part of the stall's `wallMs` and `cpuMs`, never added to it.
 A stall with no collection in it, and an old line, leave `gc` absent.
+Each line, started or completed, also carries `system`, the watchdog's newest reading of the whole computer's memory ("The system's memory").
 `build` preserves the recording computer's existing source identity (version, source commit or unknown, and whether its source is mutable), not the investigating checkout's identity.
 It reads that identity from the installed source index alone (`readSelfSourceIdentity`), never checking each indexed file, so reading it at a start reads two small files.
 It records no arguments, values or text, and nothing sends it anywhere: Diagnostics sends nothing new.
@@ -96,10 +97,16 @@ Each stall's line, started or completed, carries `step` when the main thread was
 The main thread tells the watchdog each time the running step or the unsettled set changes, as a message apart from the heartbeat, so the tag is what the main thread said just before it stopped.
 Unsettled work says only that the stall fell while it was outstanding, not that it ran then: several steps' work can be outstanding at once.
 
+A completed stall's `step` also carries `ran`: every step that ended between the heartbeat before the stall and the one that ended it, added up by name, most time first, each with its runs, its own time (`ms`) and its own processor time (`cpuMs`).
+A step's own time leaves out the steps run inside it, so a board push inside a turn's end counts once, under the board push.
+The main thread sends each run's own time with the mark that follows its end, so `ran` costs no message of its own.
+Its sum against the stall's `wallMs` is the share of the stall the steps account for; the rest ran in no step (INF-7202 found two thirds of the stall time there, and stalls that looked like several short pieces run back to back).
+
 The pass record is `minute-passes.jsonl` in the app's data folder (`AppPaths.passRecordPath`), written only by the watchdog, off its watching timer so a large file never looks like the computer slept.
 It keeps the newest day of passes (`PASS_RECORD_MAX_LINES`) and drops older ones.
 Each line is one pass: when it began, the build identity, and every step run from its start to the next pass's start, board pushes and refreshes the crew set off included, each with when it started after the pass began (`startMs`), its synchronous time (`syncMs`), the main thread's own processor time in that (`cpuMs`) and, for a step that returned a promise, when it settled after the step started (`workMs`), or `unsettled` when it had not by the next pass.
 A pass's line is written when the next pass starts, so a run's last pass is never written.
+A step that runs many times a minute is tallied: its runs within the pass are added up per name in the line's `tallied`, each with its runs, synchronous time, processor time and longest run (`maxSyncMs`), instead of listed one by one, and its promise is not followed.
 Joining the two records by time shows which step was running at each stall and how long the same step took in minutes without one.
 
 ## A task's close
@@ -118,6 +125,31 @@ A task's close (`TaskClosing.closeTask`) runs each of its synchronous parts as a
 
 A part the close awaits is timed only to its synchronous start, so the waits between parts, such as for the crewmate's stop, are in no step.
 
+## Work outside the pass
+
+INF-7202 found that timed steps covered a third of the stall time outside a memory squeeze, and named the work no step timed.
+The same runner times it (`StepRunner`, `CoreServices.step`), so its stalls are tagged and its time lands in the pass record:
+
+- `turn-end`: a crewmate turn's end (`CrewTurns.turnComplete`), and `firstmate-turn-end`, the first mate's (`FirstmateAgent.closeTurn` and the intake's turn end).
+- `message:<channel>`, tallied: every message on the app's connections, a window's, a phone's or another computer's, as the core's dispatcher starts answering it; a request queued behind others runs its handler later as `handler:<channel>`, tallied too.
+- `settle-facts` and `held-recheck`: the check watch's work once its reads came back, and `evidence-record`, a check reading's record writes (`ChangeChecks.readWatched`).
+- `card-broadcast` and `card-presentation`: the card stack's broadcast timer and its presentation check.
+
+Other timers, such as the personal workspace's poll, the load line's refresh and the standby stream's rescan, run in no step, and a stall's `ran` shows how much time that leaves.
+
+## The system's memory
+
+INF-7202 found that 35% of an alpha run's stall time fell in 38 minutes when macOS cut the core's resident memory to a quarter of its footprint, with stalls eleven to eighteen times as frequent at the same workload, and nothing in the records said what the system's memory was doing then.
+So the watchdog reads the whole computer's memory on its own thread every 5 seconds (`SYSTEM_READING_MS`) and again as each stall begins (`src/core/freeze/systemMemory.ts`), and each stall line and memory reading carries the newest one as `system`, with when it was read (`readAt`):
+
+- On macOS, one `sysctl` the watchdog starts with `hostEnv()`: `pressure`, the kernel's memory pressure level (`normal`, `warn` or `critical`), `availablePercent`, the share of memory it counts as available, `compressedBytes`, what the memory compressor holds, and `swapUsedBytes` and `swapTotalBytes`.
+- On Linux, `/proc/meminfo` and `/proc/pressure/memory`: `availablePercent`, MemAvailable over MemTotal, the swap figures, and `pressureStall`, the share of the last ten seconds in which some (`someAvg10`) or all (`fullAvg10`) tasks waited on memory.
+- On Windows, nothing; `system` is absent.
+
+A field the system did not answer is absent, never zero.
+A stall's start carries the reading before it; its completion carries the newest, usually the one read as it began.
+The main thread hears each reading and gives the newest to the memory reading, so a memory line has `system` only once the watchdog has read one, never at a run's first reading.
+
 ## The memory reading
 
 Beside the stalls, the recorder reads the main process's own memory at its start and every five minutes after (`MEMORY_READING_MS`, `src/core/freeze/memoryRecorder.ts`), INF-2392's plan after it found the main process holding 9 GB and could not tell from outside the app what held it.
@@ -133,7 +165,7 @@ Each line holds, in bytes:
 - `externalBytes` and `arrayBuffersBytes`: native memory JavaScript objects still hold, such as buffers, and the part of it in array buffers.
 - `mallocedBytes`: memory V8 itself allocated outside its heap.
 
-It also holds when it was read, the process id, the process's uptime in seconds and the recording build's source identity.
+It also holds when it was read, the process id, the process's uptime in seconds, the recording build's source identity and the system's newest memory reading (`system`, "The system's memory").
 The split (`memorySplit`) reads the JavaScript heap, the native memory JavaScript holds (`externalBytes`), and the native memory nothing in JavaScript holds: the footprint less the other two, unknown when the footprint is.
 A growing third part points at native objects the app's code no longer reaches, and a growing second part at buffers it still does.
 It records no values or text, and nothing sends it anywhere.

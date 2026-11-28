@@ -5,6 +5,7 @@ import type { FmEvent, FmUsage } from "@shared/events";
 import type { ForgeSignInState } from "@shared/forges";
 import type { ModelsCatalogView, QuotaSnapshotView, Slot } from "@shared/quota";
 import type { CorrectionCaseRequest } from "../decisions/correctionCases";
+import type { StepRunner } from "../freeze/passSteps";
 import type { IntegrationsService } from "../integrations";
 import type { KnowledgeService } from "../knowledge/knowledgeService";
 import type { AppPaths } from "../paths";
@@ -36,6 +37,11 @@ export type RunningComputerVersion = {
 
 export type FirstmateAgentOptions = {
   paths: AppPaths;
+  /**
+   * Runs each turn's end as a named step for the freeze recorder
+   * (docs/freeze-recorder.md, "Work outside the pass"); absent, it only runs.
+   */
+  step?: StepRunner;
   /** Live running app versions; null means not known, never the available update. */
   computerVersions?: () => RunningComputerVersion[];
   /** The home's system (`host.app.platform`), whose settings an offered card names; a Mac's unless named. */

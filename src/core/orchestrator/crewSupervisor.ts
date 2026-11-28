@@ -359,6 +359,7 @@ export class CrewSupervisor {
     });
     this.cards = new CardService({
       now: this.now,
+      ...(options.step ? { step: options.step } : {}),
       tasks: options.tasks,
       cardStore: options.cardStore,
       syncCaptainGate: (taskId, at) => {

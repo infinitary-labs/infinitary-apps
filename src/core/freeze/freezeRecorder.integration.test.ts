@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { pbkdf2Sync } from "node:crypto";
 import { once } from "node:events";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
@@ -20,7 +20,7 @@ import {
   type WindowState,
 } from "./freezeRecorder";
 import { FreezeTally, type VersionSummary } from "./freezeTally";
-import { readMemoryRecord } from "./memoryRecorder";
+import { MEMORY_READING_MS, readMemoryRecord } from "./memoryRecorder";
 import { PassSteps, type PassTiming } from "./passSteps";
 import { armWatchdog } from "./watchdog";
 
@@ -230,7 +230,10 @@ describe("the freeze recorder", () => {
       { steps: { source: steps, recordPath: passPath } },
     );
 
-    expect(seen.step).toEqual({ running: "gate-sweep", unsettled: ["check-watch"] });
+    expect({ running: seen.step?.running, unsettled: seen.step?.unsettled }).toEqual({
+      running: "gate-sweep",
+      unsettled: ["check-watch"],
+    });
     const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
     expect(written?.step).toEqual(seen.step);
 
@@ -250,6 +253,71 @@ describe("the freeze recorder", () => {
     expect(sweep?.syncMs).toBeGreaterThanOrEqual(FREEZE_THRESHOLD_MS);
     expect(sweep?.cpuMs).toBeGreaterThan(0);
   });
+
+  // INF-7202's diagnosis plan, which the captain started: two thirds of the
+  // stall time fell outside every step, and stalls looked like several short
+  // pieces run back to back, so each stall says which steps ran in it and
+  // their own time, a nested step counted once.
+  it("lists the steps that ran in a stall with their own time, a nested step counted once", async () => {
+    const recordPath = join(scratchDir("infinitary-freeze-ran-"), "freezes.jsonl");
+    const steps = new PassSteps();
+    const seen = await recordStall(
+      recordPath,
+      () => {
+        for (let each = 0; each < 3; each += 1)
+          steps.run("message:listTasks", () => walkEveryRow(5), { tally: true });
+        steps.run("turn-end", () => {
+          // Twice the line: the walk ends on Date.now's whole milliseconds,
+          // so a walk of exactly the line can time a little under it.
+          walkEveryRow(FREEZE_THRESHOLD_MS * 2);
+          steps.run("board-push", () => walkEveryRow(FREEZE_THRESHOLD_MS * 8));
+        });
+      },
+      {
+        steps: {
+          source: steps,
+          recordPath: join(scratchDir("infinitary-freeze-ran-passes-"), "minute-passes.jsonl"),
+        },
+      },
+    );
+
+    const ran = seen.step?.ran ?? [];
+    expect(ran.map((each) => each.name)).toEqual(["board-push", "turn-end", "message:listTasks"]);
+    const [push, turn, messages] = ran;
+    expect(push?.ms).toBeGreaterThanOrEqual(FREEZE_THRESHOLD_MS * 8);
+    // Counted with the board push inside it, the turn's end would hold at least ten times the line.
+    expect(turn?.ms).toBeGreaterThanOrEqual(FREEZE_THRESHOLD_MS);
+    expect(turn?.ms).toBeLessThan(FREEZE_THRESHOLD_MS * 8);
+    expect(messages?.runs).toBe(3);
+    const [written] = readFreezes(recordPath).filter((line) => line.incidentId === seen.incidentId);
+    expect(written?.step?.ran).toEqual(ran);
+  });
+
+  // INF-7202's diagnosis plan: macOS cut the core's resident memory to a
+  // quarter of its footprint for 38 minutes and stalls rose elevenfold, and
+  // nothing in the record said what the system's memory was doing then. A
+  // stall's line carries the system's own reading, read on the watchdog's
+  // thread; the swap total is checked against the system's answer here.
+  it.runIf(process.platform === "darwin" || process.platform === "linux")(
+    "notes the system's memory pressure and swap with a stall",
+    async () => {
+      const recordPath = join(scratchDir("infinitary-freeze-system-"), "freezes.jsonl");
+      const seen = await recordStall(recordPath, () => walkEveryRow(FREEZE_THRESHOLD_MS * 4));
+
+      const system = seen.system;
+      expect(system?.swapTotalBytes).toBe(systemSwapTotal());
+      expect(system?.swapUsedBytes).toBeLessThanOrEqual(system?.swapTotalBytes ?? -1);
+      expect(system?.availablePercent).toBeLessThanOrEqual(100);
+      if (process.platform === "darwin") {
+        expect(["normal", "warn", "critical"]).toContain(system?.pressure);
+        expect(system?.compressedBytes).toBeGreaterThanOrEqual(0);
+      }
+      const [written] = readFreezes(recordPath).filter(
+        (line) => line.incidentId === seen.incidentId,
+      );
+      expect(written?.system).toEqual(system);
+    },
+  );
 
   it("records a main thread stall with the function that held it, innermost first", async () => {
     const recordPath = join(scratchDir("infinitary-freeze-busy-"), "freezes.jsonl");
@@ -442,6 +510,10 @@ describe("the freeze recorder", () => {
         ...(start.capturedAt ? { capturedAt: completed.capturedAt } : {}),
         // The start has the speed before the stall; only the completion has the after.
         speed: { beforeNs: completed.speed?.beforeNs, fastestNs: start.speed?.fastestNs },
+        // The start carries the system's newest memory reading, where the host gives one.
+        ...(start.system
+          ? { system: expect.objectContaining({ readAt: expect.any(String) }) }
+          : {}),
       });
       expect(readFreezes(recordPath)).toContainEqual(completed);
       console.info("Start observed before recovery:", JSON.stringify(start));
@@ -592,4 +664,44 @@ describe("the recorder's memory reading", () => {
     });
     expect(footprint).toHaveBeenCalledOnce();
   });
+
+  // INF-7202's diagnosis plan: each memory reading also carries the system's
+  // memory pressure and swap, the watchdog's newest reading.
+  it.runIf(process.platform === "darwin" || process.platform === "linux")(
+    "carries the system's newest memory reading in each later reading",
+    async () => {
+      const recordPath = join(scratchDir("infinitary-memory-system-"), "memory.jsonl");
+      vi.useFakeTimers({ toFake: ["setInterval"] });
+      try {
+        armWatchdog();
+        recorder = new FreezeRecorder({
+          recordPath: join(scratchDir("infinitary-memory-system-freeze-"), "freezes.jsonl"),
+          onFreeze: () => {},
+          memory: { recordPath },
+        });
+        recorder.start();
+        await expect.poll(() => readMemoryRecord(recordPath)).toHaveLength(1);
+        // The watchdog reads on its own thread, which the fake clock does not reach.
+        await vi.waitFor(async () => {
+          vi.advanceTimersByTime(MEMORY_READING_MS);
+          await expect.poll(() => readMemoryRecord(recordPath).at(-1)?.system).toBeDefined();
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+      expect(readMemoryRecord(recordPath).at(-1)?.system?.swapTotalBytes).toBe(systemSwapTotal());
+    },
+  );
 });
+
+/** The system's swap total in bytes, as the system itself answers here. */
+function systemSwapTotal(): number {
+  if (process.platform === "linux") {
+    const found = /^SwapTotal:\s+(\d+) kB/m.exec(readFileSync("/proc/meminfo", "utf8"));
+    return Number(found?.[1]) * 1024;
+  }
+  const swap = /total = ([\d.]+)M/.exec(
+    execFileSync("/usr/sbin/sysctl", ["-n", "vm.swapusage"], { env: hostEnv() }).toString(),
+  );
+  return Math.round(Number(swap?.[1]) * 1024 * 1024);
+}

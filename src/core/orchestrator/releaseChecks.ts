@@ -200,7 +200,7 @@ export class ReleaseChecks {
   brief(repo: Pick<RepoView, "name" | "path">, facts: InPlaceRelease): string {
     const tasks = facts.release.tasks.flatMap((id): ReleaseCheckTask[] => {
       const task = this.options.tasks.get(id);
-      if (!task || task.delivery?.firstRelease || !TaskGraph.merged(task)) return [];
+      if (!task || task.delivery?.firstRelease || !TaskGraph.workMerged(task)) return [];
       return [
         {
           key: task.key || task.id,

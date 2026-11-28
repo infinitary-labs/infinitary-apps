@@ -313,9 +313,10 @@ export const workShapeSchema = z.object({
   /**
    * When a side-effect task's outside action may happen, set by the first
    * mate from how the project ships (docs/task-graph.md, "A side-effect
-   * task"): `release` keeps it unstarted while any merged wait has no
-   * recorded first release; `merge`, or none, starts it once every wait
-   * closed done. Only on a task marked `side_effect`.
+   * task"): `release` keeps it unstarted while any merged work it waits
+   * on, a merged wait or a finished wait's merged part, has no recorded
+   * first release; `merge`, or none, starts it once every wait closed
+   * done. Only on a task marked `side_effect`.
    */
   side_effect_moment: z.enum(["release", "merge"]).optional(),
   /**

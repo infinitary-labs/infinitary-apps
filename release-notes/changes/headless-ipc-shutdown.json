@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "headless-ipc-shutdown",
+      "reason": "Fixes the internal Node fork transport used by headless hosts and native checks; the desktop command process and screens are unchanged."
+    }
+  ]
+}

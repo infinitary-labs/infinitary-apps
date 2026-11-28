@@ -76,6 +76,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
             getModel: () => undefined,
             getModels: () => [],
             getProvider: () => undefined,
+            registerNativeProvider: () => {},
           };
         },
       ),

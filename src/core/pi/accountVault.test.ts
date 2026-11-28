@@ -45,6 +45,7 @@ type FakeRuntime = {
   getModel: () => undefined;
   getModels: () => [];
   getProvider: () => undefined;
+  registerNativeProvider: () => void;
 };
 
 const fakes = vi.hoisted(() => ({
@@ -83,6 +84,7 @@ vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => ({
         getModel: () => undefined,
         getModels: () => [],
         getProvider: () => undefined,
+        registerNativeProvider: () => {},
       };
       // Keep the upstream mock before the app wraps getAuth with its routing guard.
       fakes.runtimes.push({ authPath: options.authPath, runtime, getAuth: runtime.getAuth });

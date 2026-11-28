@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "guard-google-ai-plan",
+      "reason": "Every model runtime now registers Infinitary's own Gemini plan provider, with no sign-in and no models, ahead of a Pi update that would otherwise bring in Pi's Google sign-in; the app offers nothing new and nothing a person sees changes."
+    }
+  ]
+}

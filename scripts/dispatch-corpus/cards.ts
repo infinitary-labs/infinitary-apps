@@ -33,9 +33,10 @@ export type CardVersion = {
 
 export type CardVersionSource = Pick<CardRow, "kind" | "title" | "body" | "actions_json">;
 
-/** `Card shown: <title> (<card id>)` → the card id the store assigned. */
+/** `Card shown: <title> (<card id>)`, then optionally the label-fit facts the
+ * emit_card answer may add (`src/core/pi/cardFigureFit.ts`) → the card id the store assigned. */
 export function cardIdFromEmitResult(text: string): string | null {
-  const match = text.match(/^Card shown: .*\(([^()]+)\)\s*$/);
+  const match = text.match(/^Card shown: .*?\(([^()]+)\)(?: Label fit:.*)?\s*$/s);
   return match?.[1] ?? null;
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { figureLabelFacts, figureLabelSpills } from "./cardFigureFit";
+import { figureLabelSpills } from "./cardFigureFit";
 import { createEmitCardTool } from "./cardTool";
 import { piToolOf } from "./toolSpec";
 
@@ -72,32 +72,115 @@ describe("figureLabelSpills", () => {
     ]);
   });
 
+  it("reports the edge a centred label crosses by most, not the roomier one", () => {
+    // Centred at 100 in a 0-200 box: the 140-unit-wide label's left end is 30
+    // units past the box's left edge and its right end 30 past the right; one
+    // placed off-centre crosses the left edge alone while the right has room.
+    const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="300" height="60"/><text x="40" y="30" text-anchor="middle">A label wider than the room to its left</text></svg>`;
+    const [spill] = figureLabelSpills(body);
+    expect(spill?.side).toBe("left");
+    expect(spill?.room).toBeLessThan(0);
+  });
+
+  it("draws unsized text at the frame's 12.5 px, and sizes from the root, ems and a style", () => {
+    // 18 letters "n" (0.613 em each, 11.03 em) from x=10 end at 147.9 drawn at 12.5 px
+    // and at 142.4 at 12 px; the box edge at 154 leaves 6.1 units or 11.6.
+    const text = "n".repeat(18);
+    const at = (attrs: string, svgAttrs = ""): number | undefined =>
+      figureLabelSpills(
+        `<svg viewBox="0 0 750 60" ${svgAttrs}><rect x="0" y="0" width="154" height="60"/><text x="10" y="30" ${attrs}>${text}</text></svg>`,
+      )[0]?.room;
+    expect(at("")).toBeCloseTo(6.1, 0);
+    expect(at('font-size="12"')).toBeUndefined();
+    expect(at("", 'style="font-size: 16px"')).toBeLessThan(0);
+    expect(at('style="font-size: 1.5em"')).toBeLessThan(0);
+    expect(at('font-size="16"')).toBeLessThan(0);
+  });
+
   it("splits a label at a tspan that names its own x, as the browser lays it out", () => {
     const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="200" height="60"/><text x="10" y="20" font-size="12.5">Short<tspan x="10" y="40">A second line that is far too long for this box</tspan></text></svg>`;
     expect(figureLabelSpills(body).map((spill) => spill.text)).toEqual([
       "A second line that is far too long for this box",
     ]);
   });
+
+  it("measures a positioned tspan from its own x and trims its indentation", () => {
+    // The second line starts at x=150 in a 0-200 box, so a short label there crosses the edge;
+    // the same line measured from the first line's x=10 would fit.
+    const body = `<svg viewBox="0 0 400 60"><rect x="0" y="0" width="200" height="60"/><text x="10" y="20">Fits<tspan x="150" dy="20">     Eleven chars</tspan></text></svg>`;
+    const [spill] = figureLabelSpills(body);
+    expect(spill?.text).toBe("Eleven chars");
+    expect(spill?.room).toBeLessThan(0);
+  });
+
+  it("names every spilling label, with more than five", () => {
+    const labels = Array.from(
+      { length: 7 },
+      (_, i) =>
+        `<text x="${10 + i * 4}" y="${20 + i * 20}">A label far too long for its small box ${i}</text>`,
+    ).join("");
+    const body = `<svg viewBox="0 0 400 200"><rect x="0" y="0" width="100" height="200"/>${labels}</svg>`;
+    expect(figureLabelSpills(body)).toHaveLength(7);
+  });
 });
 
+type Tool = {
+  execute: (
+    id: string,
+    params: Record<string, unknown>,
+  ) => Promise<{ content: { text: string }[] }>;
+};
+
+async function sendThroughTool(
+  body: string,
+  onCard: () => string | { shown: string; line: string },
+): Promise<string> {
+  const tool = piToolOf(createEmitCardTool(onCard)) as unknown as Tool;
+  const result = await tool.execute("t1", { title: "Repotting steps", body });
+  return result.content[0]?.text ?? "";
+}
+
 describe("emit_card answer", () => {
-  it("adds the label facts and the repairs after the card is shown", async () => {
+  it("names every spilling label and every repair after the card is shown", async () => {
     const onCard = vi.fn(() => "card-fm-1-abc");
-    const tool = piToolOf(createEmitCardTool(onCard)) as unknown as {
-      execute: (
-        id: string,
-        params: Record<string, unknown>,
-      ) => Promise<{ content: { text: string }[] }>;
-    };
-    const result = await tool.execute("t1", { title: "Repotting steps", body: stepsBody() });
-    const text = result.content[0]?.text ?? "";
-    expect(text).toContain("Card shown: Repotting steps (card-fm-1-abc) Label fit:");
-    expect(text).toContain('"2 Loosen the roots (if root-bound)" ends 70 units past');
-    expect(text).toContain("Shorten the label, widen the box");
+    const text = await sendThroughTool(stepsBody(), onCard);
+    expect(text.startsWith("Card shown: Repotting steps (card-fm-1-abc) Label fit:")).toBe(true);
+    for (const label of [
+      "The day before you start",
+      "2 Loosen the roots (if root-bound)",
+      "Tease them apart by hand",
+      "Peat-free mix (any brand)",
+      "6 Trim old roots (optional)",
+    ])
+      expect(text).toContain(`"${label}"`);
+    // Chromium drew the long title 69 units past its box.
+    const long = /"2 Loosen the roots \(if root-bound\)" ends (\d+) units past/.exec(text);
+    expect(Math.abs(Number(long?.[1]) - 69)).toBeLessThanOrEqual(3);
+    for (const repair of ["Shorten the label", "widen the box", "draw the box as HTML"])
+      expect(text).toContain(repair);
     expect(onCard).toHaveBeenCalledTimes(1);
   });
 
-  it("adds nothing for a card with no figure", async () => {
-    expect(figureLabelFacts("<p>No drawing here.</p>")).toBe("");
+  it("adds nothing for a card whose labels fit, or that has no figure", async () => {
+    const short = STEPS.map(([, lines]): [string, string[]] => [
+      "1  Water",
+      lines.map((line) => line.slice(0, 12)),
+    ]);
+    expect(await sendThroughTool(stepsBody(short), () => "card-fm-1-abc")).toBe(
+      "Card shown: Repotting steps (card-fm-1-abc)",
+    );
+    expect(await sendThroughTool("<p>No drawing here.</p>", () => "card-fm-1-abc")).toBe(
+      "Card shown: Repotting steps (card-fm-1-abc)",
+    );
+  });
+
+  it("adds nothing when the host answers with a thread line, which is not this body shown", async () => {
+    const text = await sendThroughTool(stepsBody(), () => ({
+      shown: "card-fm-1-abc",
+      line: "Your reply was written on the card.",
+    }));
+    expect(text).toBe(
+      "Card shown: Repotting steps (card-fm-1-abc). Your reply was written on the card.",
+    );
   });
 });

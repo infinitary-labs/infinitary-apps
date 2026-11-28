@@ -194,7 +194,7 @@ const MIN_RENDERED_TYPE = 11;
 
 type FigureNode = DomNode & { attribs?: Record<string, string> };
 
-function declaredSize(node: FigureNode, inherited: number): number {
+export function declaredSize(node: FigureNode, inherited: number): number {
   const attrs = node.attribs ?? {};
   const style = attrs.style?.match(/(?:^|;)\s*font-size\s*:\s*([^;]+)/i)?.[1]?.trim();
   const value = style ?? attrs["font-size"];

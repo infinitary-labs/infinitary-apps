@@ -1138,15 +1138,16 @@ async function emitCard(
     ...(params.answers_message !== undefined ? { answersMessage: params.answers_message } : {}),
   };
   const shown = await options.onCard(card);
-  // Facts only after the card is up: a refused card throws before this line.
-  const fit = figureLabelFacts(card.body);
   // A write on someone else's card answers what the host saved, typed.
   if (typeof shown === "object" && "line" in shown)
-    return `Card shown: ${params.title} (${shown.shown}). ${shown.line}${fit}`;
-  if (typeof shown === "object") return `${cardMutationText(shown)}${fit}`;
+    return `Card shown: ${params.title} (${shown.shown}). ${shown.line}`;
+  if (typeof shown === "object") return cardMutationText(shown);
+  // Facts only for a card the host took as written: a typed answer may mean a
+  // reply, a held display or a reused result, where this body was not shown.
+  const fit = typeof shown === "string" && shown ? figureLabelFacts(card.body) : "";
   return typeof shown === "string" && shown
     ? `Card shown: ${params.title} (${shown})${fit}`
-    : `Card shown: ${params.title}${fit}`;
+    : `Card shown: ${params.title}`;
 }
 
 function relatedOf(refs: string[] | undefined): string[] {

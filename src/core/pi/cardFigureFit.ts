@@ -1,6 +1,7 @@
 // i18n-exempt: served to the agent that wrote the card, stays English
 import { ElementType, parseDocument } from "htmlparser2";
 import { GLYPH_ADVANCES } from "./cardGlyphWidths.generated";
+import { declaredSize } from "./cardLint";
 
 /**
  * Send-time label fit (docs/card-authoring.md, "Type"): SVG text never wraps,
@@ -15,9 +16,12 @@ import { GLYPH_ADVANCES } from "./cardGlyphWidths.generated";
  * some card widths and fits at others: Chromium sets small type a little
  * differently from one width to the next, by up to about 11 units. */
 export const LABEL_EDGE_ROOM = 8;
+/** Where the facts start in an answer, so a reader of the receipt can cut them off. */
+export const LABEL_FIT_MARK = "Label fit:";
 /** Advance of a character outside U+0020..U+007E, in ems; those are rare in a figure. */
 const OTHER_ADVANCE = 0.6;
-const MOST_LISTED = 5;
+/** The frame's `--text-sm`, the size SVG text draws at when nothing declares one. */
+const FRAME_SVG_SIZE = 12.5;
 
 type Node = {
   type: string;
@@ -52,12 +56,11 @@ function declared(node: Node, name: string): string | undefined {
 }
 
 function styleOf(node: Node, inherited: Style): Style {
-  const size = declared(node, "font-size");
-  const px = size ? /^(\d+(?:\.\d+)?)\s*(?:px)?$/i.exec(size) : null;
+  const size = declaredSize(node, inherited.size);
   const weight = declared(node, "font-weight");
   const anchor = declared(node, "text-anchor");
   return {
-    size: px ? Number(px[1]) : inherited.size,
+    size: Number.isFinite(size) ? size : inherited.size,
     weight:
       weight === "bold" ? 700 : weight && /^\d+$/.test(weight) ? Number(weight) : inherited.weight,
     anchor:
@@ -65,52 +68,76 @@ function styleOf(node: Node, inherited: Style): Style {
   };
 }
 
-function runWidth(run: Run): number {
-  const table = GLYPH_ADVANCES[run.weight >= 600 ? 600 : 400] ?? [];
-  let ems = 0;
-  for (const char of run.text) {
-    const at = char.codePointAt(0) ?? 0;
-    ems += at >= 32 && at <= 126 ? (table[at - 32] ?? OTHER_ADVANCE) : OTHER_ADVANCE;
-  }
-  return ems * run.size;
+type Glyph = { char: string; size: number; weight: number };
+
+function glyphWidth({ char, size, weight }: Glyph): number {
+  const table = GLYPH_ADVANCES[weight >= 600 ? 600 : 400] ?? [];
+  const at = char.codePointAt(0) ?? 0;
+  return (at >= 32 && at <= 126 ? (table[at - 32] ?? OTHER_ADVANCE) : OTHER_ADVANCE) * size;
 }
 
-/** A text's lines: a `tspan` that names its own x starts a new line there. */
+/** The frame lays out SVG text with collapsed white space, trimmed at both ends. */
+function collapsed(glyphs: Glyph[]): Glyph[] {
+  const out: Glyph[] = [];
+  for (const glyph of glyphs) {
+    if (/\s/.test(glyph.char)) {
+      if (out.length === 0 || /\s/.test(out.at(-1)?.char ?? "")) continue;
+      out.push({ ...glyph, char: " " });
+    } else out.push(glyph);
+  }
+  if (/\s/.test(out.at(-1)?.char ?? "")) out.pop();
+  return out;
+}
+
+/**
+ * A text's lines. A `tspan` that names its own x starts a line there, one
+ * that names y or dy moves the line's baseline, and each line keeps the
+ * anchor of the element that started it, as the browser lays it out.
+ */
 function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Label[] {
+  type Line = { x: number; y: number; anchor: Style["anchor"]; glyphs: Glyph[] };
   const attrs = node.attribs ?? {};
-  const lines: { x: number; y: number; runs: Run[] }[] = [
-    { x: number(attrs.x) + at.dx, y: number(attrs.y) + at.dy, runs: [] },
+  const lines: Line[] = [
+    {
+      x: number(attrs.x) + number(attrs.dx) + at.dx,
+      y: number(attrs.y) + number(attrs.dy) + at.dy,
+      anchor: style.anchor,
+      glyphs: [],
+    },
   ];
   const add = (child: Node, inherited: Style): void => {
     if (child.type === ElementType.Text) {
-      lines
-        .at(-1)
-        ?.runs.push({ text: child.data ?? "", size: inherited.size, weight: inherited.weight });
+      for (const char of child.data ?? "")
+        lines.at(-1)?.glyphs.push({ char, size: inherited.size, weight: inherited.weight });
       return;
     }
     if (child.type !== ElementType.Tag || child.name?.toLowerCase() !== "tspan") return;
     const own = styleOf(child, inherited);
+    const last = lines.at(-1);
     if (child.attribs?.x !== undefined) {
-      const last = lines.at(-1);
+      const y = child.attribs.y !== undefined ? number(child.attribs.y) + at.dy : (last?.y ?? 0);
       lines.push({
-        x: number(child.attribs.x) + at.dx,
-        y: child.attribs.y !== undefined ? number(child.attribs.y) + at.dy : (last?.y ?? 0),
-        runs: [],
+        x: number(child.attribs.x) + number(child.attribs.dx) + at.dx,
+        y: y + number(child.attribs.dy),
+        anchor: own.anchor,
+        glyphs: [],
       });
     }
     for (const grandchild of child.children ?? []) add(grandchild, own);
   };
   for (const child of node.children ?? []) add(child, style);
-  return lines.flatMap(({ x, y, runs }) => {
-    const text = runs
-      .map((run) => run.text)
-      .join("")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!text) return [];
-    const spaced = runs.map((run) => ({ ...run, text: run.text.replace(/\s+/g, " ") }));
-    const width = spaced.reduce((sum, run) => sum + runWidth(run), 0);
-    return [{ text, x, y, width, anchor: style.anchor }];
+  return lines.flatMap(({ x, y, anchor, glyphs }) => {
+    const kept = collapsed(glyphs);
+    if (kept.length === 0) return [];
+    return [
+      {
+        text: kept.map((glyph) => glyph.char).join(""),
+        x,
+        y,
+        width: kept.reduce((sum, glyph) => sum + glyphWidth(glyph), 0),
+        anchor,
+      },
+    ];
   });
 }
 
@@ -165,8 +192,9 @@ function spillsOf(svg: Node): Spill[] {
     }
     for (const child of node.children ?? []) walk(child, own, place);
   };
-  for (const child of svg.children ?? [])
-    walk(child, { size: 12, weight: 400, anchor: "start" }, { dx: 0, dy: 0 });
+  // The frame's own SVG type size (docs/card-authoring.md, "Type"), unless the root says otherwise.
+  const root = styleOf(svg, { size: FRAME_SVG_SIZE, weight: 400, anchor: "start" });
+  for (const child of svg.children ?? []) walk(child, root, { dx: 0, dy: 0 });
 
   const spills: Spill[] = [];
   for (const label of labels) {
@@ -189,11 +217,19 @@ function spillsOf(svg: Node): Spill[] {
           ? label.x - label.width / 2
           : label.x - label.width;
     const right = left + label.width;
-    const base = { text: label.text, edgeLeft: edge.left, edgeRight: edge.right };
-    if (edge.right - right < LABEL_EDGE_ROOM)
-      spills.push({ ...base, room: edge.right - right, side: "right" });
-    else if (label.anchor !== "start" && left - edge.left < LABEL_EDGE_ROOM)
-      spills.push({ ...base, room: left - edge.left, side: "left" });
+    // A start-anchored label begins at its anchor, so only its end can cross.
+    const rightRoom = edge.right - right;
+    const leftRoom = label.anchor === "start" ? Number.POSITIVE_INFINITY : left - edge.left;
+    if (Math.min(rightRoom, leftRoom) < LABEL_EDGE_ROOM) {
+      const side = rightRoom <= leftRoom ? "right" : "left";
+      spills.push({
+        text: label.text,
+        room: Math.min(rightRoom, leftRoom),
+        edgeLeft: edge.left,
+        edgeRight: edge.right,
+        side,
+      });
+    }
   }
   return spills;
 }
@@ -215,25 +251,26 @@ export function figureLabelSpills(body: string): Spill[] {
 
 function spillWords(spill: Spill): string {
   const units = Math.abs(Math.round(spill.room));
-  const edge = spill.side === "right" ? spill.edgeRight : spill.edgeLeft;
-  const where = spill.side === "right" ? "right" : "left";
+  const right = spill.side === "right";
+  const edge = Math.round(right ? spill.edgeRight : spill.edgeLeft);
   const quoted = spill.text.length > 48 ? `${spill.text.slice(0, 47)}...` : spill.text;
+  const from = right ? "ends" : "starts";
+  const where = `its box's ${right ? "right" : "left"} edge (${edge})`;
   // i18n-exempt: served to the agent, stays English
   return spill.room < 0
-    ? `"${quoted}" ends ${units} units past its box's ${where} edge (${Math.round(edge)})`
-    : `"${quoted}" ends ${units} units from its box's ${where} edge (${Math.round(edge)}), which spills at some card widths`;
+    ? `"${quoted}" ${from} ${units} units past ${where}`
+    : `"${quoted}" ${from} ${units} units inside ${where}`;
 }
 
 /**
  * What the emit_card answer adds when a card's figure labels do not fit, or
- * nothing. A fact, never a refusal: the card is shown as written.
+ * nothing. A fact, never a refusal.
  */
 export function figureLabelFacts(body: string): string {
   const spills = figureLabelSpills(body);
   if (spills.length === 0) return "";
-  const listed = spills.slice(0, MOST_LISTED).map(spillWords).join("; ");
+  const listed = spills.map(spillWords).join("; ");
+  const past = spills.filter((spill) => spill.room < 0).length;
   // i18n-exempt: served to the agent, stays English
-  const more = spills.length > MOST_LISTED ? `; and ${spills.length - MOST_LISTED} more` : "";
-  // i18n-exempt: served to the agent, stays English
-  return ` Label fit: SVG text does not wrap, and measured in the card font ${spills.length === 1 ? "this label does" : `${spills.length} labels do`} not fit its box with ${LABEL_EDGE_ROOM} units to spare: ${listed}${more}. Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, then revise the card; it was shown as written.`;
+  return ` ${LABEL_FIT_MARK} SVG text does not wrap. Measured in the card font, ${past} of ${spills.length} flagged label${spills.length === 1 ? "" : "s"} ${past === 1 ? "runs" : "run"} past its box; the rest sit within ${LABEL_EDGE_ROOM} units of an edge, where the width of the card can tip them over: ${listed}. Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, then revise the card.`;
 }

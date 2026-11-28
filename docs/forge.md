@@ -1175,12 +1175,12 @@ A batch of several is titled in the app's plain words, `merge N approved changes
 Where the project lives a description has a limit, 65,536 characters on GitHub, 1,048,576 on GitLab and 32,768 on Bitbucket (`presentationBodyLimit`), and a large batch's stories can pass it together though each fits alone (`batchDescription`, `src/core/batches/description.ts`).
 Then the description keeps the list of changes, says how many stories follow below it, and holds the stories that fit, in order.
 The rest follow in order in the app's own comments on the pull request, each within the host's limit on one comment (`presentationCommentLimit`) and opening with `BATCH_STORIES_MARKER`.
-Each time the description is written, the app reads its own marked comments back and keeps them in step: a changed one is rewritten, a missing one posted and one left over deleted (`Batches.continueIn`, `Forge.ownComments`).
+Each time the description is written, the app reads its own marked comments back and keeps them in step: a changed one is rewritten, a missing one posted and one left over deleted (`BatchStories.continueIn`, `src/core/batches/stories.ts`; `Forge.ownComments`).
 So no comment carries a story the batch no longer holds, a restart writes nothing again, and a comment whose answer was lost is never posted twice.
 A comment the host refuses is tried again on a later pass, and the batch goes on.
 A story too long for a comment of its own is never cut: it is a missing story, as below.
 When its members change, the same pull request takes the new version, and its title and description are rewritten at the version just read.
-Each host refuses a rewrite of a pull request that moved since that read, Bitbucket by the app reading it again first, so a refused one is sent again on the next pass (`Batches.describe`).
+Each host refuses a rewrite of a pull request that moved since that read, Bitbucket by the app reading it again first, so a refused one is sent again on the next pass (`BatchStories.describe`).
 A story that cannot be written into the description or a comment, such as one whose picture could not be sent, never keeps the batch from opening: the pull request opens or is rewritten without it, Activity names the missing story once for that version of its change (`BATCH_WORDS.noStory`), and each pass writes the description again until every story is in it.
 
 The host's own reading decides what happens next, on each pass of the tick and after each change of the line (`Batches.follow`).
@@ -1242,7 +1242,7 @@ This repository's batch runs the phone's generators and the app parts list's thi
 ### A change rebuilt on an open batch
 
 A change that clashes with the open batch is answered while that batch is checked, rather than after it merges, so a large change is brought up to date once instead of on every batch that leaves it out.
-Two moments find the clash: the combine leaves a change out for a clash (`clash` on its left-out entry), and each pass tries every ordinary change waiting in line once against the open batch's version with `merge-tree`, which writes no ref anyone sees (`clashesWithBatch`, `src/core/batches/combine.ts`; `Batches.tryLine`).
+Two moments find the clash: the combine leaves a change out for a clash (`clash` on its left-out entry), and each pass tries every ordinary change waiting in line once against the open batch's version with `merge-tree`, which writes no ref anyone sees (`clashesWithBatch`, `src/core/batches/combine.ts`; `BatchRebuilds.tryLine`, `src/core/batches/rebuild.ts`).
 A fix, a later part built on another part's version, a stacked change and a change already rebuilt keep their own place and are not tried.
 The app keeps what it told on the project's batch record (`BatchRebuild`, `toldRebuild`, `src/core/batches/line.ts`): the change's version, the batch's branch and version, and the changes that version carries, in order.
 Its crewmate hears it once for each version of its change and set of changes in the batch: a batch combined again with the same changes tells nothing new, and one that lost or gained a change tells once more, with its new version.
@@ -1250,7 +1250,7 @@ The `batch-rebuild` wake names the batch's pull request, branch and version, the
 It is sent only while the captain's merge approval is kept; otherwise the task's line and its merge card say what follows.
 A left-out change that was told reads `rebuild` in its place while that batch is open, so its merge waits quietly on `queue` and names the version to build on.
 
-A version in line whose branch builds on the version its crewmate was told to rebuild on, or on the open batch's version, is marked as built on it on the next pass (`onBatch`, `builtOnBatch`, `Batches.markRebuilt`), read from git's history whatever repair was declared, so one whose repair came back to the captain on a new merge card goes the same way (`batchVersionIn`).
+A version in line whose branch builds on the version its crewmate was told to rebuild on, or on the open batch's version, is marked as built on it on the next pass (`onBatch`, `builtOnBatch`, `BatchRebuilds.markRebuilt`), read from git's history whatever repair was declared, so one whose repair came back to the captain on a new merge card goes the same way (`batchVersionIn`).
 A held batch's version is not offered: a version built on it is that batch's fix, carried from the held version, and declaring a fix drops any such mark (`markFix`).
 It goes right behind the changes that version carries: first in the next batch once the batch merges, behind its changes when they go back in line, behind the declared fixes when the line joins a held batch, and right behind them when the open batch is combined again with them still in it (`carried`).
 The combine carries it as its own difference from that version, as a held batch's fix is carried, so it goes onto the default branch after a rebase merge or onto the batch combined again (`combine`).

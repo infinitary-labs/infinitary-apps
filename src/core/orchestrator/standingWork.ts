@@ -10,14 +10,23 @@ import { readerSavedLine, servedTaskTitle, withReaderDataReminder } from "./read
 
 /**
  * The standing list (INF-6664 piece 1; docs/report-sort.md, "The standing
- * list"): waiting work that no wake reports to the first mate, and every
- * hold and wait on unstarted work (INF-6853), read from typed facts the
+ * list"): waiting work that no wake reports to the first mate, every hold
+ * and wait on unstarted work (INF-6853), and idle work nothing runs or
+ * watches (INF-7116), read from typed facts the
  * record already holds. It only reads; each store keeps its
  * one writer, and the new mark rides the inbox's once-names, so it adds no
  * store.
  */
 
 const DAY_MS = 24 * 60 * 60_000;
+
+/**
+ * Idle this long with nothing running or watching it is an idle row
+ * (INF-7116 fix 4): well past the idle ladder's nudge and wake
+ * (`STALL_WAKE_MS`, `IDLE_WAKE_MS`), so a row names idle work the ladder
+ * did not report.
+ */
+export const IDLE_ROW_MS = 2 * 60 * 60_000;
 
 /**
  * At most this many rows, those marked new first and the rest oldest first;
@@ -90,6 +99,10 @@ export type StandingRow =
       endsSooner: { event: boolean; update: boolean };
     })
   | (RowBase & {
+      /** Idle past `IDLE_ROW_MS` with nothing running, watching or ending its quiet. */
+      kind: "idle";
+    })
+  | (RowBase & {
       kind: "linked-wait";
       /** The work only a start begins that it waits on, and whether the captain stopped each. */
       waits: { taskId: string; key: string; title: string; stopped: boolean }[];
@@ -111,8 +124,8 @@ export type StandingWork = {
 export type StandingWorkHost = {
   tasks: TaskService;
   inbox: Pick<InboxStore, "woken">;
-  /** The work a task waits on, as the idle ladder reads it. */
-  waits: Pick<IdleLadder, "unstartedWaits" | "underwayWaits">;
+  /** The work a task waits on and what holds it, as the idle ladder reads them. */
+  waits: Pick<IdleLadder, "unstartedWaits" | "underwayWaits" | "witnesses">;
 };
 
 /**
@@ -231,6 +244,51 @@ function linkedWait(host: StandingWorkHost, record: TaskRecord): Unmarked | unde
   };
 }
 
+/**
+ * A started, idle task out of the backlog, with no gate, idle past
+ * `IDLE_ROW_MS` (INF-7116 fix 4): INF-6937 sat 31 hours after its report
+ * while a leftover notice in its inbox made every watcher read it as moving.
+ * So this reads only typed facts that something runs, watches or ends its
+ * quiet, and never the inbox's deliverable witness: a job in its bound, an
+ * open review, watched checks, a merge in line, a card or answer on the
+ * captain's screen, a put-off, a wait on work underway or unstarted, a
+ * held account, an out-of-reach computer, a pending settle, or a work wait
+ * its newest report declared that no later failed turn ended, once the idle
+ * ladder has acted on this idle stay (its rung past 0): a declared wait has
+ * no owner, and at rung 0 the ladder may be the watcher misreading it. A request to
+ * the first mate, a finished report with no card and a captain reply
+ * waiting on its crewmate are no watcher: each is a move nobody made.
+ */
+function idleRow(host: StandingWorkHost, record: TaskRecord, now: number): Unmarked | undefined {
+  if (record.activity !== "idle" || record.backlogSince != null || record.gate) return;
+  const since = record.idleSince;
+  if (since == null || now - since < IDLE_ROW_MS) return;
+  const { tasks } = host;
+  const report = tasks.lastReportEntries(record.id).at(-1);
+  const declaredWait =
+    report?.declared.workWait !== undefined && (tasks.lastFailureAt(record.id) ?? -1) <= report.at;
+  if (declaredWait && (record.recoveryRung ?? 0) > 0) return;
+  const held = host.waits.witnesses(record.id, now);
+  if (
+    held.jobsRunning ||
+    held.reviewOpen ||
+    held.checksWatched ||
+    held.mergeInLine ||
+    held.decisionCardOpen ||
+    held.finishedCardUp ||
+    held.answerReady ||
+    held.putOff ||
+    held.waitsOnUnderway ||
+    held.waitsOnUnstarted ||
+    held.waitsOnStopped ||
+    held.accountHeld ||
+    held.outOfReach ||
+    held.pendingSettle
+  )
+    return;
+  return { kind: "idle", taskId: record.id, key: keyOrId(record), title: record.title, since };
+}
+
 function savedPlan(tasks: TaskService, record: TaskRecord): boolean {
   const basis = tasks.graph.basisOf(record);
   const plan = basis ? tasks.resolve(basis.ref) : undefined;
@@ -249,7 +307,10 @@ export function standingWork(host: StandingWorkHost, now: number): StandingWork 
       onRequest || record.backlogSince != null
         ? parkedPart(tasks, record)
         : record.status === "active"
-          ? (heldRow(tasks, record) ?? linkedWait(host, record) ?? openEndedWait(tasks, record))
+          ? (heldRow(tasks, record) ??
+            linkedWait(host, record) ??
+            openEndedWait(tasks, record) ??
+            idleRow(host, record, now))
           : undefined;
     if (row) {
       found.push(row);
@@ -307,6 +368,8 @@ export function standingWorkText(tasks: TaskService, list: StandingWork, now: nu
         };
       case "open-ended-wait":
         return { reason: reason(row) };
+      case "idle":
+        return {};
       case "held":
         return {
           until: iso(row.until),
@@ -335,7 +398,7 @@ export function standingWorkText(tasks: TaskService, list: StandingWork, now: nu
   }));
   const standing_work = {
     // i18n-exempt: sent to the first mate in English; a heartbeat's History shows it as sent
-    note: "Waiting work: parked parts, waits nothing ends, holds over a day and waits on unstarted work, rows marked new first, then oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.",
+    note: `Waiting work: parked parts, waits nothing ends, holds over a day, waits on unstarted work and work idle over ${IDLE_ROW_MS / 3_600_000} hours that nothing runs or watches, rows marked new first, then oldest first. A row is new when it joins the list and again at 1, 3 and 7 days, then every 7 days. Reading it grants no permission.`,
     rows,
     ...(list.more > 0 ? { more: list.more } : {}),
     filed_for_later: {

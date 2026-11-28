@@ -580,8 +580,9 @@ export class TaskGraph {
     const approved = this.writer.store
       .listAwaitingApproval()
       .filter((record) => this.approvedBase(record) !== undefined);
-    // A release-moment task's merged wait with no first release still holds
-    // its start ("A side-effect task"); the store's query reads only status.
+    // A release-moment task's merged work with no first release, a merged wait
+    // or a finished wait's merged part, still holds its start ("A side-effect
+    // task"); the store's query reads only status.
     const ready = this.writer.store
       .listReady()
       .filter(
@@ -912,7 +913,8 @@ export class TaskGraph {
   /**
    * What holds an open task's start: each wait not closed done, less the
    * ones an approval answers, and, on a release-moment side-effect task,
-   * each merged wait with no recorded first release (`awaitingRelease`).
+   * each merged wait or finished wait's merged part with no recorded first
+   * release (`awaitingRelease`).
    */
   waitingOn(id: string): TaskRecord[] {
     const waiting = this.unanswered(

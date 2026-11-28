@@ -107,7 +107,7 @@ It fires once the record holds the named task's first release (`delivery.firstRe
 A task closed without a release, and a task the record no longer holds, never fires it.
 Its item names the task, the release's version and its page, carried once, so it never fires twice.
 Its look runs every minute, so it fires within about a minute of the release being recorded.
-A release-moment side-effect task needs no hold, since the host keeps it unstarted until its merged waits have a first release; the first mate holds on it a started merge-moment side-effect task whose words still name a release (`docs/task-graph.md`, "A side-effect task"; "A rule that ends a hold" above).
+A release-moment side-effect task needs no hold, since the host keeps it unstarted until its merged waits, and a finished wait's merged parts, have a first release; the first mate holds on it a started merge-moment side-effect task whose words still name a release (`docs/task-graph.md`, "A side-effect task"; "A rule that ends a hold" above).
 
 ## The automation's page
 

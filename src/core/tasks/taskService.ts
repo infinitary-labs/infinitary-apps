@@ -181,7 +181,7 @@ export type UpdateTaskPatch = {
   /**
    * When a side-effect task that has not started may act
    * (`shape.side_effect_moment`, docs/task-graph.md, "A side-effect task"):
-   * at the first release of its merged waits, or at their merge.
+   * at the first release of the work its waits merged, or at their merge.
    */
   moment?: "release" | "merge";
   /**

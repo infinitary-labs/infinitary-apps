@@ -71,7 +71,7 @@ export function queueWaitOf(
     );
   }
   // Only once nothing else it waits on is unfinished: a release-moment task's
-  // merged waits that have not shipped (docs/task-graph.md, "A side-effect task").
+  // merged waits or parts that have not shipped (docs/task-graph.md, "A side-effect task").
   if (unreleased.length) {
     const merged = unreleased.map((task) => task.closedAt);
     return dated(

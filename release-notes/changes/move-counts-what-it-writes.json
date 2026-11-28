@@ -9,7 +9,7 @@
       "picture": {
         "dark": "move-counts-what-it-writes-dark.webp",
         "light": "move-counts-what-it-writes-light.webp",
-        "alt": "The list before moving your first mate to Mac mini, saying Mac mini has 57.0 GB free, the move needs about 108.2 GB, and to free about 51.2 GB there first"
+        "alt": "Mac mini's row in Settings, Devices, with the list before moving your first mate there, saying Mac mini has 57.0 GB free, the move needs about 108.2 GB, and to free about 51.2 GB there first"
       },
       "noDocsSite": "The docs site's Move your first mate section says a list first shows anything in the way, which stays true; it names no space figures.",
       "provenance": { "origin": "change" }

@@ -695,18 +695,18 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
   ).join(" ")}
 ${FRAME_PICTURE_SCRIPT}
 ${FRAME_PRESS_SCRIPT}
-  // What a press left to tell its own words from earlier ones, read in place because the browser queues selectionchange apart from the gesture: the selection's ends, which a drag moves, and where it went down, which a drag that selects the same words again still leaves. A click the card's script or a held touch sends ahead of the browser's own clearing moves neither; four pixels is a drag's slop, as a press that moves further is no tap.
-  var pressed = { ends: [], x: 0, y: 0 };
+  // What a press left to tell its own words from earlier ones, read in place because the browser queues selectionchange apart from the gesture: the selection's ends, which a drag moves, and where it went down, which a drag that selects the same words again still leaves. A click the card's script or a held touch sends ahead of the browser's own clearing moves neither. Only a mouse's travel counts, four pixels of it: a held touch may move further and is still a press, and its click is sent at the release.
+  var pressed = { ends: [], x: 0, y: 0, mouse: false };
   function selectionEnds() {
     var selection = getSelection();
     return [selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset];
   }
   document.addEventListener("pointerdown", function (event) {
-    pressed = { ends: selectionEnds(), x: event.clientX, y: event.clientY };
+    pressed = { ends: selectionEnds(), x: event.clientX, y: event.clientY, mouse: event.pointerType === "mouse" };
   }, true);
   document.addEventListener("click", function (event) {
     var ends = selectionEnds();
-    var selecting = Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 4
+    var selecting = (pressed.mouse && Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 4)
       || ends.some(function (end, at) { return end !== pressed.ends[at]; });
     var target = event.target;
     var action = target && target.closest ? target.closest("[data-inf-action]") : null;
@@ -876,4 +876,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-lJr5vCA6Llx70IzxZFBENEpZnk3z4xs5Pe0oyjG8CYc=";
+export const FRAME_BRIDGE_SHA256 = "sha256-U4wcKQrG62wTUC+EboQvDQzFa9/8MgoVk8PucRpeCns=";

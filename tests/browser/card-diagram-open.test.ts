@@ -313,12 +313,21 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
     await settled(heard);
     expect(opened(heard)).toHaveLength(2);
 
-    // A drag that selects the same words again leaves the ends as they were, but it moves the pointer.
-    await selectParagraphWords(WORDS);
+    // The mouse's travel is the fallback for a drag that leaves the selection's ends as they were: words selected in the diagram, a press and a release 120 px apart.
+    // A real press inside selected words starts a text drag-and-drop in Chromium, so a reselecting drag cannot be made with the mouse here.
     await inFrame(() => {
       const label = document.getElementById("label");
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("command") as Element);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
       label?.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, clientX: 100, clientY: 60 }),
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "mouse",
+          clientX: 100,
+          clientY: 60,
+        }),
       );
       label?.dispatchEvent(
         new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 220, clientY: 60 }),
@@ -326,6 +335,25 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
     }, null);
     await settled(heard);
     expect(opened(heard)).toHaveLength(2);
+
+    // A held touch may move within its press and its click is sent at the release, with earlier words still selected.
+    await selectParagraphWords(WORDS);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "touch",
+          clientX: 100,
+          clientY: 60,
+        }),
+      );
+      label?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 112, clientY: 60 }),
+      );
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(3);
 
     // A held touch's release makes the bridge send its click before the browser clears words selected elsewhere.
     await inFrame(() => {
@@ -353,7 +381,7 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
       .poll(() => inFrame(() => (window as unknown as { ups: number }).ups, null))
       .toBeGreaterThan(0);
     await settled(heard);
-    expect(opened(heard)).toHaveLength(3);
+    expect(opened(heard)).toHaveLength(4);
     const clicks = await inFrame(() => (window as unknown as { clicks: unknown[] }).clicks, null);
     expect(clicks[0]).toEqual({ trusted: false, words: WORDS });
   }

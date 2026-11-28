@@ -4515,6 +4515,7 @@
 "taskOverrideDirectionVersion" = "Votre consigne d:%1$@ lève %2$@ pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « %3$@ »";
 "taskPinPin" = "Épingler";
 "taskPinUnpin" = "Désépingler";
+"taskQueueWaitRelease" = "Attend la publication de %1$@ dans une version";
 "taskStatusComputerUpdating" = "%1$@ se met à jour";
 "taskTabActivity" = "Activité";
 "taskTabCards" = "Cartes";

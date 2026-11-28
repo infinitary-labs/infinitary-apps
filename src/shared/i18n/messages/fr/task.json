@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "Votre consigne d:{direction} lève {holds} pour cette version, jusqu’à ce qu’elle soit révisée ou retirée : « {words} »",
   "taskPinPin": "Épingler",
   "taskPinUnpin": "Désépingler",
+  "taskQueueWaitRelease": "Attend la publication de {tasks} dans une version",
   "taskStatusComputerUpdating": "{computer} se met à jour",
   "taskTabActivity": "Activité",
   "taskTabCards": "Cartes",

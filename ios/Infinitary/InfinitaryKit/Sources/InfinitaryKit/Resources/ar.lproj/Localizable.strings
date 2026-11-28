@@ -4515,6 +4515,7 @@
 "taskOverrideDirectionVersion" = "يتجاوز توجيهك d:%1$@ %2$@ في هذه النسخة، إلى أن يُعدَّل أو يُستبعَد: «%3$@»";
 "taskPinPin" = "تثبيت";
 "taskPinUnpin" = "إلغاء التثبيت";
+"taskQueueWaitRelease" = "بانتظار صدور %1$@ في إصدار";
 "taskStatusComputerUpdating" = "%1$@ قيد التحديث";
 "taskTabActivity" = "النشاط";
 "taskTabCards" = "البطاقات";

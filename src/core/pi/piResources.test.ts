@@ -824,5 +824,6 @@ it("keeps the full authoring and handoff sources word for word", () => {
   // INF-6293's approved plan makes room for the tradeoff chart text: the merge permission line says the same in fewer words.
   // INF-6639 (the captain's yes) restores the read-only, closed-answer, bounded-work, last-piece and parent lines and "more than one part", and serves the planner's and builder's parts in their briefs.
   // INF-6776 part 1 (the captain's pick: its own task, waiting on every task that does the work) files an outside action that waits on work as a side-effect task.
-  expect(hash(HANDOFF)).toBe("e236fa70933eeaaf88932760f37792b42084ee2c087272638807ff521c48fac4");
+  // INF-7198 part 1 (the captain's "Approve and build") has the first mate set that task's moment, release or merge.
+  expect(hash(HANDOFF)).toBe("8d801188bf4837da806046bc69e35f4bf97d24eb1848c864d2b356aaa1ee2910");
 });

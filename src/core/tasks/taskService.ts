@@ -179,6 +179,12 @@ export type UpdateTaskPatch = {
    */
   sideEffect?: boolean;
   /**
+   * When a side-effect task that has not started may act
+   * (`shape.side_effect_moment`, docs/task-graph.md, "A side-effect task"):
+   * at the first release of the work its waits merged, or at their merge.
+   */
+  moment?: "release" | "merge";
+  /**
    * Whether open work that has not started is the first mate's own, not the
    * captain's ask (`shape.internal_step`, INF-1467): set when it starts a
    * crewmate's filing unasked.

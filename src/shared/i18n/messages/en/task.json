@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "Your direction d:{direction} passes {holds} for this version, until it is revised or retired: “{words}”",
   "taskPinPin": "Pin",
   "taskPinUnpin": "Unpin",
+  "taskQueueWaitRelease": "Waiting for {tasks} to ship in a release",
   "taskStatusComputerUpdating": "{computer} is updating",
   "taskTabActivity": "Activity",
   "taskTabCards": "Cards",

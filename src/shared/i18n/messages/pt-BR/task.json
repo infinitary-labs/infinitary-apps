@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "Sua diretriz d:{direction} libera {holds} para a mudança como está agora, até ganhar uma nova versão ou ser desativada: “{words}”",
   "taskPinPin": "Fixar",
   "taskPinUnpin": "Desafixar",
+  "taskQueueWaitRelease": "Aguardando {tasks} sair em uma versão",
   "taskStatusComputerUpdating": "{computer} está atualizando",
   "taskTabActivity": "Atividade",
   "taskTabCards": "Cartões",

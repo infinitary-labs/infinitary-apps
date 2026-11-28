@@ -33,6 +33,7 @@
   "taskOverrideDirectionVersion": "你的指引 d:{direction} 讓這個版本越過{holds}的暫緩，直到它被修訂或停用：「{words}」",
   "taskPinPin": "釘選",
   "taskPinUnpin": "取消釘選",
+  "taskQueueWaitRelease": "正在等待 {tasks} 隨版本發布",
   "taskStatusComputerUpdating": "{computer} 正在更新",
   "taskTabActivity": "動態",
   "taskTabCards": "卡片",

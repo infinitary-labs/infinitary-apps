@@ -272,6 +272,7 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
               : {}),
             ...(input.needsMerge !== undefined ? { needsMerge: input.needsMerge } : {}),
             ...(input.sideEffect !== undefined ? { sideEffect: input.sideEffect } : {}),
+            ...(input.moment !== undefined ? { moment: input.moment } : {}),
             ...(input.internalStep !== undefined ? { internalStep: input.internalStep } : {}),
             ...(input.speed !== undefined ? { speed: input.speed } : {}),
             ...(input.model !== undefined && !moveTo ? { model: input.model } : {}),
@@ -653,8 +654,21 @@ export function firstmateTaskTools(host: FirstmateTaskToolsHost): TaskToolsDeleg
       // INF-6091 finding 1: removing the last wait of when-ready work lets
       // the ready sweep start what the first mate's own open card asks about.
       if (input.remove && input.type === "blocks" && to.startPolicy === "when-ready") {
-        // The ready sweep's own rule: an approved base answers a wait too.
-        const others = tasks.graph.waitingOn(to.id).filter((blocker) => blocker.id !== from.id);
+        // The ready sweep's own rule: an approved base answers a wait too,
+        // and a release-moment task's hold names the merged parts under a
+        // finished wait (`TaskGraph.awaitingRelease`), which leave with its
+        // edge unless another edge still reaches them.
+        const kept = new Set(
+          tasks.graph
+            .blockers(to.id)
+            .filter((blocker) => blocker.id !== from.id)
+            .flatMap((blocker) => tasks.graph.mergedWork(blocker))
+            .map((task) => task.id),
+        );
+        const leaving = new Set([from.id, ...tasks.graph.mergedWork(from).map((task) => task.id)]);
+        const others = tasks.graph
+          .waitingOn(to.id)
+          .filter((blocker) => !(leaving.has(blocker.id) && !kept.has(blocker.id)));
         const held =
           others.length === 0
             ? cardHeldStartRefusal(to, { ...cardHold(to.id), edit: "wait-removal" })

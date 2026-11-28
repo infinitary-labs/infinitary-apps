@@ -4515,6 +4515,7 @@
 "taskOverrideDirectionVersion" = "Wegen deiner Vorgabe d:%1$@ halten diese Punkte diese Version nicht mehr zurück: %2$@. Das gilt, bis die Vorgabe eine neue Revision bekommt oder zurückgezogen wird: „%3$@“";
 "taskPinPin" = "Anheften";
 "taskPinUnpin" = "Nicht mehr anheften";
+"taskQueueWaitRelease" = "Wartet, bis %1$@ in einer Version erscheint";
 "taskStatusComputerUpdating" = "%1$@ wird aktualisiert";
 "taskTabActivity" = "Aktivität";
 "taskTabCards" = "Karten";

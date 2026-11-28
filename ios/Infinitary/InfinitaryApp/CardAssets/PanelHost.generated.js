@@ -112287,6 +112287,34 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Unpin`;
   }
+  function taskQueueWaitRelease(input2) {
+    const tasks = input2.tasks;
+    switch (currentLanguage()) {
+      case "ar":
+        return `بانتظار صدور ${tasks} في إصدار`;
+      case "de":
+        return `Wartet, bis ${tasks} in einer Version erscheint`;
+      case "es":
+        return `Esperando a que ${tasks} salga en una versión`;
+      case "fr":
+        return `Attend la publication de ${tasks} dans une version`;
+      case "ja":
+        return `${tasks} のリリース待ち`;
+      case "ko":
+        return `${tasks} 릴리스 대기 중`;
+      case "pt-BR":
+        return `Aguardando ${tasks} sair em uma versão`;
+      case "zh-Hans":
+        return `正在等待 ${tasks} 随版本发布`;
+      case "zh-Hant":
+        return `正在等待 ${tasks} 隨版本發布`;
+      case "en-XA":
+        return `[Ŵáîţîñĝ ƒöŕ ${tasks} ţö šĥîþ îñ á ŕéļéášé ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Waiting for ‬${tasks}‮ to ship in a release‬`;
+    }
+    return `Waiting for ${tasks} to ship in a release`;
+  }
   function taskStatusComputerUpdating(input2) {
     const computer = input2.computer;
     switch (currentLanguage()) {
@@ -122467,6 +122495,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     taskOverrideDirectionVersion,
     taskPinPin,
     taskPinUnpin,
+    taskQueueWaitRelease,
     taskStatusComputerUpdating,
     taskTabActivity,
     taskTabCards,
@@ -126273,6 +126302,7 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "taskOverrideDirectionVersion": ["direction", "holds", "words"],
     "taskPinPin": [],
     "taskPinUnpin": [],
+    "taskQueueWaitRelease": ["tasks"],
     "taskStatusComputerUpdating": ["computer"],
     "taskTabActivity": [],
     "taskTabCards": [],
@@ -138716,6 +138746,15 @@ ${FRAME_KEYBOARD_SCRIPT}
      */
     side_effect: boolean().optional(),
     /**
+     * When a side-effect task's outside action may happen, set by the first
+     * mate from how the project ships (docs/task-graph.md, "A side-effect
+     * task"): `release` keeps it unstarted while any merged work it waits
+     * on, a merged wait or a finished wait's merged part, has no recorded
+     * first release; `merge`, or none, starts it once every wait closed
+     * done. Only on a task marked `side_effect`.
+     */
+    side_effect_moment: _enum(["release", "merge"]).optional(),
+    /**
      * The approved version of an earlier part this task's working copy
      * started on (`start_at_approval`): that task, its pushed branch and the
      * approved commit, written by the host at the start. The brief, the
@@ -138875,6 +138914,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     start_at_approval: true,
     needs_merge: true,
     side_effect: true,
+    side_effect_moment: true,
     branch: true,
     program: true
   }).extend({

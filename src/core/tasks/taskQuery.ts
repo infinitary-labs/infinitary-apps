@@ -496,6 +496,7 @@ function toRow(
             tasks.graph.linksTo(record.id),
             children,
             tasks.graph.nothingMerged(record) !== undefined,
+            tasks.graph.awaitingRelease(record),
           ),
         )?.line
       : undefined) ??

@@ -18,6 +18,7 @@ import { currentReceipt } from "../storage/changeProjection";
 import type { TaskRecord } from "../storage/taskRecords";
 import { alreadyAllowed, inheritedOverride } from "../tasks/alreadyAllowed";
 import { sha256OfFile } from "../tasks/handoverFiles";
+import { TaskGraph } from "../tasks/taskGraph";
 import type { TaskService } from "../tasks/taskService";
 import { checkedOutRefFor } from "../workspace/workspaceService";
 import { linkedIssuesSection } from "./buildRows";
@@ -286,7 +287,14 @@ export class CrewBrief {
         renderSideEffectSection(
           this.options.tasks.graph.blockers(taskId).map((wait) => {
             const result = this.options.tasks.latestResult(wait.id)?.value;
-            return result ? { ...wait, result } : wait;
+            const shipped = TaskGraph.workMerged(wait)
+              ? []
+              : this.options.tasks.graph.mergedWork(wait);
+            return {
+              ...wait,
+              ...(result ? { result } : {}),
+              ...(shipped.length ? { mergedParts: shipped } : {}),
+            };
           }),
           record.shape.side_effect_moment,
         ),

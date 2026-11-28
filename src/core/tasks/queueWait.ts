@@ -4,7 +4,6 @@ import * as m from "@shared/i18n/messages.generated";
 import { providerLabel } from "@shared/modelSlots";
 import type { TaskView } from "@shared/tasks";
 import type { TaskRecord } from "../storage/taskRecords";
-import { TaskGraph } from "./taskGraph";
 
 /** Only unstarted work reads a start wait; callers can avoid fetching its unused inputs. */
 export function hasStartQueueWait(
@@ -46,6 +45,11 @@ export function queueWaitOf(
    * with nothing merged.
    */
   awaitsGo = false,
+  /**
+   * The merged work a release-moment side-effect task still waits on to
+   * ship (`TaskGraph.awaitingRelease`).
+   */
+  unreleased: readonly TaskRecord[] = [],
 ): TaskView["queueWait"] {
   if (!hasStartQueueWait(record)) return undefined;
   const dated = (reason: string, since?: number): NonNullable<TaskView["queueWait"]> => ({
@@ -68,7 +72,6 @@ export function queueWaitOf(
   }
   // Only once nothing else it waits on is unfinished: a release-moment task's
   // merged waits that have not shipped (docs/task-graph.md, "A side-effect task").
-  const unreleased = TaskGraph.unreleasedAmong(record, blockers);
   if (unreleased.length) {
     const merged = unreleased.map((task) => task.closedAt);
     return dated(

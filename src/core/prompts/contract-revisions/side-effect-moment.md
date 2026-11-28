@@ -7,12 +7,12 @@ The captain asked whether they should start only when the release is ready, and 
 What the first mate is now told:
 
 - HANDOFF (the core): when it files a side-effect task, it sets `moment` release when the project ships in releases and the action should follow the work's first release, else merge.
-- `create_task` takes `moment` (one parameter description, the rule's home): release keeps the task unstarted until every merged `blocked_by` has a recorded first release; merge, the default, starts it once each closed done.
+- `create_task` takes `moment` (one parameter description, the rule's home): release keeps the task unstarted until each merge its `blocked_by` shipped, a parent's merged parts included, has a recorded first release; merge, the default, starts it once each closed done.
 - `update_task` takes `moment`, as `create_task`'s, before the task starts.
 - The tasks reader shows `moment` in a side-effect task's row and its by-key read.
 
 What a crewmate reads: only a side-effect task's own brief changes, naming its moment (the builder's brief).
-A release-moment task's brief tells its crewmate to act only once every merged wait shows its first release, and otherwise to do nothing outside and report the wait, since a start by hand skips the release hold; a merge-moment task keeps the report that asks for a release hold when its words still name a release.
+A wait closed done with no merge of its own names its merged parts with their first releases, and a release-moment task's brief tells its crewmate to act only once every merged wait or part shows its first release, and otherwise to do nothing outside and report the wait, since a start by hand skips the release hold; a merge-moment task keeps the report that asks for a release hold when its words still name a release.
 
 Homes: the choice of moment is said once, in HANDOFF; what the host holds is said once, on `create_task`'s `moment`; `update_task` points to it.
 The new words cost about 75 tokens of fixed context (`tests/firstmate-fixed-context.test.ts`).

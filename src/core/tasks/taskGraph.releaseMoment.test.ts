@@ -128,4 +128,36 @@ describe("a side-effect task whose moment is the release", () => {
     expect(tasks.graph.waitingOn("reply")).toEqual([]);
     expect(tasks.graph.listReady().map((r) => r.id)).toContain("reply");
   });
+
+  // INF-7238 review, from the approved plan's INF-6932 row: a parent the host closes finished
+  // when its last part merges holds its release-moment waiter on that part's release.
+  it("holds a release-moment task on a finished parent's merged part, naming the part", () => {
+    const { tasks, work } = setup();
+    const parent = work("parent", { repoId: "r1", startPolicy: "on-request" });
+    const part = work("part", { repoId: "r1", startPolicy: "on-request", parentId: parent.id });
+    work("reply", {
+      repoId: "r1",
+      blockedBy: ["parent"],
+      shape: { kind: "implement", side_effect: true, side_effect_moment: "release" },
+    });
+    tasks.close(part.id, { status: "done", reason: "merged", actor: "host" });
+    tasks.close(parent.id, { status: "done", reason: "finished", actor: "host" });
+
+    expect(tasks.graph.listReady().map((r) => r.id)).not.toContain("reply");
+    expect(tasks.graph.waitingOn("reply").map((r) => r.id)).toEqual(["part"]);
+    const reply = tasks.get("reply")!;
+    expect(queryTasks(tasks, { key: reply.key }).rows[0]?.waiting).toMatch(
+      new RegExp(`^Waiting for ${part.key} to ship in a release · since `),
+    );
+
+    const check = work("release-check", { repoId: "r1", startPolicy: "on-request" });
+    tasks.delivery.recordFirstRelease(check.id, {
+      version: "1.4.0",
+      url: "https://example.com/releases/1.4.0",
+      evidence: "The 1.4.0 tag holds the part's merge commit.",
+      tasks: [part.key],
+    });
+    expect(tasks.graph.waitingOn("reply")).toEqual([]);
+    expect(tasks.graph.listReady().map((r) => r.id)).toContain("reply");
+  });
 });

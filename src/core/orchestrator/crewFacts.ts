@@ -382,6 +382,7 @@ export class CrewFacts {
                 this.core.options.tasks.graph.linksTo(record.id),
                 this.core.options.tasks.graph.children(record.id),
                 this.core.options.tasks.graph.nothingMerged(record) !== undefined,
+                this.core.options.tasks.graph.awaitingRelease(record),
               ),
             );
       // A started task in the backlog (INF-2062) waits for start_now, with how long it has.

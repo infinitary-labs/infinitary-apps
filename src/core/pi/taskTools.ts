@@ -270,7 +270,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       moment: Type.Optional(
         stringEnum(["release", "merge"], {
           description:
-            "A side_effect task's moment, from how the project ships: release keeps it unstarted until every merged blocked_by has a recorded first release; merge, the default, starts it once each closed done.",
+            "A side_effect task's moment, from how the project ships: release keeps it unstarted until each merge its blocked_by shipped, a parent's merged parts included, has a recorded first release; merge, the default, starts it once each closed done.",
         }),
       ),
       unsafe_data_reader: Type.Optional(

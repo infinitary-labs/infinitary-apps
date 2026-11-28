@@ -15,7 +15,6 @@ import { standingDependencyWaits } from "./dependencyWaits";
 import { holdingWaits, waitsSince } from "./holdingWaits";
 import { queueWaitOf } from "./queueWait";
 import { reportHeadline } from "./recordActivity";
-import { TaskGraph } from "./taskGraph";
 import type { TaskProtocolOptions } from "./taskProtocolOptions";
 import { TaskService } from "./taskService";
 import { type TaskWaitFacts, taskWaitsOf } from "./taskWaits";
@@ -222,9 +221,10 @@ export function viewOf(
   facts: LiveFacts,
 ): TaskView {
   const blockers = graph.blockersOf.get(record.id) ?? [];
+  const unreleased = options.tasks.graph.awaitingRelease(record);
   const waiting = [
     ...blockers.filter((blocker) => !TaskService.blockerCleared(blocker)),
-    ...TaskGraph.unreleasedAmong(record, blockers),
+    ...unreleased,
   ];
   const liveBlockers = blockers.filter(TaskService.blockerHoldsClose);
   const { repo, posture, place, startAttempt, computerMove } = facts;
@@ -336,6 +336,7 @@ export function viewOf(
           graph.linksInto.get(record.id) ?? [],
           graph.parts.get(record.id) ?? [],
           awaitsGo,
+          unreleased,
         ),
     flags: {
       blocked,

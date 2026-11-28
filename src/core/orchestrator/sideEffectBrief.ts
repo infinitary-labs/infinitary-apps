@@ -16,7 +16,19 @@ export type SideEffectWait = Pick<
   | "outcome"
   | "outcomeSummary"
   | "shape"
-> & { result?: Record<string, unknown> };
+> & {
+  result?: Record<string, unknown>;
+  /** The merged parts a done wait with no merge of its own shipped in (`TaskGraph.mergedWork`). */
+  mergedParts?: readonly Pick<TaskRecord, "id" | "key" | "delivery">[];
+};
+
+function mergedWords(task: Pick<TaskRecord, "delivery">): string {
+  const release = task.delivery?.firstRelease;
+  // i18n-exempt: a crewmate's brief, never shown to a person
+  return release
+    ? `merged; first shipped in release ${release.version} (${release.url})`
+    : "merged; in no release yet";
+}
 
 /** How a wait closed, in the record's own words: a merge is a fact, never read from a report. */
 function closedWords(wait: SideEffectWait): string {
@@ -25,13 +37,11 @@ function closedWords(wait: SideEffectWait): string {
   const reason = wait.closedReason ? ` (${wait.closedReason})` : "";
   // i18n-exempt: a crewmate's brief, never shown to a person
   if (wait.status === "dropped") return `dropped${reason}`;
-  if (TaskGraph.workMerged(wait)) {
-    const release = wait.delivery?.firstRelease;
-    // i18n-exempt: a crewmate's brief, never shown to a person
-    return release
-      ? `merged; first shipped in release ${release.version} (${release.url})`
-      : "merged; in no release yet";
-  }
+  if (TaskGraph.workMerged(wait)) return mergedWords(wait);
+  const parts = wait.mergedParts ?? [];
+  // i18n-exempt: a crewmate's brief, never shown to a person
+  if (parts.length)
+    return `done${reason}, shipped by its merged parts: ${parts.map((part) => `${part.key || part.id} (${mergedWords(part)})`).join(", ")}`;
   // i18n-exempt: a crewmate's brief, never shown to a person
   return `done${reason}, with no merge`;
 }
@@ -73,7 +83,7 @@ export function renderSideEffectSection(
     "This is a side-effect task: its only job is the outside action its words name, such as closing a work item, sending a message or posting an update, once the work it waits on is done. Each task it waits on, and how the record says it closed, with a finished wait's reported summary and typed result, which say what that work found:",
     ...(lines.length ? lines : ["- none"]),
     moment === "release"
-      ? "Its moment is the release: act only once every merged wait above shows its first release. While one is in no release yet, do nothing outside: report with needs_firstmate naming it, and end your turn."
+      ? "Its moment is the release: act only once every merged wait or part above shows its first release. While one is in no release yet, do nothing outside: report with needs_firstmate naming it, and end your turn."
       : "Its moment is the merge. When the words name a release as the moment and a merged wait is in no release yet, report with needs_firstmate naming those tasks, so the first mate holds you until the work ships in a release, and end your turn.",
     "Act only when every wait that ships a change merged; a wait done with no change, such as an answer, counts as done. Do the action through the integration for the item's tracker, or where the project lives, and say in your report what you did and where. When a wait was dropped, or its change closed with no merge, do nothing outside: report which wait and how it closed.",
   ].join("\n");

@@ -1263,6 +1263,7 @@ public struct PhoneNotice: Equatable, Sendable {
             do { while true { delivered.yield(try await socket.receive()) } } catch { delivered.finish(throwing: error) }
         }
         var reading = messages.makeAsyncIterator()
+        var welcomed = false
         do {
             helloSent = .now
             try await send(hello, on: socket)
@@ -1272,12 +1273,18 @@ public struct PhoneNotice: Equatable, Sendable {
                 guard current == generation, !Task.isCancelled else { break }
                 guard case .string(let text) = message else { throw PhoneError.invalidReply }
                 // INF-2832: each part of a long frame is the computer sending, heard as it arrives; the frame is read
-                // once whole, so an answer still arriving is never cut as a stuck one.
-                guard let whole = try parts.read(text) else { hear(); framed = .now; continue }
+                // once whole, so an answer still arriving is never cut as a stuck one. A welcome is heard only once it
+                // is this phone's home (`receive`), so neither are its parts: a refused home whose welcome runs past one
+                // piece would otherwise be heard at every attempt, and the words would stay at Live.
+                guard let whole = try parts.read(text) else {
+                    if welcomed { hear(); framed = .now }
+                    continue
+                }
                 // INF-2566: the frame is parsed and its payload decoded off the main thread, then read here in order.
                 let frame = try await PhoneFrame.decode(whole, reads: pending, home: mac.name)
                 guard current == generation, !Task.isCancelled else { break }
                 try await receive(frame, on: socket)
+                if frame.frame["t"] as? String == "welcome" { welcomed = true }
                 guard current == generation, !Task.isCancelled, !removed else { break }
                 if contact == "in-reach" { refused = 0; reached = true }
             }

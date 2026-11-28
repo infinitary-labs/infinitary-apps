@@ -60,6 +60,12 @@ The page is marked as the overlay's by a preload argument (`--inf-card-overlay`)
 It starts only the stack's reads (`startOverlayStore`): the cards, their threads and drafts, and the project focus, never the board, crew, voice or a notification's card.
 It draws `CardLayer` itself, so every card's peeks, pager, replies, fields, thread and host choices work as in the window, and so does card admission: a choice runs once through the same action path, and a refusal stays on the card.
 
+Only the stack's place differs from the window's (`overlay.css`).
+The pager hangs 10 points under the card and moves with it, card and pager centred together in the panel's height, instead of under the window's fixed lane, which in the panel is nearly its whole height.
+It stands on the overlay's pill surface, as the hide button does, so it reads over any scene; the new badge stays beside it on an opaque ground of its own.
+The hide button sits just above the card's top corner, clear of the peeks, and follows the card as its height eases; a card made large leaves it in the panel's corner.
+So the tallest card gives up a lane above it for the hide button and one under it for the pager.
+
 A choice that opens Infinitary's window - Settings, a browser, a sign-in - is refused on the card with the words that it opens the window, so it is made there and never runs out of sight.
 The system's file and folder pickers are refused the same way (`pickFiles`, `pickProjectFolder`): a picker would take the keys and send the panel away under it.
 Files dropped on the thread still attach.
@@ -77,6 +83,8 @@ A key the person was already holding when the panel took the keys - the overlay'
 `carriedKeys` drops every one of those repeats and its let-go before the page and the window's commands hear it, so a held key never answers or moves on a card; the window's held-Enter rule (`docs/keyboard.md`) still holds for keys pressed in the panel.
 
 Off the card, the panel's clear area lets the pointer through: the page tells the main process whether the pointer is over the card, and the panel ignores mouse events elsewhere, so a click beside the card reaches the game.
+The stack's own empty boxes around the card and its pager count as clear area too (`CLEAR` in `CardOverlay.tsx`), so a click above or below the card, or beside the pager, reaches the game as well.
+The hide button comes after the card in the page, so Tab reaches it after the card's controls.
 
 ## Going back
 
@@ -84,7 +92,7 @@ Each way out sends the panel away without answering, keeping what was typed:
 
 - the key again;
 - Escape, which first closes card search, then shrinks a card made large, then leaves a control inside the card for the card, and only then leaves;
-- the hide corner at the panel's top;
+- the hide button just above the card;
 - a choice made on the card, and a stack with no cards left;
 - a click on the game, another app, another Space (the panel loses the keys);
 - the screen locking, the computer sleeping, or a display going away.

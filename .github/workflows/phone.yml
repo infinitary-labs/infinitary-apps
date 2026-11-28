@@ -56,6 +56,10 @@ on:
         description: The one device this call checks, ipad, duo or iphone; empty checks every device in one job
         type: string
         default: ''
+      release:
+        description: The phone release's own check, which waits in the release phone queue once MAC_QUEUES names it
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       affected:
@@ -248,12 +252,15 @@ jobs:
       fail-fast: ${{ needs.request.outputs.stop_early == 'true' }}
       matrix:
         include: ${{ fromJSON(needs.request.outputs.jobs || format('[{{"device":"{0}","key":"{0}"}}]', inputs.device || 'every')) }}
-    # Required: no override or local fallback; a missing phone mapping supplies no runnable destination. INF-7079's fix 1
-    # (the captain's "When the phone places are full, start phone checks of one or two jobs before bigger ones"): a
-    # request the chooser dealt into one or two jobs asks for the small phone queue, which the same phone places serve
-    # and the placement service starts ahead of bigger phone checks; until MAC_QUEUES names it, the phone queue. Every
-    # other phone check, the phone release's call and a wait-clock or tool request among them, asks for the phone queue.
-    runs-on: ${{ needs.request.outputs.small == 'true' && fromJSON(vars.MAC_QUEUES).phone_small || fromJSON(vars.MAC_QUEUES).phone }}
+    # Required: no override or local fallback; a missing phone mapping supplies no runnable destination. INF-7079's fix 4
+    # (the captain's "Give TestFlight's phone check a release queue that your machines start before branch phone
+    # checks"): the phone release's call asks for the release phone queue, which the same phone places serve and the
+    # placement service starts ahead of every other phone check, even when it was dealt into one or two jobs.
+    # INF-7079's fix 1 (the captain's "When the phone places are full, start phone checks of one or two jobs before
+    # bigger ones"): any other request the chooser dealt into one or two jobs asks for the small phone queue, which the
+    # same phone places serve and the placement service starts ahead of bigger phone checks. Until MAC_QUEUES names a
+    # queue, the phone queue. Every other phone check, a wait-clock or tool request among them, asks for the phone queue.
+    runs-on: ${{ inputs.release && fromJSON(vars.MAC_QUEUES).release_phone || needs.request.outputs.small == 'true' && fromJSON(vars.MAC_QUEUES).phone_small || fromJSON(vars.MAC_QUEUES).phone }}
     # Each run, attempt and job waits only for a free vBoxx place, not another run's group.
     concurrency:
       group: ${{ format('phone-{0}-{1}-{2}', github.run_id, github.run_attempt, matrix.key) }}

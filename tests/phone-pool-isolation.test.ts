@@ -6,8 +6,8 @@ import { loadYamlFile, workflowString, workflowValue } from "./helpers/releaseWo
 // INF-2055, captain: only native phone-check jobs may resolve to the rented
 // phone pool, and none may read secrets. Exercise the real workflow routes;
 // caller-supplied proof-run label overrides are not repository routing policy.
-// INF-7079's fix 1: the small phone queue is served by the same phone places.
-const pools = ["mini-mac-phone", "mini-mac-phone-small"];
+// INF-7079's fixes 1 and 4: the small and release phone queues are served by the same phone places.
+const pools = ["mini-mac-phone", "mini-mac-phone-small", "mini-mac-release-phone"];
 const nativeJobs = ["native-phone"];
 const allowed = nativeJobs.map((id) => `phone.yml:${id}`);
 const kinds = [
@@ -23,6 +23,7 @@ const kinds = [
   "release_split",
   "release_sign",
   "release_light",
+  "release_phone",
 ];
 const vars = {
   MAC_QUEUES: JSON.stringify(
@@ -76,18 +77,21 @@ function inspect(all: Record<string, Workflow>) {
   for (const [file, workflow] of Object.entries(all)) {
     for (const [id, job] of Object.entries(workflow.jobs)) {
       if (!job["runs-on"]) continue; // Reusable calls have no runner of their own.
-      for (const [dryRun, small] of ["true", "false"].flatMap((dry) =>
-        ["true", "false"].map((each) => [dry, each]),
+      for (const [dryRun, small, release] of ["true", "false"].flatMap((dry) =>
+        ["true", "false"].flatMap((each) =>
+          [true, false].map((call) => [dry, each, call] as const),
+        ),
       )) {
         // Both publishing paths matter: release-only queues must not join phone.
         // The alpha wait's matrix is the alpha cuts its find job listed, here
         // the one from main run 204 that a main check waited for (alpha-wait.yml).
         // A branch push: no pull request, so a fork-aware runner reads its variables.
         // A phone request dealt into one or two jobs is small (INF-7079's fix 1).
+        // The phone release's call passes release (INF-7079's fix 4).
         const contexts = {
           vars,
           github: { event_name: "push" },
-          inputs: {},
+          inputs: { release },
           needs: {
             resolve: { outputs: { dry_run: dryRun } },
             request: { outputs: { small } },

@@ -329,6 +329,9 @@
   "cardNoteToolBox": "إطار أو موضع",
   "cardNoteToolLine": "خط حر",
   "cardNoteUnavailable": "لا يمكن عرض هذا الجزء في هذه الواجهة",
+  "cardOverlayHide": "إخفاء البطاقات",
+  "cardOverlayNothing": "لا بطاقات تنتظر",
+  "cardOverlayOpensWindow": "هذا الخيار يفتح نافذة Infinitary، فاختره هناك.",
   "cardPastMark": "سابقة",
   "cardPastMeta": "بطاقة سابقة",
   "cardPastPictures": {

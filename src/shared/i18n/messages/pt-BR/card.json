@@ -275,6 +275,9 @@
   "cardNoteToolBox": "Caixa ou ponto",
   "cardNoteToolLine": "Linha à mão livre",
   "cardNoteUnavailable": "Esta parte não pode ser mostrada nesta visualização",
+  "cardOverlayHide": "Ocultar os cartões",
+  "cardOverlayNothing": "Nenhum cartão esperando",
+  "cardOverlayOpensWindow": "Esta escolha abre a janela do Infinitary, então faça-a lá.",
   "cardPastMark": "Anterior",
   "cardPastMeta": "cartão anterior",
   "cardPastPictures": {

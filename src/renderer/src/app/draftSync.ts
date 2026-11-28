@@ -127,7 +127,7 @@ const hasPick = (answer: FrameAnswer) =>
 type Base = number | null;
 
 /** A request in flight: the parts it carries and the revision each goes against. */
-type Flying = { parts: Parts; bases: Map<string, Base> };
+type Flying = { parts: Parts; bases: Map<string, Base>; done: Promise<void> };
 
 export class DraftSync {
   /** The draft as the first mate's computer last said it, by card. */
@@ -255,6 +255,21 @@ export class DraftSync {
     this.deps.saveBase(cardId, null);
   }
 
+  /**
+   * Sends every change still waiting out its pause now, and answers once
+   * nothing is on its way: a window about to go, such as the card overlay
+   * (docs/card-overlay.md), leaves its words with the first mate.
+   */
+  async settle(): Promise<void> {
+    for (const [cardId, timer] of [...this.timers]) {
+      this.deps.cancel(timer);
+      this.timers.delete(cardId);
+      this.flush(cardId);
+    }
+    // A request that comes back can send the card's next group.
+    while (this.flying.size > 0) await Promise.all([...this.flying.values()].map((f) => f.done));
+  }
+
   private schedule(cardId: string): void {
     if (!this.welcomed) return;
     const timer = this.timers.get(cardId);
@@ -310,7 +325,7 @@ export class DraftSync {
     if (!picked) return;
     const { since, sent, bases, change, key } = picked;
     for (const part of sent.keys()) marked.delete(part);
-    const flight: Flying = { parts: sent, bases };
+    const flight: Flying = { parts: sent, bases, done: Promise.resolve() };
     this.flying.set(cardId, flight);
     // A change that did not go waits out of reach, against the revision it went with.
     const unsent = () => {
@@ -318,7 +333,7 @@ export class DraftSync {
       for (const part of bases.keys()) if (!again.has(part)) again.set(part, since);
       this.persist(cardId);
     };
-    void this.deps.send(cardId, change).then(
+    flight.done = this.deps.send(cardId, change).then(
       (answer) => {
         // The card left, or opened anew, while this was on its way.
         if (this.flying.get(cardId) !== flight) return;

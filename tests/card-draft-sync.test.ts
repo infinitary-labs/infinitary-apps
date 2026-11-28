@@ -497,6 +497,27 @@ describe("DraftSync", () => {
   });
 });
 
+describe("DraftSync.settle", () => {
+  // Intent (INF-7063's plan, "Give control back"): "Drafts are kept on hide" -
+  // the card overlay's page settles its words before it goes.
+  it("sends words still waiting out the pause, and answers once they arrived", async () => {
+    const { at, desk, laptop } = twoWindows();
+    desk.hold = true;
+    desk.edit({ words: "Use the nightly run" });
+    let settled = false;
+    const settling = desk.sync.settle().then(() => {
+      settled = true;
+    });
+    await settle();
+    expect(desk.requests).toHaveLength(1);
+    expect(settled).toBe(false);
+    desk.release();
+    await settling;
+    expect(stored(at)?.words).toBe("Use the nightly run");
+    expect(laptop.local.words).toBe("Use the nightly run");
+  });
+});
+
 function emptyDraftOf(cardId: string): CardDraft {
   return { cardId, revision: 0, answers: [], words: "", notes: [] };
 }

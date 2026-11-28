@@ -538,6 +538,9 @@
 "cardNoteToolBox" = "枠または一点";
 "cardNoteToolLine" = "フリーハンドの線";
 "cardNoteUnavailable" = "この部分はこのビューでは表示できません";
+"cardOverlayHide" = "カードを隠す";
+"cardOverlayNothing" = "待っているカードはありません";
+"cardOverlayOpensWindow" = "この選択は Infinitary のウインドウを開くので、そちらで選んでください。";
 "cardPastMark" = "過去";
 "cardPastMeta" = "過去のカード";
 "cardPastSentLead" = "選択と一緒に送信：";
@@ -3450,6 +3453,17 @@
 "settingsKeyboardAddBeside" = "ほかのキーに追加";
 "settingsKeyboardAnywhere" = "どこでも";
 "settingsKeyboardCancel" = "キャンセル";
+"settingsKeyboardCardOverlay" = "ほかのアプリの上にカードを表示";
+"settingsKeyboardCardOverlayChange" = "キーを変更";
+"settingsKeyboardCardOverlayChangeLabel" = "ほかのアプリの上にカードを表示するキーを変更";
+"settingsKeyboardCardOverlayDescription" = "どのアプリでも、フルスクリーンのゲーム中でも、%1$@ を押すと待っているカードが画面の端に表示され、その場で答えられます。もう一度押すか Esc で戻ります。";
+"settingsKeyboardCardOverlayKept" = "macOS が %2$@ を受け付けませんでした。カードは %1$@ のままです。";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ ではカードを表示できません。Control、Option、Command のいずれかを含み、Esc、Tab、Return、Space、Delete 以外のキーを選んでください。";
+"settingsKeyboardCardOverlayPress" = "Control、Option、Command のいずれかと一緒にキーを押してください。Esc でキャンセルします。";
+"settingsKeyboardCardOverlayRecording" = "ほかのアプリの上にカードを表示するキーを記録中";
+"settingsKeyboardCardOverlaySystem" = "%1$@ は macOS 自身のショートカットに使われています。別のキーを選んでください。";
+"settingsKeyboardCardOverlaySystemKept" = "%2$@ は macOS 自身のショートカットに使われています。カードは %1$@ のままです。";
+"settingsKeyboardCardOverlayTaken" = "macOS が %1$@ を受け付けなかったため、今は何も起きません。別のキーを選んでください。";
 "settingsKeyboardChanged" = "変更済み";
 "settingsKeyboardClashMovesKeeps" = "%1$@。保存するとこちらに移り、「%2$@」はほかのキーをそのまま使います。";
 "settingsKeyboardClashMovesNoKey" = "%1$@。保存するとこちらに移り、「%2$@」にはキーがなくなります。";

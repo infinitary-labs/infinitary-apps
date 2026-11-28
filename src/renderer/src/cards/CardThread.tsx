@@ -51,6 +51,7 @@ import {
 } from "../design/core/FileControls";
 import { installedBindings } from "../design/core/installedKeys";
 import { DictationMark, PastedTextChip } from "../design/voice/VoiceInput";
+import { isCardOverlayPage } from "../overlay/overlayPage";
 import { AnnotationControls, NO_NOTES, NoteAnchor, QueuedNotes } from "./AnnotationControls";
 import { FOLLOW_SLACK_PX } from "./CrewmateView";
 import type { CollectAnswers } from "./PrototypeBody";
@@ -532,13 +533,15 @@ export function ReplyRow({
               // The dictation key goes on to record here, and Escape while
               // this field records abandons it (docs/composer.md, "Voice").
               if (dictation.keyDown(event)) return;
-              // Only the opted-in layer lends an unused Escape to the window's
-              // existing chain. Every other key stays the field's own.
+              // Only the opted-in layer, and the card overlay's page, lend an
+              // unused Escape to the page's existing chain: the overlay's
+              // leaves the field for the card, then sends the overlay away
+              // (docs/card-overlay.md). Every other key stays the field's own.
               if (
                 event.key === "Escape" &&
                 !event.defaultPrevented &&
                 !isComposing(event) &&
-                hasNotTypingKeys(installedBindings())
+                (hasNotTypingKeys(installedBindings()) || isCardOverlayPage())
               )
                 return;
               event.stopPropagation();
@@ -1393,9 +1396,9 @@ function SettingsRowView({ row }: { row: SettingsRow }) {
 }
 
 /**
- * The in-place rung's head control (`card` · `thread · N`). It exists
- * because the ladder must end somewhere: it needs a stage under 720px,
- * which the app's own 960px window minimum puts out of reach.
+ * The in-place rung's head control (`card` · `thread · N`): it needs a stage
+ * under 720px, which the window's 960px minimum never gives and the card
+ * overlay's narrow panel always does (docs/card-overlay.md).
  */
 export function ThreadSegments({
   showing,

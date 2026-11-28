@@ -538,6 +538,9 @@
 "cardNoteToolBox" = "Box or spot";
 "cardNoteToolLine" = "Freehand line";
 "cardNoteUnavailable" = "This part cannot be shown in this view";
+"cardOverlayHide" = "Hide the cards";
+"cardOverlayNothing" = "No cards waiting";
+"cardOverlayOpensWindow" = "This choice opens Infinitary’s window, so make it there.";
 "cardPastMark" = "Past";
 "cardPastMeta" = "past card";
 "cardPastSentLead" = "Sent with your choice:";
@@ -3450,6 +3453,17 @@
 "settingsKeyboardAddBeside" = "Add beside the others";
 "settingsKeyboardAnywhere" = "Anywhere";
 "settingsKeyboardCancel" = "Cancel";
+"settingsKeyboardCardOverlay" = "Show cards over other apps";
+"settingsKeyboardCardOverlayChange" = "Change key";
+"settingsKeyboardCardOverlayChangeLabel" = "Change the key that shows cards over other apps";
+"settingsKeyboardCardOverlayDescription" = "Press %1$@ in any app, even a full-screen game, to answer the waiting card at the edge of the screen. Press it again or Escape to go back.";
+"settingsKeyboardCardOverlayKept" = "macOS did not accept %2$@. The cards keep %1$@.";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ cannot show the cards: choose a key with Control, Option or Command, other than Escape, Tab, Return, Space or Delete.";
+"settingsKeyboardCardOverlayPress" = "Press a key with Control, Option or Command. Escape cancels.";
+"settingsKeyboardCardOverlayRecording" = "Recording a key for cards over other apps";
+"settingsKeyboardCardOverlaySystem" = "macOS uses %1$@ for one of its own shortcuts. Choose another key.";
+"settingsKeyboardCardOverlaySystemKept" = "macOS uses %2$@ for one of its own shortcuts. The cards keep %1$@.";
+"settingsKeyboardCardOverlayTaken" = "macOS did not accept %1$@, so it does nothing now. Choose another key.";
 "settingsKeyboardChanged" = "Changed";
 "settingsKeyboardClashMovesKeeps" = "%1$@. Saving moves it here, and “%2$@” keeps its other keys.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. Saving moves it here, and “%2$@” will have no key.";

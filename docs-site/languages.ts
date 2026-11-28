@@ -57,6 +57,8 @@ export const KEYBOARD_WORDS = [
   "keyboard.presets",
   "keyboard.change.heading",
   "keyboard.change",
+  "keyboard.overlay.heading",
+  "keyboard.overlay",
   "keyboard.every.heading",
   "keyboard.every",
   "keyboard.column.command",

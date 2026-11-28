@@ -413,7 +413,7 @@ Collapsed panel headers stay visible but reserve no card clearance.
 The create-your-own-panel slot reserves it as an expanded panel does, so a wide card never covers it.
 The rails keep their panels while folded, which is why `--rail-docked-*` (what they ask for) is a different variable from `--occupied-rail-*` (what they take): reading the effective one would make the ladder circular and the pair would oscillate.
 
-In place is the last rung - a segmented control in the card's head swaps the body for the message list - and needs a stage under 720px, which the app's own 960px window minimum puts out of reach.
+In place is the last rung - a segmented control in the card's head swaps the body for the message list - and needs a stage under 720px: the window's 960px minimum never gives one, and the card overlay's narrow panel always does (`docs/card-overlay.md`).
 
 A request card for the captain's help in a task's browser has a second place: beside the page in the browser view opened from it, as a column of its own with the card on top, its thread under it and its field at the foot (`docs/task-browser.md`, "The request beside the page").
 

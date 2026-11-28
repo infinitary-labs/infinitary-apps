@@ -1,14 +1,14 @@
 import type { HostSecretsRecovery } from "@core/host";
 import * as m from "@shared/i18n/messages.generated";
 import { dialog } from "electron";
-import { appWindows } from "../windows";
+import { frontWindows } from "../windows";
 import { readSecretRecoveryFiles, saveSecretRecoveryFiles } from "./secretRecoveryFiles";
 
 /** Native-only file selection: the renderer supplies neither paths nor file contents. */
 export function createSecretRecoveryDialogs(): HostSecretsRecovery {
   return {
     async chooseSave() {
-      const window = appWindows()[0];
+      const window = frontWindows()[0];
       if (!window || window.isDestroyed()) return undefined;
       const archive = await dialog.showSaveDialog(window, {
         title: m.secretsArchiveSaveTitle(),
@@ -28,7 +28,7 @@ export function createSecretRecoveryDialogs(): HostSecretsRecovery {
       return (files) => saveSecretRecoveryFiles(destinations, files);
     },
     async chooseRestore() {
-      const window = appWindows()[0];
+      const window = frontWindows()[0];
       if (!window || window.isDestroyed()) return undefined;
       const archive = await dialog.showOpenDialog(window, {
         title: m.secretsArchiveOpenTitle(),

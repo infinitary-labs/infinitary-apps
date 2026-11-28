@@ -538,6 +538,9 @@
 "cardNoteToolBox" = "Recuadro o punto";
 "cardNoteToolLine" = "Línea a mano alzada";
 "cardNoteUnavailable" = "Esta parte no se puede mostrar en esta vista";
+"cardOverlayHide" = "Ocultar las tarjetas";
+"cardOverlayNothing" = "No hay tarjetas esperando";
+"cardOverlayOpensWindow" = "Esta opción abre la ventana de Infinitary, así que elígela allí.";
 "cardPastMark" = "Anterior";
 "cardPastMeta" = "tarjeta anterior";
 "cardPastSentLead" = "Enviado con tu elección:";
@@ -3450,6 +3453,17 @@
 "settingsKeyboardAddBeside" = "Agregar junto a las demás";
 "settingsKeyboardAnywhere" = "En cualquier lugar";
 "settingsKeyboardCancel" = "Cancelar";
+"settingsKeyboardCardOverlay" = "Mostrar tarjetas sobre otras apps";
+"settingsKeyboardCardOverlayChange" = "Cambiar tecla";
+"settingsKeyboardCardOverlayChangeLabel" = "Cambiar la tecla que muestra tarjetas sobre otras apps";
+"settingsKeyboardCardOverlayDescription" = "Presiona %1$@ en cualquier app, incluso en un juego a pantalla completa, para responder la tarjeta pendiente en el borde de la pantalla. Presiónala otra vez o Esc para volver.";
+"settingsKeyboardCardOverlayKept" = "macOS no aceptó %2$@. Las tarjetas siguen con %1$@.";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ no puede mostrar las tarjetas: elige una tecla con Control, Opción o Comando, que no sea Esc, Tab, Retorno, Espacio ni Borrar.";
+"settingsKeyboardCardOverlayPress" = "Presiona una tecla con Control, Opción o Comando. Esc cancela.";
+"settingsKeyboardCardOverlayRecording" = "Grabando una tecla para las tarjetas sobre otras apps";
+"settingsKeyboardCardOverlaySystem" = "macOS usa %1$@ para uno de sus propios atajos. Elige otra tecla.";
+"settingsKeyboardCardOverlaySystemKept" = "macOS usa %2$@ para uno de sus propios atajos. Las tarjetas siguen con %1$@.";
+"settingsKeyboardCardOverlayTaken" = "macOS no aceptó %1$@, así que ahora no hace nada. Elige otra tecla.";
 "settingsKeyboardChanged" = "Cambiado";
 "settingsKeyboardClashMovesKeeps" = "%1$@. Al guardar, pasa aquí y «%2$@» conserva sus otras teclas.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. Al guardar, pasa aquí y «%2$@» se queda sin tecla.";

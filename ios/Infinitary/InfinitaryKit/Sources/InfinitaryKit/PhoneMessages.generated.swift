@@ -577,6 +577,9 @@ public enum PhoneMessages {
     public static func `cardNoteToolBox`() -> String { PhoneWords.format("cardNoteToolBox", []) }
     public static func `cardNoteToolLine`() -> String { PhoneWords.format("cardNoteToolLine", []) }
     public static func `cardNoteUnavailable`() -> String { PhoneWords.format("cardNoteUnavailable", []) }
+    public static func `cardOverlayHide`() -> String { PhoneWords.format("cardOverlayHide", []) }
+    public static func `cardOverlayNothing`() -> String { PhoneWords.format("cardOverlayNothing", []) }
+    public static func `cardOverlayOpensWindow`() -> String { PhoneWords.format("cardOverlayOpensWindow", []) }
     public static func `cardPastMark`() -> String { PhoneWords.format("cardPastMark", []) }
     public static func `cardPastMeta`() -> String { PhoneWords.format("cardPastMeta", []) }
     public static func `cardPastPictures`(`count`: Int, `names`: String) -> String { PhoneWords.format("cardPastPictures", [`count`, `names`]) }
@@ -3607,6 +3610,17 @@ public enum PhoneMessages {
     public static func `settingsKeyboardAddBeside`() -> String { PhoneWords.format("settingsKeyboardAddBeside", []) }
     public static func `settingsKeyboardAnywhere`() -> String { PhoneWords.format("settingsKeyboardAnywhere", []) }
     public static func `settingsKeyboardCancel`() -> String { PhoneWords.format("settingsKeyboardCancel", []) }
+    public static func `settingsKeyboardCardOverlay`() -> String { PhoneWords.format("settingsKeyboardCardOverlay", []) }
+    public static func `settingsKeyboardCardOverlayChange`() -> String { PhoneWords.format("settingsKeyboardCardOverlayChange", []) }
+    public static func `settingsKeyboardCardOverlayChangeLabel`() -> String { PhoneWords.format("settingsKeyboardCardOverlayChangeLabel", []) }
+    public static func `settingsKeyboardCardOverlayDescription`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlayDescription", [`key`]) }
+    public static func `settingsKeyboardCardOverlayKept`(`kept`: String, `key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlayKept", [`kept`, `key`]) }
+    public static func `settingsKeyboardCardOverlayNotAllowed`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlayNotAllowed", [`key`]) }
+    public static func `settingsKeyboardCardOverlayPress`() -> String { PhoneWords.format("settingsKeyboardCardOverlayPress", []) }
+    public static func `settingsKeyboardCardOverlayRecording`() -> String { PhoneWords.format("settingsKeyboardCardOverlayRecording", []) }
+    public static func `settingsKeyboardCardOverlaySystem`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlaySystem", [`key`]) }
+    public static func `settingsKeyboardCardOverlaySystemKept`(`kept`: String, `key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlaySystemKept", [`kept`, `key`]) }
+    public static func `settingsKeyboardCardOverlayTaken`(`key`: String) -> String { PhoneWords.format("settingsKeyboardCardOverlayTaken", [`key`]) }
     public static func `settingsKeyboardChanged`() -> String { PhoneWords.format("settingsKeyboardChanged", []) }
     public static func `settingsKeyboardClashMovesKeeps`(`clash`: String, `command`: String) -> String { PhoneWords.format("settingsKeyboardClashMovesKeeps", [`clash`, `command`]) }
     public static func `settingsKeyboardClashMovesNoKey`(`clash`: String, `command`: String) -> String { PhoneWords.format("settingsKeyboardClashMovesNoKey", [`clash`, `command`]) }
@@ -5454,6 +5468,9 @@ extension PhoneWords {
         "cardNoteToolBox": [],
         "cardNoteToolLine": [],
         "cardNoteUnavailable": [],
+        "cardOverlayHide": [],
+        "cardOverlayNothing": [],
+        "cardOverlayOpensWindow": [],
         "cardPastMark": [],
         "cardPastMeta": [],
         "cardPastPictures": ["count", "names"],
@@ -8484,6 +8501,17 @@ extension PhoneWords {
         "settingsKeyboardAddBeside": [],
         "settingsKeyboardAnywhere": [],
         "settingsKeyboardCancel": [],
+        "settingsKeyboardCardOverlay": [],
+        "settingsKeyboardCardOverlayChange": [],
+        "settingsKeyboardCardOverlayChangeLabel": [],
+        "settingsKeyboardCardOverlayDescription": ["key"],
+        "settingsKeyboardCardOverlayKept": ["kept", "key"],
+        "settingsKeyboardCardOverlayNotAllowed": ["key"],
+        "settingsKeyboardCardOverlayPress": [],
+        "settingsKeyboardCardOverlayRecording": [],
+        "settingsKeyboardCardOverlaySystem": ["key"],
+        "settingsKeyboardCardOverlaySystemKept": ["kept", "key"],
+        "settingsKeyboardCardOverlayTaken": ["key"],
         "settingsKeyboardChanged": [],
         "settingsKeyboardClashMovesKeeps": ["clash", "command"],
         "settingsKeyboardClashMovesNoKey": ["clash", "command"],

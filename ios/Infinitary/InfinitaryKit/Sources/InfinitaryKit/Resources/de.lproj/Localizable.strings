@@ -538,6 +538,9 @@
 "cardNoteToolBox" = "Rahmen oder Stelle";
 "cardNoteToolLine" = "Freihandlinie";
 "cardNoteUnavailable" = "Dieser Teil kann in dieser Ansicht nicht angezeigt werden";
+"cardOverlayHide" = "Karten ausblenden";
+"cardOverlayNothing" = "Keine Karten warten";
+"cardOverlayOpensWindow" = "Diese Auswahl öffnet das Fenster von Infinitary, triff sie also dort.";
 "cardPastMark" = "Früher";
 "cardPastMeta" = "frühere Karte";
 "cardPastSentLead" = "Mit deiner Wahl gesendet:";
@@ -3450,6 +3453,17 @@
 "settingsKeyboardAddBeside" = "Neben den anderen hinzufügen";
 "settingsKeyboardAnywhere" = "Überall";
 "settingsKeyboardCancel" = "Abbrechen";
+"settingsKeyboardCardOverlay" = "Karten über anderen Apps zeigen";
+"settingsKeyboardCardOverlayChange" = "Taste ändern";
+"settingsKeyboardCardOverlayChangeLabel" = "Taste ändern, die Karten über anderen Apps zeigt";
+"settingsKeyboardCardOverlayDescription" = "Drück %1$@ in einer beliebigen App, auch in einem Spiel im Vollbild, um die wartende Karte am Bildschirmrand zu beantworten. Drück die Taste noch einmal oder Esc, um zurückzukehren.";
+"settingsKeyboardCardOverlayKept" = "macOS hat %2$@ nicht angenommen. Die Karten behalten %1$@.";
+"settingsKeyboardCardOverlayNotAllowed" = "%1$@ kann die Karten nicht zeigen: Wähl eine Taste mit Control, Option oder Command, außer Esc, Tab, Return, Leertaste oder Löschen.";
+"settingsKeyboardCardOverlayPress" = "Drück eine Taste mit Control, Option oder Command. Esc bricht ab.";
+"settingsKeyboardCardOverlayRecording" = "Taste für Karten über anderen Apps wird aufgenommen";
+"settingsKeyboardCardOverlaySystem" = "macOS nutzt %1$@ für eines seiner eigenen Kürzel. Wähl eine andere Taste.";
+"settingsKeyboardCardOverlaySystemKept" = "macOS nutzt %2$@ für eines seiner eigenen Kürzel. Die Karten behalten %1$@.";
+"settingsKeyboardCardOverlayTaken" = "macOS hat %1$@ nicht angenommen, daher tut die Taste gerade nichts. Wähl eine andere Taste.";
 "settingsKeyboardChanged" = "Geändert";
 "settingsKeyboardClashMovesKeeps" = "%1$@. Beim Speichern wandert sie hierher, und „%2$@“ behält seine anderen Tasten.";
 "settingsKeyboardClashMovesNoKey" = "%1$@. Beim Speichern wandert sie hierher, und „%2$@“ hat dann keine Taste mehr.";

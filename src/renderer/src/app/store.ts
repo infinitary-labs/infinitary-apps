@@ -30,6 +30,7 @@ import { type AppearanceSlice, appearanceSlice } from "./appearance";
 import { type CardSlice, cardSlice } from "./cardActions";
 import { startCardDrafts } from "./cardDrafts";
 import { type ComposerSlice, composerSlice, mainInputHeld } from "./composer";
+import { followOverlayLending } from "./lendDraft";
 import { projectFocus } from "./projectFocus";
 import { mirrorCardAnswers } from "./savedCardAnswers";
 import { shownEntry, withoutKey } from "./stack";
@@ -416,6 +417,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     window.infinitary.cards.onThread((thread) => get().applyThread(thread.cardId, thread.messages));
     // Each open card's unsent draft follows every window (./cardDrafts.ts).
     startCardDrafts(get, set, useShellStore.subscribe);
+    // The card overlay's message box borrows the main message and gives it back (./lendDraft.ts).
+    followOverlayLending(get, set);
     // A click on a card's notification brings that card to the front, here or
     // in the window the click opened (src/main/notifiedCard.ts).
     window.infinitary.cards.onNotified(() => void openNotifiedCard(get).catch(() => {}));

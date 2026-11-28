@@ -36,11 +36,12 @@ import {
   shellCommands,
 } from "./keyboard";
 import { onNoticedCard } from "./notifiedCard";
+import { DraftRelay } from "./overlayDraft";
 import { assertSecurityBaseline, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
 import { lockdownNavigation } from "./security/navigation";
 import type { RendererSourceOptions } from "./security/rendererSource";
 import { followWindowSize, type PreferenceSource } from "./windowSize";
-import { markOverlayWindow } from "./windows";
+import { markOverlayWindow, openMainWindows } from "./windows";
 
 /**
  * The card overlay's Electron half (docs/card-overlay.md): the system
@@ -79,6 +80,8 @@ export type CardOverlayHost = {
   pointer(sender: WebContents, over: boolean): void;
   /** The card was made large or restored: the panel spans the display's width while it is large. */
   wide(sender: WebContents, wide: boolean): void;
+  /** The window's unsent message, lent to the overlay as it opens and handed back as it goes. */
+  drafts: DraftRelay<WebContents>;
 };
 
 /** The Mac menu's keys the overlay holds back: ⌘Q and ⌘W send it away, and none quits, hides or opens the app. */
@@ -224,8 +227,28 @@ export function startCardOverlay(options: CardOverlayWindowOptions): CardOverlay
   app.once("will-quit", () => controller.dispose());
   onNoticedCard(() => controller.noticed());
 
+  const drafts = new DraftRelay<WebContents>({
+    lender: () => {
+      const win = openMainWindows().find((each) => !each.webContents.isDestroyed());
+      return win ? win.webContents : null;
+    },
+    ask: (contents, ask) => {
+      if (!contents.isDestroyed()) contents.send("inf:composer:lend-ask", { ask });
+    },
+    handBack: (contents, lent) => {
+      if (!contents.isDestroyed()) contents.send("inf:composer:hand-back", lent);
+    },
+    kept: () => {
+      for (const win of openMainWindows())
+        if (!win.webContents.isDestroyed()) win.webContents.send("inf:composer:kept", {});
+    },
+    later: (run, ms) => setTimeout(run, ms),
+    cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+  });
+
   return {
     controller,
+    drafts,
     set: async (next) => {
       if (options.supported) hotKeys = systemHotKeys(await readHotKeys());
       return controller.set(next);

@@ -1,9 +1,11 @@
 import * as m from "@shared/i18n/messages.generated";
+import { holdsWords } from "@shared/overlayDraft";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cardStage } from "../app/cardStage";
 import { focusLanding } from "../app/focusLanding";
 import { guardLostFocus } from "../app/focusRecovery";
 import { guardHeldPresses } from "../app/heldKeys";
+import { mainDraftOf } from "../app/lendDraft";
 import { followNotTypingKeys } from "../app/notTypingKeys";
 import { followShellCommands } from "../app/shellCommands";
 import { shownEntry, stackOf } from "../app/stack";
@@ -13,7 +15,8 @@ import { closeCardFind, useCardFind } from "../cards/cardFind";
 import { focusWithRing } from "../design/focus";
 import { guardFrameActivation } from "../plugins/frames/frameActivation";
 import { giveHandedFocusBack, guardFrameFocus } from "../plugins/frames/frameFocus";
-import { settleOverlayDrafts, startOverlayStore } from "./overlayStart";
+import { OverlayMessage } from "./OverlayMessage";
+import { settleOverlayDrafts, startOverlayStore, takeLentDraft } from "./overlayStart";
 import { overlayTarget } from "./overlayTarget";
 import "./overlay.css";
 
@@ -21,14 +24,19 @@ import "./overlay.css";
 const CLEAR =
   "html, body, #root, [data-card-overlay-root], [data-stage], [data-card-layer], [data-card-layer-leaving], [data-card-envelope], [data-card-slot], [data-card-pager]";
 
-/** What the panel holds: its first reads, a card to answer, or the word that none waits. */
+/**
+ * What the panel holds: its first reads, the cards and the message box, or
+ * the word that the first reads failed, so nothing can be shown.
+ */
 type Phase = "starting" | "cards" | "nothing";
 
 /**
- * The card overlay's page (docs/card-overlay.md): the card stack alone, in
- * a panel over the app in front. It shows the card the newest notification
- * was about, stays while cards wait, gives the keys back once the last card
- * closes or Escape leaves, and sends its unsent words before it goes.
+ * The card overlay's page (docs/card-overlay.md): the card stack and the
+ * first mate's message box, in a panel over the app in front. It shows the
+ * card the newest notification was about, or the box alone when no card
+ * waits; stays while cards wait or the box holds words; gives the keys back
+ * once the last card closes or Escape leaves; and sends its unsent words,
+ * and the window's message, back before it goes.
  */
 export function CardOverlay() {
   // A card that closes here takes focus with it: it lands on the next card, as in the window.
@@ -47,6 +55,8 @@ export function CardOverlay() {
   useEffect(() => followNotTypingKeys(), []);
   const [phase, setPhase] = useState<Phase>("starting");
   const [revealed, setRevealed] = useState(false);
+  // No card on the stack: the message box stands alone (the captain's pick on INF-7222's plan).
+  const alone = useShellStore((s) => stackOf(s).length === 0);
   const leaving = useRef(false);
 
   const leave = useCallback(() => {
@@ -62,15 +72,11 @@ export function CardOverlay() {
   // The first reads, then the card to show: the notified one while it asks.
   useEffect(() => {
     void Promise.all([startOverlayStore(), window.infinitary.cardOverlay.start()])
-      .then(([, { cardId }]) => {
+      .then(([, { cardId, lent }]) => {
+        takeLentDraft(lent);
         const state = useShellStore.getState();
         const target = overlayTarget(stackOf(state), shownEntry(state)?.id, cardId);
-        if (target === null) {
-          setPhase("nothing");
-          void window.infinitary.cardOverlay.ready(false).then(() => setRevealed(true));
-          return;
-        }
-        state.focusCard(target);
+        if (target !== null) state.focusCard(target);
         setPhase("cards");
       })
       .catch(() => {
@@ -91,7 +97,12 @@ export function CardOverlay() {
       void window.infinitary.cardOverlay.ready(true).then(() => setRevealed(true));
     };
     const check = () => {
-      const entry = document.querySelector<HTMLElement>('[data-stage-entry="shown"]');
+      // With no card, the box alone is ready once drawn.
+      const entry = useShellStore.getState().cardsSnapshotLoaded
+        ? stackOf(useShellStore.getState()).length === 0
+          ? document.querySelector<HTMLElement>("[data-overlay-message]")
+          : document.querySelector<HTMLElement>('[data-stage-entry="shown"]')
+        : null;
       if (entry && !entry.inert) requestAnimationFrame(() => requestAnimationFrame(tell));
     };
     const observer = new MutationObserver(check);
@@ -108,11 +119,15 @@ export function CardOverlay() {
 
   // Only a stack with nothing left gives the keys back: a card that closes
   // here brings up the next by the stack's own rule (the captain, INF-7222).
+  // The last card closing leaves only while the box holds nothing unsent, so
+  // the overlay never goes while words wait; it then stays as the box alone,
+  // as when the key opened it with no card.
   useEffect(
     () =>
-      useShellStore.subscribe((state) => {
-        if (phase !== "cards") return;
-        if (state.cardsSnapshotLoaded && stackOf(state).length === 0) leave();
+      useShellStore.subscribe((state, before) => {
+        if (phase !== "cards" || !state.cardsSnapshotLoaded) return;
+        const emptied = stackOf(state).length === 0 && stackOf(before).length > 0;
+        if (emptied && !holdsWords(mainDraftOf(state))) leave();
       }),
     [phase, leave],
   );
@@ -189,8 +204,12 @@ export function CardOverlay() {
           <div data-stage="" tabIndex={-1}>
             <CardLayer onEmptied={() => {}} />
           </div>
-          {/* After the stage: the card is the hide button's anchor (overlay.css), and an
-              anchor must come first in the page. Tab reaches it after the card. */}
+          {/* After the stage, so Tab reaches it after the card's controls, and the
+              card and pager, its anchors (overlay.css), come first in the page. */}
+          <OverlayMessage alone={alone} />
+          {/* After the stage and the box: the card, or the box alone, is the hide
+              button's anchor, and an anchor must come first in the page. Tab
+              reaches it last. */}
           <button
             type="button"
             data-card-overlay-hide=""

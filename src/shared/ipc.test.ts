@@ -295,6 +295,10 @@ describe("ipc contract", () => {
       "inf:cards:saved-files",
       // The card a click on its notification asked this window to open (docs/view.md, "Notifications").
       "inf:cards:take-notified",
+      // The window's unsent message lent to the card overlay, and words the overlay kept with
+      // no window to take them (docs/card-overlay.md, "The message box").
+      "inf:composer:lent",
+      "inf:composer:take-kept",
       // Following along once this computer's first mate's computer added it, at the first
       // launch (docs/view.md, "Following along").
       "inf:devices:follow-added",
@@ -326,7 +330,8 @@ describe("ipc contract", () => {
       "inf:keyboard:run",
       "inf:keyboard:save",
       // INF-7063's approved plan: the card overlay's switch and key, this computer's own,
-      // and its panel's page.
+      // and its panel's page; INF-7222's accepted plan adds its message box's hand-back.
+      "inf:overlay:hand-back",
       "inf:overlay:hide",
       "inf:overlay:pointer",
       "inf:overlay:ready",
@@ -374,6 +379,11 @@ describe("ipc contract", () => {
       // INF-7063's approved plan: the card overlay's switch, and its panel told to let go.
       "inf:overlay:settings",
       "inf:overlay:leave",
+      // INF-7222's accepted plan: the window asked for its unsent message, given it back,
+      // and told words are kept (docs/card-overlay.md, "The message box").
+      "inf:composer:lend-ask",
+      "inf:composer:hand-back",
+      "inf:composer:kept",
       "inf:window:state",
       "inf:window:presence",
       "inf:window:fence",

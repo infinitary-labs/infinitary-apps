@@ -10,6 +10,8 @@ It is this computer's own, off until a person turns it on in Settings → Keyboa
 | The shortcut, the phases, the saved file and the carried-key rule | `src/main/cardOverlay.ts` (`CardOverlayController`, `cardOverlayFile`, `carriedKeys`) |
 | The panel window, its keys and the system events that send it away | `src/main/cardOverlayWindow.ts` (`startCardOverlay`) |
 | The page: its reads, the card it shows, Escape, the pointer | `src/renderer/src/overlay/` |
+| The first mate's message box in the panel | `OverlayMessage` in `src/renderer/src/overlay/OverlayMessage.tsx` |
+| The window's message lent to the panel and handed back | `DraftRelay` in `src/main/overlayDraft.ts`, `followOverlayLending` in `src/renderer/src/app/lendDraft.ts` |
 | The row in Settings → Keyboard | `CardOverlayRow` in `src/renderer/src/settings/KeyboardTab.tsx` |
 | The newest notification's card, read without taking it | `noteNoticedCard`, `noticedCard` in `src/main/notifiedCard.ts` |
 
@@ -40,7 +42,7 @@ The panel reads the cards as the window draws them: put-aside cards and the card
 2. Else the first card on the stack that asks for a choice.
 3. Else the card the stack shows now, else the first.
 
-With no card at all the panel says that none waits, for a moment, without taking the keys or raising the window.
+With no card at all the panel shows the first mate's message box alone, with the keys (the captain's pick: "the key opens it even when no card waits").
 A card that arrives while one is shown waits behind it as in the window; it never replaces the card being read.
 A card that closes in the panel - a choice, putting it aside, its author closing it - leaves the panel up on the next card, which the stack picks by its own rule as in the window (the captain, after using the overlay: "the card stack should stay after closing a card").
 
@@ -62,28 +64,28 @@ A card made large takes the display's whole work area while it stays large, and 
 There is no glass, dimmer, sound or badge; the card moves in once from the edge, and under Reduce Motion it is there at once.
 
 The page is marked as the overlay's by a preload argument (`--inf-card-overlay`), which sets `html[data-card-overlay]` before its first paint.
-It starts only the stack's reads (`startOverlayStore`): the cards, their threads and drafts, and the project focus, never the board, crew, voice or a notification's card.
+It starts only the stack's reads (`startOverlayStore`): the cards, their threads and drafts, and the project focus, and what the message box needs - the first-launch gate, the last turn, and the events that draw the newest round - never the board, crew, voice or a notification's card.
 It draws `CardLayer` itself, so every card's peeks, pager, replies, fields, thread and host choices work as in the window, and so does card admission: a choice runs once through the same action path, and a refusal stays on the card.
 
 Only the stack's place differs from the window's (`overlay.css`).
-The pager hangs 10 points under the card and moves with it, card and pager centred together in the panel's height, instead of under the window's fixed lane, which in the panel is nearly its whole height.
+The pager hangs 10 points under the card and moves with it, card, pager and message box centred together in the panel's height, instead of under the window's fixed lane, which in the panel is nearly its whole height.
 It stands on the overlay's pill surface, as the hide button does, so it reads over any scene; the new badge stays beside it on an opaque ground of its own.
 The hide button sits just above the card's top corner, clear of the peeks, and follows the card as its height eases; a card made large leaves it in the panel's corner.
-So the tallest card gives up a lane above it for the hide button and one under it for the pager.
+So the tallest card gives up a lane above it for the hide button and lanes under it for the pager and the message box.
 
 A choice that opens Infinitary's window - Settings, a browser, a sign-in - is refused on the card with the words that it opens the window, so it is made there and never runs out of sight.
 The system's file and folder pickers are refused the same way (`pickFiles`, `pickProjectFolder`): a picker would take the keys and send the panel away under it.
 Files dropped on the thread still attach.
 Where the panel has no room for the thread beside the card - a narrow display or a large Size - the card holds its thread in place, behind the `card` · `thread · N` control in the card's head (`docs/card-threads.md`); a line that arrives after the thread's first read, the person's own reply or its author's answer, turns the card to its thread.
 
-The page tells the main process it is ready once the shown card is drawn and live, or at the stack's own hold limit (`HOLD_LIMIT_MS`), past which the stack shows the card as it is; only then does the panel show, with the keys when there is a card (`show()`) and without them when none waits (`showInactive()`).
+The page tells the main process it is ready once the shown card is drawn and live, or with no card once the message box is drawn, or at the stack's own hold limit (`HOLD_LIMIT_MS`), past which the stack shows the card as it is; only then does the panel show, with the keys (`show()`), and without them only to say its first reads failed (`showInactive()`).
 As a nonactivating panel it takes the keys while the game stays the front app.
 
 ## Keys and pointer
 
 The shown card takes focus as a card the window points at does (`focusCard`), so the first key reads or acts on that card.
 When a card closes in the panel, focus lands on the next one whole by the window's lost-focus fallback (`docs/keyboard.md`, "Where focus lands").
-In the panel the card's own installed keys run as in the window (`overlayRunsCommand`); every other window key does nothing.
+In the panel the card's own installed keys and Go to the main message run as in the window (`overlayRunsCommand`); every other window key does nothing.
 The menu's ⌘Q and ⌘W send the overlay away, and ⌘H, ⌘M and ⌘, do nothing, so no key quits, hides or opens the app from the panel.
 
 A key the person was already holding when the panel took the keys - the overlay's own key, a game's movement key - keeps repeating into the panel without ever being pressed there.
@@ -91,20 +93,20 @@ A key the person was already holding when the panel took the keys - the overlay'
 
 Off the card, the panel's clear area lets the pointer through: the page tells the main process whether the pointer is over the card, and the panel ignores mouse events elsewhere, so a click beside the card reaches the game.
 The stack's own empty boxes around the card and its pager count as clear area too (`CLEAR` in `CardOverlay.tsx`), so a click above or below the card, or beside the pager, reaches the game as well.
-The hide button comes after the card in the page, so Tab reaches it after the card's controls.
+The message box comes after the card in the page and the hide button after the box, so Tab goes from the card's controls to the box, then to the hide button.
 
 ## Going back
 
 Each way out sends the panel away without answering, keeping what was typed:
 
 - the key again;
-- Escape, which first closes card search, then shrinks a card made large, then leaves a control inside the card for the card, and only then leaves;
-- the hide button just above the card;
-- a stack with no cards left, such as after the choice on the last card;
+- Escape, which first closes card search, then shrinks a card made large, then leaves a control inside the card for the card, and only then leaves; in the message box it first drops a replacing mark, then leaves with the words kept;
+- the hide button just above the card, or above the message box alone;
+- a stack left with no cards, such as after the choice on the last card, while the message box holds nothing unsent; with words in it the panel stays as the box alone;
 - a click on the game, another app, another Space (the panel loses the keys);
 - the screen locking, the computer sleeping, or a display going away.
 
-The panel hides at once, the page sends its unsent drafts (`DraftSync.settle`), and the window is destroyed once it has, or after one second.
+The panel hides at once, the page sends its unsent drafts (`DraftSync.settle`) and hands the main message back to the window that lent it, or to the main process to keep when none did, and the window is destroyed once it has, or after one second.
 Nothing brings the main window forward, and the game stays the front app; a game that quit meanwhile stays gone.
 A click on the card can still make Infinitary the active app, although the panel is nonactivating (seen on macOS 26), and the game would then get no keys once the panel went.
 So the panel notes which app was in front when the key was pressed (`lsappinfo`), and when the card was clicked and the panel still has the keys as it goes, it makes that app active again through Launch Services (`open -b`), only while that same instance still runs.
@@ -112,6 +114,25 @@ Hiding Infinitary instead would activate whichever app the system orders next, w
 A panel that lost the keys first went because the person moved to another app, Infinitary's own window included, and that app keeps them.
 
 A press while the page is still starting, or while it is letting go, does nothing.
+
+## The message box
+
+The captain asked to bring the first mate's message box into the overlay.
+It hangs 12 points under the pager, or under the card where no pager shows, centred with the card and no wider than the card or the window's 560-point message, on the overlay's opaque pill surface so it reads over any scene.
+With no card it stands alone, centred in the panel, and the hide button sits above its corner; a card made large hides it.
+It is the window's own main message, typed only - no dictation - with its chips, Up to recall the last message and its replacing mark, and its hint is the window's, such as "type a task for a crewmate".
+
+One message lives in two places, in memory only, as the window's composer does.
+As the panel opens, `inf:overlay:start` asks the main window for its unsent message (`inf:composer:lend-ask`, answered on `inf:composer:lent`) and waits at most `LEND_LIMIT_MS` for it, so the box opens with the window's words.
+As the panel goes, the page hands the message back once, to the window that lent it (`inf:overlay:hand-back`, then `inf:composer:hand-back`); the window takes it only while its own box still holds what it lent, so words typed in the window meanwhile are never replaced.
+A message sent from the box becomes the one Up recalls in the window, unless the window sent one since.
+When no window lends - none is open, or it answers after `LEND_LIMIT_MS` - the box opens with the words an earlier overlay kept, or empty, and as it goes the main process keeps the words it holds, in memory only (the captain's choice on the change's review: "Keep them for the next overlay opening or window").
+Kept words go once: to the next overlay opening, when no window lends or the window lends an empty box (keeping that window's last sent message for Up when the kept words have none), or to a window whose box holds nothing, which takes them as it opens or when the main process says words are kept (`inf:composer:kept`, then `inf:composer:take-kept`).
+A window whose box holds words of its own leaves them kept.
+Words an opening took stay kept until that opening hands back, so a page whose first reads fail, or that goes while starting, loses nothing: the next opening gets them again, and no window takes them meanwhile.
+
+A send carries the shown card's id as the window's does (`visibleCardId`), as a hint, not the topic.
+After a send from the box in this opening, the newest round - the message, the first mate's mark, its working words and its reply line - shows above the field on the same surface; it is not a button and opens nothing, since the conversation stays in the window.
 
 ## Timing marks
 

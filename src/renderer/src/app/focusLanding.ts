@@ -85,8 +85,9 @@ export function typingWhereFocusRested(): boolean {
 }
 
 export function landLostFocus(): void {
-  // The card overlay's page has no main message: focus lands on the shown
-  // card, typing or not, and the panel goes once no card is left.
+  // In the card overlay's page focus lands on the shown card, typing or
+  // not; once no card is left it lands in the overlay's message box, which
+  // keeps the panel up while it holds words (docs/card-overlay.md).
   const overlay = isCardOverlayPage();
   const prompt = document.querySelector<HTMLElement>('[aria-label="Task prompt"]');
   // Settings and the first-launch gate have no available main message: nothing to land on.

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "card-overlay-message-box",
+      "kind": "feature",
+      "area": "cards",
+      "title": "Message the first mate from the cards over other apps",
+      "body": "When cards show over another app, such as a full-screen game, a message box now sits under them, so you can give the first mate a task without leaving the game. With no card waiting, the key opens the message box alone. It starts with any words you left in Infinitary's window, and words you leave unsent go back there. After you send, the first mate's reply shows just above the box.",
+      "picture": {
+        "dark": "card-overlay-message-box-dark.webp",
+        "light": "card-overlay-message-box-light.webp",
+        "alt": "Cards over another app with a message box under them, and above it a sent message and the first mate's reply that it started a crewmate"
+      },
+      "noDocsSite": "The Keyboard page, which a script writes from the site's own words, now says the message box sits under the cards, and no hand-written page covers them.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

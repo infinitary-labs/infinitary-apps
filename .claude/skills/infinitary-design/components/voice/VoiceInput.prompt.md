@@ -27,6 +27,7 @@ The field is a textarea at `--text-md` on `--leading-body`.
 It grows one line at a time, instantly, up to 8 lines, or less when its top would reach the first mate's frame (about 6 lines at the 960 × 640 minimum window), and then scrolls inside.
 The radius stays `--prompt-radius` at every height: a pill at one line, a rounded rectangle taller.
 The shell stays clear at every height - its hairline alone, never acrylic, never blur.
+In the card overlay (`docs/card-overlay.md`) the same input hangs 12px under the pager, typed only, no wider than the card or 560px, on the overlay's pill surface (`--bg-1`, `--line-1`, `--shadow-2`) so it reads over any scene; the newest round above it stands on the same surface at `--radius-m`.
 
 Rows, top to bottom: the chip row (only when something is attached), the text, and the foot row (only when the draft is multi-line - it holds a line break, wraps, or carries a chip - or while recording).
 The foot row carries the key hint on the left (`--text-sm`, `--fg-3`, keys as `KeyCap` at the kbd style (`--text-sm`): "⏎ send · ⇧⏎ new line"; inside an open code block "in a code block ⏎ adds a line · ⌘⏎ sends"), then the count, then the send control on the right.

@@ -640,7 +640,7 @@ When the control holding focus goes away, as when the shown card pages, is answe
 3. Not typing and no card left, as when a key answers or puts aside the last card: the main message, in every preset, plain keys installed or not.
    Escape in the main message still leaves it for the empty card area, where plain keys work ("Keys used when not typing").
 
-The card overlay's panel has no main message (`docs/card-overlay.md`): its page runs the same fallback, and focus lands on the shown card whole, typing or not, until no card is left and the panel goes.
+The card overlay's panel runs the same fallback (`docs/card-overlay.md`): focus lands on the shown card whole, typing or not, and its message box takes focus when no card is left, its caret at the end of its words, or when the panel opened with no card.
 
 Focus that rests anywhere else, such as in a side panel, stays there when a card changes: the card stack never asks for the main message.
 Closing something that opened over the work returns focus where it was: command search gives back the control it remembered ("Command search"), and leaving Settings lands by the fact from before Settings opened, in the main message when no card is left.

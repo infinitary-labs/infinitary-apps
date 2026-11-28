@@ -87,6 +87,11 @@ describe("overlayRunsCommand", () => {
     expect(overlayRunsCommand("cards.next")).toBe(true);
     expect(overlayRunsCommand("focus.card-actions")).toBe(true);
     expect(overlayRunsCommand("cards.show-activity")).toBe(false);
-    expect(overlayRunsCommand("focus.main-message")).toBe(false);
+    expect(overlayRunsCommand("commands.search")).toBe(false);
+  });
+
+  // Intent: INF-7222's plan, piece 2 - "⌘L, the window's Go to the main message, goes to the box".
+  it("runs Go to the main message, which reaches the overlay's message box", () => {
+    expect(overlayRunsCommand("focus.main-message")).toBe(true);
   });
 });

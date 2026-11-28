@@ -144,8 +144,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(verify?.with).not.toHaveProperty("installer_only");
 
     // The phone release calls the phone check at its resolved source and runs
-    // every part of both devices before a TestFlight upload, one call per device
-    // (INF-2582 direction A, the captain's "A: wait once and trim the soak").
+    // every part on every device before a TestFlight upload (INF-2582 direction A,
+    // the captain's "A: wait once and trim the soak").
     const phone = loadYamlFile(".github/workflows/phone.yml") as {
       on: Record<string, unknown>;
       jobs: Record<string, { if?: string; steps: Step[] }>;
@@ -169,7 +169,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       trigger: "Requested TestFlight",
       source_commit: "${{ needs.resolve.outputs.source_commit }}",
     });
-    // INF-4241 piece 8: one call, whose one job checks every device from one build.
+    // One call naming no device; phone.yml deals its passes into jobs (INF-7079's fix 5,
+    // tests/phone-ci.test.ts "the phone release's call").
     expect(releaseCall?.strategy).toBeUndefined();
     expect(phoneRelease.jobs.testflight?.needs).toContain("phone");
     const source = "6073f484509752eb55ee1b1c85c38b82b4909cc3";
@@ -179,7 +180,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       needs: {},
       vars: {},
       env: {},
-      matrix: { device: "every", key: "every" },
+      // The first of the jobs the release's call is dealt.
+      matrix: {
+        key: "job-1",
+        label: "job 1 of 6: iPhone",
+        passes: [{ device: "iphone", part: "join-read", round: 1 }],
+      },
     };
     const native = phone.jobs["native-phone"];
     expect(workflowValue(native?.if ?? "", released)).toBe(true);
@@ -198,10 +204,11 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     const gate = native?.steps.find((step) => step.id === "both");
     expect(workflowValue(gate?.if ?? "", chosen)).toBe(true);
-    // INF-2582 direction A: the release leaves no part to the iPhone alone and runs no further pass: it is dealt no
-    // plan, so its gate runs every part on every device (INF-5387's plan, piece 2).
-    expect(workflowString(gate?.env?.PHONE_PLAN ?? "", chosen)).toBe("");
-    expect(workflowString(gate?.env?.PHONE_DEVICE ?? "", chosen)).toBe("every");
+    // Each dealt job's gate runs exactly the passes dealt to it, and a failed pass stops no other: the release
+    // hands on no stop_early.
+    expect(JSON.parse(workflowString(gate?.env?.PHONE_PLAN ?? "", chosen))).toEqual(
+      released.matrix.passes,
+    );
     expect(workflowString(gate?.env?.INFINITARY_PHONE_STOP_EARLY ?? "", chosen)).toBe("0");
   });
 

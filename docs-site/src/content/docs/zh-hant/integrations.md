@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: 88c26f56331369d6
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---
@@ -52,10 +52,10 @@ Infinitary 如何用它來複製專案、提出變更，請看 [專案](/zh-hant
 
 登出 GitHub 後，在你重新登入之前，私人存放庫的複製和 pull request 都會停止。
 
-## Google：Gmail、日曆和雲端硬碟 {#google-gmail-calendar-and-drive}
+## Google：Gmail、日曆、雲端硬碟、文件和試算表 {#google-gmail-calendar-drive-docs-and-sheets}
 
-Google 用一個登入同時連結 Gmail、日曆和雲端硬碟。
-Infinitary 透過 Google 自己為 AI 代理程式提供的 Gmail、日曆和雲端硬碟伺服器，以你自己的 Google 連線使用它們：也就是你在自己的 Google Cloud 專案中，以 Google 的個人模式建立的用戶端。
+Google 用一個登入同時連結 Gmail、日曆、雲端硬碟、文件和試算表。
+Infinitary 透過 Google 自己為 AI 代理程式提供的 Gmail、日曆、雲端硬碟、文件和試算表伺服器，以你自己的 Google 連線使用它們：也就是你在自己的 Google Cloud 專案中，以 Google 的個人模式建立的用戶端。
 Google 不會審核它，不會顯示警告，也不會在 7 天後結束它的登入。
 
 1. 按 **Google**，會開啟 **設定你自己的 Google 連線**。
@@ -88,7 +88,7 @@ Infinitary 會把用戶端的密鑰保存在這台電腦的 [機密](/zh-hant/se
   按 **重新設定**。
 - **請把你的用戶端標示為供代理程式使用**：Google 為 AI 代理程式提供的伺服器只接受標示為供 AI 代理程式使用的用戶端，而你的用戶端沒有這個標示。
   按 **開啟 Google Cloud**，在你的用戶端上勾選「Use this client for an AI-powered agent」並儲存，然後在那一列的選單中選擇 **立即檢查**。
-- **有一項 Google 服務已關閉**：你的 Google Cloud 專案中，Gmail、日曆或雲端硬碟的 MCP 服務已關閉。
+- **有一項 Google 服務已關閉**：你的 Google Cloud 專案中，Gmail、日曆、雲端硬碟、文件或試算表的 MCP 服務已關閉。
   按 **開啟 Google Cloud**，把它開啟，然後在那一列的選單中選擇 **立即檢查**。
 
 在最後這兩種情況下，你仍然保持登入，不需要重新設定任何東西。
@@ -100,10 +100,13 @@ Infinitary 會把用戶端的密鑰保存在這台電腦的 [機密](/zh-hant/se
 在日曆中，他們可以列出你的日曆和活動、讀取一項活動、找出所有人都有空的時段，以及建立或更新活動。
 沒有任何動作會刪除日曆活動。
 在雲端硬碟中，他們可以搜尋你的檔案、以文字形式讀取檔案，以及把檔案存到任務的資料夾，Google 文件、試算表或簡報會匯出為 PDF 或 Office 檔案。
-沒有任何動作會刪除、移動或分享檔案，也沒有任何動作會修改檔案。
+在文件中，他們可以用含有標題、清單、粗體和連結的文字建立文件，在文件結尾加上文字，並取代其中的字詞。
+在試算表中，他們可以讀取試算表的工作表或儲存格，建立含有工作表和前幾列的試算表，設定儲存格，並在最後一個有內容的列之後新增列。
+這些變更每一項都會等你核准，**在這項任務剩下的時間都允許** 只適用於一份文件或一份試算表。
+沒有任何動作會刪除、移動或分享檔案。
 
 即使是你已允許的呼叫，Google 也可能先停止它，來徵求你的意見。
-這時 Infinitary 會在一張註明由 Gmail、日曆或雲端硬碟提問的卡片上顯示問題，並把 Google 的每個選項依 Google 的原話做成一個按鈕。
+這時 Infinitary 會在一張註明由 Gmail、日曆、雲端硬碟、文件或試算表提問的卡片上顯示問題，並把 Google 的每個選項依 Google 的原話做成一個按鈕。
 在你按下其中一個之前，什麼都不會執行；你的選擇只回答這一次呼叫。
 「一律允許」類選擇由 Google 保存，而不是 Infinitary。
 

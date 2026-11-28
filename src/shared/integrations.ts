@@ -661,7 +661,7 @@ export type IntegrationNotice = {
 };
 
 /**
- * How long Gmail, Calendar and Drive words stay in saved conversations before a
+ * How long Gmail, Calendar, Drive, Docs and Sheets words stay in saved conversations before a
  * note takes their place, and what a person calls them: 30 days after they
  * were read, the captain's answer on INF-952 ("30 days, the same as
  * Claude's own sweep"), so no Google data is kept for good
@@ -673,7 +673,7 @@ export const GOOGLE_DATA_KEPT: Omit<KeptOutsideData, "label"> = {
 };
 
 /**
- * Google's notice: what Infinitary uses from Gmail, Calendar and Drive, and where
+ * Google's notice: what Infinitary uses from Gmail, Calendar and Drive, Docs and Sheets included, and where
  * it goes - the person's AI provider, another computer that runs the work,
  * and the saved task records, with how long they keep it and how to delete
  * it sooner (INF-952), and a saved attachment's stay and its unmarked words
@@ -704,10 +704,10 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         {
           // i18n-exempt: a product name
           name: "Drive",
-          text: "The names, types, owners, sizes and links of your files, and the content of each file the crew reads. A crewmate can save a file you approve into its task's folder. Infinitary asks for all of Drive, which could also change, move, share or delete files; no action of Infinitary's does any of that.",
+          text: "The names, types, owners, sizes and links of your files, and the content of each file the crew reads. A crewmate can save a file you approve into its task's folder, and make Google Docs and Sheets and change their text and cells after you approve each change. Infinitary asks for all of Drive, which could also move, share or delete files; no action of Infinitary's does any of that.",
         },
         {
-          text: "Infinitary uses them only to do what you ask and to run the rules you turn on. Each label, draft, sent message and event change waits for your approval.",
+          text: "Infinitary uses them only to do what you ask and to run the rules you turn on. Each label, draft, sent message and change to an event, doc or sheet waits for your approval.",
         },
       ],
     },

@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "google-docs-sheets",
+      "kind": "feature",
+      "area": "settings",
+      "title": "Your crew can make and update Google Docs and Sheets",
+      "body": "The Google row now adds Docs and Sheets. Your crew can create a doc from text with headings, lists and links, add to a doc and replace words in it, read a sheet's tabs and cells, create a sheet, set cells and add rows. Each change starts out asking you first, and Allow for the rest of this task covers one doc or one sheet. No action deletes, moves or shares a file. Turn on the Docs and Sheets MCP services in your Google Cloud project if they are off.",
+      "picture": {
+        "dark": "google-docs-sheets-dark.webp",
+        "light": "google-docs-sheets-light.webp",
+        "alt": "The Google row's actions in Settings → Integrations: Create a Google Doc, Add to a Google Doc, Replace text in a Google Doc, Read a Google Sheet, Create a Google Sheet, Update cells in a Google Sheet and Add rows to a Google Sheet, each set to Asks you, below Drive's actions"
+      },
+      "docsSite": ["integrations"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

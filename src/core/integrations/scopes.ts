@@ -140,3 +140,32 @@ export function recipientsScope(input: unknown): IntegrationScope {
   const all = [...new Set([...to, ...cc].map((address) => address.trim().toLowerCase()))].sort();
   return { key: JSON.stringify(all), words: `messages to ${all.join(", ")}` };
 }
+
+/**
+ * A change to one Google Doc or Sheet, by its Drive id: one allowance
+ * covers one document or one spreadsheet (INF-6447, as a calendar's covers
+ * one calendar).
+ */
+export function googleFileScope(
+  kind: "document" | "spreadsheet",
+): (input: unknown) => IntegrationScope {
+  return (input) => {
+    const { id } = input as { id: string };
+    // i18n-exempt: joins integrationTaskAllowLine's English sentence, as every kind's place words do
+    return { key: id, words: `the ${kind} ${id}` };
+  };
+}
+
+/** A new Google Doc or Sheet, by the Drive folder it is made in: the top of My Drive when none is named. */
+export function newGoogleFileScope(
+  kind: "document" | "spreadsheet",
+): (input: unknown) => IntegrationScope {
+  return (input) => {
+    const { folder } = input as { folder?: string };
+    return {
+      key: folder ?? "",
+      // i18n-exempt: joins integrationTaskAllowLine's English sentence, as every kind's place words do
+      words: folder ? `new ${kind}s in the Drive folder ${folder}` : `new ${kind}s in My Drive`,
+    };
+  };
+}

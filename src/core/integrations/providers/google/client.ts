@@ -63,8 +63,12 @@ export type GoogleEndpoints = {
   gmailMcp: string;
   /** Google Calendar's MCP server, where every Calendar action and look goes. */
   calendarMcp: string;
-  /** Google Drive's MCP server, where every Drive action goes. */
+  /** Google Drive's MCP server, where every Drive action goes, and where a new doc or sheet is made. */
   driveMcp: string;
+  /** Google Docs' MCP server, where a doc's text changes. */
+  docsMcp: string;
+  /** Google Sheets' MCP server, where a sheet is read and its cells change. */
+  sheetsMcp: string;
 };
 
 const GOOGLE_ENDPOINTS: GoogleEndpoints = {
@@ -75,6 +79,8 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
   gmailMcp: "https://gmailmcp.googleapis.com/mcp/v1",
   calendarMcp: "https://calendarmcp.googleapis.com/mcp/v1",
   driveMcp: "https://drivemcp.googleapis.com/mcp/v1",
+  docsMcp: "https://docsmcp.googleapis.com/mcp/v1",
+  sheetsMcp: "https://sheetsmcp.googleapis.com/mcp/v1",
 };
 
 /**
@@ -107,6 +113,8 @@ export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEn
       gmailMcp: `${root}/gmailmcp/mcp/v1`,
       calendarMcp: `${root}/calendarmcp/mcp/v1`,
       driveMcp: `${root}/drivemcp/mcp/v1`,
+      docsMcp: `${root}/docsmcp/mcp/v1`,
+      sheetsMcp: `${root}/sheetsmcp/mcp/v1`,
     },
   };
 }

@@ -3486,7 +3486,7 @@ export async function startPhoneHome(
           result = { ok: true, before: { ...readings } };
           await removeEveryDevice(core, await controlBody(request));
           break;
-        // The stand-in Google (tests/helpers/phoneGoogle.ts) and the take-over answer every other request.
+        // The stand-in Google (tests/helpers/phoneGoogle.ts) answers first; the appearance commands, the take-over and the project filter answer every other request.
         default:
           result =
             (await google.answer(`${request.method} ${command}`)) ??

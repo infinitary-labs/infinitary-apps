@@ -259,8 +259,10 @@ export class CrewFacts {
   /**
    * Where a task stands with its independent review, for crew_status and
    * the context block: the reviewer's own row names the builder; a builder
-   * has a review open, a verdict short of a pass, or a pass. A care name
-   * says nothing here: what each care asks is the care runbook's.
+   * has a review open, a verdict short of a pass, or a pass. Careful work
+   * committed with no review open and no pass covering it waits for the
+   * review only the first mate starts (INF-7116 fix 3); beyond that, what
+   * each care asks is the care runbook's.
    */
   private reviewState(record: TaskRecord): string | undefined {
     const shape = record.shape;
@@ -270,6 +272,10 @@ export class CrewFacts {
         ? `assesses ${builder?.key || record.parentId}'s repair`
         : `reviews ${builder?.key || record.parentId}`;
     }
+    const owed = this.core.ladder.carefulUnreviewed(record);
+    if (owed)
+      // i18n-exempt: crew status served to the first mate, stays English
+      return `waiting for its Careful review: committed at ${owed.head.slice(0, 7)}, no review open and no pass covering it`;
     // A review happens at any care (INF-1875).
     const verdict = record.delivery?.reviewVerdict;
     // A pass names the version it read, and says when it does not cover

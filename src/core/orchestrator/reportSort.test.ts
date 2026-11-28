@@ -183,6 +183,20 @@ describe("sortReport", () => {
       wake: true,
     },
     {
+      // INF-7116 fix 3: INF-6937's builder reported its Careful fix committed
+      // while a notice it had already heard sat on its lane, so row 3 filed
+      // the report routine and nobody started the review for 31 hours.
+      name: "0e. Careful work committed with no review open or pass covering it: wake, though guidance is pending",
+      facts: facts({
+        carefulUnreviewed: { head: "9c2e4b1a7d3f5e6c8b0a1d2e3f4a5b6c7d8e9f01" },
+        deliverable: true,
+        workObservable: true,
+      }),
+      rule: "careful-unreviewed",
+      verdict: "captain",
+      wake: true,
+    },
+    {
       name: "1. a decision card is open: the captain's turn",
       facts: facts({ decisionCardOpen: true, workObservable: true }),
       rule: "captain-card",
@@ -483,6 +497,25 @@ describe("sortReport", () => {
       "thread-unanswered",
     );
     expect(sortReport(facts({ proofUnread, decisionCardOpen: true })).rule).toBe("proof-unread");
+  });
+
+  // INF-7116 fix 3: the Careful review's wake sits beside the proof's, both
+  // asking the first mate to start a review, and below the rows that
+  // already reach it.
+  it("Careful work with no review yields to recorded proof and the rows above it, and outranks an open card", () => {
+    const carefulUnreviewed = { head: "9c2e4b1a7d3f5e6c8b0a1d2e3f4a5b6c7d8e9f01" };
+    const proofUnread = { run: 1, head: "9c2e4b1a7d3f5e6c8b0a1d2e3f4a5b6c7d8e9f01" };
+    expect(sortReport(facts({ carefulUnreviewed, proofUnread })).rule).toBe("proof-unread");
+    expect(sortReport(facts({ carefulUnreviewed, reviewReread: true })).rule).toBe("review-reread");
+    expect(sortReport(facts({ carefulUnreviewed, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
+    expect(sortReport(facts({ carefulUnreviewed, threadAwaitingAuthor: true })).rule).toBe(
+      "thread-unanswered",
+    );
+    expect(sortReport(facts({ carefulUnreviewed, decisionCardOpen: true })).rule).toBe(
+      "careful-unreviewed",
+    );
   });
 
   // INF-799 piece 2, the captain's Approve and build on "Plan task-graph

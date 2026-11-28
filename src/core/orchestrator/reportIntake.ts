@@ -45,6 +45,7 @@ import type { CrewSupervisorOptions } from "./crewSupervisorOptions";
 import { type PersonalBriefFacts, renderFollowupBrief } from "./intentBrief";
 import { READER_DATA_LABEL, readerDataAnswer, readerDataLine } from "./readerData";
 import { implausibleReport } from "./reportPlausibility";
+import { carryPassedReview } from "./reviewCarry";
 import { carryTakenOverReview } from "./takeoverCarry";
 
 /** What the report intake reaches of the supervisor beyond its options. */
@@ -232,6 +233,69 @@ export class ReportIntake {
     );
   }
 
+  /**
+   * A Careful builder's report reads the version its branch holds commits
+   * of its own at, for the sort at the turn's end (INF-7116 fix 3); any
+   * other task reads nothing and the report stays synchronous. A version
+   * that cannot be read is no fact, never a refused report.
+   */
+  noteCommittedVersion(task: TaskRuntime): Promise<void> | undefined {
+    const record = this.options.tasks.get(task.id);
+    if (
+      !record ||
+      record.shape?.kind === "review" ||
+      this.options.tasks.policiesOf(record)?.rigor.value !== "reviewed"
+    ) {
+      delete task.committed;
+      return undefined;
+    }
+    return this.committedVersion(record).then(
+      (head) => {
+        if (head) task.committed = { head, at: Date.now() };
+        else delete task.committed;
+      },
+      () => {
+        delete task.committed;
+      },
+    );
+  }
+
+  private async committedVersion(record: TaskRecord): Promise<string | undefined> {
+    const status = await this.workStatus(record);
+    if (!status || status.unlandedCommits === 0) return undefined;
+    const head = await this.validationHead(record);
+    // A pass carries to a rebase of the same change only when it is
+    // published or merged; carrying it here keeps a rebase-only version
+    // from asking for a second review.
+    await carryPassedReview({
+      tasks: this.options.tasks,
+      taskId: record.id,
+      record,
+      repoDir: record.repoDir,
+      head,
+    });
+    return head;
+  }
+
+  /** The working copy's edits and commits of its own, read where it lives. */
+  private async workStatus(
+    record: TaskRecord,
+    options: { strict?: boolean } = {},
+  ): Promise<{ dirty: boolean; unlandedCommits: number } | null | undefined> {
+    if ((!record.deviceId && !record.worktreeDir) || !record.branch) return undefined;
+    return record.deviceId
+      ? await this.options.machines?.workStatus(record.id)
+      : await this.options.workspace.taskWorkStatus(
+          {
+            taskId: record.id,
+            cwd: record.worktreeDir,
+            repoDir: record.repoDir,
+            branch: record.branch,
+          },
+          options,
+        );
+  }
+
   async validationHead(record: TaskRecord): Promise<string> {
     const head =
       (await checkedOutHead(this.options, record)) ??
@@ -248,17 +312,7 @@ export class ReportIntake {
   private async requireCleanValidationWork(record: TaskRecord, head: string): Promise<void> {
     if ((!record.deviceId && !record.worktreeDir) || !record.branch)
       throw new Error("The validation working copy cannot be read; nothing may run.");
-    const status = record.deviceId
-      ? await this.options.machines?.workStatus(record.id)
-      : await this.options.workspace.taskWorkStatus(
-          {
-            taskId: record.id,
-            cwd: record.worktreeDir,
-            repoDir: record.repoDir,
-            branch: record.branch,
-          },
-          { strict: true },
-        );
+    const status = await this.workStatus(record, { strict: true });
     const actual = await this.validationHead(record).catch(() => undefined);
     if (!status || status.dirty || actual !== head)
       throw new Error(

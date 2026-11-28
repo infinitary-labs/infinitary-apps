@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "work-names-every-message",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "No second answer card while a crewmate works on your question",
+      "body": "When you send a question and then a correction, the work your first mate starts now counts for both, so it no longer posts a second answer card of its own. When a crewmate passes something to your first mate before showing its card, your first mate now leaves the answer to that card.",
+      "noPicture": "This stops a repeated answer card; no view or control looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

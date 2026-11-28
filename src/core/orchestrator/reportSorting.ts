@@ -208,6 +208,7 @@ export class ReportSorting {
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
+        ...(pending ? { midTurn: true as const } : {}),
         ...(declared?.captainWords
           ? {
               captainWords: {

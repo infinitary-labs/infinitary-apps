@@ -192,7 +192,9 @@ The feed line says how many were taken back.
 ## Events
 
 An event rule (`kind: "event"`) names an integration by its id and one of the events that integration declares, such as the stand-in's `item_arrived` (`docs/integrations.md`, "What an integration can tell").
-It is the captain's q6 on INF-775: the app looks on its one tick at each kind's declared cadence, every minute for mail and every five minutes for calendars, and nothing leaves the computer to wait for an event.
+It is the captain's q6 on INF-775: the app looks on its one tick at each kind's declared cadence, every five minutes for mail and for calendars, and nothing leaves the computer to wait for an event.
+Mail's five minutes is the captain's "Every 5 minutes, like Calendar" on INF-7264, which keeps a rule inside Gmail's daily allowance at Google.
+A look that fails because Google asked the app to wait, until midnight Pacific time for a daily limit, fails with those words and tries again at the rule's next look (`docs/integrations.md`, "Google").
 
 - The Scheduler looks for each enabled event rule on its tick when the event's `every` comes round, counted in ticks, so a development run's shortened tick looks sooner (`tickPeriodFor`).
   A look runs beside the tick, one per rule at a time, through `IntegrationsService.look`.

@@ -292,7 +292,8 @@ The broker declares the app's own sign-in, so every renewal, and the one that ma
 Who it is signed in as, what Google granted, when the access runs out, its health and its key's reference are `userData/integrations/google.json`, 0600 (`GoogleSignInStore`).
 An earlier version kept both keys in `userData/integrations/secrets/google/secrets.json`; at start, and again at the next use while Secrets is locked, the lasting key moves into Secrets and the file is removed (`MovedGoogleKeys`): the reference is written first, so an interrupted move repeats onto the same entry.
 The access renews when it has less than one request's time left, and once more when Gmail refuses it; health is `needs_reauth` only when Google refuses the lasting key or the person's own client, or the sign-in was made with a client the person no longer keeps, and `unavailable` when Google cannot be reached or fails, or when Secrets is locked.
-When Gmail answers 429, or 403 for a rate limit, with Retry-After, no request goes to Gmail until then, and a rule's look tries again on its next minute; the sign-in's health stays as it was.
+When a service answers 429, that service waits before its next request, and the others go on, since Google counts each service's daily requests apart (`waits.ts`): as long as Retry-After says; with none, until the next midnight Pacific time when the body names a daily limit (Gmail's `dailyLimitExceeded`, or a Google Cloud quota error whose limit is per day), since Google resets daily limits then; otherwise one minute, doubling on each refusal in a row up to an hour, until the service answers again.
+A request during the wait fails with the wait's words before it leaves, so a rule's look fails with them and tries again at its next look; the sign-in's health stays as it was.
 Removing the row asks Google to revoke the sign-in, as far as Google can be reached, and forgets it here and in Secrets either way; with no access key in memory, one renewal makes one to revoke with.
 It also starts Delete Google content (`IntegrationsServiceOptions.deleteOutside`), since Google's [Workspace API user data and developer policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy) keeps no user data after the tool is disconnected; the row goes without waiting for a conversation in a turn, which is replaced once it pauses.
 
@@ -310,10 +311,11 @@ Words read inside a saved file reach the crewmate unmarked, and Google's notice 
 A message read is its plain text, or its HTML read as text in one pass over it, so markup a sender never closes cannot slow the app's own process.
 `draft_message` is `create_draft` and `send_message` is `send_message`, with plain addresses, since Gmail's MCP server takes no display names; a reply names its message, and Gmail's server keeps it in the thread, and an address or subject with a line break is refused before anything is asked.
 Where Gmail's tool list names no `send_message`, `send_message` writes the draft instead, sends nothing and says so.
-Gmail tells `message_received` ("A message arrives") from `search_threads` over the inbox with `THREAD_VIEW_IDS_ONLY`, which Google answers without asking the person: each conversation with mail received between the cursor and a minute ago is one item, oldest first, its summary naming the conversation's id.
+Gmail tells `message_received` ("A message arrives") every five minutes from `search_threads` over the inbox with `THREAD_VIEW_IDS_ONLY`, which Google answers without asking the person: each conversation with mail received between the cursor and a minute ago is one item, oldest first, its summary naming the conversation's id.
 An item's id is the conversation's in that look's window, never the conversation's own: a rule drops an item id it already carried, so a reply in a conversation it told fires again, and a look repeated from the same cursor names the same ids.
 Google asks the person before anything reads a sender, subject or text from someone else's mail, and a look runs with nobody to ask, so an event carries no words of the mail; the crewmate reads it with `read_message`'s `thread`, where Google's question reaches the person on its own card, as above.
 The cursor is a time to the second with the mailbox it belongs to, and consecutive looks search windows that meet without overlapping: in seconds since 1970 Gmail's `before:` holds its own second, as `after:` does, so a look searches up to the second before the next look starts; mail under a minute old waits for the next look, since Gmail's search may not hold it yet.
+Google counts each `search_threads` as 10 of the Gmail MCP server's 5,000 requests a day for the person's Google Cloud project, so one rule looking every five minutes spends 2,880 a day and leaves the rest for the crew's reads; each rule listening for mail looks on its own.
 The first look starts from now and fires nothing; a cursor from another mailbox, or a Gmail history id an earlier version kept, starts from now and answers `resynced`, as does a look that would read more than ten pages.
 Calendar's actions (`calendar.ts`, INF-786) are `list_calendars`, `list_events`, `read_event` and `free_busy`, which read, and `create_event` and `update_event`, which change; all follow the per-action rule.
 Calendar ids come from `list_calendars`; actions use the primary calendar when none is named, and paged lists return `next_page`.
@@ -340,7 +342,7 @@ Docs' actions (`docs.ts`) and Sheets' (`sheets.ts`), INF-7010, make and change f
 `update_cells` sets a range with `update_formulas`, read as typed.
 Google's Sheets setters take no input option and both read every value as typed, so `entered: exact` gives each text cell Sheets' leading `'`, which keeps it as text unshown.
 `append_rows` is `append_values` after the last filled row of a tab's or range's table, read as typed.
-Every service shares one renewal and backoff boundary; a Calendar rate limit holds Gmail, Drive, Docs and Sheets too.
+Every service shares one renewal, and each keeps its own wait: a Calendar rate limit holds Calendar alone.
 
 `googleSetup` names a client only for an unpackaged run that sets `INFINITARY_GOOGLE_CLIENT_ID`; a packaged build names none.
 `googleSetup` offers Google in development and packaged builds on both stable and alpha channels, for the captain's private experimental rollout.

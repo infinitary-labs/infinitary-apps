@@ -11,8 +11,8 @@ extension PhoneJourney {
     /// is focused on north-pier.
     /// Completion: focused on north-pier, Home counts the note alone and the tail one task waiting elsewhere; a south-pier
     /// card that arrives then adds nothing to Home; All projects counts every card, the late one as new; the new-card
-    /// notice of a card that arrived while held shows it on Home with the focus still on north-pier; after Show all
-    /// projects and north-pier again, that card is held once more.
+    /// notice of a card that arrived while held shows it on Home, drawn and ready to answer, with the focus still on
+    /// north-pier; after Show all projects and north-pier again, that card is held once more.
     func testProjectFilterCards() async throws {
         try await launchJoined()
         let fixture = try await home("project-filter-fixture")
@@ -85,6 +85,11 @@ extension PhoneJourney {
         XCTAssertTrue(pointed.waitForPresence(timeout: 10), "The notice's tap shows the held card\n\(app.debugDescription)")
         XCTAssertTrue(app.buttons["project-focus-pill"].label.hasPrefix(northName), "The focus stays on north-pier")
         XCTAssertTrue(waitForPhonePager(pager, " of 2", suffix: true), "Only the card pointed at comes through: \(pager.label)")
+        // The pager counts the card before its body draws, and a choice takes a press only once it has, so the picture
+        // waits for the choice and shows the card whole rather than an empty body with dimmed choices.
+        let choice = app.buttons["card-action-first"]
+        XCTAssertTrue(waitForPhonePredicate(NSPredicate { _, _ in choice.exists && choice.isEnabled }, object: nil, timeout: 10) == .completed,
+                      "The pointed card draws its body and takes a choice\n\(app.debugDescription)")
         picture("4-home-pointed")
 
         // Show all projects, then north-pier again: the card pointed at is held once more.

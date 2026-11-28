@@ -11,20 +11,22 @@ struct PhoneSceneRoster {
             let homeName: String
             let inReach: Bool
             let grouping: String
+            let focus: String?
         }
         private var key: Key?
         private var value: PhoneSceneRoster?
         private var retained: [String: Set<String>] = [:]
         func read(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, revision: Int,
-                  grouping: String = "computer") -> PhoneSceneRoster {
-            let next = Key(revision: revision, generation: generation, presence: presence, homeName: homeName, inReach: inReach, grouping: grouping)
+                  grouping: String = "computer", focus: String? = nil) -> PhoneSceneRoster {
+            let next = Key(revision: revision, generation: generation, presence: presence, homeName: homeName, inReach: inReach,
+                           grouping: grouping, focus: focus)
             if key == next, let value { return value }
             // Programs are remembered by the group their parts ran in, so a new grouping remembers afresh.
             if key?.generation != generation || key?.grouping != grouping { retained = [:] }
             let roots = Set((board?.tasks ?? []).filter { $0.program == true && ($0.status == "active" || $0.status == "open") }.map(\.id))
             retained = retained.filter { roots.contains($0.key) }
             let crew = (board?.tasks ?? []).filter { $0.kind == "work" && $0.status == "active" && $0.program != true }
-            let grouped = PhoneCrewGroups.read(board: board, tasks: crew, presence: presence, grouping: grouping)
+            let grouped = PhoneCrewGroups.read(board: board, tasks: crew, presence: presence, grouping: grouping, focus: focus)
             for task in crew where task.reviewOf == nil {
                 if let parent = task.parentId, roots.contains(parent) {
                     retained[parent, default: []].insert(grouped?.groups[task.id] ?? PhoneSceneRoster.computerID(task))
@@ -33,7 +35,7 @@ struct PhoneSceneRoster {
             // Seats are remembered from the last read of a real board, as the desktop remembers them; a new scene seats everyone afresh.
             let books = key?.generation == generation && key?.grouping == grouping && (value?.sequence ?? -1) >= 0 ? value?.books : nil
             var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation,
-                                          retainedPrograms: retained, seats: books, grouping: grouping)
+                                          retainedPrograms: retained, seats: books, grouping: grouping, focus: focus)
             if let previous = value, key?.generation == generation {
                 // Keep the panned extent while work departs; a removal must not clip its flight or move the viewport.
                 let left = max(roster.homeX, previous.homeX), right = max(roster.width - roster.homeX, previous.width - previous.homeX)
@@ -134,7 +136,7 @@ struct PhoneSceneRoster {
     var books: [String: SeatBook] { Dictionary(uniqueKeysWithValues: computers.map { ($0.id, $0.book) }) }
 
     init(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, retainedPrograms: [String: Set<String>] = [:], seats previous: [String: SeatBook]? = nil,
-         grouping: String = "computer") {
+         grouping: String = "computer", focus: String? = nil) {
         self.generation = generation; sequence = board?.seq ?? -1; self.inReach = inReach
         let all = board?.tasks ?? []
         allTasks = all; links = board?.links ?? []
@@ -142,7 +144,7 @@ struct PhoneSceneRoster {
             .sorted { $0.createdAt == $1.createdAt ? $0.key < $1.key : $0.createdAt < $1.createdAt }
         order = Dictionary(uniqueKeysWithValues: tasks.enumerated().map { ($0.element.id, $0.offset) })
         let programs = all.filter { $0.program == true && ($0.status == "active" || $0.status == "open") }
-        let plan = PhoneCrewGroups.read(board: board, tasks: tasks, presence: presence, grouping: grouping)
+        let plan = PhoneCrewGroups.read(board: board, tasks: tasks, presence: presence, grouping: grouping, focus: focus)
         let groups = plan?.groups ?? [:]
         self.groups = groups
         let groupOf = { (task: PhoneTask) in groups[task.id] ?? Self.computerID(task) }

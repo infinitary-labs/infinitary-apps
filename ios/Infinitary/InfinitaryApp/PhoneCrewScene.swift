@@ -27,7 +27,7 @@ struct PhoneCrewScene: View {
     var body: some View {
         let roster = rosters.read(board: session.board, presence: session.computers, homeName: session.mac.name,
                                   inReach: session.contact == "in-reach", generation: session.sceneGeneration, revision: session.workRevision,
-                                  grouping: session.crewGrouping)
+                                  grouping: session.crewGrouping, focus: session.projectFocus)
         let still = reduceMotion || phase != .active || !messageContext.cardsVisible || !visible || record != nil
         GeometryReader { geometry in
             let viewport = PhoneSceneViewport(scene: CGSize(width: roster.width, height: roster.height),

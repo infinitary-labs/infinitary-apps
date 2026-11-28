@@ -243,7 +243,9 @@ async function settled(heard: Heard[]): Promise<void> {
   await inFrame(() => {
     parent.postMessage({ type: "settled" }, "*");
   }, null);
-  await expect.poll(() => heard.filter((message) => message.type === "settled").length).toBe(before + 1);
+  await expect
+    .poll(() => heard.filter((message) => message.type === "settled").length)
+    .toBe(before + 1);
 }
 
 /** Selects words in the paragraph as a drag across them leaves them. */
@@ -285,7 +287,9 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
     expect(await selectParagraphWords(WORDS)).toBe(WORDS);
     await inFrame(() => {
       const label = document.getElementById("label");
-      label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }));
+      label?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }),
+      );
       label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     }, null);
     await settled(heard);

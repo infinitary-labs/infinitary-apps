@@ -598,6 +598,12 @@ The stage hands its frame and the drawing's inputs up as a preference, and Home 
 The first mate still sits in the middle of the stage, so it moves up with the keyboard.
 On Home the reach line has no band of its own, the message box's glass blurs the crew that pass behind it, and the captain's bubble in the last turn is solid in the colour it always showed, so the crew behind it are hidden.
 With a card up the stage leaves Home, and nothing is drawn.
+While the computer's Appearance groups the crew animation by project (`docs/crew-orbits.md`, "Grouping by project"), the crew scene seats each crewmate in the group the desktop's rule picks (`PhoneCrewGroups`, a port of `crewGroups.ts`), and `PhoneCrewGroupsTests` replays that rule's own readings (`PhoneCrewGroups.generated.json`, from `scripts/generate-phone-scene.ts`).
+The first mate's ring then takes the middle project's name while its crew sit there, and otherwise has no name and no name button, as on the desktop.
+The phone has no project focus, so the middle project is only the one project of the person's own with crew; a summary's light falls on its computer's crew, as on the desktop.
+The phone reads the choice on reach (`inf:settings:crew-grouping:get`) from a home that lists `crew-grouping` and follows the preferences push; an older home groups by computer.
+The phone's Settings → Appearance shows the same switch while the home has two projects of the person's own or the switch is on, and turns it with `inf:settings:crew-grouping:set`, which saves through the home's own appearance write, so every window follows and Activity gets one line.
+
 The phone draws the desktop's orbits at `PhoneSceneRoster.ringScale`, derived so that eight crewmates on the first orbit stay inside the narrowest portrait iPhone (375 points), the captain's ask.
 Crew glyphs keep the desktop's size: home's crowded glyph (`PLANES_GLYPH_PX`), and in another computer's cluster the smaller glyph `CLUSTER_LAYOUT` names, smaller again once that cluster holds more than its `crowdedCrew` (INF-1854).
 Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the first orbit widens with each crewmate up to its seats, the next arrival opens the second orbit inside it, and no third orbit opens.

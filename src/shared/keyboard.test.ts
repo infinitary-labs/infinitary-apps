@@ -119,6 +119,7 @@ describe("the command catalog", () => {
       "secrets.move", // INF-4718 piece 2: starts the ask to move secrets in, chosen by name.
       "automation.pause-all",
       "ambient.style", // INF-5610's plan: Choose ambient music is chosen by name.
+      "crew-grouping.toggle", // INF-6955's plan: a command search entry with no default key.
       "usage.unit",
       "allowance.recheck",
       "devices.try-again",
@@ -229,6 +230,7 @@ describe("the command catalog", () => {
       "automation.pause-all",
       "ambient.toggle",
       "ambient.style",
+      "crew-grouping.toggle",
       "usage.unit",
       "allowance.recheck",
       "devices.try-again",

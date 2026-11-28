@@ -131,6 +131,31 @@ describe("the first mate's Settings actions, driven through the whole core", () 
     expect(paused.lines).toEqual(["ambient music pauses while you're away"]);
   });
 
+  // INF-6955's plan, the captain's "a real toggle setting to change the
+  // grouping to by project": the first mate, a window and the phone turn one
+  // switch on the look, and each turn leaves one Activity line.
+  it("groups the crew animation by project and back, from the first mate and from the phone", async () => {
+    const was = await appearance();
+    const grouped = await asked("crew-grouping", { grouping: "project" });
+    expect(await appearance()).toEqual({ ...was, crewGrouping: "project" });
+    expect(grouped.lines).toEqual(["Crew animation grouped by project"]);
+    const before = new Set(operations().map((task) => task.id));
+    expect(
+      await core.dispatch("inf:settings:crew-grouping:set", [{ grouping: "computer" }]),
+    ).toEqual({
+      grouping: "computer",
+    });
+    expect((await appearance()).crewGrouping).toBeUndefined();
+    expect(await core.dispatch("inf:settings:crew-grouping:get", [])).toEqual({
+      grouping: "computer",
+    });
+    expect(
+      operations()
+        .filter((task) => !before.has(task.id))
+        .map((task) => task.title),
+    ).toEqual(["Crew animation grouped by computer"]);
+  });
+
   // INF-6289, the captain's pick on INF-6278: own ambient styles reach the
   // first mate by name, so how many are saved costs it no context and the
   // cap of 12 goes. Fixture: the sample styles a first mate wrote

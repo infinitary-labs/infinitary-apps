@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "有卡片挡住了电脑列表",
+  "refuseACardCoversTheProjects": "有卡片挡住了项目列表",
   "refuseARecordingIsRunning": "正在录音",
   "refuseBrowserTabCannotBeFound": "浏览器标签页显示的是网页的图片，因此无法查找其中的文字",
   "refuseCloseTheOpenDialogFirst": "请先关闭打开的对话框",
@@ -36,7 +37,9 @@
   "refuseThereIsNoOtherTabToGo": "没有其他标签页可前往",
   "refuseThereIsOnlyOneProject": "只有一个项目",
   "refuseTheseAreTheFirstComputers": "这已是第一组电脑",
+  "refuseTheseAreTheFirstProjects": "这已是第一组项目",
   "refuseTheseAreTheLastComputers": "这已是最后一组电脑",
+  "refuseTheseAreTheLastProjects": "这已是最后一组项目",
   "refuseThisCardAsksNoQuestions": "这张卡片没有提问",
   "refuseThisCardCannotBeFound": "只能在卡片、过去的卡片或任务记录中查找文字",
   "refuseThisCardHasNoButtons": "这张卡片没有按钮",

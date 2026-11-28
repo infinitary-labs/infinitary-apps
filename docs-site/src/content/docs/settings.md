@@ -64,6 +64,9 @@ On the computer where your first mate lives, they are under **Signed-in sites** 
   You can still resize each card.
 - **Keep cards maximized** keeps every card maximized after you maximize one, until you restore one.
 - **Crew model names** shows model names while your crewmates use only one orbit.
+- **Group crew animation by project** seats each project's crew together in the crew animation, whichever computer runs them.
+  It is off by default, and shows while you have two projects or more.
+  Command search and your first mate can switch it too.
 - **Window wash**, on a Mac, sets how much of the theme color covers the blurred background.
   0% is the default.
 - **Theme** is **Dark**, **Light**, or one of thirteen themes under their makers' names, such as **Dracula**, **Catppuccin Mocha** or **Rosé Pine Dawn**.

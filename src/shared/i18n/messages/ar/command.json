@@ -71,6 +71,8 @@
   "commandCommandsSearch": "البحث في الأوامر",
   "commandComputersNext": "حواسيب العمل التالية",
   "commandComputersPrevious": "حواسيب العمل السابقة",
+  "commandCrewGroupingToggle": "تجميع رسوم الطاقم المتحركة حسب المشروع أو حسب الحاسوب",
+  "commandCrewGroupingToggleWords": "طاقم, رسوم متحركة, مدار, مشروع, حاسوب, تجميع",
   "commandDevicesTryAgain": "محاولة الوصول إلى حواسيبك مجددًا",
   "commandDevicesTryAgainWords": "أجهزة, إعادة الاتصال, اتصال, حواسيب",
   "commandFeedbackStart": "إرسال ملاحظات",

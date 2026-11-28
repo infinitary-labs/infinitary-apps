@@ -63,7 +63,7 @@ enum PhoneCrewPainter {
     static func drawMarks(_ frame: PhoneSceneMotion.Frame, selection: String?, bracketed: (task: String, computer: String)?,
                           in context: inout ScenePen, palette: CharacterPainter.Palette) {
         guard selection != nil || bracketed != nil else { return }
-        let glyphs = frame.glyphs.map { (id: $0.task.id, task: $0.task.id, computer: PhoneSceneRoster.computerID($0.task), point: $0.point, reach: $0.size / 2 + 4) }
+        let glyphs = frame.glyphs.map { (id: $0.task.id, task: $0.task.id, computer: $0.group, point: $0.point, reach: $0.size / 2 + 4) }
         let marks = frame.marks.map { (id: $0.id, task: $0.task.id, computer: $0.computerID, point: $0.point, reach: CharacterCatalog.shared.program["rootMarkPx"]! + 4) }
         for target in glyphs + marks {
             let square = CGRect(x: target.point.x - 22, y: target.point.y - 22, width: 44, height: 44)

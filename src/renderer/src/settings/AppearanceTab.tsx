@@ -10,6 +10,7 @@ import { describeOwnStyle, STYLE_GROUPS, STYLE_WORDS, styleWords } from "../ambi
 import type { AppearanceChoice } from "../app/appearance";
 import { useCommandKeys } from "../app/keyHints";
 import { notePickerChange, takePickerFocus, windowDefaultLanguage } from "../app/language";
+import { useProjectFocus } from "../app/projectFocus";
 import { useShellStore } from "../app/store";
 import { Button, GroupedPills, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
@@ -152,6 +153,11 @@ export function AppearanceTab() {
   const setWashStrength = useShellStore((s) => s.setWashStrength);
   const showCrewModelNames = useShellStore((s) => s.showCrewModelNames);
   const setShowCrewModelNames = useShellStore((s) => s.setShowCrewModelNames);
+  const crewGrouping = useShellStore((s) => s.crewGrouping);
+  const setCrewGrouping = useShellStore((s) => s.setCrewGrouping);
+  // Grouping by project matters to someone with two projects or more, so the
+  // switch shows where the project pill does, or once it is on.
+  const projectsShown = useProjectFocus().shown;
   // On a Mac controlling another, its look is its own (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);
   // A refused choice is told beside its own control, over the saved look.
@@ -238,6 +244,21 @@ export function AppearanceTab() {
             />
           }
         />
+        {(projectsShown || crewGrouping === "project") && (
+          <SettingRow
+            id="crew-grouping"
+            error={errorFor("crewGrouping")}
+            title={m.settingsAppearanceCrewGrouping()}
+            description={m.settingsAppearanceCrewGroupingDescription()}
+            control={
+              <Switch
+                checked={crewGrouping === "project"}
+                aria-label={m.settingsAppearanceCrewGrouping()}
+                onChange={(on) => setCrewGrouping(on ? "project" : "computer")}
+              />
+            }
+          />
+        )}
         {/* Only a window over the system's material has a wash (docs/translucent-window.md);
             it takes the theme's color (docs/themes.md), so it sits just above the tiles. */}
         {desktop.material && (

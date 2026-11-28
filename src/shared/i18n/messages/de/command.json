@@ -71,6 +71,8 @@
   "commandCommandsSearch": "Befehle suchen",
   "commandComputersNext": "Nächste Arbeitscomputer",
   "commandComputersPrevious": "Vorherige Arbeitscomputer",
+  "commandCrewGroupingToggle": "Crew-Animation nach Projekt oder nach Computer gruppieren",
+  "commandCrewGroupingToggleWords": "Crew, Animation, Umlaufbahn, Projekt, Computer, Gruppe",
   "commandDevicesTryAgain": "Erneut versuchen, deine Computer zu erreichen",
   "commandDevicesTryAgainWords": "Geräte, SSH, erneut verbinden, verbinden, Computer",
   "commandFeedbackStart": "Feedback senden",

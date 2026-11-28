@@ -109,7 +109,8 @@ export type WindowFacts = {
   answerDoneReady?: boolean;
   /** The shown decision offers a way to say no (INF-3108). */
   declineReady?: boolean;
-  computers?: { page: number; pages: number };
+  /** The crew's pages; byProject while the crew animation is grouped by project. */
+  computers?: { page: number; pages: number; byProject?: boolean };
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
   projectFocus?: { shown: boolean; focus: string | null };
   updateAvailable?: boolean;
@@ -286,17 +287,25 @@ const REFUSALS: Readonly<
     s.view !== "home"
       ? m.refuseSettingsIsOpen()
       : shownEntry(s)
-        ? m.refuseACardCoversTheComputers()
+        ? facts.computers?.byProject
+          ? m.refuseACardCoversTheProjects()
+          : m.refuseACardCoversTheComputers()
         : !facts.computers || facts.computers.page === 0
-          ? m.refuseTheseAreTheFirstComputers()
+          ? facts.computers?.byProject
+            ? m.refuseTheseAreTheFirstProjects()
+            : m.refuseTheseAreTheFirstComputers()
           : null,
   "computers.next": (s, facts) =>
     s.view !== "home"
       ? m.refuseSettingsIsOpen()
       : shownEntry(s)
-        ? m.refuseACardCoversTheComputers()
+        ? facts.computers?.byProject
+          ? m.refuseACardCoversTheProjects()
+          : m.refuseACardCoversTheComputers()
         : !facts.computers || facts.computers.page + 1 >= facts.computers.pages
-          ? m.refuseTheseAreTheLastComputers()
+          ? facts.computers?.byProject
+            ? m.refuseTheseAreTheLastProjects()
+            : m.refuseTheseAreTheLastComputers()
           : null,
   "project-focus.open": (s, facts) =>
     s.view !== "home"
@@ -468,6 +477,7 @@ const REFUSALS: Readonly<
   // This window's own music, wherever the first mate lives.
   "ambient.toggle": () => null,
   "ambient.style": () => null,
+  "crew-grouping.toggle": () => null,
   "usage.unit": refusedUntilUpdate,
   // The allowance is read where the first mate lives, from any Mac.
   "allowance.recheck": refusedUntilUpdate,

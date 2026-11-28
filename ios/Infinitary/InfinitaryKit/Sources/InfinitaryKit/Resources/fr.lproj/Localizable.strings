@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "Rechercher des commandes";
 "commandComputersNext" = "Ordinateurs de travail suivants";
 "commandComputersPrevious" = "Ordinateurs de travail précédents";
+"commandCrewGroupingToggle" = "Grouper l’animation de l’équipage par projet ou par ordinateur";
+"commandCrewGroupingToggleWords" = "équipage, animation, orbite, projet, ordinateur, grouper";
 "commandDevicesTryAgain" = "Réessayer de joindre vos ordinateurs";
 "commandDevicesTryAgainWords" = "appareils, ssh, reconnecter, connecter, ordinateurs";
 "commandFeedbackStart" = "Envoyer un avis";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "Second – %1$@";
 "crewModelNames" = "Noms des modèles de l’équipage";
 "crewNextComputers" = "Ordinateurs suivants";
+"crewNextProjects" = "Projets suivants";
 "crewOrbitLabel" = "Équipage – %2$@ au travail, %1$@ au repos";
 "crewOutOfReach" = "Hors de portée";
 "crewPartsCount" = "%1$@ terminées, %2$@ en cours, %3$@ en attente";
 "crewPreviousComputers" = "Ordinateurs précédents";
+"crewPreviousProjects" = "Projets précédents";
 "crewProgramsAndParts" = "Programmes et leurs parties";
+"crewProjectGroups" = "Groupes de projets";
 "crewStateIdle" = "Au repos";
 "crewStateWorking" = "Au travail";
 "crewSummaryAnotherTask" = "une autre tâche";
@@ -1762,6 +1767,7 @@
 "panelChangeCardSize" = "Taille des cartes";
 "panelChangeCopyStop" = "Arrêter de garder une copie sur un autre ordinateur";
 "panelChangeCostLimit" = "Quand une tâche demande avant de dépenser plus";
+"panelChangeCrewGrouping" = "Grouper l’animation de l’équipage par projet";
 "panelChangeCrewModelNames" = "Afficher les noms de modèle de l’équipage";
 "panelChangeCrewReasoning" = "La réflexion de l’équipage";
 "panelChangeCrewSlots" = "Les modèles de l’équipage";
@@ -2333,6 +2339,8 @@
 "phoneSettingsCapabilityRead" = "Lit les cartes, l’Activité et les tâches. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "La conversation reste sur votre ordinateur.";
+"phoneSettingsCrewGrouping" = "Grouper l’animation de l’équipage par projet";
+"phoneSettingsCrewGroupingScope" = "Dans l’animation de l’équipage, les équipiers de chaque projet gravitent ensemble, quel que soit l’ordinateur qui les exécute. Réglé sur %1$@, donc ses fenêtres le suivent aussi.";
 "phoneSettingsDevices" = "Appareils";
 "phoneSettingsFoldSplit" = "Séparer au pli";
 "phoneSettingsFoldSplitScope" = "Ouvert comme un livre, ce téléphone affiche Tâches et Activité d’un côté du pli et Accueil de l’autre. Désactivez-le pour une disposition comme sur un iPad.";
@@ -2622,6 +2630,7 @@
 "recordValidationScenario" = "Scénario";
 "recordValidationSupplementary" = "%1$@ (complémentaire)";
 "refuseACardCoversTheComputers" = "Une carte recouvre les ordinateurs";
+"refuseACardCoversTheProjects" = "Une carte recouvre les projets";
 "refuseARecordingIsRunning" = "Un enregistrement est en cours";
 "refuseBrowserTabCannotBeFound" = "L’onglet Navigateur montre une image d’une page, ses mots ne peuvent donc pas être recherchés";
 "refuseCloseTheOpenDialogFirst" = "Fermez d’abord la boîte de dialogue ouverte";
@@ -2658,7 +2667,9 @@
 "refuseThereIsNoOtherTabToGo" = "Il n’y a pas d’autre onglet où aller";
 "refuseThereIsOnlyOneProject" = "Il n’y a qu’un seul projet";
 "refuseTheseAreTheFirstComputers" = "Ce sont les premiers ordinateurs";
+"refuseTheseAreTheFirstProjects" = "Ce sont les premiers projets";
 "refuseTheseAreTheLastComputers" = "Ce sont les derniers ordinateurs";
+"refuseTheseAreTheLastProjects" = "Ce sont les derniers projets";
 "refuseThisCardAsksNoQuestions" = "Cette carte ne pose aucune question";
 "refuseThisCardCannotBeFound" = "Les mots se recherchent dans une carte, une carte passée ou le dossier d’une tâche";
 "refuseThisCardHasNoButtons" = "Cette carte n’a pas de boutons";
@@ -2848,6 +2859,10 @@
 "settingsAppearanceCardSizeDescription" = "Choisissez comment les cartes s’ouvrent. Vous pouvez toujours redimensionner chaque carte.";
 "settingsAppearanceCardUsual" = "Habituelle";
 "settingsAppearanceCardWide" = "Large";
+"settingsAppearanceCrewGroupedByComputer" = "Animation de l’équipage groupée par ordinateur";
+"settingsAppearanceCrewGroupedByProject" = "Animation de l’équipage groupée par projet";
+"settingsAppearanceCrewGrouping" = "Grouper l’animation de l’équipage par projet";
+"settingsAppearanceCrewGroupingDescription" = "Dans l’animation de l’équipage, les équipiers de chaque projet gravitent ensemble, quel que soit l’ordinateur qui les exécute.";
 "settingsAppearanceCrewModelNames" = "Noms des modèles de l’équipage";
 "settingsAppearanceCrewModelNamesDescription" = "Afficher les noms des modèles tant que les équipiers n’occupent qu’une seule orbite.";
 "settingsAppearanceHeading" = "Apparence";

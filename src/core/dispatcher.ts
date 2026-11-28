@@ -43,6 +43,7 @@ import { accountHandlers } from "./dispatcher/accountHandlers";
 import { createActionTrail } from "./dispatcher/actionTrail";
 import { cardMediaHandlers } from "./dispatcher/cardMedia";
 import { type CoreHandlers, createCatalogDispatch } from "./dispatcher/catalogDispatch";
+import { crewGroupingHandlers } from "./dispatcher/crewGroupingHandlers";
 import { projectHandlers } from "./dispatcher/projectHandlers";
 import { moveRepositories } from "./dispatcher/repositoryMove";
 import { resetHandlers } from "./dispatcher/resetHandlers";
@@ -1032,6 +1033,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:settings:appearance:get": () => services.settings.getAppearance(),
 
     "inf:settings:appearance:set": (appearance) => services.preferences.setAppearance(appearance),
+    ...crewGroupingHandlers(services, (look) => outer("inf:settings:appearance:set", [look])),
 
     // What a panel reads of each named setting (`settings.current`): the
     // line's own current answer, cut to its panel value (src/shared/panelSettings.ts).

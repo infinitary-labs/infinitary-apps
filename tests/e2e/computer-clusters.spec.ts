@@ -15,6 +15,7 @@ import { launchApp } from "./launch";
 import { expectClearOf, intersects, type Rect, resizeWindow, within } from "./layout";
 import { promptInput } from "./prompt";
 import { expectRecordBody, hideRecord, recordCard } from "./rails";
+import { settingRow } from "./settings";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 function crewTargets(page: import("@playwright/test").Page) {
@@ -275,9 +276,9 @@ test("a wait and a review between computers draw their arrows across the stage",
  * Two projects' crew on two computers: this Mac and another, each running
  * one task of the website and one or two of the shop.
  */
-function twoProjectFixture(): string {
+function twoProjectFixture(peers?: DeviceGrant[]): string {
   let ids: (string | undefined)[] = [];
-  const dir = clusterFixture([0, 0], undefined, (_tasks, deviceIds) => {
+  const dir = clusterFixture([0, 0], peers, (_tasks, deviceIds) => {
     ids = deviceIds;
   });
   const db = openDatabase(dir);
@@ -341,6 +342,90 @@ test("a crewmate's open summary lights its project's crew on another computer", 
     await expect
       .poll(() => crewLight(page, "shop-studio"))
       .toBeGreaterThan(was("shop-studio") * 0.7);
+  } finally {
+    await app.close();
+  }
+});
+
+// INF-6955, the captain's approved plan: Settings → Appearance's Group crew
+// animation by project seats each project's crew together, whichever
+// computer runs them, and command search turns it too; a project group's
+// crewmate opens its record by keys, and a computer out of reach keeps its
+// own frozen group.
+test("grouping the crew animation by project seats each project's crew together across computers, and back", async () => {
+  const peers: DeviceGrant[] = [];
+  const app = await launchApp({ userDataDir: twoProjectFixture(peers), withMockProvider: true });
+  try {
+    const { page } = app;
+    const peer = peers[0];
+    if (!peer) throw new Error("The fixture paired no work computer");
+    const port = await app.app.evaluate(() => process.env.INFINITARY_CONNECTION_LOOPBACK_PORT);
+    const connection = await connectClient({ ...peer, at: `127.0.0.1:${port}` });
+    let connected = true;
+    try {
+      const studio = page.locator(`[data-computer-cluster="${peer.deviceId}"]`);
+      await expect(studio).toHaveAttribute("data-computer-reachable", "true");
+      const projectGroups = page.locator('[data-computer-cluster^="project:"]');
+      await expect(projectGroups).toHaveCount(0);
+
+      await runFromSearch(app.app, page, "crew-grouping.toggle");
+      await expect
+        .poll(async () => (await projectGroups.allTextContents()).sort())
+        .toEqual(["shop", "website"]);
+      await expect(studio).toHaveCount(0);
+      const middle = await page.evaluate(() => window.innerWidth / 2);
+      const side = async (selector: string) => {
+        const box = await page.locator(selector).boundingBox();
+        if (!box) throw new Error(`${selector} is not on the stage`);
+        return box.x + box.width / 2 < middle ? "left" : "right";
+      };
+      const website = await side('[data-computer-cluster^="project:"]:has-text("website")');
+      const shop = await side('[data-computer-cluster^="project:"]:has-text("shop")');
+      expect(website).not.toBe(shop);
+      for (const [id, group] of [
+        ["web-home", website],
+        ["web-studio", website],
+        ["shop-home", shop],
+        ["shop-studio", shop],
+      ] as const)
+        await expect
+          .poll(() => side(`[data-crew-model-anchor="${id}"]`), { message: id })
+          .toBe(group);
+
+      const grouped = page.locator('[data-crew-model-name="web-studio"]');
+      await expect(grouped).toHaveAttribute("data-crew-computer", /^project:/);
+      await focusOn(grouped);
+      await expect(crewSummary(page)).toHaveAttribute("data-crew-summary", "web-studio");
+      await pressKey(grouped, "Enter");
+      await expect(recordCard(page)).toHaveAttribute("data-task-record", "web-studio");
+      await hideRecord(page).click();
+      await expect(recordCard(page)).toHaveCount(0);
+
+      await connection.close();
+      connected = false;
+      await expect(studio).toHaveAttribute("data-computer-reachable", "false");
+      for (const id of ["web-studio", "shop-studio"])
+        await expect(page.locator(`[data-crew-model-name="${id}"]`)).toHaveAttribute(
+          "data-crew-computer",
+          peer.deviceId,
+        );
+      await expect
+        .poll(async () => (await projectGroups.allTextContents()).sort())
+        .toEqual(["shop", "website"]);
+
+      await page.getByRole("button", { name: "Settings", exact: true }).click();
+      await page.getByRole("tab", { name: "Appearance", exact: true }).click();
+      const toggle = settingRow(page, "crew-grouping").getByRole("switch");
+      await expect(toggle).toBeChecked();
+      await toggle.click();
+      await expect(toggle).not.toBeChecked();
+      await page.keyboard.press("Escape");
+      await expect(toggle).toHaveCount(0);
+      await expect(projectGroups).toHaveCount(0);
+      await expect(studio).toHaveAttribute("data-computer-reachable", "false");
+    } finally {
+      if (connected) await connection.close();
+    }
   } finally {
     await app.close();
   }

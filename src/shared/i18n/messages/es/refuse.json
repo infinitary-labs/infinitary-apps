@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "Una tarjeta tapa las computadoras",
+  "refuseACardCoversTheProjects": "Una tarjeta tapa los proyectos",
   "refuseARecordingIsRunning": "Hay una grabación en curso",
   "refuseBrowserTabCannotBeFound": "La pestaña Navegador muestra una imagen de una página, así que sus palabras no se pueden buscar",
   "refuseCloseTheOpenDialogFirst": "Primero cierra el cuadro de diálogo abierto",
@@ -36,7 +37,9 @@
   "refuseThereIsNoOtherTabToGo": "No hay otra pestaña a la que ir",
   "refuseThereIsOnlyOneProject": "Solo hay un proyecto",
   "refuseTheseAreTheFirstComputers": "Estas son las primeras computadoras",
+  "refuseTheseAreTheFirstProjects": "Estos son los primeros proyectos",
   "refuseTheseAreTheLastComputers": "Estas son las últimas computadoras",
+  "refuseTheseAreTheLastProjects": "Estos son los últimos proyectos",
   "refuseThisCardAsksNoQuestions": "Esta tarjeta no hace preguntas",
   "refuseThisCardCannotBeFound": "Las palabras se buscan en una tarjeta, una tarjeta anterior o el registro de una tarea",
   "refuseThisCardHasNoButtons": "Esta tarjeta no tiene botones",

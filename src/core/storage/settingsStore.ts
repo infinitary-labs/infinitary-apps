@@ -371,6 +371,7 @@ export class SettingsStore {
         : {}),
       ...(ambient.data?.on && this.get("ambient-paused") === true ? { ambientPaused: true } : {}),
       ...(this.get("ambient-away-plays") === true ? { ambientPlaysWhenAway: true } : {}),
+      ...(this.get("crew-grouping") === "project" ? { crewGrouping: "project" as const } : {}),
       ...(ambient.success
         ? { ambientMusic: ambient.data.on, ambientVolume: ambient.data.volume }
         : {}),
@@ -398,7 +399,8 @@ export class SettingsStore {
    * The ambient music's switch and volume go to their own row
    * (`ambient-music`), and a look without them keeps the saved ones; its
    * style goes to `ambient-style` the same way. Keep playing while away is
-   * `ambient-away-plays`, kept only while on. A look saved paused, by this
+   * `ambient-away-plays`, kept only while on, and grouping the crew by
+   * project is `crew-grouping`, kept only while chosen. A look saved paused, by this
    * build's read of the old `ambient-paused` row or by an older view, is
    * saved off and the row removed (`foldAmbientPause`). The person's own styles go to
    * `ambient-own-styles`; a look without them keeps the saved ones, and an
@@ -427,6 +429,7 @@ export class SettingsStore {
       ambientOwnStyles,
       colorTheme,
       ownColorThemes,
+      crewGrouping,
       ...look
     } = foldAmbientPause({
       ...was,
@@ -449,6 +452,8 @@ export class SettingsStore {
     this.remove("ambient-paused");
     if (ambientPlaysWhenAway) this.set("ambient-away-plays", true);
     else this.remove("ambient-away-plays");
+    if (crewGrouping === "project") this.set("crew-grouping", "project");
+    else this.remove("crew-grouping");
     if (colorTheme === undefined) this.remove("color-theme");
     else this.set("color-theme", { theme: colorTheme, base: look.theme });
     if (language === undefined) this.remove("language");

@@ -562,6 +562,8 @@
   "phoneSettingsCapabilityRead": "Reads cards, Activity and tasks. {update}",
   "phoneSettingsComputerSummary": "{computer} · {reach}",
   "phoneSettingsConversationStays": "Conversation stays on your computer.",
+  "phoneSettingsCrewGrouping": "Group crew animation by project",
+  "phoneSettingsCrewGroupingScope": "Each project's crew orbit together in the crew animation, whichever computer runs them. Set on {computer}, so its windows follow it too.",
   "phoneSettingsDevices": "Devices",
   "phoneSettingsFoldSplit": "Split at the fold",
   "phoneSettingsFoldSplitScope": "Open like a book, this phone shows Tasks and Activity on one side of the fold and Home on the other. Turn it off to lay out as an iPad does.",

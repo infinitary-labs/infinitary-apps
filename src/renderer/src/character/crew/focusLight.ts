@@ -15,7 +15,7 @@ import type { OrbitFrame } from "./orbit";
 export const OUT_OF_FOCUS_LIGHT = 0.25;
 
 export type FocusLightInput = {
-  /** The project in light; null lights every crewmate. */
+  /** The project in light, or a computer while a grouped summary is open; null lights every crewmate. */
   project: string | null;
   projectOf: (taskId: string) => string | undefined;
 };
@@ -27,9 +27,18 @@ export type FocusLightState = Map<string, number>;
  * The light while the summary of `rested` is open: its project on every
  * computer, in place of the window's own light. A crewmate (or program) whose
  * project the board does not name changes nothing, nor does no summary.
+ * While the crew are grouped by project, its project is already its group,
+ * so `computerOf` names what lights instead: its computer's crew across
+ * every group (the captain's answer on INF-6955). The lit key is then a
+ * computer, and each crewmate's key is its computer.
  */
-export function restedLight(input: FocusLightInput, rested: string | null): FocusLightInput {
+export function restedLight(
+  input: FocusLightInput,
+  rested: string | null,
+  computerOf?: (taskId: string) => string,
+): FocusLightInput {
   if (rested === null) return input;
+  if (computerOf) return { project: computerOf(rested), projectOf: computerOf };
   const project = input.projectOf(rested);
   return project === undefined || project === input.project ? input : { ...input, project };
 }

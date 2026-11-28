@@ -8,6 +8,14 @@ import type { SupernovaFrame } from "../supernova";
 import type { WarpFrame } from "../warp";
 import { type Program, programShare } from "./constellation";
 import {
+  type CrewGroupingInput,
+  type GroupPlan,
+  groupOf,
+  groupPlanOf,
+  HOME_GROUP,
+  PROJECT_GROUP,
+} from "./crewGroups";
+import {
   CrewOrbit,
   type CrewStatus,
   type CrewWait,
@@ -19,7 +27,7 @@ import {
 } from "./orbit";
 import { outerPlaneRadius } from "./orbitalPlanes";
 
-export const HOME_COMPUTER = "home";
+export const HOME_COMPUTER = HOME_GROUP;
 export const COMPUTERS_PER_PAGE = 6;
 
 /**
@@ -53,6 +61,10 @@ export const CLUSTER_LAYOUT = {
   minFit: 0.3,
 } as const;
 
+/**
+ * One group of crew on the stage: a computer's, or while grouping by project
+ * a project's (./crewGroups.ts), whose id starts `project:`.
+ */
 export type ComputerCluster = {
   id: string;
   name: string;
@@ -95,18 +107,36 @@ export class ComputerOrbits extends CrewOrbit {
   private homeName: string = HERE.This;
   private clusterCues: Cue[] = [];
   private owners = new Map<string, string>();
+  /** The crew the board has named a project for while grouping by project (`groupOf`). */
+  private named = new Set<string>();
   private tiers = new Map<string, Slot | undefined>();
   private reviewEdges = new Map<string, string>();
   private waits: readonly CrewedWait[] = [];
   /** The board's programs, and the computers each is drawn on. */
   private programList: readonly Program[] = [];
   private programAt = new Map<string, readonly string[]>();
+  /** Grouping by project, when Settings asks for it (./crewGroups.ts); null groups by computer. */
+  private grouping: CrewGroupingInput | null = null;
+  private plan: GroupPlan | null = null;
+  private rosterKey = "";
   constructor(now: number, random: () => number = Math.random) {
     super(now, undefined, random, "adaptive");
     this.clock = now;
   }
   get multiple(): boolean {
     return this.computers().length > 1 && this.present().every((id) => this.placement.has(id));
+  }
+  /** Whether the crew sit by project now: chosen, and the board names its projects. */
+  get byProject(): boolean {
+    return this.plan !== null;
+  }
+  /**
+   * Group the crew by project, or by computer with null. Each crewmate whose
+   * group changes moves at once, as a late placement does (`relocate`).
+   */
+  setGrouping(grouping: CrewGroupingInput | null): void {
+    this.grouping = grouping;
+    this.regroup();
   }
   get page(): number {
     return this.pageIndex;
@@ -123,22 +153,21 @@ export class ComputerOrbits extends CrewOrbit {
   configure(devices: readonly DeviceView[], homeName: string = HERE.This): void {
     this.homeName = homeName;
     this.devices = devices;
-    for (const id of this.present()) this.relocate(id);
-    this.pageIndex = Math.min(this.pageIndex, this.pages - 1);
-    this.bump();
+    this.regroup();
   }
   setPlacement(id: string, deviceId: string | null): void {
     if (this.placement.get(id) === deviceId) return;
-    const before = this.computerOf(id);
+    const before = this.groupOf(id);
     this.placement.set(id, deviceId);
-    const after = this.computerOf(id);
-    if (before !== after && this.has(id)) this.relocate(id);
+    this.plan = this.planFor(this.present());
+    for (const each of this.present()) this.relocate(each);
+    const after = this.groupOf(id);
     this.routeDependencies();
     if (before !== after) this.routePrograms(this.clock);
     this.bump();
   }
   isHome(id: string): boolean {
-    return this.computerOf(id) === HOME_COMPUTER;
+    return this.groupOf(id) === HOME_COMPUTER;
   }
   override present(): string[] {
     return [
@@ -152,7 +181,7 @@ export class ComputerOrbits extends CrewOrbit {
   override statusOf(id: string): CrewStatus | undefined {
     return this.isHome(id)
       ? super.statusOf(id)
-      : this.locals.get(this.computerOf(id))?.model.statusOf(id);
+      : this.locals.get(this.groupOf(id))?.model.statusOf(id);
   }
   /**
    * A crewmate's placement arrived after its spawn, or changed: it leaves
@@ -160,7 +189,7 @@ export class ComputerOrbits extends CrewOrbit {
    * takes its place on the right one, still as a spark if it was one.
    */
   private relocate(id: string): void {
-    const after = this.computerOf(id);
+    const after = this.groupOf(id);
     const before = this.owners.get(id);
     if (before === after) return;
     const source = before === HOME_COMPUTER ? this : this.locals.get(before ?? "")?.model;
@@ -192,7 +221,91 @@ export class ComputerOrbits extends CrewOrbit {
     if (!placed || this.devices.some((d) => d.id === placed && d.onThisMac)) return HOME_COMPUTER;
     return placed;
   }
+  /**
+   * The group a crewmate sits in: its computer's, or while grouping by
+   * project its project's, unless its computer is away (./crewGroups.ts).
+   * Every seat, route and name reads this; reach reads `computerOf`.
+   */
+  groupOf(id: string): string {
+    if (!this.plan || !this.grouping) return this.computerOf(id);
+    const crew = this.groupCrew(id);
+    // A closing task's board row goes before its fall home starts, so a
+    // crewmate the board named once and stops naming keeps the group it sits
+    // in, the first mate's ring included, and falls home from there instead of
+    // jumping to its computer's group. One never named yet takes its
+    // computer's group until its row arrives.
+    const owner = this.owners.get(id);
+    if (this.grouping.projectOf(id) !== undefined) this.named.add(id);
+    else if (!crew.away && owner !== undefined && this.named.has(id)) return owner;
+    return groupOf(this.plan, this.grouping, crew);
+  }
+  /** Whether a computer is away: out of reach, updating, connecting or removed. */
+  private away(computer: string): boolean {
+    if (computer === HOME_COMPUTER) return false;
+    return this.devices.find((d) => d.id === computer)?.inReach !== true;
+  }
+  private groupCrew(id: string): { id: string; computer: string; away: boolean } {
+    const computer = this.computerOf(id);
+    return { id, computer, away: this.away(computer) };
+  }
+  private planFor(ids: readonly string[]): GroupPlan | null {
+    return groupPlanOf(
+      this.grouping,
+      ids.map((id) => this.groupCrew(id)),
+    );
+  }
+  /**
+   * Settles the plan for the roster as it stands and moves each crewmate
+   * whose group changed: a new project's crew, the middle project's change,
+   * a computer leaving or regaining reach.
+   */
+  private regroup(): void {
+    const ids = this.present();
+    this.rosterKey = ids.join();
+    this.plan = this.planFor(ids);
+    for (const id of ids) this.relocate(id);
+    this.routeDependencies();
+    this.routePrograms(this.clock);
+    this.pageIndex = Math.min(this.pageIndex, this.pages - 1);
+    this.bump();
+  }
+  /** The groups on the stage, the first mate's first: by computer, or by project (`groupOf`). */
   private computers(): Array<Pick<ComputerCluster, "id" | "name" | "reachable" | "away">> {
+    if (this.plan) {
+      // A computer keeps its group while it holds crew: away ones, and ones
+      // whose project the board does not name yet.
+      const held = this.machines().filter((computer) =>
+        this.present().some((id) => this.groupOf(id) === computer.id),
+      );
+      // A project group whose last crewmate is leaving stays listed, so its
+      // orbit keeps stepping until the fall home's cue reaches the first mate.
+      const listed = new Set(this.plan.groups.map((group) => group.id));
+      for (const [id, group] of this.owners)
+        if (group.startsWith(PROJECT_GROUP) && this.locals.get(group)?.model.has(id))
+          listed.add(group);
+      const groups = (this.grouping?.projects ?? [])
+        .filter((project) => listed.has(PROJECT_GROUP + project.id))
+        .map((project) => ({ id: PROJECT_GROUP + project.id, name: project.name }));
+      // The first mate's ring holds crew from every computer now, so it takes
+      // the name of the middle project sitting there, or none (the captain's
+      // answer on the review of INF-6955's build).
+      const projectOf = this.grouping?.projectOf;
+      const seated = this.present().some(
+        (id) => this.groupOf(id) === HOME_COMPUTER && projectOf?.(id) === this.plan?.middle,
+      );
+      const middle = seated
+        ? this.grouping?.projects.find((project) => project.id === this.plan?.middle)
+        : undefined;
+      return [
+        { id: HOME_COMPUTER, name: middle?.name ?? "", reachable: true },
+        ...groups.map((group) => ({ ...group, reachable: true })),
+        ...held,
+      ];
+    }
+    return [{ id: HOME_COMPUTER, name: this.homeName, reachable: true }, ...this.machines()];
+  }
+  /** The other computers, in pairing order, and any removed one whose crew are still here. */
+  private machines(): Array<Pick<ComputerCluster, "id" | "name" | "reachable" | "away">> {
     const list = this.devices
       .filter((d) => deviceRunsWork(d.kind) && !d.onThisMac)
       .slice()
@@ -213,9 +326,9 @@ export class ComputerOrbits extends CrewOrbit {
       if (computer !== HOME_COMPUTER && !list.some((d) => d.id === computer))
         list.push({ id: computer, name: m.crewUnavailableComputer(), reachable: false });
     }
-    return [{ id: HOME_COMPUTER, name: this.homeName, reachable: true }, ...list];
+    return list;
   }
-  /** The other computers on this page, in pairing order. */
+  /** The other groups on this page, in order. */
   private pagePeers(): Array<Pick<ComputerCluster, "id" | "name" | "reachable" | "away">> {
     return this.computers().slice(1 + this.pageIndex * 5, 1 + (this.pageIndex + 1) * 5);
   }
@@ -229,7 +342,7 @@ export class ComputerOrbits extends CrewOrbit {
   private targets(): Map<string, { x: number; y: number; radius: number }> {
     const crewed = new Map<string, number>();
     for (const id of this.present()) {
-      const computer = this.computerOf(id);
+      const computer = this.groupOf(id);
       crewed.set(computer, (crewed.get(computer) ?? 0) + 1);
     }
     const homeEdge = outerPlaneRadius(crewed.get(HOME_COMPUTER) ?? 0) + CLUSTER_LAYOUT.glyphPx;
@@ -315,11 +428,11 @@ export class ComputerOrbits extends CrewOrbit {
     }
     return out;
   }
-  /** The clusters that show their name: only those with crew on this page,
-   * and none while home's are the only crew. */
+  /** The clusters that show their name: only those with crew on this page
+   * and a name, and none while home's are the only crew. */
   labeled(): ComputerCluster[] {
-    const crewed = new Set(this.present().map((id) => this.computerOf(id)));
-    const named = this.clusters().filter((cluster) => crewed.has(cluster.id));
+    const crewed = new Set(this.present().map((id) => this.groupOf(id)));
+    const named = this.clusters().filter((cluster) => crewed.has(cluster.id) && cluster.name);
     return named.some((cluster) => cluster.id !== HOME_COMPUTER) ? named : [];
   }
   /**
@@ -404,7 +517,7 @@ export class ComputerOrbits extends CrewOrbit {
   private acrossLinks(crew: OrbitFrame["crew"]): DependencyLink[] {
     const shown = new Set(crew.filter((c) => c.phase === "orbiting").map((c) => c.id));
     const across = (from: string, to: string) =>
-      shown.has(from) && shown.has(to) && this.computerOf(from) !== this.computerOf(to);
+      shown.has(from) && shown.has(to) && this.groupOf(from) !== this.groupOf(to);
     const links: DependencyLink[] = [];
     for (const [reviewer, builder] of this.reviewEdges)
       if (across(reviewer, builder))
@@ -433,12 +546,12 @@ export class ComputerOrbits extends CrewOrbit {
     const placed = new Map<string, readonly string[]>();
     for (const program of this.programList) {
       const running = program.parts.filter((part) => part.state === "live");
-      const live = [...new Set(running.map((part) => this.computerOf(part.id)))];
+      const live = [...new Set(running.map((part) => this.groupOf(part.id)))];
       const at = live.length > 0 ? live : (this.programAt.get(program.id) ?? [HOME_COMPUTER]);
       placed.set(program.id, at);
       for (const computer of at) {
         const parts = program.parts.filter(
-          (part) => part.state !== "live" || this.computerOf(part.id) === computer,
+          (part) => part.state !== "live" || this.groupOf(part.id) === computer,
         );
         const list = byComputer.get(computer) ?? [];
         // Each copy's gem counts the whole program's parts.
@@ -455,7 +568,7 @@ export class ComputerOrbits extends CrewOrbit {
   private routeDependencies(): void {
     const byComputer = new Map<string, CenterCue[]>();
     for (const cue of this.pendingDependencies) {
-      const computer = this.computerOf(cue.waiterId);
+      const computer = this.groupOf(cue.waiterId);
       const list = byComputer.get(computer) ?? [];
       list.push(cue);
       byComputer.set(computer, list);
@@ -473,7 +586,7 @@ export class ComputerOrbits extends CrewOrbit {
   ): void {
     // One leaving counts as new: it arrives anew (CrewOrbit.spawn).
     const existed = this.present().includes(id);
-    const computer = this.computerOf(id);
+    const computer = this.groupOf(id);
     this.owners.set(id, computer);
     if (!existed) this.tiers.set(id, tier);
     if (computer === HOME_COMPUTER) {
@@ -489,7 +602,7 @@ export class ComputerOrbits extends CrewOrbit {
   }
   override setStatus(id: string, status: CrewStatus): void {
     if (this.isHome(id)) super.setStatus(id, status);
-    else this.local(this.computerOf(id)).model.setStatus(id, status);
+    else this.local(this.groupOf(id)).model.setStatus(id, status);
   }
   private captainIds: string[] = [];
   /** Every orbit hears the whole set; each paints only the crew it holds. */
@@ -507,12 +620,12 @@ export class ComputerOrbits extends CrewOrbit {
   }
   override setWait(id: string, wait: CrewWait): void {
     if (this.isHome(id)) super.setWait(id, wait);
-    else this.local(this.computerOf(id)).model.setWait(id, wait);
+    else this.local(this.groupOf(id)).model.setWait(id, wait);
   }
   override setTier(id: string, tier: Slot | undefined): void {
     this.tiers.set(id, tier);
     if (this.isHome(id)) super.setTier(id, tier);
-    else this.local(this.computerOf(id)).model.setTier(id, tier);
+    else this.local(this.groupOf(id)).model.setTier(id, tier);
   }
   override setReview(reviewer: string, builder: string | null): void {
     super.setReview(reviewer, builder);
@@ -525,7 +638,7 @@ export class ComputerOrbits extends CrewOrbit {
       super.signal(id, direction, now);
       return;
     }
-    const computer = this.computerOf(id);
+    const computer = this.groupOf(id);
     this.local(computer).model.signal(id, direction, this.localTime(computer));
   }
   override nudge(id: string, now: number): void {
@@ -533,7 +646,7 @@ export class ComputerOrbits extends CrewOrbit {
       super.nudge(id, now);
       return;
     }
-    const computer = this.computerOf(id);
+    const computer = this.groupOf(id);
     this.local(computer).model.nudge(id, this.localTime(computer));
   }
   override flicker(id: string, strength: number, now: number): void {
@@ -541,7 +654,7 @@ export class ComputerOrbits extends CrewOrbit {
       super.flicker(id, strength, now);
       return;
     }
-    const computer = this.computerOf(id);
+    const computer = this.groupOf(id);
     this.local(computer).model.flicker(id, strength, this.localTime(computer));
   }
   override leave(id: string, mode: LeaveMode, now: number): void {
@@ -549,7 +662,7 @@ export class ComputerOrbits extends CrewOrbit {
       super.leave(id, mode, now);
       return;
     }
-    const computer = this.computerOf(id);
+    const computer = this.groupOf(id);
     const local = this.local(computer);
     delete local.frozen;
     delete local.lastFrame;
@@ -561,7 +674,6 @@ export class ComputerOrbits extends CrewOrbit {
   }
   override takeCues(): Cue[] {
     const legacy = super.takeCues();
-    if (!this.multiple) return legacy;
     const cues = [...legacy, ...this.clusterCues];
     this.clusterCues = [];
     return cues;
@@ -575,6 +687,9 @@ export class ComputerOrbits extends CrewOrbit {
   ): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.clock) / 1000, 0.05);
     this.clock = now;
+    // A crewmate arriving or gone can change the middle project, and with it others' groups.
+    if (this.grouping?.grouping === "project" && this.present().join() !== this.rosterKey)
+      this.regroup();
     const legacy = super.update(now, settled, rush, warp, supernova);
     this.settleSeats(dt, settled);
     const clusters = this.clusters();
@@ -582,6 +697,10 @@ export class ComputerOrbits extends CrewOrbit {
     const frames: OrbitFrame[] = [
       { ...legacy, crew: legacy.crew.map((c) => ({ ...c, computerId: HOME_COMPUTER })) },
     ];
+    // Read before the orbits step: a project group's last fall home landing
+    // in this step takes the group off the stage, and its cue must still go.
+    const cueing = this.multiple;
+    const peers = new Set(this.pagePeers().map((peer) => peer.id));
     for (const computer of this.computers()) {
       if (computer.id === HOME_COMPUTER) continue;
       const local = this.local(computer.id);
@@ -624,11 +743,10 @@ export class ComputerOrbits extends CrewOrbit {
         };
       }
       const visible = clusters.some((c) => c.id === computer.id);
-      const onPage = this.pagePeers().some((peer) => peer.id === computer.id);
       // A cue reaches the Firstmate from any computer on the page, including
       // the last crewmate's fall home, which leaves its computer unseated.
       const cues = local.model.takeCues();
-      if (this.multiple && onPage && computer.reachable) this.clusterCues.push(...cues);
+      if (cueing && peers.has(computer.id) && computer.reachable) this.clusterCues.push(...cues);
       if (!this.multiple || !visible) continue;
       // Unknown activity is never guessed from old heat. Keep last-known
       // position and spin; no packets or review motion on an unreachable Mac.
@@ -664,7 +782,7 @@ export class ComputerOrbits extends CrewOrbit {
       frames.push(frame);
     }
     if (!this.multiple) {
-      this.clusterCues = [];
+      if (!cueing) this.clusterCues = [];
       return legacy;
     }
     return {

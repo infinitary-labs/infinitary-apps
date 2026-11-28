@@ -1,5 +1,5 @@
 ---
-source: 0a2abffa6cee2faa
+source: b54d92169707b7c1
 title: Configuración
 description: Lo que contiene cada sección de Configuración, con General y Apariencia explicadas aquí y un enlace para el resto.
 ---
@@ -65,6 +65,9 @@ En la computadora donde vive tu primer oficial, están en **Sitios con sesión i
   Aun así puedes cambiar el tamaño de cada tarjeta.
 - **Mantener las tarjetas maximizadas** mantiene maximizada cada tarjeta después de que maximizas una, hasta que restauras una.
 - **Nombres de los modelos de la tripulación** muestra los nombres de los modelos mientras tus tripulantes usan una sola órbita.
+- **Agrupar la animación de la tripulación por proyecto** junta a los tripulantes de cada proyecto en la animación de la tripulación, sea cual sea la computadora que los ejecuta.
+  Viene desactivado y aparece mientras tengas dos proyectos o más.
+  También puedes cambiarlo desde la búsqueda de comandos o pedírselo a tu primer oficial.
 - **Velo de la ventana**, en una Mac, define cuánto del color del tema cubre el fondo difuminado.
   0 % es el valor predeterminado.
 - **Tema** es **Oscuro**, **Claro** o uno de trece temas con el nombre que les dio su autor, como **Dracula**, **Catppuccin Mocha** o **Rosé Pine Dawn**.

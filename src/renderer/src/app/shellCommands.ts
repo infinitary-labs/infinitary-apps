@@ -456,6 +456,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, (via: CommandVia) => void>
     s.setAmbientMusic(!s.ambientMusic);
   },
   "ambient.style": () => openStyleList(),
+  "crew-grouping.toggle": () => {
+    const s = useShellStore.getState();
+    s.setCrewGrouping(s.crewGrouping === "project" ? "computer" : "project");
+  },
   // The other unit, saved by the core, seen in Usage.
   "usage.unit": () => {
     const s = useShellStore.getState();
@@ -587,7 +591,11 @@ function windowFacts(): WindowFacts {
     updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     checksUpdates: checksUpdates(useUpdateState.getState().status),
     savingForUpdate: savingForUpdate(useUpdateState.getState().status),
-    computers: { page: crewOrbit().page, pages: crewOrbit().pages },
+    computers: {
+      page: crewOrbit().page,
+      pages: crewOrbit().pages,
+      byProject: crewOrbit().byProject,
+    },
     projectFocus: { shown: projectFocus.state().shown, focus: projectFocus.state().focus },
     panelCommand: (id, recording) => panelCommandRefusal(pluginHost, id, recording),
   };

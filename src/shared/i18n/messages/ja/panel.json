@@ -16,6 +16,7 @@
   "panelChangeCardSize": "カードのサイズ",
   "panelChangeCopyStop": "別のコンピュータでのコピー保持をやめる",
   "panelChangeCostLimit": "タスクが追加の支出前に確認するタイミング",
+  "panelChangeCrewGrouping": "クルーのアニメーションをプロジェクトごとにまとめる",
   "panelChangeCrewModelNames": "クルーのモデル名を表示",
   "panelChangeCrewReasoning": "クルーの思考の深さ",
   "panelChangeCrewSlots": "クルーのモデル",

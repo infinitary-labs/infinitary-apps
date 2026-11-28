@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "Befehle suchen";
 "commandComputersNext" = "Nächste Arbeitscomputer";
 "commandComputersPrevious" = "Vorherige Arbeitscomputer";
+"commandCrewGroupingToggle" = "Crew-Animation nach Projekt oder nach Computer gruppieren";
+"commandCrewGroupingToggleWords" = "Crew, Animation, Umlaufbahn, Projekt, Computer, Gruppe";
 "commandDevicesTryAgain" = "Erneut versuchen, deine Computer zu erreichen";
 "commandDevicesTryAgainWords" = "Geräte, SSH, erneut verbinden, verbinden, Computer";
 "commandFeedbackStart" = "Feedback senden";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "Erster Offizier – %1$@";
 "crewModelNames" = "Modellnamen der Crew";
 "crewNextComputers" = "Nächste Computer";
+"crewNextProjects" = "Nächste Projekte";
 "crewOrbitLabel" = "Crew – %2$@ arbeiten, %1$@ frei";
 "crewOutOfReach" = "Außer Reichweite";
 "crewPartsCount" = "%1$@ abgeschlossen, %2$@ laufen, %3$@ warten";
 "crewPreviousComputers" = "Vorherige Computer";
+"crewPreviousProjects" = "Vorherige Projekte";
 "crewProgramsAndParts" = "Programme und ihre Teile";
+"crewProjectGroups" = "Projektgruppen";
 "crewStateIdle" = "Frei";
 "crewStateWorking" = "Arbeitet";
 "crewSummaryAnotherTask" = "eine andere Aufgabe";
@@ -1762,6 +1767,7 @@
 "panelChangeCardSize" = "Kartengröße";
 "panelChangeCopyStop" = "Kopie auf einem anderen Computer nicht mehr führen";
 "panelChangeCostLimit" = "Wann eine Aufgabe fragt, bevor sie mehr ausgibt";
+"panelChangeCrewGrouping" = "Crew-Animation nach Projekt gruppieren";
 "panelChangeCrewModelNames" = "Modellnamen der Crew anzeigen";
 "panelChangeCrewReasoning" = "Wie gründlich die Crew nachdenkt";
 "panelChangeCrewSlots" = "Modelle der Crew";
@@ -2333,6 +2339,8 @@
 "phoneSettingsCapabilityRead" = "Liest Karten, Aktivität und Aufgaben. %1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "Die Unterhaltung bleibt auf deinem Computer.";
+"phoneSettingsCrewGrouping" = "Crew-Animation nach Projekt gruppieren";
+"phoneSettingsCrewGroupingScope" = "In der Crew-Animation kreist die Crew jedes Projekts gemeinsam, egal auf welchem Computer sie läuft. Auf %1$@ eingestellt, daher folgen auch seine Fenster.";
 "phoneSettingsDevices" = "Geräte";
 "phoneSettingsFoldSplit" = "An der Falz teilen";
 "phoneSettingsFoldSplitScope" = "Wie ein Buch aufgeklappt zeigt dieses Telefon Aufgaben und Aktivität auf der einen Seite der Falz und die Übersicht auf der anderen. Schalte es aus, damit es sich wie ein iPad anordnet.";
@@ -2622,6 +2630,7 @@
 "recordValidationScenario" = "Szenario";
 "recordValidationSupplementary" = "%1$@ (ergänzend)";
 "refuseACardCoversTheComputers" = "Eine Karte verdeckt die Computer";
+"refuseACardCoversTheProjects" = "Eine Karte verdeckt die Projekte";
 "refuseARecordingIsRunning" = "Eine Aufnahme läuft";
 "refuseBrowserTabCannotBeFound" = "Der Tab „Browser“ zeigt ein Bild einer Seite, darum lassen sich seine Wörter nicht finden";
 "refuseCloseTheOpenDialogFirst" = "Schließ zuerst den offenen Dialog";
@@ -2658,7 +2667,9 @@
 "refuseThereIsNoOtherTabToGo" = "Es gibt keinen anderen Tab";
 "refuseThereIsOnlyOneProject" = "Es gibt nur ein Projekt";
 "refuseTheseAreTheFirstComputers" = "Das sind die ersten Computer";
+"refuseTheseAreTheFirstProjects" = "Das sind die ersten Projekte";
 "refuseTheseAreTheLastComputers" = "Das sind die letzten Computer";
+"refuseTheseAreTheLastProjects" = "Das sind die letzten Projekte";
 "refuseThisCardAsksNoQuestions" = "Diese Karte stellt keine Fragen";
 "refuseThisCardCannotBeFound" = "Wörter werden in einer Karte, einer früheren Karte oder der Akte einer Aufgabe gefunden";
 "refuseThisCardHasNoButtons" = "Diese Karte hat keine Tasten";
@@ -2848,6 +2859,10 @@
 "settingsAppearanceCardSizeDescription" = "Wähle, wie Karten sich öffnen. Du kannst die Größe jeder Karte trotzdem ändern.";
 "settingsAppearanceCardUsual" = "Normal";
 "settingsAppearanceCardWide" = "Breit";
+"settingsAppearanceCrewGroupedByComputer" = "Crew-Animation nach Computer gruppiert";
+"settingsAppearanceCrewGroupedByProject" = "Crew-Animation nach Projekt gruppiert";
+"settingsAppearanceCrewGrouping" = "Crew-Animation nach Projekt gruppieren";
+"settingsAppearanceCrewGroupingDescription" = "In der Crew-Animation kreist die Crew jedes Projekts gemeinsam, egal auf welchem Computer sie läuft.";
 "settingsAppearanceCrewModelNames" = "Modellnamen der Crew";
 "settingsAppearanceCrewModelNamesDescription" = "Modellnamen zeigen, solange die Crewmitglieder nur eine Umlaufbahn belegen.";
 "settingsAppearanceHeading" = "Erscheinungsbild";

@@ -730,6 +730,8 @@
 "commandCommandsSearch" = "搜索命令";
 "commandComputersNext" = "下一组工作电脑";
 "commandComputersPrevious" = "上一组工作电脑";
+"commandCrewGroupingToggle" = "按项目或按电脑分组船员动画";
+"commandCrewGroupingToggleWords" = "船员, 动画, 轨道, 项目, 电脑, 分组";
 "commandDevicesTryAgain" = "再次尝试连接你的电脑";
 "commandDevicesTryAgainWords" = "设备, 重新连接, 连接, 电脑";
 "commandFeedbackStart" = "发送反馈";
@@ -867,11 +869,14 @@
 "crewFirstmateLabel" = "大副 - %1$@";
 "crewModelNames" = "船员的模型名称";
 "crewNextComputers" = "下一组电脑";
+"crewNextProjects" = "下一组项目";
 "crewOrbitLabel" = "船员 - %2$@ 个工作中，%1$@ 个空闲";
 "crewOutOfReach" = "无法联系";
 "crewPartsCount" = "%1$@ 个已完成，%2$@ 个运行中，%3$@ 个等待中";
 "crewPreviousComputers" = "上一组电脑";
+"crewPreviousProjects" = "上一组项目";
 "crewProgramsAndParts" = "程序及其组成部分";
+"crewProjectGroups" = "项目分组";
 "crewStateIdle" = "空闲";
 "crewStateWorking" = "工作中";
 "crewSummaryAnotherTask" = "另一个任务";
@@ -1762,6 +1767,7 @@
 "panelChangeCardSize" = "卡片大小";
 "panelChangeCopyStop" = "停止在另一台电脑上保留副本";
 "panelChangeCostLimit" = "任务何时在多花之前询问";
+"panelChangeCrewGrouping" = "按项目分组船员动画";
 "panelChangeCrewModelNames" = "显示船员的模型名称";
 "panelChangeCrewReasoning" = "船员的思考深度";
 "panelChangeCrewSlots" = "船员的模型";
@@ -2333,6 +2339,8 @@
 "phoneSettingsCapabilityRead" = "读取卡片、动态和任务。%1$@";
 "phoneSettingsComputerSummary" = "%1$@ · %2$@";
 "phoneSettingsConversationStays" = "对话保留在你的电脑上。";
+"phoneSettingsCrewGrouping" = "按项目分组船员动画";
+"phoneSettingsCrewGroupingScope" = "在船员动画中，每个项目的船员一起环绕，无论它们在哪台电脑上运行。此设置保存在 %1$@ 上，因此它的窗口也会跟随。";
 "phoneSettingsDevices" = "设备";
 "phoneSettingsFoldSplit" = "在折痕处分开";
 "phoneSettingsFoldSplitScope" = "像书一样展开时，这部手机在折痕一侧显示任务和动态，另一侧显示主页。关闭后按 iPad 的方式排布。";
@@ -2622,6 +2630,7 @@
 "recordValidationScenario" = "场景";
 "recordValidationSupplementary" = "%1$@（补充）";
 "refuseACardCoversTheComputers" = "有卡片挡住了电脑列表";
+"refuseACardCoversTheProjects" = "有卡片挡住了项目列表";
 "refuseARecordingIsRunning" = "正在录音";
 "refuseBrowserTabCannotBeFound" = "浏览器标签页显示的是网页的图片，因此无法查找其中的文字";
 "refuseCloseTheOpenDialogFirst" = "请先关闭打开的对话框";
@@ -2658,7 +2667,9 @@
 "refuseThereIsNoOtherTabToGo" = "没有其他标签页可前往";
 "refuseThereIsOnlyOneProject" = "只有一个项目";
 "refuseTheseAreTheFirstComputers" = "这已是第一组电脑";
+"refuseTheseAreTheFirstProjects" = "这已是第一组项目";
 "refuseTheseAreTheLastComputers" = "这已是最后一组电脑";
+"refuseTheseAreTheLastProjects" = "这已是最后一组项目";
 "refuseThisCardAsksNoQuestions" = "这张卡片没有提问";
 "refuseThisCardCannotBeFound" = "只能在卡片、过去的卡片或任务记录中查找文字";
 "refuseThisCardHasNoButtons" = "这张卡片没有按钮";
@@ -2848,6 +2859,10 @@
 "settingsAppearanceCardSizeDescription" = "选择卡片打开时的大小。你仍可以单独调整每张卡片的大小。";
 "settingsAppearanceCardUsual" = "常规";
 "settingsAppearanceCardWide" = "宽";
+"settingsAppearanceCrewGroupedByComputer" = "船员动画已按电脑分组";
+"settingsAppearanceCrewGroupedByProject" = "船员动画已按项目分组";
+"settingsAppearanceCrewGrouping" = "按项目分组船员动画";
+"settingsAppearanceCrewGroupingDescription" = "在船员动画中，每个项目的船员一起环绕，无论它们在哪台电脑上运行。";
 "settingsAppearanceCrewModelNames" = "船员模型名称";
 "settingsAppearanceCrewModelNamesDescription" = "船员只使用一个轨道时显示模型名称。";
 "settingsAppearanceHeading" = "外观";

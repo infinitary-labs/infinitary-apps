@@ -4,6 +4,7 @@ import { dictationSettingsSchema } from "../dictation";
 import { panelSettingNamesSchema } from "../panelSettingNames";
 import {
   appearanceSchema,
+  crewGroupingSchema,
   layoutMoveSchema,
   layoutSchema,
   personalPanelsSchema,
@@ -115,6 +116,22 @@ export const settingsChannels = {
     reach: "home",
     request: z.tuple([appearanceSchema]),
     response: appearanceSchema,
+  },
+  // The look's crew grouping alone (`crew-grouping`), which the phone's
+  // Appearance reads and sets: the home's look is not the phone's own.
+  "inf:settings:crew-grouping:get": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: z.strictObject({ grouping: crewGroupingSchema }),
+  },
+  "inf:settings:crew-grouping:set": {
+    effect: "change",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([z.strictObject({ grouping: crewGroupingSchema })]),
+    response: z.strictObject({ grouping: crewGroupingSchema }),
   },
   // The settings a panel reads (`settings.current`, primitives/live-reads.md):
   // each named line's panel value, by name, and never a line without one.

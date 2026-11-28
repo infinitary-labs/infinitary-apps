@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "Eine Karte verdeckt die Computer",
+  "refuseACardCoversTheProjects": "Eine Karte verdeckt die Projekte",
   "refuseARecordingIsRunning": "Eine Aufnahme läuft",
   "refuseBrowserTabCannotBeFound": "Der Tab „Browser“ zeigt ein Bild einer Seite, darum lassen sich seine Wörter nicht finden",
   "refuseCloseTheOpenDialogFirst": "Schließ zuerst den offenen Dialog",
@@ -36,7 +37,9 @@
   "refuseThereIsNoOtherTabToGo": "Es gibt keinen anderen Tab",
   "refuseThereIsOnlyOneProject": "Es gibt nur ein Projekt",
   "refuseTheseAreTheFirstComputers": "Das sind die ersten Computer",
+  "refuseTheseAreTheFirstProjects": "Das sind die ersten Projekte",
   "refuseTheseAreTheLastComputers": "Das sind die letzten Computer",
+  "refuseTheseAreTheLastProjects": "Das sind die letzten Projekte",
   "refuseThisCardAsksNoQuestions": "Diese Karte stellt keine Fragen",
   "refuseThisCardCannotBeFound": "Wörter werden in einer Karte, einer früheren Karte oder der Akte einer Aufgabe gefunden",
   "refuseThisCardHasNoButtons": "Diese Karte hat keine Tasten",

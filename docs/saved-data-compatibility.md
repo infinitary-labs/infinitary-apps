@@ -348,6 +348,11 @@ An older build reads a `version: 2` map as keys it could not read, as with the n
 Since the tmux preset the `version: 2` map may name `tmux` as its preset and carry an optional `prefix` chord, tmux's prefix once a person changed it; the version stays at 2, and a map without them reads as before.
 A build with presets but without tmux reads a map that holds either the same way as above: as keys it could not read, unchanged until a change there saves over it.
 
+## Grouping the crew animation by project
+
+Grouping the crew animation by project (`docs/crew-orbits.md`, "Grouping by project") is the `crew-grouping` settings row, written only while it is on, so a profile with nothing chosen needs no migration and an older build ignores the row and groups by computer.
+The appearance it hands a view carries `crewGrouping` only for a view whose hello lists the `crew-grouping` change (`unreadLook`), since an older view's strict look refuses a field it does not know.
+
 ## Self-reported merge-card risk
 
 Risk assessments keep only the crewmate's seven declared levels and reasons.

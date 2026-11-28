@@ -1,14 +1,16 @@
 import { z } from "zod";
 import type { ActionLine } from "./actions";
+import * as m from "./i18n/messages.generated";
 import { choosableLanguages } from "./i18n/start";
 import type { KeyReminders } from "./keyReminders";
 import {
   type Appearance,
+  crewGroupingSchema,
   defaultCardSizeSchema,
   uiSizeSchema,
   washStrengthSchema,
 } from "./preferences";
-import { crewModelNamesValue, sizeValue, washValue } from "./settingValues";
+import { crewGroupingValue, crewModelNamesValue, sizeValue, washValue } from "./settingValues";
 import { DEFAULT_USAGE_UNIT, usageUnitSchema } from "./usage";
 
 /**
@@ -57,6 +59,24 @@ export const appearanceLines = {
     toRequest: (v, current) => [{ ...(current as Appearance), showCrewModelNames: v.visible }],
     readValue: crewModelNamesValue,
     done: (v) => `crew model names ${v.visible ? "shown" : "hidden"}`,
+  },
+  "crew-grouping": {
+    fields: ["crewGrouping"],
+    area: "appearance",
+    tier: "asked",
+    change: "inf:settings:appearance:set",
+    current: "inf:settings:appearance:get",
+    // The phone's switch saves through this action's own write.
+    channels: ["inf:settings:crew-grouping:set"],
+    value: z.strictObject({ grouping: crewGroupingSchema }),
+    // i18n-exempt: served to the first mate, a model, never shown
+    line: "How the crew animation groups the crew, when asked: computer (the default) seats each computer's crew together; project seats each project's crew together, whichever computer runs them. It changes only where crew sit in the animation, never tasks, focus or where work runs.",
+    toRequest: (v, current) => [{ ...(current as Appearance), crewGrouping: v.grouping }],
+    readValue: crewGroupingValue,
+    done: (v) =>
+      v.grouping === "project"
+        ? m.settingsAppearanceCrewGroupedByProject()
+        : m.settingsAppearanceCrewGroupedByComputer(),
   },
   "ambient-away": {
     fields: ["ambientPlaysWhenAway"],

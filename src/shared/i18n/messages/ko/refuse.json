@@ -1,5 +1,6 @@
 {
   "refuseACardCoversTheComputers": "카드가 컴퓨터 목록을 가리고 있어요",
+  "refuseACardCoversTheProjects": "카드가 프로젝트 목록을 가리고 있어요",
   "refuseARecordingIsRunning": "녹음 중이에요",
   "refuseBrowserTabCannotBeFound": "브라우저 탭은 페이지의 그림이라 그 안의 단어는 찾을 수 없어요",
   "refuseCloseTheOpenDialogFirst": "열린 대화상자를 먼저 닫으세요",
@@ -36,7 +37,9 @@
   "refuseThereIsNoOtherTabToGo": "이동할 다른 탭이 없어요",
   "refuseThereIsOnlyOneProject": "프로젝트가 하나뿐이에요",
   "refuseTheseAreTheFirstComputers": "처음 컴퓨터들이에요",
+  "refuseTheseAreTheFirstProjects": "처음 프로젝트들이에요",
   "refuseTheseAreTheLastComputers": "마지막 컴퓨터들이에요",
+  "refuseTheseAreTheLastProjects": "마지막 프로젝트들이에요",
   "refuseThisCardAsksNoQuestions": "이 카드에는 질문이 없어요",
   "refuseThisCardCannotBeFound": "단어는 카드, 지난 카드, 작업 기록에서 찾을 수 있어요",
   "refuseThisCardHasNoButtons": "이 카드에는 버튼이 없어요",

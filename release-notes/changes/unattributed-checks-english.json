@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "unattributed-checks-english",
+      "reason": "The reason a GitHub checks reading gives when it cannot tell which pull request a workflow run belongs to is served to the crew in English, as its sibling reasons already are; the checks summary around it was already English, and the rest drops an unused check filter and leftover test output, so nothing else a person sees changes."
+    }
+  ]
+}

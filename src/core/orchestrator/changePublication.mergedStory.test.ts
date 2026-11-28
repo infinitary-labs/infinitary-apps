@@ -206,11 +206,6 @@ describe("a selected pull request on the way to its merge card", () => {
     }).toEqual({ openings: 0, selected: 1906 });
     expect(walk.stop?.missing).toContain("#1906");
     expect(at.tasks.delivery.changePresentation("ab12cd34", phone)).toBeUndefined();
-    console.log("Selected-request fixture", {
-      stop: walk.stop,
-      openings: opens(at),
-      selected: 1906,
-    });
     // Even with a matching checkout, another request on that branch is not a substitute.
     at.forge.change = { ...pull, number: 1948, branch: phone };
     const selected = at.tasks.get("ab12cd34")?.delivery?.checkTarget;

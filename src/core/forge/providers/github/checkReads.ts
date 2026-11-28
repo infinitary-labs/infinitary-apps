@@ -1,5 +1,4 @@
 import { BATCH_BRANCH_PREFIX } from "@shared/batches";
-import * as m from "@shared/i18n/messages.generated";
 import {
   allowanceResetOf,
   checkTimes,
@@ -9,7 +8,6 @@ import {
   ForgeError,
   isSignInForgeFailure,
   isTransientForgeFailure,
-  ownChecksOf,
 } from "../../forge";
 
 type CheckRunJson = {
@@ -96,6 +94,8 @@ export class GitHubChecks {
     // reason with the partial facts; existing sign-in/transient boundaries stay intact.
     let workflowRuns: { total_count?: number; workflow_runs?: SuiteRunJson[] } | null = null;
     let problem: string | undefined;
+    // i18n-exempt: served to the crew in a check reading, as the reasons below are
+    const unattributed = `${this.options.place} did not identify the pull request for some workflow runs.`;
     let scoped: SuiteRunJson[] = [];
     try {
       workflowRuns = (await this.options.read(
@@ -103,7 +103,7 @@ export class GitHubChecks {
       )) as { total_count?: number; workflow_runs?: SuiteRunJson[] };
       const ownership = await this.scopeWorkflows(change, head, workflowRuns.workflow_runs ?? []);
       scoped = ownership.runs;
-      if (ownership.ambiguous) problem = m.taskChecksUnattributed({ host: this.options.place });
+      if (ownership.ambiguous) problem = unattributed;
     } catch (caught) {
       // F25: a passing network error is not a lasting refusal, with or without cancellations.
       if (
@@ -131,7 +131,7 @@ export class GitHubChecks {
             if (job.pull_requests?.length)
               return job.pull_requests.some((pull) => pull.number === change.number);
             if (job.app?.slug !== "github-actions") return true;
-            problem ??= m.taskChecksUnattributed({ host: this.options.place });
+            problem ??= unattributed;
             return false;
           });
     const read: ForgeCheck[] = [
@@ -161,15 +161,8 @@ export class GitHubChecks {
         });
       }
     }
-    // A pull request's checks are the runs it started (INF-1891), and a
-    // batch's the runs its own pushed branch started too; a branch's own
-    // checks, read with no number, keep every run at its version.
-    const items =
-      change.number !== undefined
-        ? ownChecksOf(read, change.branch.startsWith(BATCH_BRANCH_PREFIX))
-        : read;
     return {
-      items,
+      items: read,
       ...(problem ? { problem } : {}),
       complete:
         !problem &&
@@ -180,7 +173,16 @@ export class GitHubChecks {
     };
   }
 
-  /** GitHub can omit the PR links even for same-repository Actions runs. */
+  /**
+   * A pull request's checks are the runs GitHub started for it (INF-1891, the
+   * captain: "for merge we only care about the PR checks"): a `pull_request`
+   * or `pull_request_target` run of this request, never a run a person or a
+   * tool started on the branch by hand, or a schedule. A batch's branch is one
+   * the app itself pushed, so the run its push started counts as much as its
+   * request's (docs/forge.md, "Batches of your own"). A branch's own checks,
+   * read with no number, keep every run at its version. GitHub can omit the PR
+   * links even for same-repository Actions runs.
+   */
   private async scopeWorkflows(change: ForgeChange, head: string, runs: SuiteRunJson[]) {
     if (change.number === undefined) return { runs, ambiguous: false };
     const { source } = this.options;

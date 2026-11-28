@@ -12,7 +12,7 @@ What the first mate is now told:
 - The tasks reader shows `moment` in a side-effect task's row and its by-key read.
 
 What a crewmate reads: only a side-effect task's own brief changes, naming its moment (the builder's brief).
-A release-moment task's brief says it started only once every merged wait had a first release; a merge-moment task keeps the report that asks for a release hold when its words still name a release.
+A release-moment task's brief tells its crewmate to act only once every merged wait shows its first release, and otherwise to do nothing outside and report the wait, since a start by hand skips the release hold; a merge-moment task keeps the report that asks for a release hold when its words still name a release.
 
 Homes: the choice of moment is said once, in HANDOFF; what the host holds is said once, on `create_task`'s `moment`; `update_task` points to it.
 The new words cost about 75 tokens of fixed context (`tests/firstmate-fixed-context.test.ts`).

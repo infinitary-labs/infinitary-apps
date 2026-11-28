@@ -1,3 +1,5 @@
+import { inLanguage } from "@shared/i18n/current";
+import { SOURCE_LANGUAGE } from "@shared/i18n/languages";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { CaptainAction } from "@shared/requiredActions";
 import { foldForSearch } from "@shared/searchText";
@@ -487,12 +489,14 @@ function toRow(
   const change = record.delivery ? taskChangeOf(record.delivery) : null;
   const waiting =
     (record.status === "open" && record.kind === "work" && !tasks.starts.startAttemptOf(record.id)
-      ? queueWaitOf(
-          record,
-          tasks.graph.blockers(record.id),
-          tasks.graph.linksTo(record.id),
-          children,
-          tasks.graph.nothingMerged(record) !== undefined,
+      ? inLanguage(SOURCE_LANGUAGE, () =>
+          queueWaitOf(
+            record,
+            tasks.graph.blockers(record.id),
+            tasks.graph.linksTo(record.id),
+            children,
+            tasks.graph.nothingMerged(record) !== undefined,
+          ),
         )?.line
       : undefined) ??
     (record.gate

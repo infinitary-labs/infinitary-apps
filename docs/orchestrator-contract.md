@@ -282,7 +282,7 @@ Whether a sentence would read true in a project that is not this one is judged i
 ## An outside action that waits on work
 
 When the captain's or a task's words make an outside action wait on work finishing, HANDOFF has the first mate file the action as its own side-effect task, blocked by every task doing the work, and `create_task`'s `side_effect` says what the host holds for it (`docs/task-graph.md`, "A side-effect task").
-The host keeps only typed facts: the mark, its waits, that each needs the merge, and how each closed.
+The host keeps only typed facts: the mark, its moment (release or merge, which the first mate picks), its waits, that each needs the merge, how each closed, and each merged wait's recorded first release.
 Its crewmate's rule rides that task's own brief, so no other crewmate reads it.
 The app writes no closing words of its own where a change is published (`docs/forge.md`, "A change that answers an issue").
 When that action is telling an issue, ticket or request kept outside the app how the work ended, the Outside work items runbook's guide says how to file it, a fenced reader where strangers write to the item, and when the item hears the ending; that task names the item in its own words (`docs/runbooks.md`, "Built-ins").

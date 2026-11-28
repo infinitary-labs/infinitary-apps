@@ -650,9 +650,9 @@ describe("the task graph (R1)", () => {
       `- ${tasks.get("fix")?.key} "Fix the negative reading": merged; first shipped in release 1.4.0-alpha.2 (https://github.com/example/nimbus-api/releases/tag/v1.4.0-alpha.2)`,
     );
     expect(crew.promptCalls[0]).toContain(
-      "Its moment is the release: the app started it only once every merged wait had a recorded first release, named above.",
+      "Its moment is the release: act only once every merged wait above shows its first release.",
     );
-    expect(crew.promptCalls[0]).not.toContain("report with needs_firstmate naming those tasks");
+    expect(crew.promptCalls[0]).not.toContain("so the first mate holds you");
   });
 
   // INF-6845's piece 1: the waiting task's brief carries what each finished wait reported, so

@@ -117,6 +117,7 @@ Under each finished wait it adds the summary of that wait's newest report and th
 Under an unsafe data reader's wait it serves that reader's report itself, kept between reader-data marks with their reminders since it was saved, since its saved summary is the host's own line and its report takes no result.
 The same section tells its crewmate to act only once every wait that ships a change merged, through the item's tracker's integration or where the project lives, and to do nothing outside when a wait was dropped or its change closed without merging.
 The same section names the task's moment.
+A release-moment task's crewmate acts only once every merged wait shows its first release; a start by hand (`start_now`, the captain's Start) skips the release hold, so while a merged wait is in no release yet it does nothing outside and reports that wait.
 On a merge-moment task whose words still name a release, when a merged wait is in no release yet, the crewmate reports it, and the first mate holds the task on "Work ships in a release" naming that work (`docs/automation.md`).
 
 ## Following the part under it

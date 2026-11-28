@@ -73,7 +73,7 @@ export function renderSideEffectSection(
     "This is a side-effect task: its only job is the outside action its words name, such as closing a work item, sending a message or posting an update, once the work it waits on is done. Each task it waits on, and how the record says it closed, with a finished wait's reported summary and typed result, which say what that work found:",
     ...(lines.length ? lines : ["- none"]),
     moment === "release"
-      ? "Its moment is the release: the app started it only once every merged wait had a recorded first release, named above."
+      ? "Its moment is the release: act only once every merged wait above shows its first release. While one is in no release yet, do nothing outside: report with needs_firstmate naming it, and end your turn."
       : "Its moment is the merge. When the words name a release as the moment and a merged wait is in no release yet, report with needs_firstmate naming those tasks, so the first mate holds you until the work ships in a release, and end your turn.",
     "Act only when every wait that ships a change merged; a wait done with no change, such as an answer, counts as done. Do the action through the integration for the item's tracker, or where the project lives, and say in your report what you did and where. When a wait was dropped, or its change closed with no merge, do nothing outside: report which wait and how it closed.",
   ].join("\n");

@@ -526,6 +526,31 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.waitingOn("reply")).toEqual([]);
     });
 
+    // INF-7216 review: the recorder takes every merge the release hold waits on,
+    // so no merged wait can hold a release-moment task for good.
+    it("records a first release for a wait merged by the captain's approval, whatever its close", () => {
+      const { tasks, work } = setup();
+      const fix = work("fix", { repoId: "r1", startPolicy: "on-request" });
+      work("reply", {
+        repoId: "r1",
+        blockedBy: ["fix"],
+        shape: { kind: "implement", side_effect: true, side_effect_moment: "release" },
+      });
+      approve(tasks, fix.id, "consumed");
+      tasks.close(fix.id, { status: "done", reason: "finished", actor: "firstmate" });
+      expect(tasks.graph.waitingOn("reply").map((r) => r.id)).toEqual(["fix"]);
+
+      const check = work("release-check", { repoId: "r1", startPolicy: "on-request" });
+      tasks.delivery.recordFirstRelease(check.id, {
+        version: "1.4.0",
+        url: "https://example.com/releases/1.4.0",
+        evidence: "The 1.4.0 tag holds the fix's merge commit.",
+        tasks: [fix.key],
+      });
+      expect(tasks.graph.waitingOn("reply")).toEqual([]);
+      expect(tasks.graph.listReady().map((r) => r.id)).toContain("reply");
+    });
+
     it("keeps a part waiting on the part under its base when it needs that part merged", () => {
       const { tasks, work } = setup();
       const first = work("first", { startPolicy: "on-request" });

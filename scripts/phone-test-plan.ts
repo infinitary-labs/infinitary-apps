@@ -99,6 +99,7 @@ export const PHONE_PARTS = [
   { name: "cards-diagram", test: "testCardDiagramCover", photos: false },
   // INF-4239 piece 4: an ask to keep a secret, typed into the phone's masked field and kept in Secrets.
   { name: "cards-secret", test: "testSecretAskKeptFromPhone", photos: false },
+  { name: "cards-secret-bring", test: "testSecretBringFromPhone", photos: false, devices: ["ipad"], why: "an iPad with a keyboard reaches a bring card's tick rows by Tab, ticks with Space and brings with Return" },
   // INF-5445 piece 2: a card's picks and words shared with every other screen through the test home's real core.
   { name: "cards-drafts", test: "testCardDrafts", photos: false },
   // INF-5531 piece 2: a crewmate's card reads live app data through the panels' reads while it is open, and stops once ended.

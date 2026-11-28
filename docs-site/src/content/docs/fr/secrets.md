@@ -1,5 +1,5 @@
 ---
-source: fae1b8cd31c6767c
+source: e6f03d456d32e7d5
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
@@ -131,7 +131,7 @@ Si vous gardez des secrets dans un autre outil, comme Automic Vault, un fichier 
 Infinitary exécute la commande ou lit le fichier lui-même, et ne garde que ce que vous cochez.
 Pour un fichier comme un fichier .env, **Le lire** liste d’abord les noms qu’il contient.
 L’équipier reçoit des noms, jamais une valeur, et la copie dans l’autre outil reste telle quelle.
-Vous choisissez les secrets dans la fenêtre d’Infinitary sur l’ordinateur où vit votre second, pas sur votre téléphone.
+Vous pouvez les choisir dans la fenêtre d’Infinitary sur l’ordinateur où vit votre second, ou sur la carte de votre iPhone ou iPad.
 
 Si l’outil se trouve sur un autre de vos ordinateurs qui exécutent du travail, nommez cet ordinateur dans votre demande, et un équipier qui y travaille importe les secrets depuis celui-ci.
 La carte s’affiche toujours sur l’ordinateur où vit votre second, avec une ligne **Sur l’ordinateur** qui nomme l’ordinateur où la commande s’exécute.

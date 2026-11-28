@@ -1233,7 +1233,7 @@ public struct PhoneNotice: Equatable, Sendable {
         var reached = false
         var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"],
-            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk,
+            "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk, PhoneContract.secretsBring,
                         PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts, PhoneContract.settingsCurrent,
                         PhoneContract.choiceAttachments, PhoneContract.cardAnsweredByCrewmate, PhoneContract.catchUpShown,
                         PhoneContract.removalNotice,

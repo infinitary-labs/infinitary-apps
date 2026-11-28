@@ -1,5 +1,5 @@
 ---
-source: fae1b8cd31c6767c
+source: e6f03d456d32e7d5
 title: Segredos
 description: Guarde as senhas e chaves de que sua tripulação precisa, permita cada uso em um cartão e veja o que as usou.
 ---
@@ -131,7 +131,7 @@ Se você guarda segredos em outra ferramenta, como o Automic Vault, um arquivo .
 O Infinitary executa o comando ou lê o arquivo por conta própria, e guarda só o que você marcar.
 Para um arquivo como um arquivo .env, **Ler** primeiro lista os nomes que ele contém.
 O tripulante recebe nomes, nunca um valor, e a cópia na outra ferramenta continua como está.
-Você escolhe os segredos na janela do Infinitary no computador onde seu imediato mora, não no celular.
+Você pode escolhê-los na janela do Infinitary no computador onde seu imediato mora, ou no cartão do seu iPhone ou iPad.
 
 Se a ferramenta está em outro dos seus computadores que executam trabalho, diga o nome desse computador no seu pedido, e um tripulante que trabalha lá traz os segredos dele.
 O cartão continua aparecendo no computador onde seu imediato mora, com uma linha **No computador** que diz o nome do computador onde o comando é executado.

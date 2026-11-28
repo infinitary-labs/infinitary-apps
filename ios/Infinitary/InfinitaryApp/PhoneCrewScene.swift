@@ -310,12 +310,16 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
     var returnOpens = false
     var keys = Key.allCases
     var yieldsToPresentations = false
+    /// Return alone, for a list where Space and Return do different things, as a bring card's tick rows do; in place of
+    /// `returnOpens`.
+    var onReturn: (() -> Void)?
     let handle: (Key) -> Void
 
     func makeUIView(context: Context) -> Responder { Responder() }
     func updateUIView(_ view: Responder, context: Context) {
         view.handle = handle
         view.returnOpens = returnOpens
+        view.onReturn = onReturn
         view.keys = keys
         view.yieldsToPresentations = yieldsToPresentations
         view.active = active
@@ -330,6 +334,7 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
         var handle: (Key) -> Void = { _ in }
         var active = false
         var returnOpens = false
+        var onReturn: (() -> Void)?
         var keys = Key.allCases
         var yieldsToPresentations = false
         private var takesKeys: Bool {
@@ -366,7 +371,7 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
                 command.wantsPriorityOverSystemBehavior = true
                 return command
             }
-            if returnOpens {
+            if returnOpens || onReturn != nil {
                 let command = UIKeyCommand(input: "\r", modifierFlags: [], action: #selector(press(_:)))
                 command.wantsPriorityOverSystemBehavior = true
                 commands.append(command)
@@ -376,6 +381,7 @@ struct PhoneBrowsingKeys: UIViewRepresentable {
         @objc private func press(_ command: UIKeyCommand) {
             // A previously registered command can arrive after a sheet takes the window.
             guard takesKeys else { return }
+            if command.input == "\r", let onReturn { onReturn(); return }
             let key: Key?
             switch command.input {
             case UIKeyCommand.inputLeftArrow: key = .left

@@ -310,6 +310,11 @@ The window draws one tick box per secret between the body and the buttons (`Secr
 A name Secrets already keeps under that place arrives unticked and says which version it would replace; a value the source holds as empty, larger than 1 MiB or not UTF-8 text arrives unticked and cannot be ticked.
 Tab reaches the rows, the arrows move between them, Space ticks and Enter brings.
 Bring into Secrets sends the pass and the ids of the ticked rows in their own request, `inf:secrets:bring`, never as a card choice; Don't bring, and Read it for a `lines` source with no names, are ordinary one-time passes (`secrets-decision`).
+The phone draws the same rows on the card's face, between the body and the buttons, outside the card's web view (`PhoneSecretBring.swift`, `PhoneCardBring.swift`): Bring into Secrets stays on the face, never under the thread's field, waits for a tick, and sends only the pass and the ticked ids through the same request.
+A Bring the home cannot finish leaves the card up with new passes and the phone says why beside the buttons, kept through the card's new passes, as a Save does.
+The phone presses Don't bring and Read it as it presses any choice, since they hand nothing out; the other Secrets cards' one-time choices still wait for the computer (`PhoneSecretBring.isDecision`, by the bring card's id).
+An iPad's keyboard reaches the rows as the window's does: Tab reaches them, the arrows move between them, Space ticks and Return brings.
+A bring that hands kept keys to its program (`uses`) still asks the first mate's computer for its own confirmation when the phone presses Bring into Secrets.
 
 On the press the controller spends the pass, journals the bring, and runs the program with only the recipient's base variables and none of Infinitary's secrets by default; it discards error output and reads standard output through a pipe into this process's memory, never a file (`readSource`).
 For a trusted command that needs an unlock key, `uses` maps environment variable names to discoverable kept references, for example `{"VAULT_SESSION":"vault-session"}`.
@@ -339,7 +344,7 @@ The values cross only the authenticated work route, as base64 strings that JavaS
 A press waits at most the request lifetime for the delivery and then ends the bring `failed` with words saying the computer did not send it; once the home hears that the task's conversation there closed or restarted, each of its waiting brings ends `withdrawn`.
 `uses` is refused there before anything is asked, since kept keys are handed only to a program on the home.
 A computer whose app or home does not list the change keeps its `bring` answering `unavailable` with words telling it to name the tool and secrets in its report.
-Another Mac's window lists the contract change `secrets-bring` to draw the rows and send Bring; a view that does not, the phone among them, gets the card without Bring into Secrets, and with a line, hidden in the card's body until the host leaves the button out for that view, saying to pick in Infinitary's window on the first mate's computer.
+Another Mac's window and the phone list the contract change `secrets-bring` to draw the rows and send Bring; a view that does not, such as a phone from before it, gets the card without Bring into Secrets, and with a line, hidden in the card's body until the host leaves the button out for that view, saying to pick in Infinitary's window on the first mate's computer.
 
 #### How a move starts
 

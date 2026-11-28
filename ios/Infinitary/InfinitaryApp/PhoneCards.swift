@@ -608,6 +608,9 @@ struct PhoneCardPane: View {
     /// INF-4239 piece 4: what is typed into an ask's masked fields, by field; emptied once kept or the card goes.
     @State var secretValues: [String: String] = [:]
     @FocusState var secretFocus: String?
+    /// A bring card's ticks, by its Bring button's pass, and the row under the keyboard's ring (`PhoneCardBring.swift`).
+    @State var bringTicked: [String: Set<String>] = [:]
+    @State var bringRing: String?
     @State var contentHeight: CGFloat = 0
     /// The body runs on below the choices, so a hairline separates them, as on the Mac.
     @State var runsOn = false

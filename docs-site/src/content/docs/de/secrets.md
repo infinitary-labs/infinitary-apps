@@ -1,5 +1,5 @@
 ---
-source: fae1b8cd31c6767c
+source: e6f03d456d32e7d5
 title: Geheimnisse
 description: Bewahre die Passwörter und Schlüssel auf, die deine Crew braucht, erlaube jede Nutzung auf einer Karte und sieh, was sie genutzt hat.
 ---
@@ -131,7 +131,7 @@ Wenn du Geheimnisse in einem anderen Werkzeug aufbewahrst, etwa in Automic Vault
 Infinitary führt den Befehl selbst aus oder liest die Datei selbst und behält nur, was du anhakst.
 Bei einer Datei wie einer .env-Datei listet **Datei lesen** zuerst die Namen auf, die sie enthält.
 Das Crewmitglied bekommt Namen, nie einen Wert, und die Kopie im anderen Werkzeug bleibt, wie sie ist.
-Du wählst die Geheimnisse im Fenster von Infinitary auf dem Computer, auf dem dein erster Offizier lebt, nicht auf deinem Telefon.
+Du kannst sie im Fenster von Infinitary auf dem Computer wählen, auf dem dein erster Offizier lebt, oder auf der Karte auf deinem iPhone oder iPad.
 
 Wenn das Werkzeug auf einem anderen deiner Computer liegt, der Arbeit ausführt, nenn diesen Computer in deiner Anfrage, und ein Crewmitglied dort übernimmt die Geheimnisse von ihm.
 Die Karte erscheint trotzdem auf dem Computer, auf dem dein erster Offizier lebt, mit einer Zeile **Auf Computer**, die den Computer nennt, auf dem der Befehl läuft.

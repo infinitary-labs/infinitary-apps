@@ -87,6 +87,7 @@ import { seedRowMoves, seedTalkTags, seedTalkWork } from "./phoneRowMoves";
 import { phoneSceneFixture } from "./phoneScene";
 import { phoneSecondHome } from "./phoneSecondHome";
 import { secretAskShown } from "./phoneSecretAsk";
+import { phoneSecretBringCommand } from "./phoneSecretBrings";
 import {
   PHONE_SETTINGS_SESSION_LATER,
   phoneAppearanceCommand,
@@ -110,14 +111,13 @@ const MAP_PART = readFileSync(
   ),
   "utf8",
 );
+/** The crewmate's summary on the merge card that came back after the captain saw it (INF-5035). */
+const MERGE_SINCE_SEEN_SUMMARY =
+  "I added the evening tide you asked about. The north entrance change is unchanged.";
 // A card that stops answering: its page's thread spins for 15 seconds. INF-4326 (INF-4241's speed-ups): an endless loop
 // held every screen read after it for XCTest's own minute, three times a run, while the app's watchdog fails the card
 // within about 8 seconds of the stall and a choice waits 4 seconds for its answer; a stall that outlasts both still
 // leaves the card failed and the choice unsent, and frees the page for the next read.
-/** The crewmate's summary on the merge card that came back after the captain saw it (INF-5035). */
-const MERGE_SINCE_SEEN_SUMMARY =
-  "I added the evening tide you asked about. The north entrance change is unchanged.";
-
 const STALL_SCRIPT = "const stallEnds = Date.now() + 15000; while (Date.now() < stallEnds) {}";
 /**
  * The captain's message the asked card is about (INF-1610): long and in
@@ -129,7 +129,6 @@ const PHONE_ASKED_MESSAGE = [
   "could you check what changed in the last few days, and whether the order is still the one we agreed on?",
   "if it is a regression, please fix it, but keep minimize as it is.",
 ].join("\n\n");
-
 /** A control request's small JSON body, or "" when it sent none. */
 async function controlBody(request: IncomingMessage): Promise<string> {
   let body = "";
@@ -3486,11 +3485,12 @@ export async function startPhoneHome(
           result = { ok: true, before: { ...readings } };
           await removeEveryDevice(core, await controlBody(request));
           break;
-        // The stand-in Google (tests/helpers/phoneGoogle.ts) answers first; the appearance commands, the take-over and the project filter answer every other request.
+        // The stand-in Google (tests/helpers/phoneGoogle.ts) answers first; the appearance commands, the take-over, the brings and the project filter answer every other request.
         default:
           result =
             (await google.answer(`${request.method} ${command}`)) ??
-            (await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver));
+            (await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver)) ??
+            (await phoneSecretBringCommand(core, task.id, root, `${request.method} ${command}`));
           result ??= await projectFilterCommand(core, writes, until, command ?? "");
           if (result === undefined) {
             response.writeHead(404).end();

@@ -27,9 +27,11 @@ extension PhoneCardPane {
         }
     }
 
-    /// Save secret stays with its masked fields on the face: on the back it would sit under the thread's plain field.
+    /// Save secret stays with its masked fields on the face, and Bring into Secrets with its tick rows: on the back they
+    /// would sit under the thread's plain field.
     func savesFromBack(_ action: PhoneJSON) -> Bool {
-        showsBack && action["id"].text != nil && action["id"].text == PhoneSecretAsk.of(card)?.pass
+        guard showsBack, let id = action["id"].text else { return false }
+        return id == PhoneSecretAsk.of(card)?.pass || id == PhoneSecretBring.of(card)?.pass
     }
 
     var chosenID: PhoneJSON? { card.isPast && card.value["ending"]["how"].text != "closed" ? card.value["ending"]["actionId"] : nil }
@@ -46,6 +48,9 @@ extension PhoneCardPane {
             // INF-3746: while a note is open the reply and the choices step aside for it; on an iPhone on its side the
             // editor takes their place in the foot.
             if pick != nil && shown && noteInFoot { noteEditor.modifier(PhoneFaceOnly(angle: turnAngle)) }
+            if pick == nil, !card.isPast, let bring = PhoneSecretBring.of(card) {
+                bringRows(bring).modifier(PhoneFaceOnly(angle: turnAngle))
+            }
             // On an ask to keep a secret no plain field sits beside the masked ones: the reply is on the thread's back,
             // as on the Mac, where Chat opens the thread beside the card.
             if takesReply && pick == nil && PhoneSecretAsk.of(card) == nil {
@@ -113,7 +118,7 @@ extension PhoneCardPane {
                             }
                         }
                         .buttonStyle(PhoneChoiceStyle(replyTyping ? .muted : footerKind(action), chosen: chosenID == action["id"]))
-                        .disabled(card.isPast || host.changing || !session.canChange || !host.revealed || carry.holds)
+                        .disabled(card.isPast || host.changing || !session.canChange || !host.revealed || carry.holds || bringsNothing(action))
                         .accessibilityValue(chosenID == action["id"] ? PhoneMessages.phoneCardsChosen() : "")
                         .accessibilityIdentifier("card-action-\(action["id"].text ?? "")")
                     }
@@ -340,8 +345,9 @@ extension PhoneCardPane {
         return (effect["kind"].text == "open" && !(effect["target"].text == "browser" && effect["savedSignIn"].flag))
             || (effect["kind"].text == "host" && effect["op"].text == "restore-account")
             // Its other Secrets choices need the person's confirmation on the computer itself, an ask's Unlock among
-            // them; an ask's Don't keep, its declining choice, allows nothing, so it is answered here.
+            // them; an ask's Don't keep, its declining choice, allows nothing, so it is answered here, as are a bring's
+            // Don't bring and Read it.
             || (effect["kind"].text == "host" && effect["op"].text == "secrets-decision"
-                && !(PhoneSecretAsk.of(card) != nil && action["declines"].flag))
+                && !(PhoneSecretAsk.of(card) != nil && action["declines"].flag) && !PhoneSecretBring.isDecision(action, on: card))
     }
 }

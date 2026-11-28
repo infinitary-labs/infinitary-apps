@@ -60,6 +60,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryApp/PhoneCards.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardFoot.swift",
     "ios/Infinitary/InfinitaryApp/PhoneCardActions.swift",
+    // A bring card's tick rows sit on every card's face beside its buttons (PhoneCardFoot.swift).
+    "ios/Infinitary/InfinitaryApp/PhoneCardBring.swift",
     "ios/Infinitary/InfinitaryApp/PhoneFont.swift",
     // The computer's own update under every part's message box and in Settings (MessageComposer.swift).
     "ios/Infinitary/InfinitaryApp/PhoneHomeUpdateViews.swift",
@@ -131,6 +133,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
   { parts: ["cards-carried"], files: ["tests/helpers/phoneCarried.ts"] },
   // INF-2820 pieces 2 and 3: the project-filter parts' three projects on the test home, and south-pier's later cards.
   { parts: ["project-filter", "project-filter-cards"], files: ["tests/helpers/phoneProjectFilter.ts"] },
+  // INF-7282's plan, part 1: the cards-secret-bring part's brings on the test home.
+  { parts: ["cards-secret-bring"], files: ["tests/helpers/phoneSecretBrings.ts"] },
   // INF-6865: the cards-revised-scroll part's long card on the test home.
   { parts: ["cards-revised-scroll"], files: ["tests/helpers/phoneRevisedCard.ts"] },
   { parts: family("cards"), files: [
@@ -162,6 +166,7 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneChoiceCarry.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneLinkedWords.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecretAsk.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSecretBring.swift",
   ] },
   // INF-5531 piece 2: the reads a card's page and a panel's page run, and the test home's live card.
   { parts: [...family("cards"), ...family("panels")], files: ["ios/Infinitary/CardRuntime/phoneReads.ts"] },

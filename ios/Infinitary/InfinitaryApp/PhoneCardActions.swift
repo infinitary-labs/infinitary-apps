@@ -66,6 +66,10 @@ extension PhoneCardPane {
             if let ask = PhoneSecretAsk.of(card) { CharacterCues.pressed(card.id); keepSecrets(ask) }
             return
         }
+        if PhoneSecretBring.isBring(action) {
+            if let bring = PhoneSecretBring.of(card) { bringSecrets(bring) }
+            return
+        }
         let id = action["id"].text
         perform {
             pending = id

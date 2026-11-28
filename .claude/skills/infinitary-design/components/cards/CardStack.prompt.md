@@ -105,4 +105,4 @@ Cards about no task stay, and so does anything the captain opened: a task record
 The pill's tail is the one notice: it counts what waits on the captain in other projects, held cards among them.
 A card that arrives while held back stirs nothing; picking its project or All projects returns it to its place, unread if it arrived while held, seen if it had been seen.
 A pointed-at card returns at the front without moving the focus, and stays until the focus changes.
-Holding is this window's view, never saved; another Mac's view holds by its own focus, and the phone list stays unchanged.
+Holding is this window's view, never saved; another Mac's view and the phone's Home hold by their own focus, the phone's from its Filter.

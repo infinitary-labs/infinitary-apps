@@ -235,7 +235,7 @@ import SwiftUI
             context.pointTask = PhoneMessageContext.PointTask(id: id, record: payload["op"].text == "record")
             return true
         case "card":
-            guard let id = payload["cardId"].text, session.stack.contains(where: { $0.id == id }) else { return false }
+            guard let id = payload["cardId"].text, session.openStack.contains(where: { $0.id == id }) else { return false }
             context.showOnHome = id
             return true
         default:

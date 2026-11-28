@@ -905,5 +905,88 @@
         "Reported: Relight the lamp"
       ]
     }
+  ],
+  "cards": [
+    {
+      "id": "card-1",
+      "title": "Answer the harbour master",
+      "author": "crewmate",
+      "body": "<p>Read it.</p>",
+      "actions": [],
+      "taskId": "t-1"
+    },
+    {
+      "id": "card-5",
+      "title": "Relight the lamp",
+      "author": "crewmate",
+      "body": "<p>Read it.</p>",
+      "actions": [],
+      "taskId": "t-5"
+    },
+    {
+      "id": "card-fm",
+      "title": "First mate's note",
+      "author": "firstmate",
+      "body": "<p>Read it.</p>",
+      "actions": []
+    },
+    {
+      "id": "card-6",
+      "title": "Ring the bell",
+      "author": "crewmate",
+      "body": "<p>Read it.</p>",
+      "actions": [],
+      "taskId": "t-6"
+    },
+    {
+      "id": "card-7",
+      "title": "Compress the hero images",
+      "author": "crewmate",
+      "body": "<p>Read it.</p>",
+      "actions": [],
+      "taskId": "t-7"
+    },
+    {
+      "id": "card-8",
+      "title": "Retire the old site",
+      "author": "crewmate",
+      "body": "<p>Read it.</p>",
+      "actions": [],
+      "taskId": "t-8"
+    },
+    {
+      "id": "card-99",
+      "title": "A closed task's card",
+      "author": "crewmate",
+      "body": "<p>Read it.</p>",
+      "actions": [],
+      "taskId": "t-99"
+    }
+  ],
+  "holds": [
+    {
+      "focus": null,
+      "held": [],
+      "beforeBoard": []
+    },
+    {
+      "focus": "p-inf",
+      "held": [
+        "card-5",
+        "card-6",
+        "card-7",
+        "card-8"
+      ],
+      "beforeBoard": []
+    },
+    {
+      "focus": "p-har",
+      "held": [
+        "card-1",
+        "card-7",
+        "card-8"
+      ],
+      "beforeBoard": []
+    }
   ]
 }

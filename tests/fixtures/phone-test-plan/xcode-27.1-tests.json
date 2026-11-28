@@ -75,6 +75,7 @@
   "InfinitaryUITests/PhoneJourney/testCardTopBar",
   "InfinitaryUITests/PhoneJourney/testRevisedCardScrollsToItsChoices",
   "InfinitaryUITests/PhoneJourney/testProjectFilter",
+  "InfinitaryUITests/PhoneJourney/testProjectFilterCards",
   "InfinitaryUITests/PhoneJourney/testReaderCardUnsafeLine",
   "InfinitaryUITests/PhoneJourney/testSecretAskKeptFromPhone",
   "InfinitaryUITests/PhoneJourney/testSettingsPages",

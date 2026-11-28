@@ -87,6 +87,8 @@ export const PHONE_PARTS = [
   { name: "cards-revised-scroll", test: "testRevisedCardScrollsToItsChoices", photos: false },
   // INF-2820 piece 2: the phone's own project focus, picked from Filter, narrows Tasks, its tag row, Activity and messages.
   { name: "project-filter", test: "testProjectFilter", photos: false, keys: true, devices: ["ipad"], why: "on its side the iPad keeps the release note's hero pair, Tasks narrowed under the focus row beside the wide layout's sidebar" },
+  // INF-2820 piece 3: the phone's project focus holds other projects' cards off Home until All projects or a notice's tap.
+  { name: "project-filter-cards", test: "testProjectFilterCards", photos: false },
   // INF-6388: a card from an unsafe data reader says a link or request on it may come from a stranger.
   { name: "cards-reader", test: "testReaderCardUnsafeLine", photos: false },
   // INF-3124: a thread read from its start keeps its place as new lines arrive.

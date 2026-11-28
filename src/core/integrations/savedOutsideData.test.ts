@@ -35,6 +35,7 @@ import {
   OutsideReads,
   SavedOutsideData,
 } from ".";
+import { GMAIL_MESSAGE_EVENT } from "./providers/google/gmail";
 import type { OutsideDue, PlacedOutsideVisit } from "./savedOutsideData";
 
 /**
@@ -439,10 +440,13 @@ describe("words from outside in saved conversations", () => {
       cancel: async () => true,
     }).find((tool) => tool.name === "schedule_prompt");
     await rule?.run({ on_event: "google/message_received", prompt: "Tell me: {{events}}" });
+    // The scheduler ticks each minute and a rule looks once every `every` ticks.
     const tick = async () => {
-      w.clock.now += 60_000;
-      w.scheduler.tick(w.clock.now);
-      await w.scheduler.settled();
+      for (let minute = 0; minute < GMAIL_MESSAGE_EVENT.every; minute += 1) {
+        w.clock.now += 60_000;
+        w.scheduler.tick(w.clock.now);
+        await w.scheduler.settled();
+      }
     };
     await tick();
     const lena = w.google.deliver(LENA);

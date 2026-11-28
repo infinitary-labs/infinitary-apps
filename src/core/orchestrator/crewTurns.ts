@@ -414,13 +414,14 @@ export class CrewTurns {
   /**
    * The rows of the steers the session accepted that no turn took in: the
    * window is the turn's own tail (the run made its last check of the
-   * queue, or ended, before the steer landed). A session delivers its
-   * steers oldest first, so what is left over is the newest. Taken at every
+   * queue, or ended, before the steer landed), or a conversation on another
+   * computer whose turn had not started there yet. Each is found by its
+   * words, never assumed the newest (`CrewTurn.takeUnheard`). Taken at every
    * turn end, whatever becomes of the rows, so a steer left over from one
    * turn is never counted against the next one's.
    */
   undeliveredSteerRows(task: TaskRuntime): number[] {
-    return task.turn.takeUnheard(task.session?.takeUndeliveredSteers().length ?? 0);
+    return task.turn.takeUnheard(task.session?.takeUndeliveredSteers() ?? []);
   }
 
   private isLadderTurn(taskId: string, inboxIds: number[]): boolean {

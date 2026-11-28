@@ -17,7 +17,9 @@ type End =
   | { kind: "stop"; pause?: TurnPause }
   | { kind: "cancel" | "settle" }
   | { kind: "pause"; pause: TurnPause };
-type Batch = { ids: number[]; steers: number[][] };
+/** A steer the turn carries: its rows and the words the session was handed. */
+type CarriedSteer = { ids: number[]; text: string };
+type Batch = { ids: number[]; steers: CarriedSteer[] };
 type Phase =
   | { kind: "idle" | "stopped" }
   | {
@@ -131,22 +133,45 @@ export class CrewTurn {
   }
 
   /** A steer belongs to this exact batch even if its rejection arrives late. */
-  carrySteer(ids: number[]): () => void {
+  carrySteer(ids: number[], text: string): () => void {
     if (!this.running || isRest(this.phase)) throw new Error("No running turn to steer");
     const batch = this.phase.batch;
+    const steer: CarriedSteer = { ids, text };
     batch.ids.push(...ids);
-    batch.steers.push(ids);
+    batch.steers.push(steer);
     return () => {
       batch.ids = batch.ids.filter((id) => !ids.includes(id));
-      batch.steers = batch.steers.filter((steer) => steer !== ids);
+      batch.steers = batch.steers.filter((carried) => carried !== steer);
     };
   }
 
-  takeUnheard(count: number): number[] {
+  /**
+   * The rows of the steers the session handed back unheard, each found by
+   * its words. Which steers are left over is not always the newest: a
+   * conversation on another computer refuses a steer that arrives before
+   * its turn starts there, and takes the later ones (INF-7116). Words the
+   * session changed on the way match no steer and fall back to the newest
+   * still unmatched, as many as are left.
+   */
+  takeUnheard(unheard: readonly string[]): number[] {
     if (isRest(this.phase)) return [];
-    const steers = this.phase.batch.steers;
+    const steers = [...this.phase.batch.steers];
     this.phase.batch.steers = [];
-    return count === 0 ? [] : steers.slice(-count).flat();
+    const found = new Set<CarriedSteer>();
+    let unmatched = 0;
+    for (const text of unheard) {
+      // A session delivers oldest first, so of two with the same words the newer is left over.
+      const steer = steers.findLast((carried) => !found.has(carried) && carried.text === text);
+      if (steer) found.add(steer);
+      else unmatched += 1;
+    }
+    for (const steer of steers.toReversed()) {
+      if (unmatched === 0) break;
+      if (found.has(steer)) continue;
+      found.add(steer);
+      unmatched -= 1;
+    }
+    return steers.filter((steer) => found.has(steer)).flatMap((steer) => steer.ids);
   }
 
   /** Every exit takes the carried batch once, before releasing or acknowledging it. */

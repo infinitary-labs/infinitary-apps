@@ -662,7 +662,7 @@ export class CrewSteer {
     ids: number[],
     images?: TurnImage[],
   ): Promise<void> {
-    const undo = task.turn.carrySteer(ids);
+    const undo = task.turn.carrySteer(ids, text);
     const handed: UnreadSteer = {
       sha: createHash("sha256").update(text).digest("hex"),
       since: this.core.now(),

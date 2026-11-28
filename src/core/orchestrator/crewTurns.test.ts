@@ -104,6 +104,49 @@ describe("a crewmate's turn, as CrewTurns runs it", () => {
     expect(h.inbox.pending(taskId)).toEqual([]);
     expect(crewmate.steer).not.toHaveBeenCalled();
   });
+
+  it("serves again a steer a conversation on another computer refused before its turn started, though later steers reached it (INF-7116)", async () => {
+    const crewmate = fakeCrewmate();
+    // As a conversation held on another computer answers (placedSession.ts):
+    // its turn there had not started when the first steer arrived, so that
+    // one is handed back at the turn's end; the later ones reached the turn.
+    let refused: string[] = [];
+    crewmate.steer.mockImplementation(async (text: string) => {
+      crewmate.steers.push({ text });
+      if (crewmate.steers.length === 1) refused.push(text);
+    });
+    crewmate.takeUndeliveredSteers = () => {
+      if (crewmate.isStreaming()) return [];
+      const taken = refused;
+      refused = [];
+      return taken;
+    };
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Count presses",
+      intent: intentOf("make the meter count every press"),
+    });
+    await tick();
+
+    for (const words of [
+      "Hand the meter to the reviewer first.",
+      "Count the long presses too.",
+      "Keep the old totals.",
+    ])
+      await h.supervisor.steer.steerCrewmate(taskId, words);
+    expect(crewmate.steers).toHaveLength(3);
+    expect(crewmate.promptCalls).toHaveLength(1);
+
+    await reportTurn(crewmate, taskId, "The meter counts every press.");
+    // The refused steer, the oldest, is the next turn; the two the turn
+    // heard are not served again.
+    expect(crewmate.promptCalls).toHaveLength(2);
+    expect(crewmate.promptCalls[1]).toContain("Hand the meter to the reviewer first.");
+    expect(crewmate.promptCalls[1]).not.toContain("Count the long presses too.");
+    expect(crewmate.promptCalls[1]).not.toContain("Keep the old totals.");
+    expect(h.inbox.inFlight(taskId)).toHaveLength(1);
+    expect(h.inbox.pending(taskId)).toEqual([]);
+  });
 });
 
 /**

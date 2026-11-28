@@ -13,6 +13,10 @@ struct PhoneCards<Content: View>: View {
     @State private var selected: String?
     @State private var past: PhoneCard?
     @State private var previousIDs: [String] = []
+    /// The cards the project focus held off the row at its last change: one it brings back returns to its place and is
+    /// no arrival, so a held `holdsPlace` card never jumps forward on All projects (INF-2820 piece 3, the Mac's
+    /// `reconcileStack`).
+    @State private var heldIDs: Set<String> = []
     @State private var sent = 0
     /// INF-2565, the captain: "i don't think we should auto flip". A revision gives the card a new offer, so its pane is
     /// built again to draw the new body; the side it shows and the thread it has read live here, per card, and outlast that.
@@ -101,7 +105,7 @@ struct PhoneCards<Content: View>: View {
             // A marked arrival comes forward, unless a text box in the shown card holds the keyboard: then it waits as
             // new, as on the Mac (docs/card-authoring.md, "Declared continuity").
             let typing = messageContext.keyboardUp && (messageContext.replyFocused || messageContext.panelCardTyping)
-            if !typing, let marked = stack.first(where: { !previousIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
+            if !typing, let marked = stack.first(where: { !previousIDs.contains($0.id) && !heldIDs.contains($0.id) && $0.value["holdsPlace"].flag }) {
                 selected = marked.id; past = nil
             } else if selected == nil || !ids.contains(selected!) {
                 // FI3-711 and INF-3155: an unread card first, else the card after the one that left, as on the Mac.
@@ -110,14 +114,23 @@ struct PhoneCards<Content: View>: View {
             }
             showRestored(ids)
             previousIDs = ids
+            heldIDs = Set(session.openStack.map(\.id)).subtracting(ids)
             if !moving && swipedFrom == nil { bodies.keep(only: ids.isEmpty ? [] : rowCards.map(\.card)); bodies.setAside(except: card) }
             sides = sides.filter { ids.contains($0.key) || $0.key == past?.id }; fieldPhotos = fieldPhotos.filter { ids.contains($0.key) || !$0.value.isEmpty }
             if let past, ids.contains(past.id) { self.past = nil }
         }
-        .onChange(of: messageContext.restoring) { _, _ in showRestored(stack.map(\.id)) }
+        // A card that arrives while the focus holds it stirs nothing here, and is kept among the held ones.
+        .onChange(of: session.openStack.map(\.id)) { _, open in heldIDs = Set(open).subtracting(stack.map(\.id)) }
+        .onChange(of: messageContext.restoring) { _, id in
+            // A Tasks row or a record's Cards row points at its card, which a project focus then lets through.
+            if let id { session.pointAt(id) }
+            showRestored(stack.map(\.id))
+        }
         // INF-3830 piece 3: a card a panel brought forward from the captain's tap, or a header button's card.
         .onChange(of: messageContext.showOnHome, initial: true) { _, id in
-            guard let id, stack.contains(where: { $0.id == id }) else { return }
+            guard let id else { return }
+            session.pointAt(id)
+            guard stack.contains(where: { $0.id == id }) else { return }
             selected = id; past = nil; messageContext.showOnHome = nil
         }
         // INF-3460: a card shown from the count's menu, or by the stack's own rule, leaves the row still: the card that
@@ -134,6 +147,8 @@ struct PhoneCards<Content: View>: View {
         }
         .onChange(of: session.showCardID, initial: true) { _, id in
             guard let id else { return }
+            // A notification's or the notice's tap and the first mate showing a card point at it.
+            session.pointAt(id)
             if stack.contains(where: { $0.id == id }) { selected = id; past = nil }
             else { past = session.pastCards.first { $0.id == id } }
             session.showCardID = nil

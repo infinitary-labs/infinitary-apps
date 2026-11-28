@@ -74,6 +74,41 @@ public enum PhoneProjectFocus {
         return lines.filter { line in line.taskKey.map { $0.hasPrefix(prefix) } ?? true }
     }
 
+    /// The Mac's `holdsBack` (INF-2820 piece 3, the captain's "Held back until you pick their project or All projects"):
+    /// the focus holds a card about another project's task off Home. A card about no task stays, and so does one whose
+    /// task the board does not list; before the board is read nothing is held, so a board that cannot be read never hides
+    /// a card behind a Filter that is not shown.
+    public static func holdsBack(_ card: PhoneCard, focus: String?, board: PhoneBoard?) -> Bool {
+        guard let focus, let task = card.taskID, let board else { return false }
+        guard let project = board.tasks.first(where: { $0.id == task })?.projectId else { return false }
+        return project != focus
+    }
+
+    /// The cards the captain pointed at, and the focus they were pointed under: a held card pointed at comes forward on
+    /// Home without moving the focus, and stays only until the focus changes, as the Mac's `letThroughCardIds` do.
+    public struct LetThrough: Equatable, Sendable {
+        public private(set) var focus: String?
+        public private(set) var cards: Set<String> = []
+        public init() {}
+
+        /// Lets `card` through under `focus`; a pick of another focus first lets go of the cards pointed at before.
+        public mutating func point(at card: String, under focus: String?) {
+            guard let focus else { return }
+            if focus != self.focus { self.focus = focus; cards = [] }
+            cards.insert(card)
+        }
+
+        /// Whether `card` was pointed at under `focus`, the one that holds now.
+        public func lets(_ card: String, under focus: String?) -> Bool { focus != nil && focus == self.focus && cards.contains(card) }
+    }
+
+    /// Home's stack under the focus: `stack` with every card the focus holds back left out, short of those let through,
+    /// in the stack's own order, so a card picked back returns to its place.
+    public static func shown(_ stack: [PhoneCard], focus: String?, board: PhoneBoard?, letThrough: LetThrough) -> [PhoneCard] {
+        guard focus != nil, board != nil else { return stack }
+        return stack.filter { !holdsBack($0, focus: focus, board: board) || letThrough.lets($0.id, under: focus) }
+    }
+
     /// The focused project's key, the Mac's `focusedKeyOf`: nil with no focus or before the board is read.
     public static func key(_ focus: String?, board: PhoneBoard?) -> String? {
         guard let focus else { return nil }

@@ -4,7 +4,7 @@ import Testing
 
 /// INF-2820 piece 2, the captain's approved plan: the phone's Filter offers the projects, counts and tail a Mac window's
 /// focus does. These replay the desktop's own reading of one board (`projectPillsOf`, `pillShown`, `heldFocus`,
-/// `waitingElsewhere`, `linesInFocus`), which scripts/generate-phone-scene.ts records.
+/// `waitingElsewhere`, `linesInFocus`, and piece 3's `holdsBack`), which scripts/generate-phone-scene.ts records.
 struct PhoneProjectFocusTests {
     private struct Fixture: Decodable {
         let board: PhoneBoard
@@ -16,6 +16,8 @@ struct PhoneProjectFocusTests {
         let held: [Held]
         let elsewhere: [Elsewhere]
         let kept: [Kept]
+        let cards: [PhoneCard]
+        let holds: [Holds]
     }
     private struct Line: Decodable { let kind: String; let taskKey: String?; let text: String; let at: Double }
     private struct Pills: Decodable { let projects: [Pill]; let waiting: Int; let working: Int }
@@ -23,6 +25,7 @@ struct PhoneProjectFocusTests {
     private struct Held: Decodable { let saved: String?; let held: String?; let oneHeld: String? }
     private struct Elsewhere: Decodable { let focus: String?; let waiting: Int }
     private struct Kept: Decodable { let focus: String?; let lines: [String] }
+    private struct Holds: Decodable { let focus: String?; let held: [String]; let beforeBoard: [String] }
 
     private func fixture() throws -> Fixture {
         let url = try #require(Bundle.module.url(forResource: "PhoneProjectFocus.generated", withExtension: "json", subdirectory: "Fixtures"))
@@ -66,6 +69,38 @@ struct PhoneProjectFocusTests {
             let key = PhoneProjectFocus.key(reading.focus, board: mac.board)
             #expect(PhoneProjectFocus.lines(lines, key: key).map(\.text) == reading.lines, "\(reading.focus ?? "none")")
         }
+    }
+
+    /// INF-2820 piece 3, the captain's "Held back until you pick their project or All projects, as on your Mac".
+    @Test func theFocusHoldsBackTheMacsCards() throws {
+        let mac = try fixture()
+        for reading in mac.holds {
+            let held = mac.cards.filter { PhoneProjectFocus.holdsBack($0, focus: reading.focus, board: mac.board) }.map(\.id)
+            #expect(held == reading.held, "\(reading.focus ?? "none")")
+            let before = mac.cards.filter { PhoneProjectFocus.holdsBack($0, focus: reading.focus, board: nil) }.map(\.id)
+            #expect(before == reading.beforeBoard, "\(reading.focus ?? "none") before the board is read")
+        }
+    }
+
+    /// INF-2820 piece 3: Home keeps the stack's order less the held cards; a card pointed at comes forward under the focus
+    /// it was pointed under, and a pick of another focus holds it again.
+    @Test func homeLetsAPointedCardThroughUntilTheFocusChanges() throws {
+        let mac = try fixture()
+        func shown(_ focus: String?, _ through: PhoneProjectFocus.LetThrough) -> [String] {
+            PhoneProjectFocus.shown(mac.cards, focus: focus, board: mac.board, letThrough: through).map(\.id)
+        }
+        var through = PhoneProjectFocus.LetThrough()
+        #expect(shown("p-inf", through) == ["card-1", "card-fm", "card-99"])
+        #expect(shown(nil, through) == mac.cards.map(\.id), "All projects shows every card")
+        through.point(at: "card-5", under: "p-inf")
+        #expect(shown("p-inf", through) == ["card-1", "card-5", "card-fm", "card-99"], "The pointed card comes back in its place")
+        #expect(shown("p-har", through) == ["card-5", "card-fm", "card-6", "card-99"], "Under another focus it lets nothing through")
+        through.point(at: "card-1", under: "p-har")
+        through.point(at: "card-6", under: "p-inf")
+        #expect(shown("p-inf", through) == ["card-1", "card-fm", "card-6", "card-99"],
+                "Back on p-inf, card-5 pointed at before p-har is held again")
+        through.point(at: "card-7", under: nil)
+        #expect(!through.lets("card-7", under: nil), "At All projects nothing needs letting through")
     }
 
     @Test func eachComputerKeepsItsOwnFocus() throws {

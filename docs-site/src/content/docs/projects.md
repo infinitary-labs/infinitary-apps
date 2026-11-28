@@ -146,6 +146,7 @@ Infinitary remembers your focus when you restart it.
 On your iPhone or iPad, tap **Filter** at the right of the top bar to focus the phone on one project.
 The phone keeps its own focus for each computer, apart from the one on your computer.
 While it is on, a row under the top bar names the project; tap its **×** to see every project again.
+As on your computer, cards about other projects wait off **Home** until you pick their project or **All projects**; tap a card's notification to see it anyway.
 
 ## How changes reach your project
 

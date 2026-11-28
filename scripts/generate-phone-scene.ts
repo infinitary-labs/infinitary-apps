@@ -99,7 +99,7 @@ try {
     neighboursOf: (ids: readonly string[], left: string) => string[];
   }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
   const { satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
-  const { heldFocus, pillShown, projectPillsOf, waitingElsewhere } = await runner.import<typeof import("../src/shared/projectFocus.ts")>(join(REPO_ROOT, "src/shared/projectFocus.ts"));
+  const { heldFocus, holdsBack, pillShown, projectPillsOf, waitingElsewhere } = await runner.import<typeof import("../src/shared/projectFocus.ts")>(join(REPO_ROOT, "src/shared/projectFocus.ts"));
   const { focusedKeyOf, linesInFocus } = await runner.import<typeof import("../src/panels/activity/feedRows.ts")>(join(REPO_ROOT, "src/panels/activity/feedRows.ts"));
   const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
   const { splitCardBodyUrls } = await runner.import<typeof import("../src/shared/linkify.ts")>(join(REPO_ROOT, "src/shared/linkify.ts"));
@@ -494,6 +494,7 @@ try {
    * a pill and what each counts (`projectPillsOf`), whether the pills show (`pillShown`), which saved focus holds
    * (`heldFocus`), the tail (`waitingElsewhere`) and the Activity lines a focus keeps (`linesInFocus`). Scratch and the
    * app's own workspace get a pill only while each lists a task, an archived project none.
+   * INF-2820 piece 3: which cards each focus holds off Home (`holdsBack`), the board read and before it is.
    */
   function projectFocusReadings() {
     const { now, min, project, row, started, idle, running, done } = boardRows();
@@ -518,6 +519,14 @@ try {
     ];
     const board = { seq: 1, tasks, projects, closedLeftOut: { done: { "p-scr": ["t-99"] } } };
     const pills = projectPillsOf(board);
+    const taskProjects = new Map(board.tasks.map((task) => [task.id, task.projectId]));
+    const card = (id: string, title: string, taskId?: string) =>
+      ({ id, title, author: taskId ? "crewmate" : "firstmate", body: "<p>Read it.</p>", actions: [], ...(taskId ? { taskId } : {}) });
+    // Cards about a task of each project, the first mate's own about no task, one about a task in an archived project and
+    // one about a closed task the board left out.
+    const cards = [card("card-1", "Answer the harbour master", "t-1"), card("card-5", "Relight the lamp", "t-5"),
+      card("card-fm", "First mate's note"), card("card-6", "Ring the bell", "t-6"), card("card-7", "Compress the hero images", "t-7"),
+      card("card-8", "Retire the old site", "t-8"), card("card-99", "A closed task's card", "t-99")];
     const one = { seq: 1, tasks: tasks.filter((task) => task.projectId === "p-inf"), projects: projects.slice(0, 1) };
     const lines = [
       { kind: "spawn", taskKey: "INF-2", text: "Started: Port the row's word", at: now - 9 * min },
@@ -534,6 +543,10 @@ try {
       elsewhere: [null, "p-inf", "p-har", "p-web"].map((focus) => ({ focus, waiting: waitingElsewhere(pills, focus) })),
       kept: [null, "p-inf", "p-har"].map((focus) => ({ focus,
         lines: linesInFocus(lines as never, focusedKeyOf(projects, focus)).map((line) => line.text) })),
+      cards,
+      holds: [null, "p-inf", "p-har"].map((focus) => ({ focus,
+        held: cards.filter((card) => holdsBack(card, focus, taskProjects)).map((card) => card.id),
+        beforeBoard: cards.filter((card) => holdsBack(card, focus, null)).map((card) => card.id) })),
     };
   }
   function taskListReadings() {

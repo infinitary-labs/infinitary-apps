@@ -85,6 +85,9 @@ const isolatedUnit = [
   "src/core/tasks/taskTimeline.test.ts",
   "src/core/pi/accountVault.test.ts",
   "src/core/pi/classifierSession.realSession.test.ts",
+  // Its account store's Claude list reader loads the Claude SDK, whose import
+  // writes a process environment variable.
+  "src/core/pi/codexConnectCatalog.test.ts",
   "src/core/pi/codexLogin.integration.test.ts",
   "src/core/pi/codingSession.realSession.test.ts",
   "src/core/pi/crewmateTaskTools.test.ts",

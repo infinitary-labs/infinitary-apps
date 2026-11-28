@@ -1338,6 +1338,7 @@ Nothing of the home's sign-ins is sent here, and nothing of these goes to the ho
   The safety rail protects the models the captain kept, which only the home's record holds, so the home judges a Codex or Grok account's own list there: this computer reports Pi's catalog for the account with the ids its own list named (`accountList`), and the home narrows that catalog by the same rail and protected ids as its own accounts (`narrowServedThere`, `src/core/models/piAccountLists.ts`), wherever it reads what this computer serves.
   A model the captain pins or places in a level stays listed there whenever the account's own list leaves it out, as it does here.
   Each account's own list is read when this computer first holds the account, after a sign-in, and once a day after its last try, whether that try succeeded or failed, as the home reads its own.
+  A Codex or Grok account's list is also read on each catalog pass, right after pi.dev is asked again, as at the home (`docs/model-lists.md`, "Where "served" comes from").
   An allowance read starts a list read only when the account has never been tried or its last try is a day old, since Claude's read starts its client and holds the login's store.
   A read that could not start while a session held that store is not a try, so the next allowance read starts it again.
   For a custom model, the home opens only the account-free control plane and names this computer's checked account; this computer builds the runtime on its own connection.

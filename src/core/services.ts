@@ -64,7 +64,7 @@ import { FIRSTMATE_READER, type IntegrationKeys, SavedOutsideData } from "./inte
 import { startHomeIntegrations } from "./integrations/homeIntegrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { startHomeKnowledge } from "./knowledge/homeKnowledge";
-import { createAccountStore } from "./models/accountStore";
+import { CATALOG_REFRESH_EVERY_MS, createAccountStore } from "./models/accountStore";
 import { isObserveEnabled } from "./observe/gate";
 import { ObserveService } from "./observe/observeService";
 import { createCrewmateTranscriptResolver } from "./observe/transcriptSource";
@@ -209,7 +209,7 @@ export async function createServices(
   // every computer that runs work builds its own. The rail protects the
   // slot record's starter and kept ids, read once a read lands, long after
   // the record exists below.
-  const { vault, served } = createAccountStore(paths, {
+  const { vault, served, refreshCatalogs } = createAccountStore(paths, {
     pi: piBackend,
     backends: [claudeBackend],
     holdSeat: async (accountId) => (await holdSeat?.(accountId)) ?? (() => {}),
@@ -1580,6 +1580,9 @@ export async function createServices(
     },
     24 * 60 * 60 * 1000,
   );
+  // A model a connected account's provider publishes reaches its lists while
+  // the app stays open (docs/model-lists.md, "Where "served" comes from").
+  const catalogInterval = setInterval(() => void refreshCatalogs(), CATALOG_REFRESH_EVERY_MS);
   const observe = new ObserveService({
     enabled: isObserveEnabled({
       packaged: host.app.packaged,
@@ -1662,6 +1665,7 @@ export async function createServices(
     tagging,
     stopLivenessSweep: () => {
       clearInterval(livenessInterval);
+      clearInterval(catalogInterval);
       // The daily read of each phone's box of letters (docs/phone-push.md, "Letters").
       notifier.stop();
       return usageRoutes.stop(() => usage.usageReporter.stop());

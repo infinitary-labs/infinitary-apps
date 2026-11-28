@@ -14,7 +14,11 @@ import {
   readClaudeStore,
 } from "../claude/claudeQuota";
 import { absentKeychain, type HostKeychain } from "../host";
-import { type AccountStoreOptions, createAccountStore } from "../models/accountStore";
+import {
+  type AccountStoreOptions,
+  CATALOG_REFRESH_EVERY_MS,
+  createAccountStore,
+} from "../models/accountStore";
 import type { AccountVault } from "../pi/accountVault";
 import { PiAccountBackend } from "../pi/piAccountBackend";
 import { PiAuthService } from "../pi/piAuth";
@@ -145,7 +149,7 @@ export async function startComputerAccounts(
   // (docs/helper.md, "Automatic starts"): Claude's client's own list, else
   // its shipped one. Codex's and Grok's own lists are judged at the home,
   // which holds the models the captain kept that the rail protects.
-  const { vault, served } = createAccountStore(
+  const { vault, served, refreshCatalogs } = createAccountStore(
     { accountsDir },
     {
       pi,
@@ -307,6 +311,8 @@ export async function startComputerAccounts(
     timers = [
       setInterval(() => void readAllowance("interval"), ALLOWANCE_EVERY_MS),
       setInterval(() => void health.tick().catch(() => undefined), 60_000),
+      // As the home's own: a model published since reaches these lists too.
+      setInterval(() => void refreshCatalogs(), CATALOG_REFRESH_EVERY_MS),
     ];
     for (const timer of timers) timer.unref();
   }

@@ -60,6 +60,10 @@ struct PhoneFilterSheet: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.height + $0.safeAreaInsets.top + $0.safeAreaInsets.bottom } action: { sheet = $0 }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
         .onKeyPress(.escape) { dismiss(); return .handled }
+        // The keys reach only a focused row. Focus set while the sheet still slides in can fail, as an iPad reopening
+        // the sheet just after Escape showed (UIKit's "Failed to update focus", no row focused), so the checked row
+        // takes focus once the presentation has ended.
+        .background { PhoneSheetAppeared { focusedRow = session.projectFocus ?? Self.allRow }.frame(width: 0, height: 0).accessibilityHidden(true) }
         .presentationDetents([.custom(PhoneFittedDetent.self), .large], selection: $detent).presentationDragIndicator(.visible)
         .presentationContentInteraction(.resizes)
         .environment(\.phoneSheetFit, rows > 0 && shown > 0 && sheet > shown ? rows + sheet - shown : 0).phoneSheetSurface()
@@ -77,9 +81,6 @@ struct PhoneFilterSheet: View {
                     row(pill.id, title: pill.name, waiting: pill.waiting, working: pill.working, order: order)
                 }
             }
-            // The keys reach only a focused row, and a sheet reopened a second after a pick on the iPad once kept no
-            // row focused; the default names the checked row for the system's own focus pass on presentation.
-            .defaultFocus($focusedRow, session.projectFocus ?? Self.allRow)
         }
     }
 
@@ -100,8 +101,6 @@ struct PhoneFilterSheet: View {
         .accessibilityAddTraits(checked ? .isSelected : [])
         .accessibilityIdentifier("project-filter-\(id)")
         .focusable().focused($focusedRow, equals: id)
-        // The opening focus is set from the focusable row itself, as the Settings sheet's Appearance page sets its own.
-        .onAppear { if checked { focusedRow = id } }
         .onPlainKey(.return) { pick(id) }
         .onPlainKey(.space) { pick(id) }
         .onPlainKey(.downArrow) { focusedRow = step(order, from: id, by: 1) }
@@ -119,6 +118,21 @@ struct PhoneFilterSheet: View {
     }
 
     static let allRow = "all-projects" // i18n-exempt: a focus name, not shown
+}
+
+/// Runs `appeared` when the view controller showing this view has appeared, which for a sheet is once its
+/// presentation has ended; SwiftUI's onAppear runs before the sheet is on screen.
+private struct PhoneSheetAppeared: UIViewControllerRepresentable {
+    let appeared: @MainActor () -> Void
+    func makeUIViewController(context: Context) -> Holder { Holder(appeared: appeared) }
+    func updateUIViewController(_ holder: Holder, context: Context) { holder.appeared = appeared }
+
+    final class Holder: UIViewController {
+        var appeared: @MainActor () -> Void
+        init(appeared: @escaping @MainActor () -> Void) { self.appeared = appeared; super.init(nibName: nil, bundle: nil) }
+        required init?(coder: NSCoder) { nil }
+        override func viewDidAppear(_ animated: Bool) { super.viewDidAppear(animated); appeared() }
+    }
 }
 
 /// INF-2820 piece 2: while a project is focused, one row under the top bar on every tab, under the reach line: the

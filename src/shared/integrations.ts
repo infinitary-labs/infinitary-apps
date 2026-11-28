@@ -194,6 +194,10 @@ export const integrationDoorViewSchema = z
   .strict();
 export type IntegrationDoorView = z.infer<typeof integrationDoorViewSchema>;
 
+/** Google's Workspace MCP services the setup turns on, by the name before `mcp.googleapis.com`. */
+export const GOOGLE_MCP_SERVICES = ["gmail", "calendar", "drive", "docs", "sheets"] as const;
+export type GoogleMcpService = (typeof GOOGLE_MCP_SERVICES)[number];
+
 /**
  * The client a kind signs in as, for a kind that signs in as the person's
  * own client (Google's, docs/integrations.md "Google"): typed
@@ -230,15 +234,30 @@ export const integrationClientViewSchema = z
     mcp: z
       .object({
         refused: z.enum(["agent", "service"]),
+        /** Gmail and Calendar among the services off, for a view from before `off`. */
         services: z
           .array(z.enum(["gmail", "calendar"]))
           .min(1)
           .max(2)
           .optional(),
+        /**
+         * Every service whose MCP server is off. A new member of a closed
+         * set breaks every view from before it, so this one names each MCP
+         * service Google's setup turns on, Docs and Sheets before the row
+         * reaches them.
+         */
+        off: z.array(z.enum(GOOGLE_MCP_SERVICES)).min(1).max(GOOGLE_MCP_SERVICES.length).optional(),
         link: z.string().max(2048).refine(googleConsoleLink),
       })
       .strict()
       .optional(),
+    /**
+     * The sign-in lacks Drive's permission: made before the row asked for
+     * it, or with its box left unticked on Google's page. Gmail and Calendar
+     * keep working; Drive waits for a new sign-in (the captain's answer 2a
+     * on INF-6447).
+     */
+    withoutDrive: z.literal(true).optional(),
   })
   .strict();
 export type IntegrationClientView = z.infer<typeof integrationClientViewSchema>;
@@ -268,9 +287,17 @@ export const GOOGLE_CLIENT_SETUP_PAGE =
 /** Google Cloud's list of the person's clients, where "Use this client for an AI-powered agent" is ticked on one. */
 export const GOOGLE_CLIENTS_PAGE = "https://console.cloud.google.com/auth/clients";
 
-/** The page that turns on Gmail's and Calendar's MCP servers, when Google names none. */
-export const GOOGLE_MCP_ENABLE_PAGE =
-  "https://console.cloud.google.com/flows/enableapi?apiid=gmailmcp.googleapis.com,calendarmcp.googleapis.com";
+/** Google Cloud's page that turns services on, by their names after `apiid=`. */
+export const GOOGLE_MCP_ENABLE_PAGE = "https://console.cloud.google.com/flows/enableapi";
+
+/** The page that turns on every named service's MCP server at once, in `project` when Google named it. */
+export function googleMcpEnablePage(
+  services: readonly GoogleMcpService[],
+  project?: string,
+): string {
+  const ids = services.map((service) => `${service}mcp.googleapis.com`).join(",");
+  return `${GOOGLE_MCP_ENABLE_PAGE}?apiid=${ids}${project ? `&project=${encodeURIComponent(project)}` : ""}`;
+}
 
 /** A client file as the person drops or pastes it: Google's JSON is a few hundred bytes. */
 export const integrationClientFileSchema = z
@@ -634,7 +661,7 @@ export type IntegrationNotice = {
 };
 
 /**
- * How long Gmail and Calendar words stay in saved conversations before a
+ * How long Gmail, Calendar and Drive words stay in saved conversations before a
  * note takes their place, and what a person calls them: 30 days after they
  * were read, the captain's answer on INF-952 ("30 days, the same as
  * Claude's own sweep"), so no Google data is kept for good
@@ -642,11 +669,11 @@ export type IntegrationNotice = {
  */
 export const GOOGLE_DATA_KEPT: Omit<KeptOutsideData, "label"> = {
   days: 30,
-  what: "Gmail and Calendar content",
+  what: "Google content",
 };
 
 /**
- * Google's notice: what Infinitary uses from Gmail and Calendar, and where
+ * Google's notice: what Infinitary uses from Gmail, Calendar and Drive, and where
  * it goes - the person's AI provider, another computer that runs the work,
  * and the saved task records, with how long they keep it and how to delete
  * it sooner (INF-952), and a saved attachment's stay and its unmarked words
@@ -665,12 +692,19 @@ const GOOGLE_NOTICE: IntegrationNotice = {
       heading: "What Infinitary uses",
       items: [
         {
+          // i18n-exempt: a product name
           name: "Gmail",
           text: "The senders, recipients, subjects, dates, labels and text of your messages, and the names, types and sizes of attachments. A crewmate can save an attachment you approve into its task's folder.",
         },
         {
+          // i18n-exempt: a product name
           name: "Calendar",
           text: "Your calendars, their events with titles, times, places, descriptions and guests, and the times you are busy.",
+        },
+        {
+          // i18n-exempt: a product name
+          name: "Drive",
+          text: "The names, types, owners, sizes and links of your files, and the content of each file the crew reads. A crewmate can save a file you approve into its task's folder. Infinitary asks for all of Drive, which could also change, move, share or delete files; no action of Infinitary's does any of that.",
         },
         {
           text: "Infinitary uses them only to do what you ask and to run the rules you turn on. Each label, draft, sent message and event change waits for your approval.",
@@ -682,7 +716,7 @@ const GOOGLE_NOTICE: IntegrationNotice = {
       items: [
         {
           name: "Your AI provider",
-          text: "What your first mate and crew read, whole messages included, goes to the provider whose model does the work. Your agreement and settings with that provider decide how long it keeps them and whether it trains its models on them. Google does not allow this data to train AI models. Before you connect, check that your provider does not train on your conversations.",
+          text: "What your first mate and crew read, whole messages and files included, goes to the provider whose model does the work. Your agreement and settings with that provider decide how long it keeps them and whether it trains its models on them. Google does not allow this data to train AI models. Before you connect, check that your provider does not train on your conversations.",
         },
         {
           name: "Other computers",
@@ -690,7 +724,7 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         },
         {
           name: "Saved task records",
-          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → Integrations, under Data. A saved attachment stays in its task's folder until the task closes or ${GOOGLE_DATA_KEPT.days} days pass, and the same delete removes it sooner. Words a crewmate reads inside a saved file are not marked as information from outside, and stay in its conversation after the ${GOOGLE_DATA_KEPT.days} days. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
+          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → Integrations, under Data. A saved attachment or file stays in its task's folder until the task closes or ${GOOGLE_DATA_KEPT.days} days pass, and the same delete removes it sooner. Words a crewmate reads inside a saved file are not marked as information from outside, and stay in its conversation after the ${GOOGLE_DATA_KEPT.days} days. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google deletes what they read and saved, not what they wrote. Purge task data deletes every saved task on this computer.`,
         },
       ],
     },
@@ -699,7 +733,7 @@ const GOOGLE_NOTICE: IntegrationNotice = {
       items: [
         {
           name: "What Infinitary does",
-          text: "Anyone can send you words written to steer an AI. Infinitary hands your mail and events to your first mate and crew marked as information from outside, never as instructions.",
+          text: "Anyone can send you words written to steer an AI, or share a file with them. Infinitary hands your mail, events and files to your first mate and crew marked as information from outside, never as instructions.",
         },
         {
           name: "What it cannot stop",

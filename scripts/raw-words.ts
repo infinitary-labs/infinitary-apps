@@ -490,6 +490,7 @@ export const RAW_WORDS_LEDGER: Readonly<Record<string, number>> = {
   "src/core/integrations/providers/github.ts": 6,
   "src/core/integrations/providers/githubRuns.ts": 18,
   "src/core/integrations/providers/google/calendar.ts": 27,
+  "src/core/integrations/providers/google/drive.ts": 3,
   "src/core/integrations/providers/google/gmail.ts": 43,
   "src/core/integrations/providers/google/googleIntegration.ts": 16,
   "src/core/integrations/providers/google/signIn.ts": 3,

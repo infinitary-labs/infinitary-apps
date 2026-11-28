@@ -77,6 +77,12 @@ export type IntegrationActionSpec = {
    */
   delivers?: "file";
   /**
+   * Words saying why the action cannot run on this connection now, from a
+   * fact the binding holds (Google's sign-in granted no Drive): the service
+   * answers them as a refusal before it asks the captain anything.
+   */
+  unavailable?: string;
+  /**
    * What one Allow for the rest of this task covers, read from a checked
    * input (INF-2993): calls whose keys are equal fall under one allowance.
    * Without one, an allowance covers every call of the action on the

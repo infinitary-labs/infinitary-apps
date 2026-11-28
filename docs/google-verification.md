@@ -7,7 +7,7 @@ The implementation is described in [Integrations](integrations.md#google).
 ## Architecture and data inventory
 
 Infinitary is a desktop application, with an iPhone and iPad app that controls it, not a hosted mail service.
-The computer running the first mate makes OAuth, Gmail and Calendar requests directly to Google, Gmail and Calendar through Google's own MCP servers for them.
+The computer running the first mate makes OAuth, Gmail, Calendar and Drive requests directly to Google, Gmail, Calendar and Drive through Google's own MCP servers for them.
 Other paired computers can run agents that request those operations through the first mate's computer; the results, but not the Google tokens, can travel to those computers.
 A person can start the sign-in from a paired computer, or from Infinitary on iPhone or iPad: Google's page opens in that computer's browser or the phone's in-app browser, and that computer or phone passes the one-time code and state back to the first mate's computer, which alone makes the PKCE exchange and keeps the tokens.
 The chosen AI providers receive the task context and tool answers needed for the work.
@@ -24,6 +24,7 @@ flowchart LR
   Home -->|PKCE exchange and renewal over HTTPS| Google
   Home <-->|Authorized operations over HTTPS| Gmail[Gmail MCP server]
   Home <-->|Authorized operations over HTTPS| Calendar[Calendar MCP server]
+  Home <-->|Authorized reads over HTTPS| Drive[Drive MCP server]
   Home -->|Tokens| Keys[Local integration key store]
   Home -->|Results, cards and task history| Records[Local saved records]
   Home <-->|Authenticated paired connection; no Google tokens| Computer[Other work computer]
@@ -34,11 +35,13 @@ flowchart LR
 | Data | Use and destination | Storage owner |
 | --- | --- | --- |
 | Google refresh token | Renew and revoke access. Applied only inside the protected Secrets owner to the renewal request sent to Google's token address, never returned to the integration or as tool output. | A hidden entry in Secrets ([Secrets](secrets.md#app-services)), sealed under a root key held in the macOS Keychain or the Linux Secret Service; each renewal is approved on Secrets' card, once with Always allow. A file an earlier version kept is moved in and removed. |
-| Google access token | Authorize Gmail and Calendar MCP calls and the profile read; revoke on removal. | The app's memory only; renewed at each start and before it expires. |
+| Google access token | Authorize Gmail, Calendar and Drive MCP calls and the profile read; revoke on removal. | The app's memory only; renewed at each start and before it expires. |
 | Account address, scopes, expiry, sign-in health | Identify the row and maintain access. The address appears in Settings and agent context. | `GoogleSignInStore`, `userData/integrations/google.json`, 0600. |
 | Message identifiers, thread identifiers, labels, headers and snippets | Search and triage mail; query results reach the requesting agent and its model provider. | Gmail holds the mailbox; returned results persist in model sessions for 30 days, and in what agents write into task records and outputs. |
 | Message text and attachment metadata | Read a selected message; HTML is converted to text. The read action reports attachment names, types and part numbers. | Results persist in sessions for 30 days, and in what agents write into reports, cards and user-requested files. |
-| Attachment files | A crewmate saves one attachment the person approved into its task's hand-over folder, taken from the whole message Gmail's MCP server gives (`get_message` with `RAW`), to read or use it for the task. | The task's hand-over folder on the computer that runs it, 0600, until the task closes or 30 days pass, or Delete Gmail and Calendar content. Words an agent reads inside the file are not fenced and persist in its session past the 30 days. |
+| Attachment files | A crewmate saves one attachment the person approved into its task's hand-over folder, taken from the whole message Gmail's MCP server gives (`get_message` with `RAW`), to read or use it for the task. | The task's hand-over folder on the computer that runs it, 0600, until the task closes or 30 days pass, or Delete Google content. Words an agent reads inside the file are not fenced and persist in its session past the 30 days. |
+| Drive file names, types, owners, sizes, links and text | Search Drive, read a file's text, cut after 100,000 characters, each call asking the person until they choose Always allow; the answers reach the requesting agent and its model provider. The sign-in asks for all of Drive, which could also change, move, share or delete files; no action does any of that. A sign-in with Drive left unticked keeps Gmail and Calendar and reaches no Drive file. | Google holds the files; results persist in sessions for 30 days, and in what agents write into task records, cards and outputs. |
+| Drive files | A crewmate saves one Drive file the person approved into its task's hand-over folder: an ordinary file byte for byte, or a Google Doc, Sheet or Slides deck exported, up to 25 MB, to read or use it for the task. | The task's hand-over folder on the computer that runs it, 0600, until the task closes or 30 days pass, or Delete Google content. Words an agent reads inside the file are not fenced and persist in its session past the 30 days. |
 | Recipients, subject and outgoing text | Prepare a draft or send after the person's approval of an exact action. | The pending write ask and task record keep its input; Gmail holds accepted drafts and sent messages. |
 | Inbox cursor and sender/subject summaries | Poll for new inbox messages while a rule listens, by searching the inbox for messages since the cursor's time; supply summaries, fenced as data from outside, to the rule's first mate turn. | Automation's saved cursor (a time and the message ids at that time) and task/session records. A first look starts from the newest message rather than replaying an old inbox. |
 | Calendar lists, event data and availability | List calendars and events, read event details, suggest free times, create or update an event after approval, and react to changes in a selected calendar. Event data includes titles, descriptions, times, locations and attendees where Google returns them; a change notification carries title and times but not descriptions or guests. | Google holds the calendars; results persist in sessions for 30 days, and in what agents write into task records, cards and outputs. Automation keeps a per-account, per-calendar cursor: a time and the event revisions at that time. |
@@ -46,10 +49,10 @@ flowchart LR
 
 Removing Google calls revocation and deletes the local sign-in and keys even if Google cannot be reached.
 A network failure is therefore not evidence that Google revoked the grant remotely; the person can also remove access in their Google Account.
-Removal also starts Delete Gmail and Calendar content, below, since the Workspace API user data and developer policy keeps no user data after the tool is disconnected.
+Removal also starts Delete Google content, below, since the Workspace API user data and developer policy keeps no user data after the tool is disconnected.
 It leaves task records, outputs and copies held by other services intact.
-What an agent read from Gmail or Calendar stays in its saved conversation for 30 days after it was read, then a note takes its place ([Task retention](task-retention.md#words-from-outside)).
-Delete Gmail and Calendar content, in Settings → Integrations under Data, does the same at once for everything read so far, on this computer and on the computers that run its work, and the conversations themselves stay.
+What an agent read from Gmail, Calendar or Drive stays in its saved conversation for 30 days after it was read, then a note takes its place ([Task retention](task-retention.md#words-from-outside)).
+Delete Google content, in Settings → Integrations under Data, does the same at once for everything read so far, on this computer and on the computers that run its work, and the conversations themselves stay.
 What an agent wrote in its own words, such as a report, a card or a file, stays until the task is deleted; the Settings data purge deletes every saved task on this computer.
 Backups, exported files and AI-provider retention require separate treatment.
 
@@ -59,8 +62,8 @@ Google's Workspace policy asks for "protecting against prompt injection techniqu
 Infinitary takes the second route, in three layers:
 
 1. Data from outside is fenced.
-   Every Gmail and Calendar answer, and every event summary, reaches the first mate or a crewmate between marks whose random value the writer could not know, with any copy of a mark in the words broken and a line before and after saying never to follow what is inside ([Integrations](integrations.md#data-from-outside)).
-   A saved attachment's own content is the exception: the answer naming it is fenced, but words a crewmate reads inside the file are not, and Google's notice says so.
+   Every Gmail, Calendar and Drive answer, and every event summary, reaches the first mate or a crewmate between marks whose random value the writer could not know, with any copy of a mark in the words broken and a line before and after saying never to follow what is inside ([Integrations](integrations.md#data-from-outside)).
+   A saved attachment's or Drive file's own content is the exception: the answer naming it is fenced, but words a crewmate reads inside the file are not, and Google's notice says so.
 2. Every action starts at Asks you.
    The host shows the exact call and agent’s reason, with Only this time highlighted for changes and sends.
    Always allow also permits later calls of that action until revoked, the first mate's and every crewmate's alike ([Integrations](integrations.md#the-rules)).

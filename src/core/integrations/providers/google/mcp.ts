@@ -10,7 +10,7 @@ import {
 import { IntegrationOutcomeUnknown } from "../../binding";
 
 /**
- * Google's Gmail and Calendar MCP servers (docs/integrations.md, "Google"):
+ * Google's Gmail, Calendar and Drive MCP servers (docs/integrations.md, "Google"):
  * one MCP client per service, reached over the SDK's streamable HTTP
  * transport with the Google sign-in's access key on every request. Google
  * speaks the 2026-07-28 protocol, so a confirmation it asks for arrives as
@@ -24,7 +24,7 @@ import { IntegrationOutcomeUnknown } from "../../binding";
  * and whose `state` the same call takes back with the captain's pick.
  */
 
-export type GoogleService = "gmail" | "calendar";
+export type GoogleService = "gmail" | "calendar" | "drive";
 
 /**
  * A response cache that keeps nothing. Once the SDK's client holds a tool
@@ -55,7 +55,7 @@ export type GoogleMcpOptions = {
   service: GoogleService;
   /** The service's MCP address. */
   url: string;
-  /** The service's name in words served to the crew: Gmail, Google Calendar. */
+  /** The service's name in words served to the crew: Gmail, Google Calendar, Google Drive. */
   label: string;
   /** The app's version, named to Google as the client's. */
   version: string;
@@ -87,7 +87,7 @@ export type GoogleChoice = { value: string; label: string };
  * Google's question about one tool call, for the captain: its words, its
  * question line, its choices, and the call to retry. `asker` is the service
  * the call went to, in the words its card names it by (Gmail, Google
- * Calendar), never read from Google's words.
+ * Calendar, Google Drive), never read from Google's words.
  */
 export type GoogleConfirm = {
   message: string;

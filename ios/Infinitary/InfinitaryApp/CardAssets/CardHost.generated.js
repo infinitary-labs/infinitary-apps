@@ -44075,29 +44075,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleAgentRefusedDetail() {
     switch (currentLanguage()) {
       case "ar":
-        return `لا تقبل خوادم Gmail والتقويم من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
+        return `لا تقبل خوادم Gmail والتقويم وDrive من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» من قائمة هذا الصف.`;
       case "de":
-        return `Die Gmail- und Kalender-Server von Google nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist. Öffne deinen Client in Google Cloud, setz das Häkchen bei „Use this client for an AI-powered agent“ und speichere. Wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
+        return `Die Gmail-, Kalender- und Drive-Server von Google nehmen nur einen Client an, der für einen KI-gestützten Agenten gekennzeichnet ist. Öffne deinen Client in Google Cloud, setz das Häkchen bei „Use this client for an AI-powered agent“ und speichere. Wähl dann „Jetzt prüfen“ im Menü dieser Zeile.`;
       case "es":
-        return `Los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en el menú de esta fila.`;
+        return `Los servidores de Gmail, Calendar y Drive de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en el menú de esta fila.`;
       case "fr":
-        return `Les serveurs Gmail et Agenda de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
+        return `Les serveurs Gmail, Agenda et Drive de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant dans le menu de cette ligne.`;
       case "ja":
-        return `Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、この行のメニューで「今すぐ確認」を選んでください。`;
+        return `Google の Gmail、カレンダー、ドライブのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、この行のメニューで「今すぐ確認」を選んでください。`;
       case "ko":
-        return `Google의 Gmail 및 캘린더 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, 이 행의 메뉴에서 지금 확인을 고르세요.`;
+        return `Google의 Gmail, 캘린더 및 드라이브 서버는 AI 기반 에이전트용으로 표시된 클라이언트만 받아요. Google Cloud에서 클라이언트를 열고 “Use this client for an AI-powered agent”에 체크한 뒤 저장하고, 이 행의 메뉴에서 지금 확인을 고르세요.`;
       case "pt-BR":
-        return `Os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora no menu desta linha.`;
+        return `Os servidores do Gmail, da Agenda e do Drive do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora no menu desta linha.`;
       case "zh-Hans":
-        return `Google 的 Gmail 和日历服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在这一行的菜单中选择“立即检查”。`;
+        return `Google 的 Gmail、日历和云端硬盘服务器只接受标记为供 AI 智能体使用的客户端。在 Google Cloud 中打开你的客户端，勾选“Use this client for an AI-powered agent”并保存，然后在这一行的菜单中选择“立即检查”。`;
       case "zh-Hant":
-        return `Google 的 Gmail 和日曆伺服器只接受標示為供 AI 代理程式使用的用戶端。在 Google Cloud 中開啟你的用戶端，勾選「Use this client for an AI-powered agent」並儲存，然後在這一列的選單中選擇「立即檢查」。`;
+        return `Google 的 Gmail、日曆和雲端硬碟伺服器只接受標示為供 AI 代理程式使用的用戶端。在 Google Cloud 中開啟你的用戶端，勾選「Use this client for an AI-powered agent」並儲存，然後在這一列的選單中選擇「立即檢查」。`;
       case "en-XA":
-        return `[Ĝööĝļé'š Ĝɱáîļ áñð Çáļéñðáŕ šéŕṽéŕš öñļý ţáķé á çļîéñţ ɱáŕķéð ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ. Öþéñ ýöûŕ çļîéñţ îñ Ĝööĝļé Çļöûð, ţîçķ “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” áñð šáṽé, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Ĝööĝļé'š Ĝɱáîļ, Çáļéñðáŕ áñð Ðŕîṽé šéŕṽéŕš öñļý ţáķé á çļîéñţ ɱáŕķéð ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ. Öþéñ ýöûŕ çļîéñţ îñ Ĝööĝļé Çļöûð, ţîçķ “Ûšé ţĥîš çļîéñţ ƒöŕ áñ ÅÎ-þöŵéŕéð áĝéñţ” áñð šáṽé, ţĥéñ çĥööšé Çĥéçķ ñöŵ ƒŕöɱ ţĥîš ŕöŵ'š ɱéñû. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.‬`;
+        return `‮Google's Gmail, Calendar and Drive servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.‬`;
     }
-    return `Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.`;
+    return `Google's Gmail, Calendar and Drive servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.`;
   }
   function integrationsGoogleClientFileIncomplete() {
     switch (currentLanguage()) {
@@ -44315,6 +44315,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Calendar`;
   }
+  function integrationsGoogleServiceDocs() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `المستندات`;
+      case "de":
+        return `Docs`;
+      case "es":
+        return `Documentos`;
+      case "fr":
+        return `Docs`;
+      case "ja":
+        return `ドキュメント`;
+      case "ko":
+        return `문서`;
+      case "pt-BR":
+        return `Documentos`;
+      case "zh-Hans":
+        return `文档`;
+      case "zh-Hant":
+        return `文件`;
+      case "en-XA":
+        return `[Ðöçš ~~]`;
+      case "ar-XB":
+        return `‮Docs‬`;
+    }
+    return `Docs`;
+  }
+  function integrationsGoogleServiceDrive() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `Drive`;
+      case "de":
+        return `Drive`;
+      case "es":
+        return `Drive`;
+      case "fr":
+        return `Drive`;
+      case "ja":
+        return `ドライブ`;
+      case "ko":
+        return `드라이브`;
+      case "pt-BR":
+        return `Drive`;
+      case "zh-Hans":
+        return `云端硬盘`;
+      case "zh-Hant":
+        return `雲端硬碟`;
+      case "en-XA":
+        return `[Ðŕîṽé ~~]`;
+      case "ar-XB":
+        return `‮Drive‬`;
+    }
+    return `Drive`;
+  }
   function integrationsGoogleServiceGmail() {
     switch (currentLanguage()) {
       case "ar":
@@ -44463,6 +44517,33 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
       default:
         return `The ${services} MCP services are off in your Google Cloud project, so Infinitary can't reach them. Turn them on in Google Cloud, then choose Check now from this row's menu.`;
     }
+  }
+  function integrationsGoogleServiceSheets() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `جداول البيانات`;
+      case "de":
+        return `Tabellen`;
+      case "es":
+        return `Hojas de cálculo`;
+      case "fr":
+        return `Sheets`;
+      case "ja":
+        return `スプレッドシート`;
+      case "ko":
+        return `스프레드시트`;
+      case "pt-BR":
+        return `Planilhas`;
+      case "zh-Hans":
+        return `表格`;
+      case "zh-Hant":
+        return `試算表`;
+      case "en-XA":
+        return `[Šĥééţš ~~]`;
+      case "ar-XB":
+        return `‮Sheets‬`;
+    }
+    return `Sheets`;
   }
   function integrationsGoogleSetUp() {
     switch (currentLanguage()) {
@@ -44711,29 +44792,29 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
   function integrationsGoogleSetupLead() {
     switch (currentLanguage()) {
       case "ar":
-        return `يصل Infinitary إلى Gmail والتقويم عبر عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google. لا تراجعه Google، ولا تعرض تحذيرًا، ولا تُنهي تسجيل دخوله بعد 7 أيام.`;
+        return `يصل Infinitary إلى Gmail والتقويم وDrive عبر عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google. لا تراجعه Google، ولا تعرض تحذيرًا، ولا تُنهي تسجيل دخوله بعد 7 أيام.`;
       case "de":
-        return `Infinitary erreicht Gmail und Kalender über einen Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst. Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht nach 7 Tagen.`;
+        return `Infinitary erreicht Gmail, Kalender und Drive über einen Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst. Google prüft ihn nicht, zeigt keine Warnung und beendet seine Anmeldung nicht nach 7 Tagen.`;
       case "es":
-        return `Infinitary accede a Gmail y Calendar con un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google. Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.`;
+        return `Infinitary accede a Gmail, Calendar y Drive con un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google. Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.`;
       case "fr":
-        return `Infinitary accède à Gmail et à Agenda par un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google. Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.`;
+        return `Infinitary accède à Gmail, à Agenda et à Drive par un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google. Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.`;
       case "ja":
-        return `Infinitary は、あなたが自分の Google Cloud プロジェクトに Google の個人モードで作成するクライアントを通じて Gmail とカレンダーを使います。Google による審査や警告はなく、サインインが 7 日で切れることもありません。`;
+        return `Infinitary は、あなたが自分の Google Cloud プロジェクトに Google の個人モードで作成するクライアントを通じて Gmail、カレンダー、ドライブを使います。Google による審査や警告はなく、サインインが 7 日で切れることもありません。`;
       case "ko":
-        return `Infinitary는 내 Google Cloud 프로젝트에서 Google의 개인 모드로 만든 클라이언트를 통해 Gmail과 캘린더에 접근합니다. Google의 검토나 경고가 없고, 로그인이 7일 후에 끝나지도 않습니다.`;
+        return `Infinitary는 내 Google Cloud 프로젝트에서 Google의 개인 모드로 만든 클라이언트를 통해 Gmail, 캘린더, 드라이브에 접근합니다. Google의 검토나 경고가 없고, 로그인이 7일 후에 끝나지도 않습니다.`;
       case "pt-BR":
-        return `O Infinitary acessa o Gmail e o Agenda por um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google. O Google não o revisa, não mostra aviso e não encerra o login dele depois de 7 dias.`;
+        return `O Infinitary acessa o Gmail, o Agenda e o Drive por um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google. O Google não o revisa, não mostra aviso e não encerra o login dele depois de 7 dias.`;
       case "zh-Hans":
-        return `Infinitary 通过你在自己的 Google Cloud 项目中以 Google 个人模式创建的客户端访问 Gmail 和日历。Google 不会审核它，不显示警告，也不会在 7 天后结束它的登录。`;
+        return `Infinitary 通过你在自己的 Google Cloud 项目中以 Google 个人模式创建的客户端访问 Gmail、日历和云端硬盘。Google 不会审核它，不显示警告，也不会在 7 天后结束它的登录。`;
       case "zh-Hant":
-        return `Infinitary 透過你在自己的 Google Cloud 專案中以 Google 個人模式建立的用戶端存取 Gmail 和日曆。Google 不會審核它，不顯示警告，也不會在 7 天後結束它的登入。`;
+        return `Infinitary 透過你在自己的 Google Cloud 專案中以 Google 個人模式建立的用戶端存取 Gmail、日曆和雲端硬碟。Google 不會審核它，不顯示警告，也不會在 7 天後結束它的登入。`;
       case "en-XA":
-        return `[Îñƒîñîţáŕý ŕéáçĥéš Ĝɱáîļ áñð Çáļéñðáŕ ţĥŕöûĝĥ á çļîéñţ ýöû ɱáķé îñ ýöûŕ öŵñ Ĝööĝļé Çļöûð þŕöĵéçţ, îñ Ĝööĝļé'š Þéŕšöñáļ ɱöðé. Ĝööĝļé ðöéšñ'ţ ŕéṽîéŵ îţ, šĥöŵš ñö ŵáŕñîñĝ, áñð ðöéšñ'ţ éñð îţš šîĝñ-îñ áƒţéŕ 7 ðáýš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+        return `[Îñƒîñîţáŕý ŕéáçĥéš Ĝɱáîļ, Çáļéñðáŕ áñð Ðŕîṽé ţĥŕöûĝĥ á çļîéñţ ýöû ɱáķé îñ ýöûŕ öŵñ Ĝööĝļé Çļöûð þŕöĵéçţ, îñ Ĝööĝļé'š Þéŕšöñáļ ɱöðé. Ĝööĝļé ðöéšñ'ţ ŕéṽîéŵ îţ, šĥöŵš ñö ŵáŕñîñĝ, áñð ðöéšñ'ţ éñð îţš šîĝñ-îñ áƒţéŕ 7 ðáýš. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
       case "ar-XB":
-        return `‮Infinitary reaches Gmail and Calendar through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.‬`;
+        return `‮Infinitary reaches Gmail, Calendar and Drive through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.‬`;
     }
-    return `Infinitary reaches Gmail and Calendar through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.`;
+    return `Infinitary reaches Gmail, Calendar and Drive through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.`;
   }
   function integrationsGoogleSetupOpenPage() {
     switch (currentLanguage()) {
@@ -45006,6 +45087,60 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
         return `‮This client isn't in Personal mode, so Google ends its sign-in ‬${date2}‮. Set up a client in Personal mode to keep Google connected.‬`;
     }
     return `This client isn't in Personal mode, so Google ends its sign-in ${date2}. Set up a client in Personal mode to keep Google connected.`;
+  }
+  function integrationsGoogleWithoutDrive() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لم تُضَف Drive والمستندات وجداول البيانات`;
+      case "de":
+        return `Drive, Docs und Tabellen nicht hinzugefügt`;
+      case "es":
+        return `Drive, Documentos y Hojas de cálculo sin añadir`;
+      case "fr":
+        return `Drive, Docs et Sheets non ajoutés`;
+      case "ja":
+        return `ドライブ、ドキュメント、スプレッドシートは未追加`;
+      case "ko":
+        return `드라이브, 문서, 스프레드시트 추가 안 됨`;
+      case "pt-BR":
+        return `Drive, Documentos e Planilhas não adicionados`;
+      case "zh-Hans":
+        return `未添加云端硬盘、文档和表格`;
+      case "zh-Hant":
+        return `未新增雲端硬碟、文件和試算表`;
+      case "en-XA":
+        return `[Ðŕîṽé, Ðöçš áñð Šĥééţš ñöţ áððéð ~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Drive, Docs and Sheets not added‬`;
+    }
+    return `Drive, Docs and Sheets not added`;
+  }
+  function integrationsGoogleWithoutDriveDetail() {
+    switch (currentLanguage()) {
+      case "ar":
+        return `لا يشمل تسجيل دخولك إلى Google كلًّا من Drive والمستندات وجداول البيانات. يواصل Gmail والتقويم العمل. لإضافتها، سجّل الدخول مجددًا واترك Drive محددًا في صفحة Google.`;
+      case "de":
+        return `Deine Google-Anmeldung lässt Drive, Docs und Tabellen aus. Gmail und Kalender funktionieren weiter. Um sie hinzuzufügen, melde dich erneut an und lass auf der Seite von Google das Häkchen bei Drive gesetzt.`;
+      case "es":
+        return `Tu inicio de sesión de Google deja fuera Drive, Documentos y Hojas de cálculo. Gmail y Calendar siguen funcionando. Para añadirlos, vuelve a iniciar sesión y deja Drive marcado en la página de Google.`;
+      case "fr":
+        return `Votre connexion Google laisse de côté Drive, Docs et Sheets. Gmail et Agenda continuent de fonctionner. Pour les ajouter, reconnectez-vous et laissez Drive coché sur la page de Google.`;
+      case "ja":
+        return `Google のサインインにドライブ、ドキュメント、スプレッドシートが含まれていません。Gmail とカレンダーはそのまま使えます。追加するには、もう一度サインインし、Google のページでドライブにチェックを入れたままにしてください。`;
+      case "ko":
+        return `Google 로그인에 드라이브, 문서, 스프레드시트가 빠져 있어요. Gmail과 캘린더는 계속 작동해요. 추가하려면 다시 로그인하고 Google 페이지에서 드라이브를 체크한 채로 두세요.`;
+      case "pt-BR":
+        return `Seu login do Google deixa de fora o Drive, o Documentos e o Planilhas. O Gmail e a Agenda continuam funcionando. Para adicioná-los, faça login de novo e deixe o Drive marcado na página do Google.`;
+      case "zh-Hans":
+        return `你的 Google 登录未包含云端硬盘、文档和表格。Gmail 和日历照常可用。要添加它们，请重新登录，并在 Google 的页面上保持勾选云端硬盘。`;
+      case "zh-Hant":
+        return `你的 Google 登入未包含雲端硬碟、文件和試算表。Gmail 和日曆照常可用。若要新增，請重新登入，並在 Google 的頁面上保持勾選雲端硬碟。`;
+      case "en-XA":
+        return `[Ýöûŕ Ĝööĝļé šîĝñ-îñ ļéáṽéš öûţ Ðŕîṽé, Ðöçš áñð Šĥééţš. Ĝɱáîļ áñð Çáļéñðáŕ ķééþ ŵöŕķîñĝ. Ţö áðð ţĥéɱ, šîĝñ îñ áĝáîñ áñð ļéáṽé Ðŕîṽé ţîçķéð öñ Ĝööĝļé'š þáĝé. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `‮Your Google sign-in leaves out Drive, Docs and Sheets. Gmail and Calendar keep working. To add them, sign in again and leave Drive ticked on Google's page.‬`;
+    }
+    return `Your Google sign-in leaves out Drive, Docs and Sheets. Gmail and Calendar keep working. To add them, sign in again and leave Drive ticked on Google's page.`;
   }
   function integrationsMcpAdd(input2) {
     const name = input2.name;
@@ -119760,9 +119895,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleExchangeResult,
     integrationsGoogleOpenCloud,
     integrationsGoogleServiceCalendar,
+    integrationsGoogleServiceDocs,
+    integrationsGoogleServiceDrive,
     integrationsGoogleServiceGmail,
     integrationsGoogleServiceOff,
     integrationsGoogleServiceOffDetail,
+    integrationsGoogleServiceSheets,
     integrationsGoogleSetUp,
     integrationsGoogleSetUpAgain,
     integrationsGoogleSetUpFirst,
@@ -119783,6 +119921,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     integrationsGoogleStoppedDetail,
     integrationsGoogleStops,
     integrationsGoogleStopsDetail,
+    integrationsGoogleWithoutDrive,
+    integrationsGoogleWithoutDriveDetail,
     integrationsMcpAdd,
     integrationsMcpNameTooLong,
     integrationsMcpNeedsSignIn,
@@ -123559,9 +123699,12 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleExchangeResult": [],
     "integrationsGoogleOpenCloud": [],
     "integrationsGoogleServiceCalendar": [],
+    "integrationsGoogleServiceDocs": [],
+    "integrationsGoogleServiceDrive": [],
     "integrationsGoogleServiceGmail": [],
     "integrationsGoogleServiceOff": [],
     "integrationsGoogleServiceOffDetail": ["count", "services"],
+    "integrationsGoogleServiceSheets": [],
     "integrationsGoogleSetUp": [],
     "integrationsGoogleSetUpAgain": [],
     "integrationsGoogleSetUpFirst": [],
@@ -123582,6 +123725,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "integrationsGoogleStoppedDetail": [],
     "integrationsGoogleStops": ["date"],
     "integrationsGoogleStopsDetail": ["date"],
+    "integrationsGoogleWithoutDrive": [],
+    "integrationsGoogleWithoutDriveDetail": [],
     "integrationsMcpAdd": ["name"],
     "integrationsMcpNameTooLong": ["max"],
     "integrationsMcpNeedsSignIn": [],
@@ -132738,7 +132883,7 @@ ${FRAME_KEYBOARD_SCRIPT}
     "integration-add": ["credential", "Connecting an integration signs in to it"],
     "integration-add-mcp": ["consent", "Runs a program the captain names on this computer"],
     "integration-remove": ["destructive", "Forgets an integration and its sign-in"],
-    "delete-outside": ["destructive", "Deletes saved Gmail and Calendar content"],
+    "delete-outside": ["destructive", "Deletes saved Google content"],
     "integration-settings": true,
     "integration-action-rule": ["consent", "An action's allowance is the captain's consent"],
     "integration-key": ["credential", "An integration's key"],

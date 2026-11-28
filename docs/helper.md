@@ -702,7 +702,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   A computer older than protocol 7.1 is not reported as cleaned.
   The conversation, card bodies and copies, and protocol state stay; an open conversation refuses cleanup.
 - **Words from outside.**
-  The home asks `inf:session:delete-outside` when the Gmail and Calendar content a conversation here read is past its days, or the captain deletes it (`docs/task-retention.md`, "Words from outside"); a home asks only a computer on the current contract major.
+  The home asks `inf:session:delete-outside` when the Google content a conversation here read is past its days, or the captain deletes it (`docs/task-retention.md`, "Words from outside"); a home asks only a computer on the current contract major.
   The order names each kind's label, the moment its words read by then are due, and the note that takes their place, so this computer holds none of the home's rules.
   Its `files` names the files from outside, such as a saved Gmail attachment, due in the task's hand-over folder here, which this computer removes first, whatever the conversation is doing.
   It reads the conversation's record and this Mac's own Claude client's files for it (`claudeConfigDir`), and answers `waiting` while a turn runs, the conversation opens or carries on by itself, or its client runs work of its own.

@@ -75,7 +75,7 @@ export const PANEL_CHANGES = {
   "integration-add": ["credential", "Connecting an integration signs in to it"],
   "integration-add-mcp": ["consent", "Runs a program the captain names on this computer"],
   "integration-remove": ["destructive", "Forgets an integration and its sign-in"],
-  "delete-outside": ["destructive", "Deletes saved Gmail and Calendar content"],
+  "delete-outside": ["destructive", "Deletes saved Google content"],
   "integration-settings": true,
   "integration-action-rule": ["consent", "An action's allowance is the captain's consent"],
   "integration-key": ["credential", "An integration's key"],

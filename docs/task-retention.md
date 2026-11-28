@@ -172,10 +172,10 @@ A scrub of closed crewmate sessions, if the captain asks for one, rewrites tool 
 
 ## Words from outside
 
-What an integration hands an agent from a kind that fences its words, Gmail and Calendar today (`google-data`, [Integrations](integrations.md#data-from-outside)), stays in saved conversations only for the days that kind declares (`IntegrationBinding.kept`).
+What an integration hands an agent from a kind that fences its words, Google's Gmail, Calendar and Drive today (`google-data`, [Integrations](integrations.md#data-from-outside)), stays in saved conversations only for the days that kind declares (`IntegrationBinding.kept`).
 Google keeps 30, the same as the Claude client's own sweep (`GOOGLE_DATA_KEPT`, the captain's INF-952 answer).
-Once they pass, a note, `[Gmail and Calendar content deleted]`, takes the place of each passage, and the conversation stays (the captain's INF-952 answer: "Yes, replace the passage and keep the conversation").
-Delete Gmail and Calendar content, in Settings → Integrations' Data section, does the same at once for everything read so far (`inf:retention:delete-outside`), and the captain can ask the first mate for it (`delete-outside`).
+Once they pass, a note, `[Google content deleted]`, takes the place of each passage (`[Gmail and Calendar content deleted]` in a passage an earlier version replaced), and the conversation stays (the captain's INF-952 answer: "Yes, replace the passage and keep the conversation").
+Delete Google content, in Settings → Integrations' Data section, does the same at once for everything read so far (`inf:retention:delete-outside`), and the captain can ask the first mate for it (`delete-outside`).
 Removing Google from Settings → Integrations starts the same delete, since Google's user data policy keeps nothing a tool read once it is disconnected (`IntegrationsServiceOptions.deleteOutside`).
 Its answer says how many conversations changed, how many are cleaned once their work pauses, and how many on each computer that runs work follow once it is back in reach or Infinitary there is updated (`elsewhere`).
 

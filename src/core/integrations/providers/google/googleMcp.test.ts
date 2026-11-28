@@ -1,4 +1,4 @@
-import { GOOGLE_CLIENTS_PAGE, GOOGLE_MCP_ENABLE_PAGE, NOTICE_ACCEPTED } from "@shared/integrations";
+import { GOOGLE_CLIENTS_PAGE, NOTICE_ACCEPTED } from "@shared/integrations";
 import { fencedSpans } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import { APPROVAL_CHOICES, approvalQuestion } from "../../../../../tests/helpers/googleMcpStandIn";
@@ -272,6 +272,7 @@ describe("Google's MCP servers", () => {
     expect(row()?.client?.mcp).toEqual({
       refused: "service",
       services: ["calendar"],
+      off: ["calendar"],
       link: `https://console.developers.google.com/apis/api/calendarmcp.googleapis.com/overview?project=${STAND_IN_PROJECT}`,
     });
 
@@ -280,7 +281,8 @@ describe("Google's MCP servers", () => {
     expect(row()?.client?.mcp).toEqual({
       refused: "service",
       services: ["gmail", "calendar"],
-      link: `${GOOGLE_MCP_ENABLE_PAGE}&project=${STAND_IN_PROJECT}`,
+      off: ["gmail", "calendar"],
+      link: `https://console.cloud.google.com/flows/enableapi?apiid=gmailmcp.googleapis.com,calendarmcp.googleapis.com&project=${STAND_IN_PROJECT}`,
     });
 
     google.knobs.off.clear();

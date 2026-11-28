@@ -7,14 +7,15 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
     /// A computer from before INF-6342 sends none, and its sign-in needs no setup.
     public struct Client: Decodable, Sendable, Equatable {
         /// Google refused the sign-in's calls to its MCP servers, though the sign-in stands: the client is not marked
-        /// for an AI-powered agent (`agent`), or the MCP service of `services` is off (`service`). `link` is the Google
-        /// Cloud page that fixes it.
+        /// for an AI-powered agent (`agent`), or the MCP services of `off` are off (`service`). `link` is the Google
+        /// Cloud page that fixes it. A computer from before Drive names Gmail and Calendar in `services` alone.
         public struct Mcp: Decodable, Sendable, Equatable {
             public let refused: String
             public let services: [String]?
+            public let off: [String]?
             public let link: String
-            public init(refused: String, services: [String]? = nil, link: String) {
-                self.refused = refused; self.services = services; self.link = link
+            public init(refused: String, services: [String]? = nil, off: [String]? = nil, link: String) {
+                self.refused = refused; self.services = services; self.off = off; self.link = link
             }
         }
         public let kept: Bool
@@ -24,8 +25,12 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
         public let endsAt: Double?
         /// A computer from before the move to Google's MCP servers sends none.
         public let mcp: Mcp?
-        public init(kept: Bool, refused: String? = nil, runClient: Bool? = nil, endsAt: Double? = nil, mcp: Mcp? = nil) {
+        /// The sign-in left out Drive, Docs and Sheets; Gmail and Calendar still work.
+        public let withoutDrive: Bool?
+        public init(kept: Bool, refused: String? = nil, runClient: Bool? = nil, endsAt: Double? = nil, mcp: Mcp? = nil,
+                    withoutDrive: Bool? = nil) {
             self.kept = kept; self.refused = refused; self.runClient = runClient; self.endsAt = endsAt; self.mcp = mcp
+            self.withoutDrive = withoutDrive
         }
     }
     public struct Row: Decodable, Sendable, Equatable {
@@ -46,13 +51,15 @@ public struct PhoneIntegrations: Decodable, Sendable, Equatable {
 /// What the Google row says of its client when that outranks its health, and its one next step: the computer's
 /// `googleClientState` (src/renderer/src/settings/GoogleClientSetup.tsx), in the same order.
 public struct PhoneGoogleClientState: Equatable, Sendable {
-    /// `open` opens the Google Cloud page that fixes what Google's MCP servers refused.
+    /// `open` opens the Google Cloud page that fixes what Google's MCP servers refused; `signInAgain` signs in to grant
+    /// what the sign-in left out.
     public enum Next: Equatable, Sendable {
-        case setUpAgain, open(URL)
+        case setUpAgain, open(URL), signInAgain
         /// Google Cloud's page for an `open` step, which reads nothing on the computer.
         public var link: URL? { if case .open(let url) = self { url } else { nil } }
     }
-    public enum Tone: Sendable { case danger, warning }
+    /// `quiet`: the sign-in works, and the line only offers more.
+    public enum Tone: Sendable { case danger, warning, quiet }
     public let words: String
     public let detail: String
     public let tone: Tone
@@ -73,8 +80,14 @@ public struct PhoneGoogleClientState: Equatable, Sendable {
                              next: .open(link))
             }
             if mcp.refused == "service" {
-                let names = (mcp.services ?? []).map {
-                    $0 == "gmail" ? PhoneMessages.integrationsGoogleServiceGmail() : PhoneMessages.integrationsGoogleServiceCalendar()
+                let names = (mcp.off ?? mcp.services ?? []).map { service in
+                    switch service {
+                    case "gmail": PhoneMessages.integrationsGoogleServiceGmail()
+                    case "calendar": PhoneMessages.integrationsGoogleServiceCalendar()
+                    case "drive": PhoneMessages.integrationsGoogleServiceDrive()
+                    case "docs": PhoneMessages.integrationsGoogleServiceDocs()
+                    default: PhoneMessages.integrationsGoogleServiceSheets()
+                    }
                 }
                 return .init(words: PhoneMessages.integrationsGoogleServiceOff(),
                              detail: PhoneMessages.phoneGoogleServiceOffDetail(
@@ -87,6 +100,10 @@ public struct PhoneGoogleClientState: Equatable, Sendable {
             return .init(words: PhoneMessages.integrationsGoogleStops(date: date),
                          detail: PhoneMessages.integrationsGoogleStopsDetail(date: date), tone: .warning, next: .setUpAgain)
         }
+        if client.withoutDrive == true {
+            return .init(words: PhoneMessages.integrationsGoogleWithoutDrive(),
+                         detail: PhoneMessages.phoneGoogleWithoutDriveDetail(computer: computer), tone: .quiet, next: .signInAgain)
+        }
         return nil
     }
 
@@ -94,6 +111,7 @@ public struct PhoneGoogleClientState: Equatable, Sendable {
         switch next {
         case .setUpAgain: PhoneMessages.integrationsGoogleSetUpAgain()
         case .open: PhoneMessages.integrationsGoogleOpenCloud()
+        case .signInAgain: PhoneMessages.phoneGoogleSignInAgain()
         }
     }
 }

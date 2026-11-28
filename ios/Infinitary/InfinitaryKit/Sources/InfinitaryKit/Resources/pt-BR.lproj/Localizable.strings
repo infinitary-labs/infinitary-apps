@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "Abra Integrações para fazer login em %1$@.";
 "integrationsConnectOfferTitle" = "Conectar %1$@";
 "integrationsGoogleAgentRefused" = "Marque seu cliente para agentes";
-"integrationsGoogleAgentRefusedDetail" = "Os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora no menu desta linha.";
+"integrationsGoogleAgentRefusedDetail" = "Os servidores do Gmail, da Agenda e do Drive do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora no menu desta linha.";
 "integrationsGoogleClientFileIncomplete" = "Falta o ID ou a chave secreta do cliente nesse arquivo. Baixe-o de novo na página do Google.";
 "integrationsGoogleClientFileNotJson" = "Esse não é um arquivo de cliente do Google. Na página do Google, baixe o arquivo do seu cliente com Download JSON e solte-o aqui.";
 "integrationsGoogleClientFileWeb" = "Esse arquivo é de um cliente de aplicativo da Web. Crie um cliente de app para computador na página do Google e solte o arquivo dele aqui.";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "Um novo login no Google, guardado em Segredos e na memória do app";
 "integrationsGoogleOpenCloud" = "Abrir o Google Cloud";
 "integrationsGoogleServiceCalendar" = "Agenda";
+"integrationsGoogleServiceDocs" = "Documentos";
+"integrationsGoogleServiceDrive" = "Drive";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "Um serviço do Google está desativado";
+"integrationsGoogleServiceSheets" = "Planilhas";
 "integrationsGoogleSetUp" = "Configurar";
 "integrationsGoogleSetUpAgain" = "Configurar de novo";
 "integrationsGoogleSetUpFirst" = "Primeiro configure seu próprio cliente do Google, em Ajustes → Integrações → Google.";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "Arquivo de cliente";
 "integrationsGoogleSetupKeep" = "Guardar e fazer login";
 "integrationsGoogleSetupKeeping" = "Guardando…";
-"integrationsGoogleSetupLead" = "O Infinitary acessa o Gmail e o Agenda por um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google. O Google não o revisa, não mostra aviso e não encerra o login dele depois de 7 dias.";
+"integrationsGoogleSetupLead" = "O Infinitary acessa o Gmail, o Agenda e o Drive por um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google. O Google não o revisa, não mostra aviso e não encerra o login dele depois de 7 dias.";
 "integrationsGoogleSetupOpenPage" = "Abrir a página do Google";
 "integrationsGoogleSetupStays" = "O Infinitary guarda a chave secreta do cliente em Segredos neste computador. Seu imediato e sua tripulação nunca a veem.";
 "integrationsGoogleSetupStepFile" = "Baixe com Download JSON o arquivo de cliente que o Google mostra e depois solte-o aqui, escolha-o ou cole o conteúdo dele.";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "O Google não aceita mais seu cliente, talvez porque ele foi excluído no Google Cloud. Configure-o de novo para reconectar o Google.";
 "integrationsGoogleStops" = "Para em %1$@";
 "integrationsGoogleStopsDetail" = "Este cliente não está no modo pessoal, então o Google encerra o login dele em %1$@. Configure um cliente no modo pessoal para manter o Google conectado.";
+"integrationsGoogleWithoutDrive" = "Drive, Documentos e Planilhas não adicionados";
+"integrationsGoogleWithoutDriveDetail" = "Seu login do Google deixa de fora o Drive, o Documentos e o Planilhas. O Gmail e a Agenda continuam funcionando. Para adicioná-los, faça login de novo e deixe o Drive marcado na página do Google.";
 "integrationsMcpAdd" = "Adicionar %1$@";
 "integrationsMcpNameTooLong" = "O nome pode ter no máximo %1$@ caracteres.";
 "integrationsMcpNeedsSignIn" = "precisa fazer login de novo";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@ min";
 "phoneFormatNow" = "agora";
 "phoneFormatUnderMinute" = "menos de 1 min";
-"phoneGoogleAgentRefusedDetail" = "Os servidores do Gmail e da Agenda do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora na linha do Google em Ajustes → Integrações em %1$@.";
-"phoneGoogleInvite" = "Deixe seu imediato em %1$@ ler o Gmail e o Calendário. O login fica em %1$@.";
+"phoneGoogleAgentRefusedDetail" = "Os servidores do Gmail, da Agenda e do Drive do Google só aceitam um cliente marcado para um agente com IA. Abra seu cliente no Google Cloud, marque “Use this client for an AI-powered agent” e salve; depois escolha Verificar agora na linha do Google em Ajustes → Integrações em %1$@.";
+"phoneGoogleInvite" = "Deixe seu imediato em %1$@ ler o Gmail, o Calendário e o Drive. O login fica em %1$@.";
 "phoneGoogleSetupStays" = "O Infinitary guarda a chave secreta do cliente em Segredos no %1$@. Seu imediato e sua tripulação nunca a veem.";
 "phoneGoogleSetupStepFile" = "Baixe com Download JSON o arquivo de cliente que o Google mostra e depois escolha-o aqui ou cole o conteúdo dele.";
 "phoneGoogleSignIn" = "Fazer login";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "O Google pede que você faça login de novo.";
 "phoneGoogleSignOut" = "Sair";
 "phoneGoogleSignOutAsk" = "Sair do Google em %1$@?";
-"phoneGoogleSignOutWarning" = "Seu imediato e a tripulação deixam de acessar o Gmail e o Calendário.";
+"phoneGoogleSignOutWarning" = "Seu imediato e a tripulação deixam de acessar o Gmail, o Calendário e o Drive.";
 "phoneGoogleSignedIn" = "Login feito em %1$@.";
 "phoneGoogleSignedInAs" = "Login feito como %1$@ em %2$@.";
+"phoneGoogleWithoutDriveDetail" = "Seu login do Google em %1$@ deixa de fora o Drive, o Documentos e o Planilhas. O Gmail e a Agenda continuam funcionando. Para adicioná-los, faça login de novo e deixe o Drive marcado na página do Google.";
 "phoneHideKeyboard" = "Ocultar teclado";
 "phoneIdentityNotKept" = "Não foi possível ler nem guardar a identidade deste celular. Desbloqueie o celular e tente de novo.";
 "phoneIdentityUnreadable" = "Não foi possível ler a identidade deste celular.";

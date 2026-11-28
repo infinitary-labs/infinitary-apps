@@ -1354,9 +1354,12 @@ public enum PhoneMessages {
     public static func `integrationsGoogleExchangeResult`() -> String { PhoneWords.format("integrationsGoogleExchangeResult", []) }
     public static func `integrationsGoogleOpenCloud`() -> String { PhoneWords.format("integrationsGoogleOpenCloud", []) }
     public static func `integrationsGoogleServiceCalendar`() -> String { PhoneWords.format("integrationsGoogleServiceCalendar", []) }
+    public static func `integrationsGoogleServiceDocs`() -> String { PhoneWords.format("integrationsGoogleServiceDocs", []) }
+    public static func `integrationsGoogleServiceDrive`() -> String { PhoneWords.format("integrationsGoogleServiceDrive", []) }
     public static func `integrationsGoogleServiceGmail`() -> String { PhoneWords.format("integrationsGoogleServiceGmail", []) }
     public static func `integrationsGoogleServiceOff`() -> String { PhoneWords.format("integrationsGoogleServiceOff", []) }
     public static func `integrationsGoogleServiceOffDetail`(`count`: Int, `services`: String) -> String { PhoneWords.format("integrationsGoogleServiceOffDetail", [`count`, `services`]) }
+    public static func `integrationsGoogleServiceSheets`() -> String { PhoneWords.format("integrationsGoogleServiceSheets", []) }
     public static func `integrationsGoogleSetUp`() -> String { PhoneWords.format("integrationsGoogleSetUp", []) }
     public static func `integrationsGoogleSetUpAgain`() -> String { PhoneWords.format("integrationsGoogleSetUpAgain", []) }
     public static func `integrationsGoogleSetUpFirst`() -> String { PhoneWords.format("integrationsGoogleSetUpFirst", []) }
@@ -1377,6 +1380,8 @@ public enum PhoneMessages {
     public static func `integrationsGoogleStoppedDetail`() -> String { PhoneWords.format("integrationsGoogleStoppedDetail", []) }
     public static func `integrationsGoogleStops`(`date`: String) -> String { PhoneWords.format("integrationsGoogleStops", [`date`]) }
     public static func `integrationsGoogleStopsDetail`(`date`: String) -> String { PhoneWords.format("integrationsGoogleStopsDetail", [`date`]) }
+    public static func `integrationsGoogleWithoutDrive`() -> String { PhoneWords.format("integrationsGoogleWithoutDrive", []) }
+    public static func `integrationsGoogleWithoutDriveDetail`() -> String { PhoneWords.format("integrationsGoogleWithoutDriveDetail", []) }
     public static func `integrationsMcpAdd`(`name`: String) -> String { PhoneWords.format("integrationsMcpAdd", [`name`]) }
     public static func `integrationsMcpNameTooLong`(`max`: String) -> String { PhoneWords.format("integrationsMcpNameTooLong", [`max`]) }
     public static func `integrationsMcpNeedsSignIn`() -> String { PhoneWords.format("integrationsMcpNeedsSignIn", []) }
@@ -2140,6 +2145,7 @@ public enum PhoneMessages {
     public static func `phoneGoogleSignOutWarning`() -> String { PhoneWords.format("phoneGoogleSignOutWarning", []) }
     public static func `phoneGoogleSignedIn`(`computer`: String) -> String { PhoneWords.format("phoneGoogleSignedIn", [`computer`]) }
     public static func `phoneGoogleSignedInAs`(`account`: String, `computer`: String) -> String { PhoneWords.format("phoneGoogleSignedInAs", [`account`, `computer`]) }
+    public static func `phoneGoogleWithoutDriveDetail`(`computer`: String) -> String { PhoneWords.format("phoneGoogleWithoutDriveDetail", [`computer`]) }
     public static func `phoneHideKeyboard`() -> String { PhoneWords.format("phoneHideKeyboard", []) }
     public static func `phoneIdentityNotKept`() -> String { PhoneWords.format("phoneIdentityNotKept", []) }
     public static func `phoneIdentityUnreadable`() -> String { PhoneWords.format("phoneIdentityUnreadable", []) }
@@ -6265,9 +6271,12 @@ extension PhoneWords {
         "integrationsGoogleExchangeResult": [],
         "integrationsGoogleOpenCloud": [],
         "integrationsGoogleServiceCalendar": [],
+        "integrationsGoogleServiceDocs": [],
+        "integrationsGoogleServiceDrive": [],
         "integrationsGoogleServiceGmail": [],
         "integrationsGoogleServiceOff": [],
         "integrationsGoogleServiceOffDetail": ["count", "services"],
+        "integrationsGoogleServiceSheets": [],
         "integrationsGoogleSetUp": [],
         "integrationsGoogleSetUpAgain": [],
         "integrationsGoogleSetUpFirst": [],
@@ -6288,6 +6297,8 @@ extension PhoneWords {
         "integrationsGoogleStoppedDetail": [],
         "integrationsGoogleStops": ["date"],
         "integrationsGoogleStopsDetail": ["date"],
+        "integrationsGoogleWithoutDrive": [],
+        "integrationsGoogleWithoutDriveDetail": [],
         "integrationsMcpAdd": ["name"],
         "integrationsMcpNameTooLong": ["max"],
         "integrationsMcpNeedsSignIn": [],
@@ -7051,6 +7062,7 @@ extension PhoneWords {
         "phoneGoogleSignOutWarning": [],
         "phoneGoogleSignedIn": ["computer"],
         "phoneGoogleSignedInAs": ["account", "computer"],
+        "phoneGoogleWithoutDriveDetail": ["computer"],
         "phoneHideKeyboard": [],
         "phoneIdentityNotKept": [],
         "phoneIdentityUnreadable": [],

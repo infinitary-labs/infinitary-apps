@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "Abre Integraciones para iniciar sesión en %1$@.";
 "integrationsConnectOfferTitle" = "Conectar %1$@";
 "integrationsGoogleAgentRefused" = "Marca tu cliente para agentes";
-"integrationsGoogleAgentRefusedDetail" = "Los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en el menú de esta fila.";
+"integrationsGoogleAgentRefusedDetail" = "Los servidores de Gmail, Calendar y Drive de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en el menú de esta fila.";
 "integrationsGoogleClientFileIncomplete" = "A ese archivo de cliente le falta el ID o el secreto del cliente. Vuelve a descargarlo desde la página de Google.";
 "integrationsGoogleClientFileNotJson" = "Ese no es un archivo de cliente de Google. En la página de Google, descarga el archivo de tu cliente con Download JSON y suéltalo aquí.";
 "integrationsGoogleClientFileWeb" = "Ese archivo es de un cliente de aplicación web. Crea un cliente de app de escritorio en la página de Google y suelta aquí su archivo.";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "Un nuevo inicio de sesión en Google, guardado en Secretos y en la memoria de la app";
 "integrationsGoogleOpenCloud" = "Abrir Google Cloud";
 "integrationsGoogleServiceCalendar" = "Calendar";
+"integrationsGoogleServiceDocs" = "Documentos";
+"integrationsGoogleServiceDrive" = "Drive";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "Un servicio de Google está desactivado";
+"integrationsGoogleServiceSheets" = "Hojas de cálculo";
 "integrationsGoogleSetUp" = "Configurar";
 "integrationsGoogleSetUpAgain" = "Volver a configurar";
 "integrationsGoogleSetUpFirst" = "Primero configura tu propio cliente de Google, en Ajustes → Integraciones → Google.";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "Archivo de cliente";
 "integrationsGoogleSetupKeep" = "Guardar e iniciar sesión";
 "integrationsGoogleSetupKeeping" = "Guardando…";
-"integrationsGoogleSetupLead" = "Infinitary accede a Gmail y Calendar con un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google. Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.";
+"integrationsGoogleSetupLead" = "Infinitary accede a Gmail, Calendar y Drive con un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google. Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.";
 "integrationsGoogleSetupOpenPage" = "Abrir la página de Google";
 "integrationsGoogleSetupStays" = "Infinitary guarda el secreto del cliente en Secretos en esta computadora. Tu primer oficial y tu tripulación nunca lo ven.";
 "integrationsGoogleSetupStepFile" = "Descarga con Download JSON el archivo de cliente que muestra Google y luego suéltalo aquí, elígelo o pega su contenido.";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "Google ya no acepta tu cliente; quizá se eliminó en Google Cloud. Vuelve a configurarlo para reconectar Google.";
 "integrationsGoogleStops" = "Deja de funcionar: %1$@";
 "integrationsGoogleStopsDetail" = "Este cliente no está en modo personal, así que Google cerrará su sesión el %1$@. Configura un cliente en modo personal para que Google siga conectado.";
+"integrationsGoogleWithoutDrive" = "Drive, Documentos y Hojas de cálculo sin añadir";
+"integrationsGoogleWithoutDriveDetail" = "Tu inicio de sesión de Google deja fuera Drive, Documentos y Hojas de cálculo. Gmail y Calendar siguen funcionando. Para añadirlos, vuelve a iniciar sesión y deja Drive marcado en la página de Google.";
 "integrationsMcpAdd" = "Añadir %1$@";
 "integrationsMcpNameTooLong" = "El nombre puede tener como máximo %1$@ caracteres.";
 "integrationsMcpNeedsSignIn" = "necesita volver a iniciar sesión";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@ min";
 "phoneFormatNow" = "ahora";
 "phoneFormatUnderMinute" = "menos de 1 min";
-"phoneGoogleAgentRefusedDetail" = "Los servidores de Gmail y Calendar de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en la fila de Google de Configuración → Integraciones en %1$@.";
-"phoneGoogleInvite" = "Deja que tu primer oficial en %1$@ lea Gmail y Calendar. El inicio de sesión se queda en %1$@.";
+"phoneGoogleAgentRefusedDetail" = "Los servidores de Gmail, Calendar y Drive de Google solo aceptan un cliente marcado para un agente con IA. Abre tu cliente en Google Cloud, marca «Use this client for an AI-powered agent» y guarda; luego elige Comprobar ahora en la fila de Google de Configuración → Integraciones en %1$@.";
+"phoneGoogleInvite" = "Deja que tu primer oficial en %1$@ lea Gmail, Calendar y Drive. El inicio de sesión se queda en %1$@.";
 "phoneGoogleSetupStays" = "Infinitary guarda el secreto del cliente en Secretos en %1$@. Tu primer oficial y tu tripulación nunca lo ven.";
 "phoneGoogleSetupStepFile" = "Descarga con Download JSON el archivo de cliente que muestra Google y luego elígelo aquí o pega su contenido.";
 "phoneGoogleSignIn" = "Iniciar sesión";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "Google te pide que vuelvas a iniciar sesión.";
 "phoneGoogleSignOut" = "Cerrar sesión";
 "phoneGoogleSignOutAsk" = "¿Cerrar sesión de Google en %1$@?";
-"phoneGoogleSignOutWarning" = "Tu primer oficial y tu tripulación dejan de acceder a Gmail y Calendar.";
+"phoneGoogleSignOutWarning" = "Tu primer oficial y tu tripulación dejan de acceder a Gmail, Calendar y Drive.";
 "phoneGoogleSignedIn" = "Sesión iniciada en %1$@.";
 "phoneGoogleSignedInAs" = "Sesión iniciada como %1$@ en %2$@.";
+"phoneGoogleWithoutDriveDetail" = "Tu inicio de sesión de Google en %1$@ deja fuera Drive, Documentos y Hojas de cálculo. Gmail y Calendar siguen funcionando. Para añadirlos, vuelve a iniciar sesión y deja Drive marcado en la página de Google.";
 "phoneHideKeyboard" = "Ocultar teclado";
 "phoneIdentityNotKept" = "No se pudo leer ni guardar la identidad de este teléfono. Desbloquea tu teléfono y vuelve a intentarlo.";
 "phoneIdentityUnreadable" = "No se pudo leer la identidad de este teléfono.";

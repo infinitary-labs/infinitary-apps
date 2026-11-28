@@ -457,6 +457,7 @@ export class IntegrationsService {
         text: `${view.name}'s action ${spec.name} is off. The captain turns it on in Settings → Integrations.`,
         refused: "refused",
       };
+    if (spec.unavailable) return { text: spec.unavailable, refused: "refused" };
     const parsed = spec.input.safeParse(input ?? {});
     if (!parsed.success)
       return {

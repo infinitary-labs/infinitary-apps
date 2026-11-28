@@ -62,7 +62,8 @@ struct PhoneGoogleSection: View {
                 .accessibilityIdentifier("google-account")
             if let state = google.clientState {
                 Text(state.words).font(PhoneFont.callout)
-                    .foregroundStyle(state.tone == .danger ? PhoneTheme.danger : PhoneTheme.warning)
+                    .foregroundStyle(state.tone == .danger ? PhoneTheme.danger
+                                     : state.tone == .warning ? PhoneTheme.warning : PhoneTheme.secondary)
                     .accessibilityIdentifier("google-client-state")
                 Text(state.detail).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
                     .accessibilityIdentifier("google-client-detail")
@@ -76,9 +77,10 @@ struct PhoneGoogleSection: View {
                         switch state.next {
                         case .open(let link): openURL(link)
                         case .setUpAgain: google.beginSetup()
+                        case .signInAgain: google.begin()
                         }
                     }
-                    .buttonStyle(PhoneChoiceStyle(.primary))
+                    .buttonStyle(PhoneChoiceStyle(state.tone == .quiet ? .secondary : .primary))
                     .disabled(state.next.link == nil && (google.busy || !session.canChange || !google.homeTakesReturn))
                     .accessibilityIdentifier("google-client-next")
                 } else if row.health == "needs_reauth" { signIn(PhoneMessages.phoneGoogleSignInAgain()) }

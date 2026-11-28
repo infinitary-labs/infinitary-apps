@@ -28,8 +28,8 @@ const DENY_ONCE = "DENY_ONCE";
 /**
  * The card for a place's own question about one call (docs/integrations.md,
  * "Google"): Google stopped a call Infinitary let run, to ask the captain
- * first. Its title names the service that asks (Gmail, Google Calendar)
- * and the action; its body shows Google's words and question line as sent.
+ * first. Its title names the service that asks (Gmail, Google Calendar,
+ * Google Drive) and the action; its body shows Google's words and question line as sent.
  * Each of Google's choices is a footer button with Google's own label, and
  * a click sends that one value once; nothing is picked before it. Don't
  * allow is the declining choice and Allow once the default, with the Always

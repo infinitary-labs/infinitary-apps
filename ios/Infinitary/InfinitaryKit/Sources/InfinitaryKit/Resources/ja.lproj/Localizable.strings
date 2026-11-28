@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "連携を開いて %1$@ にサインインしてください。";
 "integrationsConnectOfferTitle" = "%1$@ に接続";
 "integrationsGoogleAgentRefused" = "クライアントをエージェント用に設定してください";
-"integrationsGoogleAgentRefusedDetail" = "Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、この行のメニューで「今すぐ確認」を選んでください。";
+"integrationsGoogleAgentRefusedDetail" = "Google の Gmail、カレンダー、ドライブのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、この行のメニューで「今すぐ確認」を選んでください。";
 "integrationsGoogleClientFileIncomplete" = "このクライアント ファイルにはクライアント ID かシークレットがありません。Google のページからもう一度ダウンロードしてください。";
 "integrationsGoogleClientFileNotJson" = "これは Google のクライアント ファイルではありません。Google のページで Download JSON からクライアントのファイルをダウンロードし、ここにドロップしてください。";
 "integrationsGoogleClientFileWeb" = "このファイルはウェブ アプリケーション用のクライアントのものです。Google のページでデスクトップ アプリのクライアントを作成し、そのファイルをここにドロップしてください。";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "Google への新しいサインイン。シークレットとアプリのメモリに保持します";
 "integrationsGoogleOpenCloud" = "Google Cloud を開く";
 "integrationsGoogleServiceCalendar" = "カレンダー";
+"integrationsGoogleServiceDocs" = "ドキュメント";
+"integrationsGoogleServiceDrive" = "ドライブ";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "Google のサービスがオフです";
+"integrationsGoogleServiceSheets" = "スプレッドシート";
 "integrationsGoogleSetUp" = "設定";
 "integrationsGoogleSetUpAgain" = "もう一度設定";
 "integrationsGoogleSetUpFirst" = "先に自分の Google クライアントを設定してください（設定 → 連携 → Google）。";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "クライアント ファイル";
 "integrationsGoogleSetupKeep" = "保管してサインイン";
 "integrationsGoogleSetupKeeping" = "保管しています…";
-"integrationsGoogleSetupLead" = "Infinitary は、あなたが自分の Google Cloud プロジェクトに Google の個人モードで作成するクライアントを通じて Gmail とカレンダーを使います。Google による審査や警告はなく、サインインが 7 日で切れることもありません。";
+"integrationsGoogleSetupLead" = "Infinitary は、あなたが自分の Google Cloud プロジェクトに Google の個人モードで作成するクライアントを通じて Gmail、カレンダー、ドライブを使います。Google による審査や警告はなく、サインインが 7 日で切れることもありません。";
 "integrationsGoogleSetupOpenPage" = "Google のページを開く";
 "integrationsGoogleSetupStays" = "Infinitary はクライアントのシークレットをこのコンピュータのシークレットに保管します。一等航海士と乗組員がそれを見ることはありません。";
 "integrationsGoogleSetupStepFile" = "Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここにドロップするか、選択するか、中身を貼り付けてください。";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "Google がクライアントを受け付けなくなりました。Google Cloud で削除された可能性があります。もう一度設定すると Google に再接続できます。";
 "integrationsGoogleStops" = "%1$@ に停止";
 "integrationsGoogleStopsDetail" = "このクライアントは個人モードではないため、Google は %1$@ にサインインを終了します。Google の接続を保つには、個人モードのクライアントを設定してください。";
+"integrationsGoogleWithoutDrive" = "ドライブ、ドキュメント、スプレッドシートは未追加";
+"integrationsGoogleWithoutDriveDetail" = "Google のサインインにドライブ、ドキュメント、スプレッドシートが含まれていません。Gmail とカレンダーはそのまま使えます。追加するには、もう一度サインインし、Google のページでドライブにチェックを入れたままにしてください。";
 "integrationsMcpAdd" = "%1$@ を追加";
 "integrationsMcpNameTooLong" = "名前は %1$@ 文字以内にしてください。";
 "integrationsMcpNeedsSignIn" = "もう一度サインインが必要";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@分";
 "phoneFormatNow" = "今";
 "phoneFormatUnderMinute" = "1分未満";
-"phoneGoogleAgentRefusedDetail" = "Google の Gmail とカレンダーのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、%1$@ の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。";
-"phoneGoogleInvite" = "%1$@ の一等航海士が Gmail とカレンダーを読めるようにします。サインイン情報は %1$@ にとどまります。";
+"phoneGoogleAgentRefusedDetail" = "Google の Gmail、カレンダー、ドライブのサーバーは、AI エージェント用に設定されたクライアントしか受け付けません。Google Cloud でクライアントを開き、「Use this client for an AI-powered agent」にチェックを入れて保存してから、%1$@ の「設定」→「連携」にある Google の行で「今すぐ確認」を選んでください。";
+"phoneGoogleInvite" = "%1$@ の一等航海士が Gmail、カレンダー、ドライブを読めるようにします。サインイン情報は %1$@ にとどまります。";
 "phoneGoogleSetupStays" = "Infinitary はクライアントのシークレットを %1$@ のシークレットに保管します。一等航海士と乗組員がそれを見ることはありません。";
 "phoneGoogleSetupStepFile" = "Google に表示されるクライアント ファイルを Download JSON でダウンロードし、ここで選択するか、中身を貼り付けてください。";
 "phoneGoogleSignIn" = "サインイン";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "Google から再度のサインインを求められています。";
 "phoneGoogleSignOut" = "サインアウト";
 "phoneGoogleSignOutAsk" = "%1$@ で Google からサインアウトしますか？";
-"phoneGoogleSignOutWarning" = "一等航海士と乗組員は Gmail とカレンダーを使えなくなります。";
+"phoneGoogleSignOutWarning" = "一等航海士と乗組員は Gmail、カレンダー、ドライブを使えなくなります。";
 "phoneGoogleSignedIn" = "%1$@ でサインインしています。";
 "phoneGoogleSignedInAs" = "%2$@ で %1$@ としてサインインしています。";
+"phoneGoogleWithoutDriveDetail" = "%1$@ の Google のサインインにドライブ、ドキュメント、スプレッドシートが含まれていません。Gmail とカレンダーはそのまま使えます。追加するには、もう一度サインインし、Google のページでドライブにチェックを入れたままにしてください。";
 "phoneHideKeyboard" = "キーボードを隠す";
 "phoneIdentityNotKept" = "このスマートフォンの識別情報を読み込むか保存することができませんでした。スマートフォンのロックを解除して、もう一度お試しください。";
 "phoneIdentityUnreadable" = "このスマートフォンの識別情報を読み込めませんでした。";

@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "افتح التكاملات لتسجيل الدخول إلى %1$@.";
 "integrationsConnectOfferTitle" = "ربط %1$@";
 "integrationsGoogleAgentRefused" = "ميّز عميلك للوكلاء";
-"integrationsGoogleAgentRefusedDetail" = "لا تقبل خوادم Gmail والتقويم من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» من قائمة هذا الصف.";
+"integrationsGoogleAgentRefusedDetail" = "لا تقبل خوادم Gmail والتقويم وDrive من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» من قائمة هذا الصف.";
 "integrationsGoogleClientFileIncomplete" = "ملف العميل هذا لا يحتوي على معرّف العميل أو سرّه. نزّله من صفحة Google مجددًا.";
 "integrationsGoogleClientFileNotJson" = "هذا ليس ملف عميل Google. نزّل ملف العميل من صفحة Google بزر Download JSON، ثم أفلته هنا.";
 "integrationsGoogleClientFileWeb" = "هذا الملف لعميل تطبيق ويب. أنشئ عميل Desktop app في صفحة Google، ثم أفلت ملفه هنا.";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "تسجيل دخول جديد إلى Google، محفوظ في الأسرار وذاكرة التطبيق";
 "integrationsGoogleOpenCloud" = "فتح Google Cloud";
 "integrationsGoogleServiceCalendar" = "التقويم";
+"integrationsGoogleServiceDocs" = "المستندات";
+"integrationsGoogleServiceDrive" = "Drive";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "إحدى خدمات Google معطّلة";
+"integrationsGoogleServiceSheets" = "جداول البيانات";
 "integrationsGoogleSetUp" = "إعداد";
 "integrationsGoogleSetUpAgain" = "إعداد من جديد";
 "integrationsGoogleSetUpFirst" = "أعدّ عميل Google الخاص بك أولًا، من الإعدادات ← التكاملات ← Google.";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "ملف العميل";
 "integrationsGoogleSetupKeep" = "احفظ وسجّل الدخول";
 "integrationsGoogleSetupKeeping" = "جارٍ الحفظ…";
-"integrationsGoogleSetupLead" = "يصل Infinitary إلى Gmail والتقويم عبر عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google. لا تراجعه Google، ولا تعرض تحذيرًا، ولا تُنهي تسجيل دخوله بعد 7 أيام.";
+"integrationsGoogleSetupLead" = "يصل Infinitary إلى Gmail والتقويم وDrive عبر عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google. لا تراجعه Google، ولا تعرض تحذيرًا، ولا تُنهي تسجيل دخوله بعد 7 أيام.";
 "integrationsGoogleSetupOpenPage" = "فتح صفحة Google";
 "integrationsGoogleSetupStays" = "يحفظ Infinitary سرّ العميل في الأسرار على هذا الحاسوب. لا يراه نائب القبطان ولا الطاقم أبدًا.";
 "integrationsGoogleSetupStepFile" = "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم أفلته هنا أو اختره أو الصق محتواه.";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "لم تعد Google تقبل عميلك، ربما لأنه حُذف في Google Cloud. أعدّه من جديد لتعيد ربط Google.";
 "integrationsGoogleStops" = "يتوقف %1$@";
 "integrationsGoogleStopsDetail" = "هذا العميل ليس في الوضع الشخصي، لذا تُنهي Google تسجيل دخوله %1$@. أعدّ عميلًا في الوضع الشخصي ليبقى Google متصلًا.";
+"integrationsGoogleWithoutDrive" = "لم تُضَف Drive والمستندات وجداول البيانات";
+"integrationsGoogleWithoutDriveDetail" = "لا يشمل تسجيل دخولك إلى Google كلًّا من Drive والمستندات وجداول البيانات. يواصل Gmail والتقويم العمل. لإضافتها، سجّل الدخول مجددًا واترك Drive محددًا في صفحة Google.";
 "integrationsMcpAdd" = "إضافة %1$@";
 "integrationsMcpNameTooLong" = "يمكن أن يصل طول الاسم إلى %1$@ حرفًا على الأكثر.";
 "integrationsMcpNeedsSignIn" = "يحتاج إلى تسجيل الدخول مجددًا";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@ د";
 "phoneFormatNow" = "الآن";
 "phoneFormatUnderMinute" = "أقل من 1 د";
-"phoneGoogleAgentRefusedDetail" = "لا تقبل خوادم Gmail والتقويم من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.";
-"phoneGoogleInvite" = "اسمح لنائب القبطان على %1$@ بقراءة Gmail وCalendar. يبقى تسجيل الدخول على %1$@.";
+"phoneGoogleAgentRefusedDetail" = "لا تقبل خوادم Gmail والتقويم وDrive من Google إلا عميلًا مميّزًا لوكيل مدعوم بالذكاء الاصطناعي. افتح عميلك في Google Cloud، وحدّد «Use this client for an AI-powered agent» واحفظ، ثم اختر «التحقق الآن» في صف Google من الإعدادات ← التكاملات على %1$@.";
+"phoneGoogleInvite" = "اسمح لنائب القبطان على %1$@ بقراءة Gmail وCalendar وDrive. يبقى تسجيل الدخول على %1$@.";
 "phoneGoogleSetupStays" = "يحفظ Infinitary سرّ العميل في الأسرار على %1$@. لا يراه نائب القبطان ولا الطاقم أبدًا.";
 "phoneGoogleSetupStepFile" = "نزّل ملف العميل الذي تعرضه Google بزر Download JSON، ثم اختره هنا أو الصق محتواه.";
 "phoneGoogleSignIn" = "تسجيل الدخول";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "تطلب Google منك تسجيل الدخول مجددًا.";
 "phoneGoogleSignOut" = "تسجيل الخروج";
 "phoneGoogleSignOutAsk" = "تسجيل الخروج من Google على %1$@؟";
-"phoneGoogleSignOutWarning" = "يتوقف نائب القبطان والطاقم عن الوصول إلى Gmail وCalendar.";
+"phoneGoogleSignOutWarning" = "يتوقف نائب القبطان والطاقم عن الوصول إلى Gmail وCalendar وDrive.";
 "phoneGoogleSignedIn" = "تم تسجيل الدخول على %1$@.";
 "phoneGoogleSignedInAs" = "تم تسجيل الدخول باسم %1$@ على %2$@.";
+"phoneGoogleWithoutDriveDetail" = "لا يشمل تسجيل دخولك إلى Google على %1$@ كلًّا من Drive والمستندات وجداول البيانات. يواصل Gmail والتقويم العمل. لإضافتها، سجّل الدخول مجددًا واترك Drive محددًا في صفحة Google.";
 "phoneHideKeyboard" = "إخفاء لوحة المفاتيح";
 "phoneIdentityNotKept" = "تعذّرت قراءة هوية هذا الهاتف أو حفظها. افتح قفل هاتفك وحاول مجددًا.";
 "phoneIdentityUnreadable" = "تعذّرت قراءة هوية هذا الهاتف.";

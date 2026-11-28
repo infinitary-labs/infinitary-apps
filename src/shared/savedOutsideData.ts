@@ -13,7 +13,7 @@ import { z } from "zod";
 export const keptOutsideDataSchema = z.strictObject({
   label: z.string().min(1).max(48),
   days: z.number().int().positive(),
-  /** What a person calls them: "Gmail and Calendar content". */
+  /** What a person calls them: "Google content". */
   what: z.string().min(1).max(80),
 });
 export type KeptOutsideData = z.infer<typeof keptOutsideDataSchema>;

@@ -173,8 +173,8 @@
   "phoneFormatMinutes": "{minutes} 分鐘",
   "phoneFormatNow": "剛剛",
   "phoneFormatUnderMinute": "不到 1 分鐘",
-  "phoneGoogleAgentRefusedDetail": "Google 的 Gmail 和日曆伺服器只接受標示為供 AI 代理程式使用的用戶端。在 Google Cloud 中開啟你的用戶端，勾選「Use this client for an AI-powered agent」並儲存，然後在 {computer} 上「設定」→「整合」中的 Google 那一列選擇「立即檢查」。",
-  "phoneGoogleInvite": "讓你在 {computer} 上的大副讀取 Gmail 和 Google 日曆。登入資訊會留在 {computer} 上。",
+  "phoneGoogleAgentRefusedDetail": "Google 的 Gmail、日曆和雲端硬碟伺服器只接受標示為供 AI 代理程式使用的用戶端。在 Google Cloud 中開啟你的用戶端，勾選「Use this client for an AI-powered agent」並儲存，然後在 {computer} 上「設定」→「整合」中的 Google 那一列選擇「立即檢查」。",
+  "phoneGoogleInvite": "讓你在 {computer} 上的大副讀取 Gmail、Google 日曆和雲端硬碟。登入資訊會留在 {computer} 上。",
   "phoneGoogleServiceOffDetail": {
     "plural": "count",
     "other": "你的 Google Cloud 專案中 {services} 的 MCP 服務已關閉，所以 Infinitary 無法存取。請在 Google Cloud 中開啟，然後在 {computer} 上「設定」→「整合」中的 Google 那一列選擇「立即檢查」。"
@@ -186,9 +186,10 @@
   "phoneGoogleSignInAgainNeeded": "Google 要求你重新登入。",
   "phoneGoogleSignOut": "登出",
   "phoneGoogleSignOutAsk": "要在 {computer} 上登出 Google 嗎？",
-  "phoneGoogleSignOutWarning": "你的大副和船員將無法再使用 Gmail 和 Google 日曆。",
+  "phoneGoogleSignOutWarning": "你的大副和船員將無法再使用 Gmail、Google 日曆和雲端硬碟。",
   "phoneGoogleSignedIn": "已在 {computer} 上登入。",
   "phoneGoogleSignedInAs": "已在 {computer} 上以 {account} 登入。",
+  "phoneGoogleWithoutDriveDetail": "你在 {computer} 上的 Google 登入未包含雲端硬碟、文件和試算表。Gmail 和日曆照常可用。若要新增，請重新登入，並在 Google 的頁面上保持勾選雲端硬碟。",
   "phoneHideKeyboard": "隱藏鍵盤",
   "phoneIdentityNotKept": "無法讀取或保存這支手機的身分。請解鎖手機後再試一次。",
   "phoneIdentityUnreadable": "無法讀取這支手機的身分。",

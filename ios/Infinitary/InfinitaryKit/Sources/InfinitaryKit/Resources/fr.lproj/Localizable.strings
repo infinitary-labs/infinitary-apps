@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "Ouvrez Intégrations pour vous connecter à %1$@.";
 "integrationsConnectOfferTitle" = "Connecter %1$@";
 "integrationsGoogleAgentRefused" = "Marquez votre client pour les agents";
-"integrationsGoogleAgentRefusedDetail" = "Les serveurs Gmail et Agenda de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant dans le menu de cette ligne.";
+"integrationsGoogleAgentRefusedDetail" = "Les serveurs Gmail, Agenda et Drive de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant dans le menu de cette ligne.";
 "integrationsGoogleClientFileIncomplete" = "Ce fichier de client n’a pas d’identifiant ou de secret de client. Téléchargez-le de nouveau depuis la page de Google.";
 "integrationsGoogleClientFileNotJson" = "Ce n’est pas un fichier de client Google. Sur la page de Google, téléchargez le fichier de votre client avec Download JSON, puis déposez-le ici.";
 "integrationsGoogleClientFileWeb" = "Ce fichier est celui d’un client d’application Web. Créez un client d’application de bureau sur la page de Google, puis déposez son fichier ici.";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "Une nouvelle connexion à Google, gardée dans Secrets et dans la mémoire de l’app";
 "integrationsGoogleOpenCloud" = "Ouvrir Google Cloud";
 "integrationsGoogleServiceCalendar" = "Agenda";
+"integrationsGoogleServiceDocs" = "Docs";
+"integrationsGoogleServiceDrive" = "Drive";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "Un service Google est désactivé";
+"integrationsGoogleServiceSheets" = "Sheets";
 "integrationsGoogleSetUp" = "Configurer";
 "integrationsGoogleSetUpAgain" = "Configurer de nouveau";
 "integrationsGoogleSetUpFirst" = "Configurez d’abord votre propre client Google, dans Réglages → Intégrations → Google.";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "Fichier de client";
 "integrationsGoogleSetupKeep" = "Garder et se connecter";
 "integrationsGoogleSetupKeeping" = "Enregistrement…";
-"integrationsGoogleSetupLead" = "Infinitary accède à Gmail et à Agenda par un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google. Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.";
+"integrationsGoogleSetupLead" = "Infinitary accède à Gmail, à Agenda et à Drive par un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google. Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.";
 "integrationsGoogleSetupOpenPage" = "Ouvrir la page de Google";
 "integrationsGoogleSetupStays" = "Infinitary garde le secret du client dans Secrets sur cet ordinateur. Votre second et votre équipage ne le voient jamais.";
 "integrationsGoogleSetupStepFile" = "Téléchargez avec Download JSON le fichier de client que Google affiche, puis déposez-le ici, choisissez-le ou collez son contenu.";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "Google n’accepte plus votre client, peut-être parce qu’il a été supprimé dans Google Cloud. Configurez-le de nouveau pour reconnecter Google.";
 "integrationsGoogleStops" = "S’arrête le %1$@";
 "integrationsGoogleStopsDetail" = "Ce client n’est pas en mode personnel : Google met fin à sa connexion le %1$@. Configurez un client en mode personnel pour que Google reste connecté.";
+"integrationsGoogleWithoutDrive" = "Drive, Docs et Sheets non ajoutés";
+"integrationsGoogleWithoutDriveDetail" = "Votre connexion Google laisse de côté Drive, Docs et Sheets. Gmail et Agenda continuent de fonctionner. Pour les ajouter, reconnectez-vous et laissez Drive coché sur la page de Google.";
 "integrationsMcpAdd" = "Ajouter %1$@";
 "integrationsMcpNameTooLong" = "Le nom peut contenir au plus %1$@ caractères.";
 "integrationsMcpNeedsSignIn" = "doit se reconnecter";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@ min";
 "phoneFormatNow" = "à l’instant";
 "phoneFormatUnderMinute" = "moins d’1 min";
-"phoneGoogleAgentRefusedDetail" = "Les serveurs Gmail et Agenda de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant sur la ligne Google de Réglages → Intégrations sur %1$@.";
-"phoneGoogleInvite" = "Laissez votre second sur %1$@ lire Gmail et Agenda. La connexion reste sur %1$@.";
+"phoneGoogleAgentRefusedDetail" = "Les serveurs Gmail, Agenda et Drive de Google n’acceptent qu’un client marqué pour un agent basé sur l’IA. Ouvrez votre client dans Google Cloud, cochez « Use this client for an AI-powered agent » et enregistrez, puis choisissez Vérifier maintenant sur la ligne Google de Réglages → Intégrations sur %1$@.";
+"phoneGoogleInvite" = "Laissez votre second sur %1$@ lire Gmail, Agenda et Drive. La connexion reste sur %1$@.";
 "phoneGoogleSetupStays" = "Infinitary garde le secret du client dans Secrets sur %1$@. Votre second et votre équipage ne le voient jamais.";
 "phoneGoogleSetupStepFile" = "Téléchargez avec Download JSON le fichier de client que Google affiche, puis choisissez-le ici ou collez son contenu.";
 "phoneGoogleSignIn" = "Se connecter";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "Google vous demande de vous reconnecter.";
 "phoneGoogleSignOut" = "Se déconnecter";
 "phoneGoogleSignOutAsk" = "Se déconnecter de Google sur %1$@ ?";
-"phoneGoogleSignOutWarning" = "Votre second et l’équipage n’accèdent plus à Gmail ni à Agenda.";
+"phoneGoogleSignOutWarning" = "Votre second et l’équipage n’accèdent plus à Gmail, à Agenda ni à Drive.";
 "phoneGoogleSignedIn" = "Connecté sur %1$@.";
 "phoneGoogleSignedInAs" = "Connecté en tant que %1$@ sur %2$@.";
+"phoneGoogleWithoutDriveDetail" = "Votre connexion Google sur %1$@ laisse de côté Drive, Docs et Sheets. Gmail et Agenda continuent de fonctionner. Pour les ajouter, reconnectez-vous et laissez Drive coché sur la page de Google.";
 "phoneHideKeyboard" = "Masquer le clavier";
 "phoneIdentityNotKept" = "Impossible de lire ou de conserver l’identité de ce téléphone. Déverrouillez votre téléphone et réessayez.";
 "phoneIdentityUnreadable" = "Impossible de lire l’identité de ce téléphone.";

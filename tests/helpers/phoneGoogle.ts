@@ -25,6 +25,8 @@ export async function startPhoneGoogle(): Promise<GoogleStandIn> {
   return google;
 }
 
+const DRIVE = "https://www.googleapis.com/auth/drive";
+
 /** The file Google Cloud gives for the person's own Desktop app client, as the phone's person pastes it. */
 export const PHONE_GOOGLE_CLIENT_FILE = JSON.stringify({
   installed: {
@@ -66,6 +68,7 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
     pages: number;
     client: string | null;
     kept: boolean;
+    withoutDrive: boolean;
     own: { file: string; id: string };
   }> => {
     const view = await core.dispatch("inf:integrations:list", []);
@@ -77,6 +80,7 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
       pages: pages.length,
       client: page ? new URL(page.url).searchParams.get("client_id") : null,
       kept: (google?.client ?? entry?.client)?.kept === true,
+      withoutDrive: google?.client?.withoutDrive === true,
       own: { file: PHONE_GOOGLE_CLIENT_FILE, id: OWN_CLIENT_ID },
     };
   };
@@ -95,8 +99,26 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
     const google = view.integrations.find((integration) => integration.id === row.id);
     return { refused: google?.client?.mcp?.refused ?? null };
   };
+  /**
+   * What the person ticks on Google's page for the next sign-in: every box
+   * but Drive (`false`), or every box (`true`), as INF-7009's row line
+   * "Drive, Docs and Sheets not added" needs a sign-in that left Drive out.
+   * The row's date a client in Testing stops outranks that line, so the
+   * sign-in without Drive is made as a client in Production, which Google
+   * names no end for; every box goes back to the stand-in's Testing client.
+   */
+  const everyBox = [...stand.knobs.consent.grant];
+  const testingLasts = stand.knobs.lasts;
+  const tickDrive = (drive: boolean): { grant: string[] } => {
+    stand.knobs.consent.grant = drive ? [...everyBox] : everyBox.filter((scope) => scope !== DRIVE);
+    stand.knobs.lasts = drive ? testingLasts : undefined;
+    return { grant: stand.knobs.consent.grant };
+  };
   return {
-    /** Answers one of the journey's requests, named by its method and path as the phone home's switch names it. */
+    /**
+     * Answers one of the journey's requests, named by its method and path as
+     * the phone home names it; undefined for a request that is not Google's.
+     */
     answer(request: string): Promise<unknown> {
       switch (request) {
         case "POST google-approve":
@@ -107,8 +129,12 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
           return markRefused(true);
         case "POST google-agent-marked":
           return markRefused(false);
+        case "POST google-without-drive":
+          return Promise.resolve(tickDrive(false));
+        case "POST google-every-box":
+          return Promise.resolve(tickDrive(true));
         default:
-          throw new Error(`The phone's Google journey asks nothing called ${request}`);
+          return Promise.resolve(undefined);
       }
     },
     close: stop,

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { NOTICE_ACCEPTED } from "@shared/integrations";
+import { GOOGLE_DATA_KEPT, NOTICE_ACCEPTED } from "@shared/integrations";
 import { fencedSpans } from "@shared/outsideData";
 import { outsideDataDeletedNote } from "@shared/savedOutsideData";
 import { afterEach, describe, expect, it } from "vitest";
@@ -52,7 +52,7 @@ import type { OutsideDue, PlacedOutsideVisit } from "./savedOutsideData";
  */
 
 const DAY = 24 * 60 * 60 * 1000;
-const NOTE = outsideDataDeletedNote("Gmail and Calendar content");
+const NOTE = outsideDataDeletedNote(GOOGLE_DATA_KEPT.what);
 const LENA = {
   from: "Lena Ortiz <lena@ortiz-studio.com>",
   subject: "Invoice 2214 for the October shoot",

@@ -85,7 +85,7 @@ export const integrationLines = {
       name: integrationMcpAddSchema.shape.name.optional(),
       runs: integrationMcpAddSchema.shape.runs.optional(),
     }),
-    line: "Connect an integration when asked (kind: github, gitlab, github-enterprise, google for Gmail and Calendar, inbox for the Infinitary command, or mcp with name and runs for a server that asks for a sign-in; optional host): app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started, at the command's switch, or at the MCP form filled in. The sign-in is always theirs.",
+    line: "Connect an integration when asked (kind: github, gitlab, github-enterprise, google for Gmail, Calendar and Drive, inbox for the Infinitary command, or mcp with name and runs for a server that asks for a sign-in; optional host): app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started, at the command's switch, or at the MCP form filled in. The sign-in is always theirs.",
     alwaysTrail: true,
     offer: (v, current) => {
       const kind = v.kind as keyof typeof INTEGRATION_KIND_NAMES;
@@ -177,11 +177,11 @@ export const integrationLines = {
     change: "inf:retention:delete-outside",
     current: "inf:retention:scope",
     value: z.strictObject({}),
-    line: "Delete the Gmail and Calendar content saved in every conversation on this computer only on the captain's typed words: a note takes its place and every other word stays, and a conversation still working is cleaned once it pauses. It also goes on its own once past its days.",
+    line: "Delete the Google content saved in every conversation on this computer only on the captain's typed words: a note takes its place and every other word stays, and a conversation still working is cleaned once it pauses. It also goes on its own once past its days.",
     alwaysTrail: true,
     toRequest: () => [],
     readValue: (c) => ({ kept: (c as { kept?: unknown }).kept ?? [] }),
-    done: () => "Deleted Gmail and Calendar content",
+    done: () => "Deleted Google content",
   },
   "integration-settings": {
     area: "integrations",

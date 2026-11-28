@@ -1285,7 +1285,7 @@
 "integrationsConnectOfferOpen" = "Open Integrations to sign in to %1$@.";
 "integrationsConnectOfferTitle" = "Connect %1$@";
 "integrationsGoogleAgentRefused" = "Mark your client for agents";
-"integrationsGoogleAgentRefusedDetail" = "Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.";
+"integrationsGoogleAgentRefusedDetail" = "Google's Gmail, Calendar and Drive servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now from this row's menu.";
 "integrationsGoogleClientFileIncomplete" = "That client file has no client ID or secret. Download it again from Google's page.";
 "integrationsGoogleClientFileNotJson" = "That isn't a Google client file. On Google's page, download your client's file with Download JSON, then drop it here.";
 "integrationsGoogleClientFileWeb" = "That file is for a web application client. Make a Desktop app client on Google's page, then drop its file here.";
@@ -1294,8 +1294,11 @@
 "integrationsGoogleExchangeResult" = "A new Google sign-in, kept in Secrets and the app's memory";
 "integrationsGoogleOpenCloud" = "Open Google Cloud";
 "integrationsGoogleServiceCalendar" = "Calendar";
+"integrationsGoogleServiceDocs" = "Docs";
+"integrationsGoogleServiceDrive" = "Drive";
 "integrationsGoogleServiceGmail" = "Gmail";
 "integrationsGoogleServiceOff" = "A Google service is off";
+"integrationsGoogleServiceSheets" = "Sheets";
 "integrationsGoogleSetUp" = "Set up";
 "integrationsGoogleSetUpAgain" = "Set up again";
 "integrationsGoogleSetUpFirst" = "Set up your own Google client first, in Settings → Integrations → Google.";
@@ -1305,7 +1308,7 @@
 "integrationsGoogleSetupField" = "Client file";
 "integrationsGoogleSetupKeep" = "Keep and sign in";
 "integrationsGoogleSetupKeeping" = "Keeping…";
-"integrationsGoogleSetupLead" = "Infinitary reaches Gmail and Calendar through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.";
+"integrationsGoogleSetupLead" = "Infinitary reaches Gmail, Calendar and Drive through a client you make in your own Google Cloud project, in Google's Personal mode. Google doesn't review it, shows no warning, and doesn't end its sign-in after 7 days.";
 "integrationsGoogleSetupOpenPage" = "Open Google's page";
 "integrationsGoogleSetupStays" = "Infinitary keeps the client's secret in Secrets on this computer. Your first mate and your crew never see it.";
 "integrationsGoogleSetupStepFile" = "Download the client file Google shows with Download JSON, then drop it here, choose it, or paste what it holds.";
@@ -1316,6 +1319,8 @@
 "integrationsGoogleStoppedDetail" = "Google no longer accepts your client, perhaps because it was deleted in Google Cloud. Set it up again to reconnect Google.";
 "integrationsGoogleStops" = "Stops %1$@";
 "integrationsGoogleStopsDetail" = "This client isn't in Personal mode, so Google ends its sign-in %1$@. Set up a client in Personal mode to keep Google connected.";
+"integrationsGoogleWithoutDrive" = "Drive, Docs and Sheets not added";
+"integrationsGoogleWithoutDriveDetail" = "Your Google sign-in leaves out Drive, Docs and Sheets. Gmail and Calendar keep working. To add them, sign in again and leave Drive ticked on Google's page.";
 "integrationsMcpAdd" = "Add %1$@";
 "integrationsMcpNameTooLong" = "A name can be at most %1$@ characters long.";
 "integrationsMcpNeedsSignIn" = "needs a sign-in again";
@@ -2032,8 +2037,8 @@
 "phoneFormatMinutes" = "%1$@m";
 "phoneFormatNow" = "now";
 "phoneFormatUnderMinute" = "under 1m";
-"phoneGoogleAgentRefusedDetail" = "Google's Gmail and Calendar servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now on the Google row in Settings → Integrations on %1$@.";
-"phoneGoogleInvite" = "Let your first mate on %1$@ read Gmail and Calendar. The sign-in stays on %1$@.";
+"phoneGoogleAgentRefusedDetail" = "Google's Gmail, Calendar and Drive servers only take a client marked for an AI-powered agent. Open your client in Google Cloud, tick “Use this client for an AI-powered agent” and save, then choose Check now on the Google row in Settings → Integrations on %1$@.";
+"phoneGoogleInvite" = "Let your first mate on %1$@ read Gmail, Calendar and Drive. The sign-in stays on %1$@.";
 "phoneGoogleSetupStays" = "Infinitary keeps the client's secret in Secrets on %1$@. Your first mate and your crew never see it.";
 "phoneGoogleSetupStepFile" = "Download the client file Google shows with Download JSON, then choose it here or paste what it holds.";
 "phoneGoogleSignIn" = "Sign in";
@@ -2041,9 +2046,10 @@
 "phoneGoogleSignInAgainNeeded" = "Google asks you to sign in again.";
 "phoneGoogleSignOut" = "Sign out";
 "phoneGoogleSignOutAsk" = "Sign out of Google on %1$@?";
-"phoneGoogleSignOutWarning" = "Your first mate and crew stop reaching Gmail and Calendar.";
+"phoneGoogleSignOutWarning" = "Your first mate and crew stop reaching Gmail, Calendar and Drive.";
 "phoneGoogleSignedIn" = "Signed in on %1$@.";
 "phoneGoogleSignedInAs" = "Signed in as %1$@ on %2$@.";
+"phoneGoogleWithoutDriveDetail" = "Your Google sign-in on %1$@ leaves out Drive, Docs and Sheets. Gmail and Calendar keep working. To add them, sign in again and leave Drive ticked on Google's page.";
 "phoneHideKeyboard" = "Hide keyboard";
 "phoneIdentityNotKept" = "Could not read or keep this phone’s identity. Unlock your phone and try again.";
 "phoneIdentityUnreadable" = "Could not read this phone’s identity.";

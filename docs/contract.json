@@ -33630,6 +33630,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -33639,6 +33654,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -33725,6 +33744,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -33734,6 +33768,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -34198,6 +34236,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -34207,6 +34260,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -34293,6 +34350,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -34302,6 +34374,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -34742,6 +34818,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -34751,6 +34842,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -34837,6 +34932,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -34846,6 +34956,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -35279,6 +35393,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -35288,6 +35417,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -35374,6 +35507,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -35383,6 +35531,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -35816,6 +35968,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -35825,6 +35992,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -35911,6 +36082,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -35920,6 +36106,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -36369,6 +36559,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -36378,6 +36583,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -36464,6 +36673,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -36473,6 +36697,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -36920,6 +37148,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -36929,6 +37172,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -37015,6 +37262,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -37024,6 +37286,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -37493,6 +37759,21 @@
                                 ]
                               }
                             },
+                            "off": {
+                              "minItems": 1,
+                              "maxItems": 5,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar",
+                                  "drive",
+                                  "docs",
+                                  "sheets"
+                                ]
+                              }
+                            },
                             "link": {
                               "type": "string",
                               "maxLength": 2048
@@ -37502,6 +37783,10 @@
                             "refused",
                             "link"
                           ]
+                        },
+                        "withoutDrive": {
+                          "type": "boolean",
+                          "const": true
                         }
                       },
                       "required": [
@@ -37588,6 +37873,21 @@
                                 ]
                               }
                             },
+                            "off": {
+                              "minItems": 1,
+                              "maxItems": 5,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar",
+                                  "drive",
+                                  "docs",
+                                  "sheets"
+                                ]
+                              }
+                            },
                             "link": {
                               "type": "string",
                               "maxLength": 2048
@@ -37597,6 +37897,10 @@
                             "refused",
                             "link"
                           ]
+                        },
+                        "withoutDrive": {
+                          "type": "boolean",
+                          "const": true
                         }
                       },
                       "required": [
@@ -38036,6 +38340,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -38045,6 +38364,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -38131,6 +38454,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -38140,6 +38478,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -38566,6 +38908,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -38575,6 +38932,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -38661,6 +39022,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -38670,6 +39046,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -39132,6 +39512,21 @@
                                 ]
                               }
                             },
+                            "off": {
+                              "minItems": 1,
+                              "maxItems": 5,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar",
+                                  "drive",
+                                  "docs",
+                                  "sheets"
+                                ]
+                              }
+                            },
                             "link": {
                               "type": "string",
                               "maxLength": 2048
@@ -39141,6 +39536,10 @@
                             "refused",
                             "link"
                           ]
+                        },
+                        "withoutDrive": {
+                          "type": "boolean",
+                          "const": true
                         }
                       },
                       "required": [
@@ -39227,6 +39626,21 @@
                                 ]
                               }
                             },
+                            "off": {
+                              "minItems": 1,
+                              "maxItems": 5,
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "gmail",
+                                  "calendar",
+                                  "drive",
+                                  "docs",
+                                  "sheets"
+                                ]
+                              }
+                            },
                             "link": {
                               "type": "string",
                               "maxLength": 2048
@@ -39236,6 +39650,10 @@
                             "refused",
                             "link"
                           ]
+                        },
+                        "withoutDrive": {
+                          "type": "boolean",
+                          "const": true
                         }
                       },
                       "required": [
@@ -39718,6 +40136,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -39727,6 +40160,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -39813,6 +40250,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -39822,6 +40274,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -40248,6 +40704,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -40257,6 +40728,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -40343,6 +40818,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -40352,6 +40842,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -115229,6 +115723,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -115238,6 +115747,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [
@@ -115324,6 +115837,21 @@
                             ]
                           }
                         },
+                        "off": {
+                          "minItems": 1,
+                          "maxItems": 5,
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "gmail",
+                              "calendar",
+                              "drive",
+                              "docs",
+                              "sheets"
+                            ]
+                          }
+                        },
                         "link": {
                           "type": "string",
                           "maxLength": 2048
@@ -115333,6 +115861,10 @@
                         "refused",
                         "link"
                       ]
+                    },
+                    "withoutDrive": {
+                      "type": "boolean",
+                      "const": true
                     }
                   },
                   "required": [

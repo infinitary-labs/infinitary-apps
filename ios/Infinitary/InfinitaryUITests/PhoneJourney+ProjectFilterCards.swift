@@ -49,6 +49,8 @@ extension PhoneJourney {
         XCTAssertTrue(decision.waitForAbsence(timeout: 10), "South-pier's decision is held back\n\(app.debugDescription)")
         XCTAssertTrue(waitForPhonePager(pager, "1 of 1"), "Home counts the note alone: \(pager.label)")
         XCTAssertEqual(app.staticTexts["project-focus-elsewhere"].label, "1 waiting elsewhere", "The tail counts the held decision's task")
+        // The release note's hero pair: the focused Home in both themes, from this one run.
+        try await appearances("hero-home-focused", showing: app.buttons["project-focus-pill"])
 
         // A south-pier card that arrives while held adds nothing to Home. Its notice on Tasks says the phone has it.
         let postCard = try await home("project-filter-card-post")

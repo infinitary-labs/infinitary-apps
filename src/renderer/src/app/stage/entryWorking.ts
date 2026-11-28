@@ -4,8 +4,9 @@ import { crewStatusOf } from "../../character/crew/crewSignal";
 import type { StackEntry } from "../stack";
 
 /**
- * Whether the author behind a stage entry is working now, which its thread
- * shows as the working row. A browser view has no author of its own: the
+ * Whether the one who answers a stage entry is working now, which its thread
+ * shows as the working row: the first mate on a card it wrote or answers,
+ * the app's own cards it answers included. A browser view has no author of its own: the
  * request docked beside its page is its task's crewmate's, so that
  * crewmate's work is what it shows (docs/task-browser.md, "The request
  * beside the page").
@@ -15,7 +16,7 @@ export function entryWorking(
   firstmateBusy: boolean,
   crewActivity: Readonly<Record<string, TaskView["activity"]>>,
 ): boolean {
-  if (entry.author === "firstmate") return firstmateBusy;
+  if (entry.author === "firstmate" || cardAnswerer(entry) === "firstmate") return firstmateBusy;
   const taskId = cardAnswerer(entry) === "crewmate" ? entry.taskId : entry.browserTaskId;
   return taskId !== undefined && crewStatusOf(crewActivity[taskId] ?? null) === "working";
 }

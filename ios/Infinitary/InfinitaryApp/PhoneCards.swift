@@ -759,11 +759,7 @@ struct PhoneCardPane: View {
         guard !card.isFirstmateOwn, let id = card.value["taskId"].text ?? card.reviewTaskId else { return nil }
         return session.board?.tasks.first { $0.id == id }
     }
-    /// Its author is at work on it: the first mate's turn, or its crewmate's task running.
-    var working: Bool {
-        card.isPast ? false : card.author == "firstmate" ? session.firstmateBusy
-            : ["running", "starting"].contains(task?.activity ?? "")
-    }
+    var working: Bool { card.working(firstmateBusy: session.firstmateBusy, taskActivity: task?.activity) }
     var asking: Bool { !card.isPast && (host.reading["of"].numeric ?? 0) > 0 }
     /// A closing choice waits until every required question has an answer (the captain's Q2 A on the Mac).
     var unanswered: Bool { asking && (host.reading["answered"].numeric ?? 0) < (host.reading["of"].numeric ?? 0) }

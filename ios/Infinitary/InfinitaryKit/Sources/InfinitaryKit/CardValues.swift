@@ -154,6 +154,14 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
                 || ((author == "crewmate" || value["answeredBy"] == .string("crewmate"))
                     && value["taskId"].text != nil))
     }
+    /// Its answerer is at work on it, as the Mac's `entryWorking`: the first mate's turn on a card it wrote or answers,
+    /// the Mac's own cards it answers included, otherwise its task's crewmate running.
+    public func working(firstmateBusy: Bool, taskActivity: String?) -> Bool {
+        if isPast { return false }
+        let firstmateAnswers = value["replies"] != .bool(false) && value["answeredBy"] == .string("firstmate")
+        if author == "firstmate" || firstmateAnswers { return firstmateBusy }
+        return ["running", "starting"].contains(taskActivity ?? "")
+    }
     public var isPast: Bool { value["ending"] != .null }
     /// Minimized on the Mac: still open, but off its stack.
     public var minimized: Bool { value["minimized"] == .bool(true) }

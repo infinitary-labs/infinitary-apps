@@ -63,7 +63,7 @@ export type ListenedEvent = {
   label: string;
   /** How often to look, in ticks. */
   every: number;
-  /** Every turned-on rule on this event shares `every`: n of them each look every `every` times n ticks. */
+  /** The turned-on rules on this event that look share `every`: n of them each look every `every` times n ticks. */
   shared?: boolean;
   /** A `required` one must be named, since the integration cannot look without it. */
   filters?: readonly { name: string; label: string; defaultValue?: string; required?: true }[];
@@ -256,7 +256,6 @@ const WEEKDAY_NAMES = [
 /** Most occurrences a catch-up counts one by one before it stops counting. */
 const MISSED_COUNT_CAP = 10_000;
 
-/** One event across every rule listening to it, whatever each one filters. */
 /** Whether a rule looks at the event it found: the same connection, its integration not paused. */
 function looksAt(
   record: Pick<ScheduleRecord, "connection">,
@@ -265,6 +264,7 @@ function looksAt(
   return !!listened && listened.connection === record.connection && !listened.paused;
 }
 
+/** One event across every rule listening to it, whatever each one filters. */
 function listenerKey(spec: { integration: string; event: string }): string {
   return `${spec.integration}\u0000${spec.event}`;
 }

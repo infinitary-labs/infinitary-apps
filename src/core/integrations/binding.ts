@@ -104,9 +104,10 @@ export type IntegrationEventSpec = {
   /** How often, in minutes, a listening rule looks. */
   every: number;
   /**
-   * The cadence is a budget every rule listening shares, since each look
+   * The cadence is a budget the rules that look share, since each look
    * spends the same daily allowance at the service: with n turned-on rules
-   * listening, each looks every `every` times n minutes, so together they
+   * that look (not waiting on a paused integration or a replaced connection),
+   * each looks every `every` times n minutes, so together they
    * look as often as one rule would.
    */
   shared?: true;

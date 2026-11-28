@@ -1,3 +1,4 @@
+import { CARD_OVERLAY_ATTRIBUTE, isCardOverlayArgv } from "@shared/cardOverlay";
 import { COMPUTER_LANGUAGES_ATTRIBUTE, computerLanguagesFromArgv } from "@shared/fonts";
 import {
   COMPUTER_LOCALE_ATTRIBUTE,
@@ -48,8 +49,10 @@ contextBridge.exposeInMainWorld("firstmate", frozen);
 // render (docs/translucent-window.md): a translucent window's body paints
 // the material tint; every other window paints the opaque void.
 // The preload runs before the document element is born, so the mark set
-// here is lost with it; the one set at DOMContentLoaded is the one that
-// paints, and it lands before the app's first render.
+// here is lost with it. The marks land again when the document turns
+// interactive, which is before the page's module script runs (the card
+// overlay's page reads its mark there, src/renderer/src/main.tsx), and once
+// more at DOMContentLoaded.
 // Which desktop the window is on, the same way: its keys, window controls
 // and Settings rows follow it (src/shared/platform.ts). No mark is a Mac's.
 // The window's language and the way its text runs, the same way: the page
@@ -61,9 +64,12 @@ const computerLocale = localeFromArgv(process.argv);
 // Every language the computer prefers, for the order of the script faces
 // after the chosen font (docs/fonts.md, "Letters in other scripts").
 const computerLanguages = computerLanguagesFromArgv(process.argv);
+// The card overlay's page draws the stack alone (docs/card-overlay.md).
+const cardOverlay = isCardOverlayArgv(process.argv);
 const markWindowMaterial = () => {
   document.documentElement?.setAttribute(WINDOW_MATERIAL_ATTRIBUTE, windowMaterial);
   if (platform) document.documentElement?.setAttribute(PLATFORM_ATTRIBUTE, platform);
+  if (cardOverlay) document.documentElement?.setAttribute(CARD_OVERLAY_ATTRIBUTE, "");
   document.documentElement?.setAttribute("lang", language);
   document.documentElement?.setAttribute("dir", textDirection(language));
   if (computerLocale)
@@ -75,4 +81,5 @@ const markWindowMaterial = () => {
     );
 };
 markWindowMaterial();
+document.addEventListener("readystatechange", markWindowMaterial, { once: true });
 document.addEventListener("DOMContentLoaded", markWindowMaterial, { once: true });

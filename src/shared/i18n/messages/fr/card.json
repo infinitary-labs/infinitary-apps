@@ -275,6 +275,9 @@
   "cardNoteToolBox": "Cadre ou point",
   "cardNoteToolLine": "Trait à main levée",
   "cardNoteUnavailable": "Cette partie ne peut pas être affichée dans cette vue",
+  "cardOverlayHide": "Masquer les cartes",
+  "cardOverlayNothing": "Aucune carte en attente",
+  "cardOverlayOpensWindow": "Ce choix ouvre la fenêtre d’Infinitary : faites-le là-bas.",
   "cardPastMark": "Passée",
   "cardPastMeta": "carte passée",
   "cardPastPictures": {

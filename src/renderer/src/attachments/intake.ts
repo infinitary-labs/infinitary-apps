@@ -13,6 +13,7 @@ import { type ComposerNotice, FILE_WORDS } from "@shared/composer";
 import * as m from "@shared/i18n/messages.generated";
 import { create } from "zustand";
 import type { ImageAttachment } from "../design/core/ComposerField";
+import { isCardOverlayPage } from "../overlay/overlayPage";
 
 /**
  * Files given to an input (`docs/composer.md`, "Files"): the one path a
@@ -297,6 +298,12 @@ export async function giveFiles(
 /** Files chosen in the system picker: cancelling changes nothing. */
 export async function pickFiles(dest: FileDestination, host: Pick<Host, "choose">): Promise<void> {
   if (!dest.accepts()) return;
+  // A system picker on the card overlay's panel would take the keys and send the panel away
+  // under it (docs/card-overlay.md), so files are chosen in the window; a drop still works.
+  if (isCardOverlayPage()) {
+    say(dest.key, m.cardOverlayOpensWindow());
+    return;
+  }
   const chosen = await host.choose().catch(() => null);
   if (!chosen || chosen.length === 0 || !dest.accepts()) return;
   await run(

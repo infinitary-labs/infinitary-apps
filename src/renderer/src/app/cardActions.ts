@@ -28,6 +28,7 @@ import {
   pasteRefusal,
 } from "@shared/composer";
 import { deviceArrival } from "@shared/deviceArrival";
+import * as m from "@shared/i18n/messages.generated";
 import { openedSection } from "@shared/integrations";
 import type { FrameAnswers, FrameBox } from "@shared/plugins/bridge";
 import { isPreparing } from "../attachments/intake";
@@ -36,6 +37,7 @@ import { clearSecretValues, readSecretValues } from "../cards/SecretAskFields";
 import { readBringPicks } from "../cards/SecretBringPicks";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
+import { isCardOverlayPage } from "../overlay/overlayPage";
 import { takePictures } from "./composer";
 import { pressesSoFar } from "./presses";
 import { messageProjectFilter } from "./projectFocus";
@@ -348,6 +350,15 @@ export function cardSlice(set: ShellSet, get: ShellGet): CardSlice {
         // Devices included (docs/view.md): nothing is sent, so the card stays
         // on both computers and says what to do.
         set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: there } }));
+        return;
+      }
+      if (chosen?.effect?.kind === "open" && isCardOverlayPage()) {
+        // The card overlay floats over another app: a choice that opens
+        // Settings, a browser or a folder picker says where to make it,
+        // never opening one where nobody sees it (docs/card-overlay.md).
+        set((s) => ({
+          cardActionErrors: { ...s.cardActionErrors, [cardId]: m.cardOverlayOpensWindow() },
+        }));
         return;
       }
       if (chosen?.effect?.kind === "host" && chosen.effect.op === "secrets-keep") {

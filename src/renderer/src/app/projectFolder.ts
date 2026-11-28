@@ -2,6 +2,7 @@ import type { ComposerNotice } from "@shared/composer";
 import * as m from "@shared/i18n/messages.generated";
 import type { RepoSetupResult } from "@shared/repos";
 import { create } from "zustand";
+import { isCardOverlayPage } from "../overlay/overlayPage";
 
 /**
  * A folder chosen in the system's picker and added as a project, as
@@ -17,6 +18,9 @@ export type FolderPick =
   | { kind: "refused"; text: string };
 
 export async function pickProjectFolder(): Promise<FolderPick> {
+  // A system picker on the card overlay's panel would take the keys and send the panel away
+  // under it (docs/card-overlay.md), so the folder is chosen in the window.
+  if (isCardOverlayPage()) return { kind: "refused", text: m.cardOverlayOpensWindow() };
   let path: string | null;
   try {
     path = await window.infinitary.app.chooseFolder();

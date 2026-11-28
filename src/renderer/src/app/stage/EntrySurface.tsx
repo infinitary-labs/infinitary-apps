@@ -278,8 +278,8 @@ export function EntrySurface({
   }
   const prepared = role === "warm";
   // The last rung: the card's body becomes the thread behind a segmented
-  // control. It needs a stage under 720px, which the app's own 960px window
-  // minimum puts out of reach.
+  // control. It needs a stage under 720px: never in the window, whose minimum
+  // is 960px, and always in the card overlay's narrow panel.
   const inPlace = view.home === "in-place";
   // The card's one field (INF-924): above its choices, under one hairline,
   // while no thread is open beside it, and the foot of the thread column

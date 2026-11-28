@@ -10,6 +10,8 @@ import { countPresses } from "./app/presses";
 import { useShellStore } from "./app/store";
 import { followUnsentWords } from "./app/unsentWords";
 import { registerDesignFixtures } from "./design/fixtures";
+import { OverlayRoot } from "./overlay/OverlayRoot";
+import { isCardOverlayPage } from "./overlay/overlayPage";
 import { startPersonalPlugins } from "./personal/personalPlugins";
 import { registerBuiltinPlugin, startGatedPanels } from "./plugins/builtin";
 import { pluginHost } from "./plugins/host";
@@ -27,20 +29,27 @@ countPresses();
 // The app's own UI is the first plugin (docs/ui-plugins.md); it registers
 // before the first render so every registry is populated when read.
 registerBuiltinPlugin(pluginHost);
-// The core's snapshot mounts the captain's own panels and the ones he
-// added through the same host, each drawn in a frame of its own.
-// The app's own panels that wait on a gate - Knowledge, in an alpha or
-// development build with knowledge to show (docs/knowledge.md) - take a
-// rail's place after the captain's own panels have theirs.
-startPersonalPlugins(pluginHost, undefined, () => startGatedPanels(pluginHost));
-// Every panel's commands join the window's keys and command search
-// (docs/keyboard.md, "A panel's commands"), as the panels come and go.
-startPanelCommands(pluginHost);
-// What the window did with each panel, for the core (docs/personal-panels.md, "Placed on the rail").
-startPanelMounts(pluginHost);
-// Off unless this window's own localStorage asks for it (design/fixtures):
-// the library gallery for the coherence check. No product path writes that key.
-registerDesignFixtures(pluginHost);
+// The card overlay's page draws the stack alone (docs/card-overlay.md): no
+// panel, no music, nothing of the window's own beyond the cards.
+const overlay = isCardOverlayPage();
+if (!overlay) startWindow();
+
+function startWindow(): void {
+  // The core's snapshot mounts the captain's own panels and the ones he
+  // added through the same host, each drawn in a frame of its own.
+  // The app's own panels that wait on a gate - Knowledge, in an alpha or
+  // development build with knowledge to show (docs/knowledge.md) - take a
+  // rail's place after the captain's own panels have theirs.
+  startPersonalPlugins(pluginHost, undefined, () => startGatedPanels(pluginHost));
+  // Every panel's commands join the window's keys and command search
+  // (docs/keyboard.md, "A panel's commands"), as the panels come and go.
+  startPanelCommands(pluginHost);
+  // What the window did with each panel, for the core (docs/personal-panels.md, "Placed on the rail").
+  startPanelMounts(pluginHost);
+  // Off unless this window's own localStorage asks for it (design/fixtures):
+  // the library gallery for the coherence check. No product path writes that key.
+  registerDesignFixtures(pluginHost);
+}
 
 // The persisted theme and layout are read before the first paint, so the
 // window opens the way the captain left it rather than correcting itself a
@@ -83,6 +92,14 @@ void Promise.all([hydratePreferences(), documentLanguage()]).then(([, computer])
           listener();
       }),
   );
+  if (overlay) {
+    createRoot(container).render(
+      <React.StrictMode>
+        <OverlayRoot />
+      </React.StrictMode>,
+    );
+    return;
+  }
   // The ambient music, while its switch is on (docs/ambient-music.md).
   followAmbientMusic();
   // Words not yet sent hold an app's restart onto its home's version (docs/view.md).

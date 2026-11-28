@@ -186,6 +186,38 @@ describe("the outbox that paces what the home writes to a device", () => {
     expect(out.unanswered).toBe(0);
   });
 
+  // INF-7084: a removed phone hears `unpaired` after the frame being written, never behind a queue meant for it.
+  it("sends its last frame after the frame being written, in place of those not yet begun, and nothing after", async () => {
+    const { socket, out } = outbox({ pieceBytes: 4, aheadMs: 1_000 });
+    out.parts = true;
+    const heard: string[] = [];
+    const hear = (name: string) => (error?: Error) =>
+      heard.push(`${name}: ${error?.message ?? "sent"}`);
+    out.send("harbour pilot", hear("being written"));
+    out.send("tide table", hear("waiting"));
+    // Only the first frame's length has gone ahead of an answer, so the rest of it waits behind it.
+    expect(socket.pieces).toHaveLength(1);
+
+    out.last('{"t":"unpaired"}');
+    out.send("after", hear("after"));
+    socket.answerAll();
+    for (const piece of socket.pieces) piece.done?.();
+    await Promise.resolve();
+
+    const reader = new FramePartsReader();
+    const read = socket.pieces.map((piece) => reader.read(piece.data));
+    expect(read.filter((frame) => frame !== undefined)).toEqual([
+      "harbour pilot",
+      '{"t":"unpaired"}',
+    ]);
+    expect(heard).toEqual([
+      "waiting: The connection is closing.",
+      "being written: sent",
+      "after: The connection is closing.",
+    ]);
+    expect(out.waiting).toBe(0);
+  });
+
   it("fails what was still waiting when the connection closes, and what is sent after", async () => {
     const { socket, out } = outbox({ pieceBytes: 4, aheadMs: 1_000 });
     const failed: string[] = [];

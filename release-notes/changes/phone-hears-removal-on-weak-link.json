@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-hears-removal-on-weak-link",
+      "kind": "fix",
+      "title": "A removed iPhone or iPad says so, even on a weak connection",
+      "body": "When you remove your iPhone or iPad in Settings → Devices, it now shows that it was removed every time. Before, a removal that reached it while it was still asking the computer for something could look like a lost connection, so it said the computer was out of reach and kept trying to reach it.",
+      "area": "devices",
+      "noPicture": "The phone shows the same Removed screen as before; only how reliably it hears the removal changed.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1176,7 +1176,8 @@ public struct PhoneNotice: Equatable, Sendable {
             "as": "view", "viewFloor": PhoneContract.viewFloor, "system": "ios", "spellings": ["inf"],
             "changes": [PhoneContract.frameParts, PhoneContract.cardAnnotations, PhoneGoogleWords.signInReturn, PhoneContract.secretsAsk,
                         PhoneContract.cardAnswerSkipped, PhoneContract.cardDrafts, PhoneContract.settingsCurrent,
-                        PhoneContract.choiceAttachments, PhoneContract.cardAnsweredByCrewmate, PhoneContract.catchUpShown]]
+                        PhoneContract.choiceAttachments, PhoneContract.cardAnsweredByCrewmate, PhoneContract.catchUpShown,
+                        PhoneContract.removalNotice]]
         if let epoch { hello["cursor"] = ["epoch": epoch, "seq": sequence] }
         // Its own version, as Settings shows it, which the computer's Devices lists.
         if let version = PhoneAppVersion.forHello(Bundle.main.infoDictionary) { hello["appVersion"] = version }
@@ -1212,6 +1213,8 @@ public struct PhoneNotice: Equatable, Sendable {
         // still being read. URLSession keeps the computer's close code only for a read waiting when the close arrives:
         // a send after the close, with no read waiting, fails the whole socket with no code, so a removal pushed right
         // behind a frame the phone answers was read as a lost connection. The reader ends when `transport` closes.
+        // INF-7084: a send still going as the close arrives loses the code even with a read waiting, so a computer
+        // that lists `removalNotice` says `unpaired` as a frame first, which the reader always gets.
         let (messages, delivered) = AsyncThrowingStream<URLSessionWebSocketTask.Message, Error>.makeStream()
         Task.detached { [socket] in
             do { while true { delivered.yield(try await socket.receive()) } } catch { delivered.finish(throwing: error) }
@@ -1232,7 +1235,7 @@ public struct PhoneNotice: Equatable, Sendable {
                 let frame = try await PhoneFrame.decode(whole, reads: pending, home: mac.name)
                 guard current == generation, !Task.isCancelled else { break }
                 try await receive(frame, on: socket)
-                guard current == generation, !Task.isCancelled else { break }
+                guard current == generation, !Task.isCancelled, !removed else { break }
                 if contact == "in-reach" { refused = 0; reached = true }
             }
         } catch {
@@ -1524,6 +1527,12 @@ public struct PhoneNotice: Equatable, Sendable {
                let routed = PhoneTakeOver.routed(mac, payload: frame["payload"]) {
                 mac = routed; onMacChanged?(mac)
             }
+        case "unpaired":
+            // INF-7084: this phone was removed. The computer waits for it to close the connection, since a close that
+            // arrives while a read is still being sent is lost and the phone would read it as out of reach.
+            removed = true; clearContent()
+            contact = "removed"; finishLeave(); onRemoved?()
+            socket.cancel(with: .normalClosure, reason: nil)
         default: break // Later envelope fields and frame kinds do not widen what this client sends.
         }
     }

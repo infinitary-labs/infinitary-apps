@@ -1456,7 +1456,7 @@ The new field keeps older windows reading the addresses: one that knows only `fi
 
 ## Leave
 
-A connected device's person can take it off the list from the device itself: it sends the connection's `leave` frame (`docs/connection.md`), and pairing removes its entry exactly as Remove does (`DevicePairing.leave`), so the connection closes it as `unpaired` (4401).
+A connected device's person can take it off the list from the device itself: it sends the connection's `leave` frame (`docs/connection.md`), and pairing removes its entry exactly as Remove does (`DevicePairing.leave`), so the connection closes it as `unpaired` (4401), telling it in a frame first when its hello lists `removal-notice` ("Remove").
 A device that may run work leaves as Remove removes one (`leaveWithWork`, below): its window is cut at once, its work comes here first - or once it is back, when its work is out of reach - and only then is it off the list.
 The home says it once in the feed, by the device's own name: "MacBook Air left."
 (`device_left`).
@@ -1467,6 +1467,7 @@ A device out of reach cannot tell the home, which lists it until the captain rem
 
 `inf:devices:remove` deletes the entry and writes the list, and forgets where a phone's cards are pushed (`docs/phone-push.md`).
 Before it returns, the connection has closed that device's every connection with `unpaired` (4401), and it drops any frame it reads afterwards from a device it no longer holds.
+A device whose hello lists `removal-notice`, as the phone's and a computer's link to its home do, is told in a frame instead, and the close waits for it (`docs/connection.md`, "Closing").
 The device needs a new link, and a new key, to come back.
 When the last device goes and no link is open, the connection stops listening.
 

@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: b3077ffa88adad8c
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -219,6 +219,7 @@ Eine geöffnete Zeile listet diese mit der Markierung **meldet**.
 - Ein MCP-Server, der es anbietet: **Eine Ressource hat sich geändert**.
 
 Eine Gmail-Automatisierung erfährt ein bis zwei Minuten nach dem Eingang, welche Unterhaltung neue Mail bekommen hat; die Mail selbst zu lesen ist ein eigener Schritt, zu dem Google dich vorher fragen kann.
+Soll sie nur auf bestimmte Mail hören, gib ihr Suchbegriffe in Gmails eigener Form, etwa `from:ada@example.com`: Nur neue Mail, die passt, löst sie aus, und Google prüft die Übereinstimmung, sodass nichts deine Mail liest, um zu entscheiden.
 
 Wähl eines unter **Wenn etwas passiert** in der Automatisierung.
 Siehe [Automatisierung](/de/automation/#when-it-runs).

@@ -109,6 +109,11 @@ export type IntegrationEventSpec = {
    */
   filters?: readonly IntegrationEventFilter[];
   /**
+   * Why a rule's filter values could never be looked with, refused when the
+   * rule is saved; undefined when they can.
+   */
+  checkFilter?: (filter: Record<string, string> | undefined) => string | undefined;
+  /**
    * The kind says when something arrives (the inbox's drop), so a rule
    * finds its place the moment it listens and the next arrival fires it.
    */

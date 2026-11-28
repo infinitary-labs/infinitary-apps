@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: b3077ffa88adad8c
 title: Integraciones
 description: Conecta GitHub, GitLab, Bitbucket, Google y servidores MCP para que tu primer oficial y tu tripulación puedan alcanzarlos, y elige lo que cada uno puede hacer sin preguntarte.
 ---
@@ -219,6 +219,7 @@ Una fila abierta los enumera marcados como **avisa**.
 - Un servidor MCP que lo ofrezca: **Cambió un recurso**.
 
 Una automatización de Gmail sabe qué conversación recibió correo nuevo uno o dos minutos después de que llegue; leer el correo es un paso aparte, sobre el que Google puede preguntarte antes.
+Para que escuche solo parte del correo, dale palabras de búsqueda con el formato de Gmail, como `from:ada@example.com`: solo el correo nuevo que coincida la activa, y Google hace la comparación, así que nada lee tu correo para decidir.
 
 Elige uno en **Cuando pasa algo**, en Automatización.
 Consulta [Automatización](/es/automation/#when-it-runs).

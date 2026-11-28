@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: b3077ffa88adad8c
 title: 整合
 description: 連結 GitHub、GitLab、Bitbucket、Google 和 MCP 伺服器，讓你的大副和船員能使用它們，並選擇每一個可以不經詢問就做哪些事。
 ---
@@ -219,6 +219,7 @@ Infinitary 會把這個登入保存在 [機密](/zh-hant/secrets/) 裡，並自�
 - 有提供這項功能的 MCP 伺服器：**資源有變更**。
 
 Gmail 自動化會在郵件抵達一兩分鐘後得知哪個對話收到了新郵件；讀取郵件本身是單獨的一步，Google 可能會先就此詢問你。
+若只想接收部分郵件，可以給它 Gmail 自己格式的搜尋字詞，例如 `from:ada@example.com`：只有符合的新郵件才會觸發它，比對由 Google 完成，因此不會為了判斷而讀取你的郵件。
 
 在自動化的 **當某件事發生時** 底下選擇其中一個。
 請看 [自動化](/zh-hant/automation/#when-it-runs)。

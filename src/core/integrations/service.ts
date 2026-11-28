@@ -194,6 +194,7 @@ export type IntegrationListen = {
   /** How often the app looks, in the tick's minutes. */
   every: number;
   filters?: readonly IntegrationEventFilter[];
+  checkFilter?: IntegrationEventSpec["checkFilter"];
   atOnce?: boolean;
   /** Paused in Settings → Integrations: it answers no look until resumed. */
   paused?: boolean;
@@ -398,6 +399,7 @@ export class IntegrationsService {
       label: spec.label,
       every: spec.every,
       ...(spec.filters ? { filters: [...spec.filters] } : {}),
+      ...(spec.checkFilter ? { checkFilter: spec.checkFilter } : {}),
       ...(spec.atOnce ? { atOnce: true } : {}),
       ...(row.settings.paused ? { paused: true } : {}),
     };

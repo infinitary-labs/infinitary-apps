@@ -210,6 +210,89 @@ describe("Gmail through its MCP server", () => {
     });
   });
 
+  // The captain's start on INF-7250's finding 2: a rule for one sender's mail saves Gmail's own
+  // search words, which join the look's search, so only matching mail fires it and the look still
+  // asks Google for ids alone.
+  it("tells only conversations whose new mail matches a rule's search words, still asking Google for ids alone", async () => {
+    const { google, clock, integrations } = await signedIn();
+    const reads = ["search_threads", "get_thread", "get_message"];
+    for (const tool of reads) google.knobs.confirm.add(tool);
+    const search = { search: "from:microsoft.com OR subject:verification" };
+    google.deliver({
+      from: "Microsoft <account@microsoft.com>",
+      subject: "Before the rule listened",
+      text: "x",
+    });
+    clock.now += 1_000;
+    const start = await integrations.look("google", "message_received", null, search);
+    google.deliver({ from: "Ada <ada@example.com>", subject: "Lunch", text: "Noon?" });
+    const microsoft = google.deliver({
+      from: "Microsoft <account-security@microsoft.com>",
+      subject: "Your identity check",
+      text: "y",
+    });
+    const verification = google.deliver({
+      from: "Partner Center <partners@example.org>",
+      subject: "Verification complete",
+      text: "z",
+    });
+    google.deliver({ from: "Bank <alerts@bank.example>", subject: "Sign-in alert", text: "w" });
+    clock.now += 120_000;
+    const asked = google.calls().length;
+    const found = await integrations.look("google", "message_received", start.cursor, search);
+    expect(told(found)).toEqual([
+      `New mail in Gmail conversation ${google.mail.get(microsoft)?.threadId}`,
+      `New mail in Gmail conversation ${google.mail.get(verification)?.threadId}`,
+    ]);
+    const sent = google
+      .calls()
+      .slice(asked)
+      .filter((call) => reads.includes(call.tool));
+    expect(sent.map((call) => [call.tool, call.args.view])).toEqual([
+      ["search_threads", "THREAD_VIEW_IDS_ONLY"],
+    ]);
+    expect(String(sent[0]?.args.query)).toMatch(
+      /^in:inbox after:\d+ before:\d+ \(from:microsoft\.com OR subject:verification\)$/,
+    );
+    expect(google.answers).toEqual([]);
+  });
+
+  // The care points on INF-7250's finding 2: the words travel inside the look's own search, so
+  // words that would close its group or leave a quote open are refused when the rule is saved.
+  it("refuses saving a rule whose search words would leave the look's group, and saves one that stays inside", async () => {
+    const { integrations, clock, db } = await signedIn();
+    const scheduler = new Scheduler({
+      store: new ScheduleStore(db),
+      inbox: new InboxStore(db),
+      notify: () => {},
+      broadcastEvent: () => {},
+      now: () => clock.now,
+      events: {
+        find: (integration, event) => integrations.listenable(integration, event),
+        look: (integration, event, cursor, filter) =>
+          integrations.look(integration, event, cursor, filter),
+      },
+    });
+    const listen = (search: string) =>
+      scheduler.checkEvent({
+        kind: "event",
+        integration: "google",
+        event: "message_received",
+        filter: { search },
+      });
+    expect(() => listen("from:ada) OR (in:sent")).toThrow(
+      "The search words close a ) they never opened.",
+    );
+    expect(() => listen('subject:"identity check')).toThrow(
+      "The search words open a quote they never close.",
+    );
+    expect(() => listen("{from:ada from:lena")).toThrow("The search words never close a {.");
+    expect(() => listen("from:ada\nin:sent")).toThrow("Gmail search words for a rule are one line.");
+    expect(listen('{from:ada from:lena} subject:"(draft)"').spec).toMatchObject({
+      filter: { search: '{from:ada from:lena} subject:"(draft)"' },
+    });
+  });
+
   // INF-7017's live check: in seconds since 1970 Gmail's before: holds its own second, as after:
   // does, so two looks that met at a second both told its mail.
   it("tells mail from the second where two looks meet once, by the later look", async () => {

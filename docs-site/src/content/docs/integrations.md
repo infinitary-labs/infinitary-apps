@@ -218,6 +218,7 @@ An open row lists these marked **tells**.
 - An MCP server that offers it: **A resource changed**.
 
 A Gmail automation hears which conversation got new mail, a minute or two after it arrives; reading the mail is a step of its own, which Google may ask you about first.
+To hear only some mail, give it search words in Gmail's own form, such as `from:ada@example.com`: only new mail that matches sets it off, and Google does the matching, so nothing reads your mail to decide.
 
 Choose one under **When something happens** in Automation.
 See [Automation](/automation/#when-it-runs).

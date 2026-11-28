@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: b3077ffa88adad8c
 title: 연동
 description: GitHub, GitLab, Bitbucket, Google, MCP 서버를 연결해 일등항해사와 선원들이 닿을 수 있게 하고, 각각이 묻지 않고 할 수 있는 일을 정하세요.
 ---
@@ -219,6 +219,7 @@ Infinitary는 변경이 도착했는지 알 수 없으면 절대 다시 보내�
 - 이를 제공하는 MCP 서버: **리소스가 바뀜**.
 
 Gmail 자동화는 새 메일이 온 대화가 어느 것인지 메일이 도착하고 1~2분 뒤에 알게 돼요. 메일 자체를 읽는 것은 별도의 단계이고, Google이 먼저 물어볼 수 있어요.
+일부 메일만 받으려면 `from:ada@example.com`처럼 Gmail 형식의 검색어를 지정하세요. 일치하는 새 메일만 자동화를 실행하고, 일치 여부는 Google이 확인하므로 판단하려고 메일을 읽지 않아요.
 
 자동화의 **어떤 일이 일어날 때**에서 하나를 고르세요.
 [자동화](/ko/automation/#when-it-runs)를 보세요.

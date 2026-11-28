@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "gmail-rule-search-words",
+      "kind": "improvement",
+      "area": "integrations",
+      "title": "A Gmail automation can wait for one sender's mail",
+      "body": "An automation for \"A message arrives\" now takes Gmail's own search words, such as a sender. Only new mail that matches sets it off, and Google does the matching, so nothing reads your mail to decide. Before, every new email set it off.",
+      "picture": {
+        "dark": "gmail-rule-search-words-dark.webp",
+        "light": "gmail-rule-search-words-light.webp",
+        "alt": "A new automation in Settings → Automation for a message arriving in Google, with Gmail search words naming one sender"
+      },
+      "docsSite": [
+        "integrations"
+      ],
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

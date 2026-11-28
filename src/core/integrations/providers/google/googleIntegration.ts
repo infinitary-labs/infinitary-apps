@@ -930,7 +930,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       if (!record) throw new Error(SIGN_IN_AGAIN);
       return event === CALENDAR_CHANGED_EVENT.name
         ? lookForCalendar(calendar.tools(), record.account, cursor, options.now, filter)
-        : lookForMail(gmail.tools(), record.account, cursor, options.now);
+        : lookForMail(gmail.tools(), record.account, cursor, options.now, filter);
     },
     close: letGo,
   };

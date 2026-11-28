@@ -266,29 +266,56 @@ function messageOf(mail: StandInMail, format: Format = "PLAIN_TEXT") {
   };
 }
 
-/** Whether a message matches Gmail's search words, as far as the stand-in reads them. */
+/**
+ * Whether a message matches Gmail's search words, as far as the stand-in
+ * reads them: terms side by side must all match, `OR` joins the two terms
+ * beside it and binds tighter than that, and parentheses group terms, as
+ * Gmail's search operators page describes.
+ */
 function matches(mail: StandInMail, query: string | undefined): boolean {
-  for (const term of (query ?? "").toLowerCase().split(/\s+/).filter(Boolean)) {
-    const [, field, value = ""] = /^([a-z]+):(.*)$/.exec(term) ?? [];
-    if (field === "in" || field === "label") {
-      const label = LABELS.find((entry) => entry.name.toLowerCase() === value);
-      if (!mail.labelIds.includes(label?.id ?? value.toUpperCase())) return false;
-    } else if (field === "is" && value === "unread") {
-      if (!mail.labelIds.includes("UNREAD")) return false;
-    } else if (field === "from") {
-      if (!mail.from.toLowerCase().includes(value)) return false;
-    } else if (field === "after" || field === "before") {
-      const [year, month, day] = value.split("/").map(Number);
-      const seconds = /^\d+$/.test(value);
-      const at = seconds ? Number(value) * 1000 : Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
-      const end = seconds ? at + 1000 : at;
-      if (field === "after" ? mail.internalDate < at : mail.internalDate >= end) return false;
-    } else {
-      const words = `${mail.from} ${mail.to} ${mail.subject} ${mail.text ?? ""}`.toLowerCase();
-      if (!words.includes(term)) return false;
+  const tokens = (query ?? "").toLowerCase().match(/[()]|[^\s()]+/g) ?? [];
+  let at = 0;
+  const all = (): boolean => {
+    let result = true;
+    while (at < tokens.length && tokens[at] !== ")") result = either() && result;
+    return result;
+  };
+  const either = (): boolean => {
+    let result = one();
+    while (tokens[at] === "or") {
+      at += 1;
+      result = one() || result;
     }
+    return result;
+  };
+  const one = (): boolean => {
+    const token = tokens[at++] ?? "";
+    if (token !== "(") return term(mail, token);
+    const result = all();
+    at += 1;
+    return result;
+  };
+  return all();
+}
+
+function term(mail: StandInMail, term: string): boolean {
+  const [, field, value = ""] = /^([a-z]+):(.*)$/.exec(term) ?? [];
+  if (field === "in" || field === "label") {
+    const label = LABELS.find((entry) => entry.name.toLowerCase() === value);
+    return mail.labelIds.includes(label?.id ?? value.toUpperCase());
   }
-  return true;
+  if (field === "is" && value === "unread") return mail.labelIds.includes("UNREAD");
+  if (field === "from") return mail.from.toLowerCase().includes(value);
+  if (field === "subject") return mail.subject.toLowerCase().includes(value);
+  if (field === "after" || field === "before") {
+    const [year, month, day] = value.split("/").map(Number);
+    const seconds = /^\d+$/.test(value);
+    const at = seconds ? Number(value) * 1000 : Date.UTC(year ?? 0, (month ?? 1) - 1, day ?? 1);
+    const end = seconds ? at + 1000 : at;
+    return field === "after" ? mail.internalDate >= at : mail.internalDate < end;
+  }
+  const words = `${mail.from} ${mail.to} ${mail.subject} ${mail.text ?? ""}`.toLowerCase();
+  return words.includes(term);
 }
 
 /** What one service's MCP server reaches of the stand-in Google. */

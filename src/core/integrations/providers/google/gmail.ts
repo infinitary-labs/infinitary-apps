@@ -28,9 +28,44 @@ export const GMAIL_MESSAGE_EVENT: IntegrationEventSpec = {
   name: "message_received",
   label: "A message arrives",
   description:
-    "Each Gmail conversation that gets new mail in the inbox, once a look; a later reply in it is a new event. Google asks the captain before anything reads who sent mail or what it says, so the summary names only the conversation's id: read_message with that id as thread reads its newest message, which Google may ask the captain about first.",
+    "Each Gmail conversation that gets new mail in the inbox, once a look; a later reply in it is a new event. Google asks the captain before anything reads who sent mail or what it says, so the summary names only the conversation's id: read_message with that id as thread reads its newest message, which Google may ask the captain about first. The search filter takes Gmail's own search words, such as from:ada@example.com or subject:invoice, and only new mail matching them fires: Google matches them, so no mail is read to decide. Put in it only what the person's words name, such as the sender they expect; empty fires for every new mail.",
   every: 1,
+  filters: [
+    {
+      name: "search",
+      label: "Search words (Gmail's own, such as from:ada@example.com; empty for every message)",
+    },
+  ],
+  checkFilter: (filter) => searchWordsProblem(filter?.search ?? ""),
 };
+
+/** The longest search words a rule keeps: Gmail's query holds them beside the look's own. */
+const SEARCH_WORDS_MAX = 512;
+
+/**
+ * Why a rule's search words cannot go inside the look's search, or undefined.
+ * The look wraps them in parentheses after its own inbox and time words, so
+ * they must stay inside that group: one line, every quote closed, and every
+ * parenthesis and brace outside quotes closed in order. An `OR` in them then
+ * joins only their own words, never the inbox or the window.
+ */
+export function searchWordsProblem(words: string): string | undefined {
+  if (words.length > SEARCH_WORDS_MAX)
+    return `Gmail search words for a rule are at most ${SEARCH_WORDS_MAX} characters.`;
+  if (/[\r\n]/.test(words)) return "Gmail search words for a rule are one line.";
+  const open: string[] = [];
+  let quoted = false;
+  for (const char of words) {
+    if (char === '"') quoted = !quoted;
+    else if (quoted) continue;
+    else if (char === "(" || char === "{") open.push(char === "(" ? ")" : "}");
+    else if ((char === ")" || char === "}") && open.pop() !== char)
+      return `The search words close a ${char} they never opened.`;
+  }
+  if (quoted) return "The search words open a quote they never close.";
+  if (open.length > 0) return `The search words never close a ${open.at(-1) === ")" ? "(" : "{"}.`;
+  return undefined;
+}
 
 const messageIdSchema = z
   .string()
@@ -539,7 +574,9 @@ function mailCursor(text: string, account: string): MailCursor | undefined {
  * or subject from someone else, and a look runs with nobody to ask, so it
  * asks Gmail for conversation ids alone (`THREAD_VIEW_IDS_ONLY`), which
  * Google answers without asking; the crewmate reads the conversation by its
- * id (read_message's thread). Consecutive looks search windows that meet and
+ * id (read_message's thread). A rule's search words join that search in
+ * parentheses, so Google matches them and the look still asks for ids alone.
+ * Consecutive looks search windows that meet and
  * never overlap: in seconds since 1970 Gmail's `before:` holds its own second
  * as `after:` does, so a look searches up to the second before the next one
  * starts. A conversation that gets more mail later is told again. The first
@@ -551,7 +588,11 @@ export async function lookForMail(
   account: string,
   cursor: string | null,
   now: () => number,
+  filter?: Record<string, string>,
 ): Promise<IntegrationLook> {
+  const words = filter?.search?.trim() ?? "";
+  const problem = searchWordsProblem(words);
+  if (problem) throw new Error(problem);
   const seconds = Math.floor(now() / 1000);
   const until = seconds - SETTLE_SECONDS;
   const start = (): string => JSON.stringify({ account, since: seconds } satisfies MailCursor);
@@ -564,7 +605,7 @@ export async function lookForMail(
   let pages = 0;
   do {
     const body = await gmail("search_threads", {
-      query: `in:inbox after:${saved.since} before:${until - 1}`,
+      query: `in:inbox after:${saved.since} before:${until - 1}${words ? ` (${words})` : ""}`,
       pageSize: THREADS_A_PAGE,
       view: "THREAD_VIEW_IDS_ONLY",
       ...(page ? { pageToken: page } : {}),

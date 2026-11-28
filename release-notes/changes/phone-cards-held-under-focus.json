@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "phone-cards-held-under-focus",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A focused iPhone or iPad keeps other projects' cards off Home",
+      "body": "While your iPhone or iPad is focused on one project, Home leaves out the cards about other projects' tasks, as your computer does; the row under the top bar still counts what waits elsewhere. Pick their project or All projects to bring them back where they were, with any that arrived meanwhile still marked new. Tap a card's notification to see it anyway, without changing the focus.",
+      "noPicture": "The hero pair comes from this change's own phone check at this version, and replaces this reason before the change merges.",
+      "docsSite": ["projects"],
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

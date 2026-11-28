@@ -1,6 +1,7 @@
 import { DRAWING_SOURCE_PREFIX, FRAME_BRIDGE_VERSION } from "@shared/plugins/bridge";
 import { frameCsp } from "@shared/plugins/containment";
 import { buildFrameDocument } from "@shared/plugins/frameDocument";
+import { WEBKIT_HIGHLIGHT_DELAY_MS } from "@shared/plugins/framePressScript";
 import { expect, test } from "vitest";
 import { commands } from "vitest/browser";
 import { cardBodyMarkup, cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
@@ -283,16 +284,34 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
     await settled(heard);
     expect(opened(heard)).toHaveLength(1);
 
-    // A held touch sends its click before the browser clears words selected elsewhere.
-    expect(await selectParagraphWords(WORDS)).toBe(WORDS);
+    // A held touch's release makes the bridge send its click before the browser clears words selected elsewhere.
     await inFrame(() => {
-      const label = document.getElementById("label");
-      label?.dispatchEvent(
-        new PointerEvent("pointerdown", { bubbles: true, pointerType: "touch" }),
+      const seen: { trusted: boolean; words: string }[] = [];
+      const win = window as unknown as { clicks: typeof seen; ups: number };
+      win.clicks = seen;
+      win.ups = 0;
+      addEventListener(
+        "click",
+        (event) => seen.push({ trusted: event.isTrusted, words: String(getSelection()) }),
+        true,
       );
-      label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+      addEventListener(
+        "mouseup",
+        (event) => {
+          if (event.isTrusted) win.ups += 1;
+        },
+        true,
+      );
     }, null);
+    expect(await selectParagraphWords(WORDS)).toBe(WORDS);
+    await commands.holdTouchInFrame(FRAME, "#label", WEBKIT_HIGHLIGHT_DELAY_MS + 180);
+    // The browser's own mouseup follows the touch's end, with its click in the same turn.
+    await expect
+      .poll(() => inFrame(() => (window as unknown as { ups: number }).ups, null))
+      .toBeGreaterThan(0);
     await settled(heard);
     expect(opened(heard)).toHaveLength(2);
+    const clicks = await inFrame(() => (window as unknown as { clicks: unknown[] }).clicks, null);
+    expect(clicks[0]).toEqual({ trusted: false, words: WORDS });
   }
 });

@@ -695,12 +695,13 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
   ).join(" ")}
 ${FRAME_PICTURE_SCRIPT}
 ${FRAME_PRESS_SCRIPT}
-  // A mouse press replaces any selection, so the words it leaves are its own; a touch keeps what was selected until after its click.
-  var pressedWords = "";
-  document.addEventListener("pointerdown", function (event) {
-    pressedWords = event.pointerType === "mouse" ? "" : String(getSelection());
-  }, true);
+  // Whether the press in progress changed the selection: a drag does, and a click the card's script or a held touch sends ahead of the browser's own clearing does not.
+  var selectedByPress = false;
+  document.addEventListener("pointerdown", function () { selectedByPress = false; }, true);
+  document.addEventListener("selectionchange", function () { selectedByPress = true; });
   document.addEventListener("click", function (event) {
+    var selecting = selectedByPress;
+    selectedByPress = false;
     var target = event.target;
     var action = target && target.closest ? target.closest("[data-inf-action]") : null;
     if (action) {
@@ -760,9 +761,8 @@ ${FRAME_PRESS_SCRIPT}
       var drawing = outermostDrawing(target);
       if (drawing && isDiagram(drawing)) {
         // The browser sends a drag's release to the drawing both ends sit in as a click: words that press selected stay, and nothing opens.
-        // Words selected before it do not count; a held touch sends its click before the browser clears them.
-        var words = String(getSelection());
-        if (words && words !== pressedWords) return;
+        // Words selected before it do not count.
+        if (selecting && String(getSelection())) return;
         openDrawing(drawing);
         return;
       }
@@ -870,4 +870,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-Jr4X28wiSQzU+79XFp+yqcl0395AUzm1JKPNrAPhqJQ=";
+export const FRAME_BRIDGE_SHA256 = "sha256-u8nCBH6NjWkdJkGJUL7WhUWUIbjG6c50mGCQkySM2mk=";

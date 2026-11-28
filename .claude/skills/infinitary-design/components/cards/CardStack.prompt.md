@@ -11,6 +11,7 @@ Cards are prioritized by importance; only one is ever shown.
 The stack is as wide as the shown card (`ResponseCard.prompt.md`, widths): its peeks follow that card, while the stage pager occupies a stable lane below the maximum-height envelope, with separate room for the last turn above the input.
 A maximized card stands without peeks, and the pager keeps a 40 px lane of its own under it (`ResponseCard.prompt.md`, "Maximize").
 Its optional `envelopeHeight` supplies that stage-only envelope.
+In the card overlay (`docs/card-overlay.md`) the pager instead hangs 10px under the card and moves with it, on the overlay's pill surface (`--bg-1`, `--line-1`, `--radius-pill`, `--shadow-2`) with its dots ringed in `--bg-1` and the badge on an opaque ground beside it; the envelope stays, as the card's cap.
 A replacement uses its final width immediately, with no width easing.
 
 A new card never steals the shown one - it lands on the stack unseen, and the pager says so: an `--accent` dot (6px, `--radius-pill`, ringed in `--bg-0`) on the arrow that leads to it, and one accent mono Badge "1 new" beside the pager, positioned outside the centred arrow group so the arrows never move under the pointer.

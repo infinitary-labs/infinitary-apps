@@ -15,8 +15,9 @@ import { settleOverlayDrafts, startOverlayStore } from "./overlayStart";
 import { overlayTarget } from "./overlayTarget";
 import "./overlay.css";
 
-/** The panel's own clear area, where a click belongs to the app behind it. */
-const CLEAR = "html, body, #root, [data-card-overlay-root], [data-stage]";
+/** The panel's own clear area, where a click belongs to the app behind it: the page and the stack's empty boxes around the card and its pager. */
+const CLEAR =
+  "html, body, #root, [data-card-overlay-root], [data-stage], [data-card-layer], [data-card-layer-leaving], [data-card-envelope], [data-card-slot], [data-card-pager]";
 
 /** What the panel holds: its first reads, a card to answer, or the word that none waits. */
 type Phase = "starting" | "cards" | "nothing";
@@ -179,6 +180,11 @@ export function CardOverlay() {
     <div data-card-overlay-root="" data-revealed={revealed ? "" : undefined}>
       {phase === "cards" && (
         <>
+          <div data-stage="" tabIndex={-1}>
+            <CardLayer onEmptied={() => {}} />
+          </div>
+          {/* After the stage: the card is the hide button's anchor (overlay.css), and an
+              anchor must come first in the page. Tab reaches it after the card. */}
           <button
             type="button"
             data-card-overlay-hide=""
@@ -190,9 +196,6 @@ export function CardOverlay() {
               <path d="M2 2 L10 10 M10 2 L2 10" stroke="currentColor" strokeWidth="1.5" />
             </svg>
           </button>
-          <div data-stage="" tabIndex={-1}>
-            <CardLayer onEmptied={() => {}} />
-          </div>
         </>
       )}
       {phase === "nothing" && (

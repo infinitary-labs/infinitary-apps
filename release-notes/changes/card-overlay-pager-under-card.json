@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-overlay-pager-under-card",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Cards over other apps keep their arrows right under the card",
+      "body": "When a card opens over another app, the arrows that page between cards, with their count and new badge, now sit just under the card and move with it, instead of near the bottom of the screen where the badge could be cut off. They stand on their own background so they read over any game, and the button that sends the card away sits just above the card's corner. A click in the empty space above or below the card now reaches the app behind it.",
+      "picture": {
+        "dark": "card-overlay-pager-under-card-dark.webp",
+        "light": "card-overlay-pager-under-card-light.webp",
+        "alt": "The bottom of a card over another app, with its arrows, the count 1 / 3 and a 3 NEW badge on their own background just under it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

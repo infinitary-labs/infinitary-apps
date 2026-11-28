@@ -27,7 +27,9 @@ function fixture(ladder: Partial<IdleLadderHost> = {}) {
   const at = (ms: number) => {
     clock.now = T0 + ms;
   };
-  // The ladder's witnesses read cards, threads and runtimes; none is up unless a case adds it.
+  const readOnly = () => {
+    throw new Error("Reading standing work must not act on an idle task");
+  };
   const waits = new IdleLadder({
     tasks,
     inbox,
@@ -35,8 +37,21 @@ function fixture(ladder: Partial<IdleLadderHost> = {}) {
     openCards: () => [],
     threadsAwaitingAuthor: () => [],
     runtime: () => undefined,
+    servesTurn: () => false,
+    bypassesSupervision: () => false,
+    answerOwed: () => false,
+    notifyOp: readOnly,
+    recordSort: readOnly,
+    steer: readOnly,
+    raiseCard: readOnly,
+    withdrawCard: readOnly,
+    dispatchQueuedTask: readOnly,
+    deliverLane: readOnly,
+    wakeDeadGate: readOnly,
+    completeContainers: readOnly,
+    broadcastCrewCounts: readOnly,
     ...ladder,
-  } as IdleLadderHost);
+  });
   const read = () => standingWork({ tasks, inbox, waits }, clock.now);
   /** A part filed on request that the first mate recorded the captain's stop on. */
   const parked = (id: string, title: string, parentId: string, blockedBy?: string[]) => {
@@ -578,14 +593,12 @@ describe("the standing list", () => {
       });
       // The idle boundary at its turn's end starts the idle clock.
       f.tasks.turns.markIdle("careful");
-      f.inbox.enqueue("careful", "This task's rigor is now Careful.");
       return { ...f, task };
     };
 
-    it("lists it once it has sat idle two hours (INF-7116's proposed bound), though a leftover notice reads as moving", () => {
-      const f = reported();
+    it("lists it after two idle hours even when an inbox witness says it is moving (INF-7116)", () => {
+      const f = reported({ servesTurn: (taskId) => taskId === "careful" });
       f.at(REPORTED - T0 + 2 * HOUR - 60_000);
-      expect(f.waits.witnesses("careful", REPORTED + 2 * HOUR).deliverable).toBe(true);
       expect(f.read().rows).toEqual([]);
       f.at(REPORTED - T0 + 2 * HOUR);
       expect(f.read().rows).toEqual([

@@ -52,7 +52,7 @@ description: ربط GitHub وGitLab وBitbucket وGoogle وخوادم MCP كي �
 
 يؤدي تسجيل الخروج من GitHub إلى إيقاف الاستنساخ الخاص وطلبات السحب حتى تسجّل الدخول مجددًا.
 
-## Google: Gmail وCalendar وDrive {#google-gmail-calendar-and-drive}
+## Google: Gmail وCalendar وDrive وDocs وSheets {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google تسجيل دخول واحد لكل من Gmail وCalendar وDrive وDocs وSheets.
 يصل Infinitary إليها عبر خوادم Gmail وCalendar وDrive وDocs وSheets التي تتيحها Google لوكلاء الذكاء الاصطناعي، باتصال Google خاص بك: عميل تنشئه في مشروعك الخاص على Google Cloud، في الوضع الشخصي من Google.

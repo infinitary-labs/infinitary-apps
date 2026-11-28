@@ -52,7 +52,7 @@ Veja [Seus outros computadores](/pt-br/your-other-computers/).
 
 Sair do GitHub interrompe clones privados e solicitações de pull até você fazer login de novo.
 
-## Google: Gmail, Agenda e Drive {#google-gmail-calendar-and-drive}
+## Google: Gmail, Agenda, Drive, Documentos e Planilhas {#google-gmail-calendar-drive-docs-and-sheets}
 
 O Google é um único login para o Gmail, a Agenda, o Drive, o Documentos e o Planilhas.
 O Infinitary os alcança pelos próprios servidores do Gmail, da Agenda, do Drive, do Documentos e do Planilhas do Google para agentes de IA, com uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.

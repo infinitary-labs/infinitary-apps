@@ -84,7 +84,7 @@ export const SHEETS_ACTIONS: readonly IntegrationActionSpec[] = [
     scope: googleFileScope("spreadsheet"),
     // i18n-exempt: served to the crew, which stays English
     description:
-      "Add rows to a Google Sheet by its id, right after the last filled row of the table found in tab (a tab's name) or range (A1 notation); name one. Nothing already there is overwritten. Each value is entered as if typed. A cell is text, a number, true or false, or null to leave it empty. The answer names the range the rows went into. Its approval state controls whether the host asks, for each spreadsheet.",
+      "Add rows to a Google Sheet by its id, right after the last filled row of the table found in tab (a tab's name) or range (A1 notation); name one. Nothing already there is overwritten. A cell is text, a number, true or false, or null to leave it empty. The answer names the range the rows went into. Its approval state controls whether the host asks, for each spreadsheet.",
     input: z
       .strictObject({
         id: fileIdSchema,
@@ -245,7 +245,7 @@ export async function runSheetsAction(
         return answer({
           ...named,
           // i18n-exempt: words served to the crew, which stay English
-          incomplete: `The spreadsheet was made, but its tabs and rows were not all added: ${error instanceof Error ? error.message : String(error)} update_cells and append_rows can add them.`,
+          incomplete: `The spreadsheet was made, but its tabs and rows were not all added: ${error instanceof Error ? error.message : String(error)} update_cells and append_rows can fill the tabs it has; a missing tab is added in Google Sheets.`,
         });
       }
       return answer({

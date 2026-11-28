@@ -52,7 +52,7 @@ Consulta [Tus otras computadoras](/es/your-other-computers/).
 
 Cerrar sesión en GitHub detiene los clones privados y las solicitudes de incorporación de cambios hasta que vuelvas a iniciar sesión.
 
-## Google: Gmail, Calendar y Drive {#google-gmail-calendar-and-drive}
+## Google: Gmail, Calendar, Drive, Documentos y Hojas de cálculo {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google es un solo inicio de sesión para Gmail, Calendar, Drive, Documentos y Hojas de cálculo.
 Infinitary los alcanza mediante los propios servidores de Gmail, Calendar, Drive, Documentos y Hojas de cálculo de Google para agentes de IA, con tu propia conexión con Google: un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google.

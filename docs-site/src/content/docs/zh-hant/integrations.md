@@ -52,7 +52,7 @@ Infinitary 如何用它來複製專案、提出變更，請看 [專案](/zh-hant
 
 登出 GitHub 後，在你重新登入之前，私人存放庫的複製和 pull request 都會停止。
 
-## Google：Gmail、日曆和雲端硬碟 {#google-gmail-calendar-and-drive}
+## Google：Gmail、日曆、雲端硬碟、文件和試算表 {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google 用一個登入同時連結 Gmail、日曆、雲端硬碟、文件和試算表。
 Infinitary 透過 Google 自己為 AI 代理程式提供的 Gmail、日曆、雲端硬碟、文件和試算表伺服器，以你自己的 Google 連線使用它們：也就是你在自己的 Google Cloud 專案中，以 Google 的個人模式建立的用戶端。

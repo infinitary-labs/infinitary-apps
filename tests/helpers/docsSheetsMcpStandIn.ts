@@ -11,12 +11,15 @@
  * - update_doc applies `insertText` at the end of the body and
  *   `replaceAllText`, and answers `replies` holding each request's Docs API
  *   answer; a count of zero is left out, as Google's JSON leaves out zeros.
+ *   Its list says those replies include errors: an edit to a doc shared to
+ *   view only answers one there, `{ error: { message } }`, changing nothing.
  * - Sheets answers its Sheets API resource under `content`, except
  *   get_values, whose `range` and `values` stand at the top, as its list
  *   says. Values come back as shown: every cell as text.
  * - update_formulas reads values as a person types them (a number, `TRUE`,
  *   and a sum of numbers after `=` are worked out), update_values keeps
- *   them exactly, and append_values enters them as typed.
+ *   them exactly, and append_values enters them as typed, which its list
+ *   leaves open.
  * A Doc's text is its file's `text`; a Sheet's cells are its file's `tabs`.
  * Each tool answers a key granted none of Drive's, Docs' or Sheets'
  * permissions Google's insufficient-scopes refusal.
@@ -185,6 +188,10 @@ export function docsMcpServer(world: DocsSheetsWorld): McpServer {
       if (scope) return scope;
       const doc = docOf(documentId);
       if (!doc) return refused(`Requested entity was not found.`);
+      if (doc.viewOnly)
+        return text({
+          replies: [{ error: { message: "The caller does not have permission" } }],
+        });
       let body = doc.text ?? "";
       const replies: Record<string, unknown>[] = [];
       for (const request of requests ?? []) {

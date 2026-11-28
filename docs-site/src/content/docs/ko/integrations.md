@@ -52,7 +52,7 @@ Infinitary가 이 로그인으로 프로젝트를 복제하고 변경을 제안�
 
 GitHub에서 로그아웃하면 다시 로그인할 때까지 비공개 복제와 끌어오기 요청이 멈춰요.
 
-## Google: Gmail, Calendar, 드라이브 {#google-gmail-calendar-and-drive}
+## Google: Gmail, Calendar, 드라이브, 문서, 스프레드시트 {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google은 로그인 하나로 Gmail, Calendar, 드라이브, 문서, 스프레드시트를 함께 써요.
 Infinitary는 Google이 AI 에이전트용으로 제공하는 Gmail, Calendar, 드라이브, 문서 및 스프레드시트 서버를 통해, 선장님 자신의 Google 연결로 이것들에 닿아요: 선장님의 Google Cloud 프로젝트에서 Google의 개인 모드로 직접 만드는 클라이언트예요.

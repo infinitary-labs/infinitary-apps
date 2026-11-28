@@ -52,7 +52,7 @@ Siehe [Deine anderen Computer](/de/your-other-computers/).
 
 Wenn du dich bei GitHub abmeldest, funktionieren private Klone und Pull Requests erst wieder, wenn du dich erneut anmeldest.
 
-## Google: Gmail, Kalender und Drive {#google-gmail-calendar-and-drive}
+## Google: Gmail, Kalender, Drive, Docs und Tabellen {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google ist eine Anmeldung für Gmail, Kalender, Drive, Docs und Tabellen.
 Infinitary erreicht sie über Googles eigene Gmail-, Kalender-, Drive-, Docs- und Tabellen-Server für KI-Agenten, mit deiner eigenen Google-Verbindung: einem Client, den du in deinem eigenen Google-Cloud-Projekt im persönlichen Modus von Google erstellst.

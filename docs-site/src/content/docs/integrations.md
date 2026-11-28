@@ -51,7 +51,7 @@ See [Your other computers](/your-other-computers/).
 
 Signing out of GitHub stops private clones and pull requests until you sign in again.
 
-## Google: Gmail, Calendar and Drive
+## Google: Gmail, Calendar, Drive, Docs and Sheets
 
 Google is one sign-in for Gmail, Calendar, Drive, Docs and Sheets.
 Infinitary reaches them through Google's own Gmail, Calendar, Drive, Docs and Sheets servers for AI agents, with a Google connection of your own: a client you make in your own Google Cloud project, in Google's Personal mode.

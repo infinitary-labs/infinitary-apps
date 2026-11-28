@@ -44,6 +44,8 @@ export type StandInDriveFile = {
   bytes?: Buffer;
   /** A Google Sheet's tabs, in order (`docsSheetsMcpStandIn.ts`). */
   tabs?: StandInTab[];
+  /** Shared with the signed-in account to view only, so Docs refuses an edit to it. */
+  viewOnly?: boolean;
 };
 
 /** One tab of a stand-in Google Sheet: its id, its name and its cells' values, row by row. */

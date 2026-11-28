@@ -52,7 +52,7 @@ Voir [Vos autres ordinateurs](/fr/your-other-computers/).
 
 Se déconnecter de GitHub arrête les clonages privés et les demandes de tirage jusqu’à ce que vous vous reconnectiez.
 
-## Google : Gmail, Agenda et Drive {#google-gmail-calendar-and-drive}
+## Google : Gmail, Agenda, Drive, Docs et Sheets {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google est une seule connexion pour Gmail, Agenda, Drive, Docs et Sheets.
 Infinitary y accède par les propres serveurs Gmail, Agenda, Drive, Docs et Sheets de Google destinés aux agents d’IA, avec une connexion Google à vous : un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google.

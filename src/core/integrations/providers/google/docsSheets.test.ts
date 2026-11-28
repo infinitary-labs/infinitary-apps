@@ -210,6 +210,20 @@ describe("Docs on the Google row", () => {
     ).toBe(0);
   });
 
+  it("answers Docs' refusal inside update_doc's replies as a refusal, not as text added", async () => {
+    const world = await signedIn();
+    world.google.files.set(SHOT_LIST.id, { ...SHOT_LIST, viewOnly: true });
+    const asked = await call(world, "append_to_document", { id: SHOT_LIST.id, text: "\nWrap." });
+    expect(asked.refused).toBe("refused");
+    const ask = world.tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+    const sent = await world.integrations.sendAsk("task-1", ask?.id ?? "");
+    expect(sent.outcome).toEqual({
+      kind: "refused",
+      why: "Google Docs refused: The caller does not have permission",
+    });
+    expect(fileOf(world, SHOT_LIST.id)?.text).toBe(SHOT_LIST.text);
+  });
+
   it("names Docs' MCP service when it is off, with Google's page that turns it on", async () => {
     const world = await signedIn();
     world.google.knobs.off.add("docs");
@@ -303,7 +317,7 @@ describe("Sheets on the Google row", () => {
     expect(fileOf(world, id)?.mimeType).toBe(SPREADSHEET);
     expect(made).toMatchObject({ id, name: "Lens rental" });
     expect(String(made.incomplete)).toMatch(
-      /^The spreadsheet was made, but its tabs and rows were not all added: .*update_cells and append_rows can add them\.$/,
+      /^The spreadsheet was made, but its tabs and rows were not all added: .*update_cells and append_rows can fill the tabs it has; a missing tab is added in Google Sheets\.$/,
     );
   });
 

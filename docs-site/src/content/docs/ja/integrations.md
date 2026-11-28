@@ -52,7 +52,7 @@ Infinitary がこのサインインを使ってプロジェクトをクローン
 
 GitHub からサインアウトすると、もう一度サインインするまで、非公開のクローンとプルリクエストが止まります。
 
-## Google：Gmail、カレンダー、ドライブ {#google-gmail-calendar-and-drive}
+## Google：Gmail、カレンダー、ドライブ、ドキュメント、スプレッドシート {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google は、Gmail、カレンダー、ドライブ、ドキュメント、スプレッドシートに使う 1 つのサインインです。
 Infinitary は、Google が AI エージェント向けに提供する Gmail、カレンダー、ドライブ、ドキュメント、スプレッドシートのサーバーを通じ、あなた自身の Google 接続でこれらにアクセスします。これは、自分の Google Cloud プロジェクトに Google の個人モードで作成するクライアントです。

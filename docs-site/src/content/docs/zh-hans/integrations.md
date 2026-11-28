@@ -52,7 +52,7 @@ Infinitary 如何用它克隆项目和提交改动，请参阅[项目](/zh-hans/
 
 退出 GitHub 登录后，私有仓库的克隆和拉取请求都会停止，直到你重新登录。
 
-## Google：Gmail、Calendar 和云端硬盘 {#google-gmail-calendar-and-drive}
+## Google：Gmail、Calendar、云端硬盘、文档和表格 {#google-gmail-calendar-drive-docs-and-sheets}
 
 Google 用一个登录同时连接 Gmail、Calendar、云端硬盘、文档和表格。
 Infinitary 通过 Google 自己面向 AI 智能体的 Gmail、Calendar、云端硬盘、文档和表格服务器，借助你自己的 Google 连接访问它们：这是你在自己的 Google Cloud 项目中以 Google 个人模式创建的一个客户端。

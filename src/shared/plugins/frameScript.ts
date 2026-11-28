@@ -695,13 +695,16 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
   ).join(" ")}
 ${FRAME_PICTURE_SCRIPT}
 ${FRAME_PRESS_SCRIPT}
-  // Whether the press in progress changed the selection: a drag does, and a click the card's script or a held touch sends ahead of the browser's own clearing does not.
-  var selectedByPress = false;
-  document.addEventListener("pointerdown", function () { selectedByPress = false; }, true);
-  document.addEventListener("selectionchange", function () { selectedByPress = true; });
+  // The selection's ends at a press, to tell the words that press selected from earlier ones: a drag moves them, and a click the card's script or a held touch sends ahead of the browser's own clearing leaves them. Read in place, not from selectionchange, which the browser queues apart from the gesture.
+  var pressedEnds = [];
+  function selectionEnds() {
+    var selection = getSelection();
+    return [selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset];
+  }
+  document.addEventListener("pointerdown", function () { pressedEnds = selectionEnds(); }, true);
   document.addEventListener("click", function (event) {
-    var selecting = selectedByPress;
-    selectedByPress = false;
+    var ends = selectionEnds();
+    var selecting = ends.some(function (end, at) { return end !== pressedEnds[at]; });
     var target = event.target;
     var action = target && target.closest ? target.closest("[data-inf-action]") : null;
     if (action) {
@@ -870,4 +873,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-u8nCBH6NjWkdJkGJUL7WhUWUIbjG6c50mGCQkySM2mk=";
+export const FRAME_BRIDGE_SHA256 = "sha256-TyVosX8LVNpOsQS4aJo0oKTYqmEbnZLyamvLFv9hgk8=";

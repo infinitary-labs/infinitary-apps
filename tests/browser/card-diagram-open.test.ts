@@ -284,6 +284,27 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
     await settled(heard);
     expect(opened(heard)).toHaveLength(1);
 
+    // The browser queues its selection notice apart from the gesture, so the press's own words are told from earlier ones in place.
+    await selectParagraphWords(WORDS);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("command") as Element);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+      label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
+
     // A held touch's release makes the bridge send its click before the browser clears words selected elsewhere.
     await inFrame(() => {
       const seen: { trusted: boolean; words: string }[] = [];
@@ -310,7 +331,7 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
       .poll(() => inFrame(() => (window as unknown as { ups: number }).ups, null))
       .toBeGreaterThan(0);
     await settled(heard);
-    expect(opened(heard)).toHaveLength(2);
+    expect(opened(heard)).toHaveLength(3);
     const clicks = await inFrame(() => (window as unknown as { clicks: unknown[] }).clicks, null);
     expect(clicks[0]).toEqual({ trusted: false, words: WORDS });
   }

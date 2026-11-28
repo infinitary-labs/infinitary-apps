@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "这里运行着一个在此窗口之外启动的大副。要从此窗口加入另一台电脑，请先停止它。";
 "devicesJoinTryAgain" = "重试";
 "devicesJoinYourAccount" = "你的账户";
+"devicesMoveSpace" = "%1$@ 有 %2$@ 可用空间，而这次移动大约需要 %3$@。请先在那里腾出约 %4$@。";
+"devicesMoveSpaceHere" = "%1$@ 有 %2$@ 可用空间，准备这次移动大约需要 %3$@。请先在 %1$@ 上腾出约 %4$@。";
 "devicesNearbyPort" = "端口";
 "devicesNearbyPortPlaceholder" = "端口 22";
 "devicesNearbyRemoteLoginOn" = "那台电脑必须打开“远程登录”。";

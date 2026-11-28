@@ -1127,6 +1127,8 @@
   {"said":{"m":"devicesJoinStaysBeside"},"words":"A first mate started outside this window runs here. Stop it first to join another computer from this window."},
   {"said":{"m":"devicesJoinTryAgain"},"words":"Try again"},
   {"said":{"m":"devicesJoinYourAccount"},"words":"Your account"},
+  {"said":{"m":"devicesMoveSpace","a":{"computer":"‹computer›","free":"‹free›","needs":"‹needs›","short":"‹short›"}},"words":"‹computer› has ‹free› free and the move needs about ‹needs›. Free about ‹short› there first."},
+  {"said":{"m":"devicesMoveSpaceHere","a":{"computer":"‹computer›","free":"‹free›","needs":"‹needs›","short":"‹short›"}},"words":"‹computer› has ‹free› free and needs about ‹needs› to prepare the move. Free about ‹short› on ‹computer› first."},
   {"said":{"m":"devicesNearbyPort"},"words":"Port"},
   {"said":{"m":"devicesNearbyPortPlaceholder"},"words":"Port 22"},
   {"said":{"m":"devicesNearbyRemoteLoginOn"},"words":"Remote Login must be on there."},

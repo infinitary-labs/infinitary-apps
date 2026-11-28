@@ -57,6 +57,7 @@ import { JoinedHome } from "../devices/joinedHome";
 import { FileReach, protectedPlaces } from "../files/fileReach";
 import type { MoveDeps } from "../folderMove/move";
 import { HOME_ARRIVING_DIR, IncomingHomeMove } from "../homeMove/arriving";
+import type { FreeBytes } from "../homeMove/space";
 import type { HostChildSpawner, HostKeychain } from "../host";
 import { hostEnv } from "../hostEnv";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
@@ -315,6 +316,8 @@ export type StartHelperOptions = {
   homeAddresses?: () => string[];
   /** This user's home folder, where a moved first mate's projects and Claude conversations land; the real one unless a test says. */
   homeFolder?: string;
+  /** Reads a disk's free space for a move here; the disk's own reading unless a test stands in one with known room. */
+  homeMoveFree?: FreeBytes;
 };
 
 export type StartHelperOutcome =
@@ -534,6 +537,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     appVersion: options.appVersion ?? null,
     addresses: ownAddresses,
     background: Boolean(options.startHome),
+    ...(options.homeMoveFree ? { free: options.homeMoveFree } : {}),
     // The first mate running here keeps no copy of its own record: the copy goes once it starts.
     startHome: async () => {
       const started = (await options.startHome?.()) ?? false;

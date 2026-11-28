@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "Un second démarré hors de cette fenêtre fonctionne ici. Arrêtez-le d’abord pour rejoindre un autre ordinateur depuis cette fenêtre.";
 "devicesJoinTryAgain" = "Réessayer";
 "devicesJoinYourAccount" = "Votre compte";
+"devicesMoveSpace" = "%1$@ a %2$@ d’espace libre et le déplacement demande environ %3$@. Libérez d’abord environ %4$@ sur cet ordinateur.";
+"devicesMoveSpaceHere" = "%1$@ a %2$@ d’espace libre et a besoin d’environ %3$@ pour préparer le déplacement. Libérez d’abord environ %4$@ sur %1$@.";
 "devicesNearbyPort" = "Port";
 "devicesNearbyPortPlaceholder" = "Port 22";
 "devicesNearbyRemoteLoginOn" = "La Session à distance doit y être activée.";

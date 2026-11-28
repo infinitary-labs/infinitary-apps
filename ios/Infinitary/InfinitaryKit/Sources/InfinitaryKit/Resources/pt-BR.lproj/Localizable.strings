@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "Um imediato iniciado fora desta janela está rodando aqui. Pare-o primeiro para entrar em outro computador a partir desta janela.";
 "devicesJoinTryAgain" = "Tentar de novo";
 "devicesJoinYourAccount" = "Sua conta";
+"devicesMoveSpace" = "%1$@ tem %2$@ livres e a mudança precisa de cerca de %3$@. Libere primeiro cerca de %4$@ lá.";
+"devicesMoveSpaceHere" = "%1$@ tem %2$@ livres e precisa de cerca de %3$@ para preparar a mudança. Libere primeiro cerca de %4$@ em %1$@.";
 "devicesNearbyPort" = "Porta";
 "devicesNearbyPortPlaceholder" = "Porta 22";
 "devicesNearbyRemoteLoginOn" = "O Login Remoto precisa estar ativado lá.";

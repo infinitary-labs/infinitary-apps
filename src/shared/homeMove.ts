@@ -118,6 +118,13 @@ export const homeMoveFactsSchema = z.object({
   appVersion: z.string().min(1).max(64).nullable(),
   /** Free space where its data folder is, in bytes; null when unread. */
   freeBytes: z.number().int().nonnegative().nullable(),
+  /**
+   * Free space where a move's files wait until it arrives, in bytes, only
+   * when that is another disk than the data folder's; null when unread there.
+   * Absent from a computer on one disk, and from one without the change
+   * (`home-move-holding-space.md`).
+   */
+  holdingFreeBytes: z.number().int().nonnegative().nullable().optional(),
   /** Where its first mate would answer once the home moves there. */
   addresses: z.array(dialAddressSchema).max(PAIRING_LINK_ALSO_MAX + 1),
   /** Its data folder holds a first mate's record of its own, which a move sets aside. */

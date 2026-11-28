@@ -25,8 +25,17 @@ import Database from "better-sqlite3";
 import { z } from "zod";
 import { DeviceOutOfReachError } from "../connection/connection";
 import { writePrivate } from "../devices/identity";
+import { DATABASES } from "../folderMove/rewrite";
 import { git } from "../workspace/git";
-import { COPY_ONLY_ROOTS, hashFile, listRecord, type RecordEntry } from "./record";
+import {
+  COPY_ONLY_ROOTS,
+  hashFile,
+  listRecord,
+  listRecordInTurns,
+  type RecordEntry,
+  toRecordPath,
+} from "./record";
+import { type FreeBytes, freeAt, type MoveSize, spaceShort } from "./space";
 import { HOME_MOVE_WORDS } from "./words";
 
 /** A started task on this computer, as the move reads it. */
@@ -144,6 +153,8 @@ export type OutgoingHost = {
   /** The move failed after the first mate stopped: it starts again whole, here. */
   onStopped: () => void;
   emit: (progress: HomeMoveProgress) => void;
+  /** Reads a disk's free space; `statfsFree` unless a test stands in a disk of known room. */
+  free?: FreeBytes;
   /** Where to stage a database's consistent copy before it crosses. */
   stagingDir: string;
 };
@@ -232,12 +243,19 @@ export class OutgoingHomeMove {
       gaps.push({ id: "background", level: "blocks", text: words.noBackground(name) });
     if (facts.addresses.length === 0)
       gaps.push({ id: "addresses", level: "blocks", text: words.noAddresses(name) });
-    const size = listRecord(this.host.userData, this.host.claudeDir, { kinds: false }).reduce(
-      (sum, entry) => sum + entry.size,
-      0,
-    );
-    if (facts.freeBytes !== null && facts.freeBytes < size * 2)
-      gaps.push({ id: "space", level: "blocks", text: words.space(name, size, facts.freeBytes) });
+    const size = await this.moveSize();
+    const short = spaceShort(size, facts);
+    if (short)
+      gaps.push({ id: "space", level: "blocks", text: words.space(name, short.free, short.needs) });
+    // This computer stages each project's bundle and each database's copy before they cross.
+    const free = freeAt(this.host.stagingDir, this.host.free);
+    const needsHere = size.projects + size.database;
+    if (free !== null && free < needsHere)
+      gaps.push({
+        id: "space-here",
+        level: "blocks",
+        text: words.spaceHere(await this.host.ownName(), free, needsHere),
+      });
     const tasks = await this.host.localTasks(deviceId);
     for (const task of tasks)
       if (!task.movable)
@@ -834,6 +852,23 @@ export class OutgoingHomeMove {
     return sha256;
   }
 
+  /** What the move writes, as `spaceShort` counts it. */
+  private async moveSize(): Promise<MoveSize> {
+    const entries = await listRecordInTurns(this.host.userData, this.host.claudeDir, {
+      kinds: false,
+    });
+    const databases = new Set(DATABASES.map(toRecordPath));
+    let record = 0;
+    let database = 0;
+    for (const entry of entries) {
+      record += entry.size;
+      if (databases.has(entry.path)) database += entry.size;
+    }
+    let projects = 0;
+    for (const project of this.host.projects()) projects += await packedSize(project.path);
+    return { record, projects, database };
+  }
+
   private async uncommitted(): Promise<{ id: string; path: string }[]> {
     const found: { id: string; path: string }[] = [];
     for (const project of this.host.projects()) {
@@ -855,6 +890,25 @@ class StartedHere extends Error {}
 
 function reason(caught: unknown): string {
   return caught instanceof Error ? caught.message : String(caught);
+}
+
+/**
+ * A repository's objects as git counts them, packed and loose, which is
+ * about what its bundle holds; 0 for a folder that is not one or does not answer.
+ */
+async function packedSize(path: string): Promise<number> {
+  let counted: string;
+  try {
+    counted = await git(path, ["count-objects", "-v"], { timeoutMs: 10_000 });
+  } catch {
+    return 0;
+  }
+  let kib = 0;
+  for (const line of counted.split("\n")) {
+    const [key, value] = line.split(":").map((part) => part.trim());
+    if (key === "size" || key === "size-pack") kib += Number(value) || 0;
+  }
+  return kib * 1024;
 }
 
 /** A repository's remotes, or null for a folder that is not one. */

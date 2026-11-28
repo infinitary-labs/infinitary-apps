@@ -5,7 +5,6 @@ import {
   readFileSync,
   renameSync,
   rmSync,
-  statfsSync,
   statSync,
 } from "node:fs";
 import { open } from "node:fs/promises";
@@ -31,6 +30,7 @@ import { rewriteDatabases } from "../folderMove/rewrite";
 import { git } from "../workspace/git";
 import { hashFile, landingOf, removePlaced, restoreAside, setAsideRecord } from "./record";
 import { keepSignInsToAsk } from "./signInAgain";
+import { type FreeBytes, freeAt, oneDisk } from "./space";
 
 /**
  * The folder in the work folder where a move's files wait until it arrives,
@@ -71,6 +71,8 @@ export type IncomingHomeMoveOptions = {
   addresses: () => string[];
   /** Whether this computer can start a first mate in the background. */
   background: boolean;
+  /** Reads a disk's free space; `statfsFree` unless a test stands in a disk of known room. */
+  free?: FreeBytes;
   /** Starts the first mate here in the background; answers whether it started. */
   startHome: () => Promise<boolean>;
   log: (line: string) => void;
@@ -243,18 +245,11 @@ export class IncomingHomeMove {
   }
 
   private async facts(): Promise<HomeMoveFacts> {
-    const { homeData } = this.options;
-    let freeBytes: number | null = null;
-    try {
-      const where = existsSync(homeData) ? homeData : dirname(homeData);
-      const stats = statfsSync(where);
-      freeBytes = Math.floor(Number(stats.bavail) * Number(stats.bsize));
-    } catch {
-      freeBytes = null;
-    }
+    const { homeData, arrivingDir, free } = this.options;
     return {
       appVersion: this.options.appVersion,
-      freeBytes,
+      freeBytes: freeAt(homeData, free),
+      ...(oneDisk(arrivingDir, homeData) ? {} : { holdingFreeBytes: freeAt(arrivingDir, free) }),
       addresses: this.options.addresses().slice(0, 9),
       ownRecord: existsSync(join(homeData, "firstmate.db")),
       firstMateRunning: await firstMateAnswers(join(homeData, LOCAL_DOOR_FOLDER)),

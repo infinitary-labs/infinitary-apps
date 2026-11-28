@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "يعمل هنا نائب قبطان بدأ تشغيله خارج هذه النافذة. أوقفه أولًا للانضمام إلى حاسوب آخر من هذه النافذة.";
 "devicesJoinTryAgain" = "المحاولة مرة أخرى";
 "devicesJoinYourAccount" = "حسابك";
+"devicesMoveSpace" = "في %1$@ مساحة حرة قدرها %2$@، ويحتاج النقل إلى نحو %3$@. وفّر نحو %4$@ هناك أولًا.";
+"devicesMoveSpaceHere" = "في %1$@ مساحة حرة قدرها %2$@، ويحتاج إلى نحو %3$@ لتجهيز النقل. وفّر نحو %4$@ على %1$@ أولًا.";
 "devicesNearbyPort" = "المنفذ";
 "devicesNearbyPortPlaceholder" = "المنفذ 22";
 "devicesNearbyRemoteLoginOn" = "يجب أن يكون «تسجيل الدخول عن بُعد» مفعّلًا هناك.";

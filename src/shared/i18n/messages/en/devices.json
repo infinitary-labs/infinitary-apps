@@ -128,6 +128,8 @@
   "devicesJoinStaysBeside": "A first mate started outside this window runs here. Stop it first to join another computer from this window.",
   "devicesJoinTryAgain": "Try again",
   "devicesJoinYourAccount": "Your account",
+  "devicesMoveSpace": "{computer} has {free} free and the move needs about {needs}. Free about {short} there first.",
+  "devicesMoveSpaceHere": "{computer} has {free} free and needs about {needs} to prepare the move. Free about {short} on {computer} first.",
   "devicesNearbyPort": "Port",
   "devicesNearbyPortPlaceholder": "Port 22",
   "devicesNearbyRemoteLoginOn": "Remote Login must be on there.",

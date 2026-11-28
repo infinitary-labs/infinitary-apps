@@ -131,6 +131,8 @@
   "devicesJoinStaysBeside": "Un second démarré hors de cette fenêtre fonctionne ici. Arrêtez-le d’abord pour rejoindre un autre ordinateur depuis cette fenêtre.",
   "devicesJoinTryAgain": "Réessayer",
   "devicesJoinYourAccount": "Votre compte",
+  "devicesMoveSpace": "{computer} a {free} d’espace libre et le déplacement demande environ {needs}. Libérez d’abord environ {short} sur cet ordinateur.",
+  "devicesMoveSpaceHere": "{computer} a {free} d’espace libre et a besoin d’environ {needs} pour préparer le déplacement. Libérez d’abord environ {short} sur {computer}.",
   "devicesNearbyPort": "Port",
   "devicesNearbyPortPlaceholder": "Port 22",
   "devicesNearbyRemoteLoginOn": "La Session à distance doit y être activée.",

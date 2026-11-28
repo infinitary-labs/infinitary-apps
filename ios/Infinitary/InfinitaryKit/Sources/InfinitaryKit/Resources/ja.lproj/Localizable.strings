@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "このウインドウの外で起動した一等航海士がここで動いています。このウインドウから別のコンピューターに参加するには、先にそれを停止してください。";
 "devicesJoinTryAgain" = "もう一度試す";
 "devicesJoinYourAccount" = "アカウント";
+"devicesMoveSpace" = "%1$@ の空きは %2$@ で、移動には約 %3$@ が必要です。先にそちらで約 %4$@ を空けてください。";
+"devicesMoveSpaceHere" = "%1$@ の空きは %2$@ で、移動の準備に約 %3$@ が必要です。先に %1$@ で約 %4$@ を空けてください。";
 "devicesNearbyPort" = "ポート";
 "devicesNearbyPortPlaceholder" = "ポート 22";
 "devicesNearbyRemoteLoginOn" = "そのコンピューターで「リモートログイン」をオンにする必要があります。";

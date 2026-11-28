@@ -36934,6 +36934,68 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Your account`;
   }
+  function devicesMoveSpace(input2) {
+    const computer = input2.computer;
+    const free = input2.free;
+    const needs = input2.needs;
+    const short = input2.short;
+    switch (currentLanguage()) {
+      case "ar":
+        return `في ${computer} مساحة حرة قدرها ${free}، ويحتاج النقل إلى نحو ${needs}. وفّر نحو ${short} هناك أولًا.`;
+      case "de":
+        return `${computer} hat ${free} frei, und der Umzug braucht etwa ${needs}. Gib dort zuerst etwa ${short} frei.`;
+      case "es":
+        return `${computer} tiene ${free} libres y la mudanza necesita unos ${needs}. Libera primero unos ${short} allí.`;
+      case "fr":
+        return `${computer} a ${free} d’espace libre et le déplacement demande environ ${needs}. Libérez d’abord environ ${short} sur cet ordinateur.`;
+      case "ja":
+        return `${computer} の空きは ${free} で、移動には約 ${needs} が必要です。先にそちらで約 ${short} を空けてください。`;
+      case "ko":
+        return `${computer}의 여유 공간은 ${free}이고 이동에는 약 ${needs}이(가) 필요해요. 먼저 그곳에서 약 ${short}을(를) 확보하세요.`;
+      case "pt-BR":
+        return `${computer} tem ${free} livres e a mudança precisa de cerca de ${needs}. Libere primeiro cerca de ${short} lá.`;
+      case "zh-Hans":
+        return `${computer} 有 ${free} 可用空间，而这次移动大约需要 ${needs}。请先在那里腾出约 ${short}。`;
+      case "zh-Hant":
+        return `${computer} 有 ${free} 可用空間，而這次移動大約需要 ${needs}。請先在那裡騰出約 ${short}。`;
+      case "en-XA":
+        return `[${computer} ĥáš ${free} ƒŕéé áñð ţĥé ɱöṽé ñééðš áƀöûţ ${needs}. Ƒŕéé áƀöûţ ${short} ţĥéŕé ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ has ‬${free}‮ free and the move needs about ‬${needs}‮. Free about ‬${short}‮ there first.‬`;
+    }
+    return `${computer} has ${free} free and the move needs about ${needs}. Free about ${short} there first.`;
+  }
+  function devicesMoveSpaceHere(input2) {
+    const computer = input2.computer;
+    const free = input2.free;
+    const needs = input2.needs;
+    const short = input2.short;
+    switch (currentLanguage()) {
+      case "ar":
+        return `في ${computer} مساحة حرة قدرها ${free}، ويحتاج إلى نحو ${needs} لتجهيز النقل. وفّر نحو ${short} على ${computer} أولًا.`;
+      case "de":
+        return `${computer} hat ${free} frei und braucht etwa ${needs}, um den Umzug vorzubereiten. Gib auf ${computer} zuerst etwa ${short} frei.`;
+      case "es":
+        return `${computer} tiene ${free} libres y necesita unos ${needs} para preparar la mudanza. Libera primero unos ${short} en ${computer}.`;
+      case "fr":
+        return `${computer} a ${free} d’espace libre et a besoin d’environ ${needs} pour préparer le déplacement. Libérez d’abord environ ${short} sur ${computer}.`;
+      case "ja":
+        return `${computer} の空きは ${free} で、移動の準備に約 ${needs} が必要です。先に ${computer} で約 ${short} を空けてください。`;
+      case "ko":
+        return `${computer}의 여유 공간은 ${free}이고 이동을 준비하려면 약 ${needs}이(가) 필요해요. 먼저 ${computer}에서 약 ${short}을(를) 확보하세요.`;
+      case "pt-BR":
+        return `${computer} tem ${free} livres e precisa de cerca de ${needs} para preparar a mudança. Libere primeiro cerca de ${short} em ${computer}.`;
+      case "zh-Hans":
+        return `${computer} 有 ${free} 可用空间，准备这次移动大约需要 ${needs}。请先在 ${computer} 上腾出约 ${short}。`;
+      case "zh-Hant":
+        return `${computer} 有 ${free} 可用空間，準備這次移動大約需要 ${needs}。請先在 ${computer} 上騰出約 ${short}。`;
+      case "en-XA":
+        return `[${computer} ĥáš ${free} ƒŕéé áñð ñééðš áƀöûţ ${needs} ţö þŕéþáŕé ţĥé ɱöṽé. Ƒŕéé áƀöûţ ${short} öñ ${computer} ƒîŕšţ. ~~~~~~~~~~~~~~~~~~~~~~~~]`;
+      case "ar-XB":
+        return `${computer}‮ has ‬${free}‮ free and needs about ‬${needs}‮ to prepare the move. Free about ‬${short}‮ on ‬${computer}‮ first.‬`;
+    }
+    return `${computer} has ${free} free and needs about ${needs} to prepare the move. Free about ${short} on ${computer} first.`;
+  }
   function devicesNearbyPort() {
     switch (currentLanguage()) {
       case "ar":
@@ -119928,6 +119990,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     devicesJoinStaysBeside,
     devicesJoinTryAgain,
     devicesJoinYourAccount,
+    devicesMoveSpace,
+    devicesMoveSpaceHere,
     devicesNearbyPort,
     devicesNearbyPortPlaceholder,
     devicesNearbyRemoteLoginOn,
@@ -123735,6 +123799,8 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "devicesJoinStaysBeside": [],
     "devicesJoinTryAgain": [],
     "devicesJoinYourAccount": [],
+    "devicesMoveSpace": ["computer", "free", "needs", "short"],
+    "devicesMoveSpaceHere": ["computer", "free", "needs", "short"],
     "devicesNearbyPort": [],
     "devicesNearbyPortPlaceholder": [],
     "devicesNearbyRemoteLoginOn": [],

@@ -131,6 +131,8 @@
   "devicesJoinStaysBeside": "Aquí se ejecuta un primer oficial iniciado fuera de esta ventana. Detenlo primero para unirte a otra computadora desde esta ventana.",
   "devicesJoinTryAgain": "Volver a intentarlo",
   "devicesJoinYourAccount": "Tu cuenta",
+  "devicesMoveSpace": "{computer} tiene {free} libres y la mudanza necesita unos {needs}. Libera primero unos {short} allí.",
+  "devicesMoveSpaceHere": "{computer} tiene {free} libres y necesita unos {needs} para preparar la mudanza. Libera primero unos {short} en {computer}.",
   "devicesNearbyPort": "Puerto",
   "devicesNearbyPortPlaceholder": "Puerto 22",
   "devicesNearbyRemoteLoginOn": "Allí debe estar activada la Sesión remota.",

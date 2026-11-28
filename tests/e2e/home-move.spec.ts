@@ -122,6 +122,8 @@ test("the captain moves the live first mate to a computer that runs work: the ol
     appVersion: appVersion(),
     homeAddresses: () => [`127.0.0.1:${miniPort}`],
     homeFolder: join(miniRoot, "home"),
+    // A disk with a terabyte free, so the Ready list never reads the room on the runner's own disk.
+    homeMoveFree: () => 1024 ** 4,
     // The first mate starts there as the app on that folder, at the address the work mode gave.
     startHome: async () => {
       mini = launchApp({
@@ -258,6 +260,8 @@ async function commandHome(options: {
     appVersion: appVersion(),
     homeAddresses: () => [`127.0.0.1:${miniPort}`],
     homeFolder: join(miniRoot, "home"),
+    // A disk with a terabyte free, so the Ready list never reads the room on the runner's own disk.
+    homeMoveFree: () => 1024 ** 4,
     startHome: () => options.startHome(miniRoot, dataDir, miniPort),
   });
   if (!started.ok) throw new Error(started.reason);

@@ -1,9 +1,17 @@
 import { HERE } from "@shared/deviceNames";
+import { formatNumber } from "@shared/i18n/format";
+import * as m from "@shared/i18n/messages.generated";
 
+/** A size as the Ready list writes it: gigabytes of 1024 cubed bytes to one place, megabytes below one. */
 function size(bytes: number): string {
   const gb = bytes / 1024 ** 3;
-  if (gb >= 1) return `${gb.toFixed(1)} GB`;
-  return `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
+  if (gb >= 1)
+    return `${formatNumber(gb, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} GB`;
+  return `${formatNumber(Math.max(1, Math.round(bytes / 1024 ** 2)))} MB`;
+}
+
+function spaceFigures(free: number, needs: number) {
+  return { free: size(free), needs: size(needs), short: size(needs - free) };
 }
 
 function list(items: readonly string[]): string {
@@ -31,8 +39,11 @@ export const HOME_MOVE_WORDS = {
     `${name} cannot start your first mate in the background. Open Infinitary there once and try again.`,
   noAddresses: (name: string) =>
     `${name} has no network address your other devices could reach it at.`,
-  space: (name: string, needs: number, free: number) =>
-    `${name} has ${size(free)} free and the move needs about ${size(needs * 2)}. Free some space there first.`,
+  space: (name: string, free: number, needs: number) =>
+    m.devicesMoveSpace({ computer: name, ...spaceFigures(free, needs) }),
+  /** `name` is this computer's own, which stages the move. */
+  spaceHere: (name: string, free: number, needs: number) =>
+    m.devicesMoveSpaceHere({ computer: name, ...spaceFigures(free, needs) }),
   /** `refusal` is the task's own reason it cannot move, which names it. */
   taskStays: (refusal: string) =>
     `${refusal} Let it finish or stop it before moving your first mate.`,

@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "這裡執行著一個在此視窗之外啟動的大副。要從此視窗加入另一台電腦，請先停止它。";
 "devicesJoinTryAgain" = "再試一次";
 "devicesJoinYourAccount" = "你的帳號";
+"devicesMoveSpace" = "%1$@ 有 %2$@ 可用空間，而這次移動大約需要 %3$@。請先在那裡騰出約 %4$@。";
+"devicesMoveSpaceHere" = "%1$@ 有 %2$@ 可用空間，準備這次移動大約需要 %3$@。請先在 %1$@ 上騰出約 %4$@。";
 "devicesNearbyPort" = "連接埠";
 "devicesNearbyPortPlaceholder" = "連接埠 22";
 "devicesNearbyRemoteLoginOn" = "那台電腦必須開啟「遠端登入」。";

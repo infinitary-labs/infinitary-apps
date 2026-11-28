@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "Hier läuft ein erster Offizier, der außerhalb dieses Fensters gestartet wurde. Beende ihn zuerst, um von diesem Fenster aus einem anderen Computer beizutreten.";
 "devicesJoinTryAgain" = "Erneut versuchen";
 "devicesJoinYourAccount" = "Dein Konto";
+"devicesMoveSpace" = "%1$@ hat %2$@ frei, und der Umzug braucht etwa %3$@. Gib dort zuerst etwa %4$@ frei.";
+"devicesMoveSpaceHere" = "%1$@ hat %2$@ frei und braucht etwa %3$@, um den Umzug vorzubereiten. Gib auf %1$@ zuerst etwa %4$@ frei.";
 "devicesNearbyPort" = "Port";
 "devicesNearbyPortPlaceholder" = "Port 22";
 "devicesNearbyRemoteLoginOn" = "Dort muss „Entfernte Anmeldung“ aktiviert sein.";

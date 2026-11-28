@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "Aquí se ejecuta un primer oficial iniciado fuera de esta ventana. Detenlo primero para unirte a otra computadora desde esta ventana.";
 "devicesJoinTryAgain" = "Volver a intentarlo";
 "devicesJoinYourAccount" = "Tu cuenta";
+"devicesMoveSpace" = "%1$@ tiene %2$@ libres y la mudanza necesita unos %3$@. Libera primero unos %4$@ allí.";
+"devicesMoveSpaceHere" = "%1$@ tiene %2$@ libres y necesita unos %3$@ para preparar la mudanza. Libera primero unos %4$@ en %1$@.";
 "devicesNearbyPort" = "Puerto";
 "devicesNearbyPortPlaceholder" = "Puerto 22";
 "devicesNearbyRemoteLoginOn" = "Allí debe estar activada la Sesión remota.";

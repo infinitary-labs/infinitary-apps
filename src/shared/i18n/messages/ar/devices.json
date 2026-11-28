@@ -140,6 +140,8 @@
   "devicesJoinStaysBeside": "يعمل هنا نائب قبطان بدأ تشغيله خارج هذه النافذة. أوقفه أولًا للانضمام إلى حاسوب آخر من هذه النافذة.",
   "devicesJoinTryAgain": "المحاولة مرة أخرى",
   "devicesJoinYourAccount": "حسابك",
+  "devicesMoveSpace": "في {computer} مساحة حرة قدرها {free}، ويحتاج النقل إلى نحو {needs}. وفّر نحو {short} هناك أولًا.",
+  "devicesMoveSpaceHere": "في {computer} مساحة حرة قدرها {free}، ويحتاج إلى نحو {needs} لتجهيز النقل. وفّر نحو {short} على {computer} أولًا.",
   "devicesNearbyPort": "المنفذ",
   "devicesNearbyPortPlaceholder": "المنفذ 22",
   "devicesNearbyRemoteLoginOn": "يجب أن يكون «تسجيل الدخول عن بُعد» مفعّلًا هناك.",

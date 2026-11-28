@@ -1097,6 +1097,8 @@ public enum PhoneMessages {
     public static func `devicesJoinStaysBeside`() -> String { PhoneWords.format("devicesJoinStaysBeside", []) }
     public static func `devicesJoinTryAgain`() -> String { PhoneWords.format("devicesJoinTryAgain", []) }
     public static func `devicesJoinYourAccount`() -> String { PhoneWords.format("devicesJoinYourAccount", []) }
+    public static func `devicesMoveSpace`(`computer`: String, `free`: String, `needs`: String, `short`: String) -> String { PhoneWords.format("devicesMoveSpace", [`computer`, `free`, `needs`, `short`]) }
+    public static func `devicesMoveSpaceHere`(`computer`: String, `free`: String, `needs`: String, `short`: String) -> String { PhoneWords.format("devicesMoveSpaceHere", [`computer`, `free`, `needs`, `short`]) }
     public static func `devicesNearbyPort`() -> String { PhoneWords.format("devicesNearbyPort", []) }
     public static func `devicesNearbyPortPlaceholder`() -> String { PhoneWords.format("devicesNearbyPortPlaceholder", []) }
     public static func `devicesNearbyRemoteLoginOn`() -> String { PhoneWords.format("devicesNearbyRemoteLoginOn", []) }
@@ -6017,6 +6019,8 @@ extension PhoneWords {
         "devicesJoinStaysBeside": [],
         "devicesJoinTryAgain": [],
         "devicesJoinYourAccount": [],
+        "devicesMoveSpace": ["computer", "free", "needs", "short"],
+        "devicesMoveSpaceHere": ["computer", "free", "needs", "short"],
         "devicesNearbyPort": [],
         "devicesNearbyPortPlaceholder": [],
         "devicesNearbyRemoteLoginOn": [],

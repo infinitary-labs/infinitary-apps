@@ -1,6 +1,14 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import {
   HOME_RECEIVE_ORDER,
@@ -34,6 +42,7 @@ import {
   SIGN_IN_AGAIN_FILE,
   type SignInToAsk,
 } from "./signInAgain";
+import { spaceShort } from "./space";
 import { askSignInsAgainAt } from "./wiring";
 import { HOME_MOVE_WORDS } from "./words";
 
@@ -85,8 +94,13 @@ function oldHome() {
   return { userData, homeDir, project, key: task.key };
 }
 
+/** A disk with a terabyte free, so no test reads the room on the disk it runs on. */
+const ROOMY = 1024 ** 4;
+
+const GB = 1024 ** 3;
+
 /** The destination: a computer that runs work, its app's data folder beside its work folder. */
-function destination(startHome?: () => Promise<boolean>) {
+function destination(startHome?: () => Promise<boolean>, free: () => number = () => ROOMY) {
   const root = scratchDir("infinitary-home-move-new-");
   const homeData = join(root, "data");
   const homeDir = join(root, "home");
@@ -101,6 +115,7 @@ function destination(startHome?: () => Promise<boolean>) {
       appVersion: VERSION,
       addresses: () => ["192.168.1.30:47213"],
       background: true,
+      free,
       startHome:
         start ??
         (async () => {
@@ -183,6 +198,7 @@ function move(
     onStopped: () => handOvers.push(null),
     emit: (step) => progress.push(step),
     stagingDir: join(old.userData, "home-moving"),
+    free: () => ROOMY,
     ...overrides,
   };
   const outgoing = new OutgoingHomeMove(host);
@@ -1078,5 +1094,72 @@ describe("moving the first mate to a computer that runs work", () => {
     accounts.push({ providerId: "claude" });
     for (const sink of sinks) sink("inf:quota", {} as never);
     expect(up()).toEqual([`${SIGN_IN_AGAIN_CARD}forge-codeberg.org`]);
+  });
+});
+
+// Intent: the approved plan to count what a move writes on the Ready list's
+// space line, rather than twice the record (docs/devices.md, "The Ready list").
+describe("the Ready list's room for a move", () => {
+  /** A record of 40 GB without writing it: a sparse file the walk counts by its size. */
+  function largeRecord(old: ReturnType<typeof oldHome>) {
+    truncateSync(join(old.userData, "crewmates", "task-1", "sessions", "one.jsonl"), 40 * GB);
+  }
+
+  it("lets a 40 GB record move to a disk with 70 GB free, which twice the record refused", async () => {
+    const old = oldHome();
+    largeRecord(old);
+    const { outgoing } = move(
+      old,
+      destination(undefined, () => 70 * GB),
+    );
+    expect((await outgoing.ready("mini")).gaps.map((gap) => gap.id)).not.toContain("space");
+  });
+
+  it("names what a 40 GB record needs with 20 GB kept free, and how much to free", async () => {
+    const old = oldHome();
+    largeRecord(old);
+    const { outgoing } = move(
+      old,
+      destination(undefined, () => 50 * GB),
+    );
+    const space = {
+      id: "space",
+      level: "blocks",
+      text: "Mac mini has 50.0 GB free and the move needs about 60.0 GB. Free about 10.0 GB there first.",
+    };
+    expect((await outgoing.ready("mini")).gaps).toContainEqual(space);
+    expect(await outgoing.start("mini")).toEqual({ ok: false, text: space.text });
+  });
+
+  it("counts each project twice on one disk, and splits the count when the holding folder is on another", () => {
+    const size = { record: 40 * GB, projects: 5 * GB, database: 2 * GB };
+    // One disk: the record, the bundle and its clone, the database's rewrite and 20 GB kept free.
+    expect(spaceShort(size, { freeBytes: 71 * GB })).toEqual({ free: 71 * GB, needs: 72 * GB });
+    expect(spaceShort(size, { freeBytes: 72 * GB })).toBeNull();
+    // Two disks: the holding folder takes the record and the bundles; the data folder the rest.
+    const twoDisks = { freeBytes: 67 * GB, holdingFreeBytes: 44 * GB };
+    expect(spaceShort(size, twoDisks)).toEqual({ free: 44 * GB, needs: 45 * GB });
+    expect(spaceShort(size, { freeBytes: 66 * GB, holdingFreeBytes: 45 * GB })).toEqual({
+      free: 66 * GB,
+      needs: 67 * GB,
+    });
+    expect(spaceShort(size, { freeBytes: 67 * GB, holdingFreeBytes: 45 * GB })).toBeNull();
+  });
+
+  it("blocks the move when this computer lacks the room to stage the database's copy", async () => {
+    const old = oldHome();
+    const database = statSync(join(old.userData, "firstmate.db")).size;
+    const here = (free: number) =>
+      move(old, destination(), { projects: () => [], free: () => free }).outgoing;
+    const spaceHere = {
+      id: "space-here",
+      level: "blocks",
+      text: HOME_MOVE_WORDS.spaceHere("MacBook Pro", database - 1, database),
+    };
+    expect((await here(database - 1).ready("mini")).gaps).toContainEqual(spaceHere);
+    expect(await here(database - 1).start("mini")).toEqual({ ok: false, text: spaceHere.text });
+    expect((await here(database).ready("mini")).gaps.map((gap) => gap.id)).not.toContain(
+      "space-here",
+    );
   });
 });

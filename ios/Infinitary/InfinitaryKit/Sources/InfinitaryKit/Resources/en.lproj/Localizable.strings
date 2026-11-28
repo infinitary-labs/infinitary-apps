@@ -1043,6 +1043,8 @@
 "devicesJoinStaysBeside" = "A first mate started outside this window runs here. Stop it first to join another computer from this window.";
 "devicesJoinTryAgain" = "Try again";
 "devicesJoinYourAccount" = "Your account";
+"devicesMoveSpace" = "%1$@ has %2$@ free and the move needs about %3$@. Free about %4$@ there first.";
+"devicesMoveSpaceHere" = "%1$@ has %2$@ free and needs about %3$@ to prepare the move. Free about %4$@ on %1$@ first.";
 "devicesNearbyPort" = "Port";
 "devicesNearbyPortPlaceholder" = "Port 22";
 "devicesNearbyRemoteLoginOn" = "Remote Login must be on there.";

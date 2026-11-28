@@ -131,6 +131,8 @@
   "devicesJoinStaysBeside": "Um imediato iniciado fora desta janela está rodando aqui. Pare-o primeiro para entrar em outro computador a partir desta janela.",
   "devicesJoinTryAgain": "Tentar de novo",
   "devicesJoinYourAccount": "Sua conta",
+  "devicesMoveSpace": "{computer} tem {free} livres e a mudança precisa de cerca de {needs}. Libere primeiro cerca de {short} lá.",
+  "devicesMoveSpaceHere": "{computer} tem {free} livres e precisa de cerca de {needs} para preparar a mudança. Libere primeiro cerca de {short} em {computer}.",
   "devicesNearbyPort": "Porta",
   "devicesNearbyPortPlaceholder": "Porta 22",
   "devicesNearbyRemoteLoginOn": "O Login Remoto precisa estar ativado lá.",

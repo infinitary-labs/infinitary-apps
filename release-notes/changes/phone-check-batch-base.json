@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-batch-base",
+      "reason": "CI only: a phone check request on a branch rebuilt on an open batch's version chooses its phone parts from that version, so it no longer reruns the batch's other changes' parts; the app is unchanged."
+    }
+  ]
+}

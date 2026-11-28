@@ -284,11 +284,19 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
     await settled(heard);
     expect(opened(heard)).toHaveLength(1);
 
-    // The browser queues its selection notice apart from the gesture, so the press's own words are told from earlier ones in place.
+    // The browser queues its selection notice apart from the gesture: here the notice of words selected before the press reaches the document between its press and its click, and must not count as the press's own.
     await selectParagraphWords(WORDS);
-    await inFrame(() => {
+    await inFrame(async () => {
       const label = document.getElementById("label");
+      const delivered = new Promise((done) =>
+        document.addEventListener("selectionchange", done, { once: true }),
+      );
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("lead") as Element);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
       label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      await delivered;
       label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
     }, null);
     await settled(heard);
@@ -301,6 +309,20 @@ test("a drag that selects words in a diagram keeps them and opens nothing; a cli
       getSelection()?.removeAllRanges();
       getSelection()?.addRange(range);
       label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
+
+    // A drag that selects the same words again leaves the ends as they were, but it moves the pointer.
+    await selectParagraphWords(WORDS);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, clientX: 100, clientY: 60 }),
+      );
+      label?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 220, clientY: 60 }),
+      );
     }, null);
     await settled(heard);
     expect(opened(heard)).toHaveLength(2);

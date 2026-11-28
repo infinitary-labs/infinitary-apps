@@ -1,6 +1,6 @@
 // The phone check's hinge helper (INF-4241 piece 8, the captain's "Keep a small helper of our own in the project that
 // opens the hinge through the undocumented interface"). scripts/phone-hinge.ts builds it for the iOS simulator and runs
-// it inside a simulated iPhone Duo with `simctl spawn`:
+// it inside a simulated iPhone Duo with `simctl spawn`; its `key` also runs on any simulator, for a part marked `keys`:
 //
 //   phone-hinge sweep <from> <to> <seconds>   move the hinge from one angle to another, 0 closed and 180 flat
 //   phone-hinge angle                          print the hinge angle CoreMotion reports, in degrees
@@ -17,7 +17,8 @@
 //
 // INF-5183: XCTest's typeKey gives its key a keyboard bound to one display, and while the Duo is open the simulator's
 // event router finds that key no destination, so the app never receives it. An attached keyboard names no display, and
-// its key goes to whichever app holds keyboard focus. `key` posts that keyboard event, usage page 7, down then up.
+// its key goes to whichever app holds keyboard focus. `key` posts that keyboard event, usage page 7, down then up. On
+// any device XCTest's typist sends no event for Escape, so a part marked `keys` presses it here too.
 //
 // `orientation` reads a turn back from SpringBoard itself, which decides it. `devicectl device info displays` answers
 // from a cache the simulator's display information daemon refreshes only when a display or orientation notification

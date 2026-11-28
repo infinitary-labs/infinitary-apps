@@ -4,7 +4,8 @@ import Foundation
 /// read from one board in one pass. Pinned tasks list first, each with its parts under it (INF-3127, INF-3512). Only groups with rows show, each in the Mac's order: priority, then oldest first, and
 /// Done newest closed first, with a part under its parent in the same group. A search keeps the groups, narrows them by
 /// title or key as the Mac's does, and adds the computer's older matches as Earlier. A pressed tag chip narrows every
-/// group the same way (the Mac's `tagChipsOf` and `carriesTag`, docs/task-tags.md).
+/// group the same way (the Mac's `tagChipsOf` and `carriesTag`, docs/task-tags.md). The phone's project focus
+/// (`PhoneProjectFocus`) narrows every group, Pinned and Earlier to its project, as the Mac's `NowFilter.projectId` does.
 /// INF-2764: it is built only while the list shows, and sorts positions in the board rather than copies of every task.
 public struct PhoneTaskList: Sendable {
     /// Where a section comes from: one of the board's groups, or the search's older closed work.
@@ -99,7 +100,7 @@ public struct PhoneTaskList: Sendable {
     public static let maxDepth = 3
 
     public init(board raw: PhoneBoard?, cards: [PhoneCard], query: String = "", tag asked: String? = nil,
-                earlier: [PhoneTask] = []) {
+                earlier: [PhoneTask] = [], project focus: String? = nil) {
         let board = raw?.presenting(cards)
         self.board = board
         let tasks = board?.tasks ?? []
@@ -111,10 +112,11 @@ public struct PhoneTaskList: Sendable {
         // The Mac's `tagChipsOf`: All tags, each of the project's tags even at 0, then No tag, each counting the open
         // tasks the list would show under it after the typed words. A card put aside with no task carries no tag.
         var chips: [TagChip] = []
-        if let project = Self.tagProject(board) {
+        func inFocus(_ task: PhoneTask) -> Bool { focus == nil || task.projectId == focus }
+        if let project = Self.tagProject(board, focus: focus) {
             let open = tasks.filter { task in
                 (task.status == "open" || task.status == "active") && (groups[task.id] != nil || task.pinnedAt != nil)
-                    && wordsMatch(task.title, task.key)
+                    && inFocus(task) && wordsMatch(task.title, task.key)
             }
             let aside = (board?.tasklessMinimized(cards) ?? []).filter { wordsMatch($0.title) }.count
             chips = [TagChip(id: nil, name: PhoneMessages.nowPanelAllTags(), count: nil)]
@@ -128,7 +130,7 @@ public struct PhoneTaskList: Sendable {
         let tag = asked.flatMap { asked in chips.contains { $0.id == asked } ? asked : nil }
         self.tag = tag
         func asideMatches(_ title: String) -> Bool { wordsMatch(title) && (tag == nil || tag == Self.noTag) }
-        func matches(_ task: PhoneTask) -> Bool { wordsMatch(task.title, task.key) && Self.carries(task, tag) }
+        func matches(_ task: PhoneTask) -> Bool { inFocus(task) && wordsMatch(task.title, task.key) && Self.carries(task, tag) }
         // INF-3127: a pinned task lists in Pinned at the top, whatever its state or age, in the order it was pinned,
         // newest last. INF-3512: its parts, and theirs, move there with it, under it, by priority then age, each still
         // unpinned; only parts some group would list come along, and each task lists once (the Mac's `pinnedRowsOf`).
@@ -227,7 +229,8 @@ public struct PhoneTaskList: Sendable {
             }
             let aside = group == .waiting ? (board?.tasklessMinimized(cards) ?? []).filter { asideMatches($0.title) } : []
             // A search or a pressed tag reads the closed rows whole, so only the unnarrowed list counts the ones left out.
-            let leftOut = group == .landed && words.isEmpty && tag == nil ? board?.leftOutDone ?? 0 : 0
+            let leftOut = group == .landed && words.isEmpty && tag == nil
+                ? (focus.map { board?.closedLeftOut?.done[$0]?.count ?? 0 } ?? board?.leftOutDone ?? 0) : 0
             if !rows.isEmpty || !aside.isEmpty || leftOut > 0 {
                 parts.append(Part(section: .group(group), rows: rows, aside: aside, leftOut: leftOut))
             }
@@ -235,7 +238,7 @@ public struct PhoneTaskList: Sendable {
         // A search's older closed work from the computer, minus what the groups list, newest closed first.
         if !words.isEmpty {
             let shown = Set(parts.flatMap { $0.rows.map(\.id) })
-            let older = earlier.filter { !shown.contains($0.id) && Self.carries($0, tag) }.enumerated()
+            let older = earlier.filter { !shown.contains($0.id) && inFocus($0) && Self.carries($0, tag) }.enumerated()
                 .sorted { a, b in
                     let (p, q) = (a.element.closedAt ?? 0, b.element.closedAt ?? 0)
                     return p != q ? p > q : a.offset < b.offset
@@ -252,9 +255,13 @@ public struct PhoneTaskList: Sendable {
 
     public var isEmpty: Bool { parts.isEmpty }
 
-    /// The project whose tags apply (the Mac's `tagProjectOf` with no project in focus, since the phone keeps none): the
-    /// only project that is not archived and has tags; otherwise none, and no tag row shows.
-    public static func tagProject(_ board: PhoneBoard?) -> PhoneBoard.Project? {
+    /// The project whose tags apply (the Mac's `tagProjectOf`): the focused project while it has tags, or with no
+    /// focus the only project that is not archived and has tags; otherwise none, and no tag row shows.
+    public static func tagProject(_ board: PhoneBoard?, focus: String? = nil) -> PhoneBoard.Project? {
+        if let focus {
+            let focused = board?.projects.first { $0.id == focus }
+            return (focused?.tags ?? []).isEmpty ? nil : focused
+        }
         let tagged = (board?.projects ?? []).filter { $0.archived != true && !($0.tags ?? []).isEmpty }
         return tagged.count == 1 ? tagged.first : nil
     }

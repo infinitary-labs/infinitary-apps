@@ -18,7 +18,7 @@ struct PhoneReach: View {
 }
 
 extension ReadOnlySession {
-    /// The reach, in the words the reach line and the computer button share. INF-2668: they follow the patient
+    /// The reach, in the words the reach line and Settings' value share. INF-2668: they follow the patient
     /// `reach`, so a redial the computer answers within the captain's 20 s says nothing. INF-4207 piece 2: Live once
     /// every change is shown, and a catch-up says whether it replays what was missed or reads everything again.
     var reachWords: String {
@@ -37,7 +37,7 @@ extension ReadOnlySession {
         return PhoneFormats.since(heardAt)
     }
 
-    /// INF-1062: the computer button in the top bar says the reach to VoiceOver, with its time while out of reach.
+    /// INF-1062: Settings' button in the top bar says the reach to VoiceOver, with its time while out of reach.
     var reachLine: String {
         guard let reachTime else { return reachWords }
         return PhoneMessages.phoneReachLineSince(reach: reachWords, time: reachTime)
@@ -251,7 +251,7 @@ private extension VerticalAlignment {
 /// INF-5265: the ways in Add another computer offers, the first screen's three.
 enum PhoneAddWay { case scan, paste, address }
 
-private extension View {
+extension View {
     /// A key pressed alone; with Command, Option or Control held it is left to the app's own commands, such as
     /// Command-Return, which never presses a row behind it (INF-499).
     func onPlainKey(_ key: KeyEquivalent, _ action: @escaping () -> Void) -> some View {

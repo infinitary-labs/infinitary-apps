@@ -1,5 +1,5 @@
 ---
-source: b6b6aafda3cee48d
+source: 687152f8b55d6613
 title: iPhone und iPad
 description: Fordere eine private TestFlight-Einladung für Infinitary auf iPhone und iPad an und verbinde dich dann mit deinem Computer, um Karten zu lesen und Nachrichten zu senden.
 ---
@@ -37,14 +37,14 @@ Dein Telefon kann mehr als einen Computer behalten, etwa einen zu Hause und eine
 Um einen weiteren hinzuzufügen, öffne die Einstellungen des Telefons, tipp auf **Dein Computer** und wähl **Weiteren Computer hinzufügen**, dann scann seinen Code, füg seinen Link ein oder verbinde dich über seine Adresse.
 Der Computer, den du gerade angezeigt hast, bleibt behalten.
 
-Wenn du mehr als einen behältst, nennt die Computer-Taste rechts in der oberen Leiste des Telefons den angezeigten Computer.
-**Dein Computer**, die erste Zeile in den Einstellungen des Telefons, nennt ihn ebenfalls, listet deine anderen Computer auf und markiert jeden, der von deinem jetzigen Ort aus antwortet, etwa wenn dein Telefon im Netzwerk oder im privaten Netzwerk dieses Computers ist.
+**Dein Computer**, die erste Zeile in den Einstellungen des Telefons, nennt den angezeigten Computer, listet deine anderen Computer auf und markiert jeden, der von deinem jetzigen Ort aus antwortet, etwa wenn dein Telefon im Netzwerk oder im privaten Netzwerk dieses Computers ist.
 Tipp auf einen oder drück mit einer Tastatur Return darauf, um ihn anzuzeigen.
 Das Telefon wechselt nie von selbst: Es bleibt bei deiner Wahl, bis du einen anderen wählst.
 
 ## Was es zeigt {#what-it-shows}
 
 Die obere Leiste hat **Übersicht**, **Aufgaben** und **Aktivität**.
+Ab zwei Projekten konzentriert **Filter** rechts in der oberen Leiste das Telefon auf ein Projekt; siehe [Auf ein Projekt konzentrieren](/de/projects/#focus-on-one-project).
 
 - **Übersicht** zeigt deine Karten, eine nach der anderen; wisch zur nächsten.
   Beantworte eine Karte auf dem Telefon, wie du es auf deinem Computer tun würdest.

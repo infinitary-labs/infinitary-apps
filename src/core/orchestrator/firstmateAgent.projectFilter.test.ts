@@ -17,8 +17,12 @@ fakeClockEachTest();
  * The project filter line (INF-6860, the captain's "are you aware of the
  * project filter i set at the top of the desktop app?" and their answers:
  * scope new work, answers and actions, naming what it left out; a phone
- * message covers every project).
+ * message at All projects covers every project, INF-2820 piece 2's
+ * "messages: focus" names the one it is focused on).
  */
+const PHONE_ALL =
+  "every project - the captain's latest message came from their phone, whose project filter is at All projects and shows every project, so nothing narrows new work, answers or actions";
+
 describe("the project filter on a first mate input", () => {
   it("names the project, the order that decides a message's project, and the scope", async () => {
     const { agent, session, tasks } = setup();
@@ -40,13 +44,36 @@ describe("the project filter on a first mate input", () => {
     );
   });
 
-  it("says a phone message came from the phone, which shows every project", async () => {
+  it("says a phone message at All projects came from the phone, which shows every project", async () => {
     const { agent, session } = setup();
     void agent.converse({ text: "what's waiting on me?", projectFilter: "phone" });
     await drained(session, 1);
+    expect(decodeContext(session.prompts[0] as string).project_filter).toBe(PHONE_ALL);
+  });
+
+  // INF-2820 piece 2, the captain's answer "messages: focus": the phone's own focus is the filter its messages say.
+  it("names the project the phone is focused on, saying the captain wrote from the phone", async () => {
+    const { agent, session, tasks } = setup();
+    const scratch = tasks.projects.scratch();
+    void agent.converse({
+      text: "fix the login bug",
+      projectFilter: { project: scratch.id, phone: true },
+    });
+    await drained(session, 1);
+    const k = scratch.key;
     expect(decodeContext(session.prompts[0] as string).project_filter).toBe(
-      "every project - the captain's latest message came from their phone, which has no project filter and shows every project, so nothing narrows new work, answers or actions",
+      `${k} "${scratch.name}" - the project filter on the captain's phone, which they wrote from. What decides a message's project, strongest first: a project, repository or task their words name; the card they replied under; the shown record or card; this filter. Where nothing stronger names one, new work goes in ${k}, answers cover ${k}'s work and say how much waits elsewhere, and actions on many tasks act on ${k}'s alone and name what they left out. Say in a few words when the filter decided something they did not say. Never change the filter; only the captain does`,
     );
+  });
+
+  it("reads a phone focused on a project the board cannot name as the phone at All projects", async () => {
+    const { agent, session } = setup();
+    void agent.converse({
+      text: "what's waiting on me?",
+      projectFilter: { project: "project-gone", phone: true },
+    });
+    await drained(session, 1);
+    expect(decodeContext(session.prompts[0] as string).project_filter).toBe(PHONE_ALL);
   });
 
   it("hears the filter a reply under its card came with, and keeps it for a message saying none", async () => {

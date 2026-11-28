@@ -22,6 +22,16 @@ import XCTest
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
     }
 
+    /// INF-5183: the test home presses `key` once, as an attached keyboard does and naming no display
+    /// (scripts/phone-hinge.ts), and answers where BackBoard sent it; the key must reach Infinitary before the journey
+    /// reads what the app did with it. On the open Duo, typeKey's key reaches no app, and on any device XCTest's typist
+    /// sends no event at all for Escape. Only the Duo's parts and a part marked `keys` (scripts/phone-test-plan.ts)
+    /// have the route.
+    func pressKeyThroughHome(_ key: String) async throws {
+        let result = try await home("key-\(key)")
+        XCTAssertEqual(result["outcome"] as? String, "delivered", "The \(key) key must reach Infinitary: \(result)")
+    }
+
     func picture(_ name: String) { picture(name, activeWindow: false) }
 
     func picture(_ name: String, activeWindow: Bool) {
@@ -141,7 +151,7 @@ import XCTest
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: tab, timeout: 10), .completed, "\(name) is the lit tab after its press")
     }
 
-    /// INF-1062: in reach the bar says nothing; the computer button's value carries the reach for VoiceOver,
+    /// INF-1062: in reach the bar says nothing; Settings' value carries the reach for VoiceOver,
     /// and a line under the bar says it only while the computer is not in reach.
     /// INF-2668: the line says Out of reach once the computer has been quiet for the captain's 20 s, counted from the
     /// last thing it sent, which a ping every 10 s keeps at most that old; a gone computer is named within 31 s.
@@ -157,12 +167,26 @@ import XCTest
                        .completed, message())
     }
 
+    /// INF-2820 piece 2: Settings at the bar's left says the computer shown and its reach, "<computer> · <reach>", since
+    /// Filter took the computer button's place.
+    var settingsButton: XCUIElement { app.buttons["phone-settings"] }
+
     func reach(_ words: String, timeout: TimeInterval = 20) {
-        let button = app.buttons["computer-details"]
-        // Reading an absent button's value fails at once, so a join still under way is waited for first.
-        XCTAssertTrue(button.waitForPresence(timeout: timeout), app.debugDescription)
-        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == %@", words), object: button, timeout: timeout), .completed, app.debugDescription)
-        if words == "Live" { XCTAssertFalse(app.otherElements["reach-line"].exists, "Live, no line under the bar repeats it") }
+        let button = settingsButton
+        // Reading an absent button's value fails at once, so a join still under way is waited for first. While the
+        // keyboard is open Done stands in Settings' place, so the reach is read from the line under the bar alone.
+        let bar = app.buttons.matching(NSPredicate(format: "identifier IN %@", ["phone-settings", "dismiss-phone-keyboard"])).firstMatch
+        XCTAssertTrue(bar.waitForPresence(timeout: timeout), app.debugDescription)
+        let line = app.otherElements["reach-line"]
+        if !button.exists {
+            XCTAssertEqual(words, "Live", "With the keyboard open only Live, the line gone, can be read")
+            // The line is drawn only on a computer's workspace, so its absence says Live only once the workspace shows.
+            XCTAssertTrue(app.textFields["message-box"].waitForPresence(timeout: timeout), app.debugDescription)
+            XCTAssertTrue(line.waitForAbsence(timeout: timeout), "Live, the line under the bar goes: \(app.debugDescription)")
+            return
+        }
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value ENDSWITH %@", " · " + words), object: button, timeout: timeout), .completed, app.debugDescription)
+        if words == "Live" { XCTAssertFalse(line.exists, "Live, no line under the bar repeats it") }
     }
 
     /// Away past the app's background time (`INFINITARY_TEST_BACKGROUND_TIME`): the app closes its connection when it ends.
@@ -346,9 +370,9 @@ import XCTest
             id, XCUIElement.ElementType.textField.rawValue, XCUIElement.ElementType.textView.rawValue)).firstMatch
     }
 
-    /// Turns the device and waits until the bar's computer button has moved with it and holds still.
+    /// Turns the device and waits until the window has turned with it and holds still.
     func turnForProbe(_ orientation: UIDeviceOrientation) {
-        turnPhone(to: orientation, in: app, moving: app.buttons["computer-details"])
+        turnPhone(to: orientation, in: app, moving: app.windows.firstMatch)
     }
 
     func dismissKeyboardForProbe() async throws {
@@ -539,7 +563,7 @@ import XCTest
         app.launchEnvironment["INFINITARY_ISOLATED_PHONE_TEST"] = "1"
         XCUIDevice.shared.orientation = .portrait
         try await launchPhoneApp(app)
-        let start = app.buttons.matching(NSPredicate(format: "identifier IN %@", ["paste-link", "computer-details"])).firstMatch
+        let start = app.buttons.matching(NSPredicate(format: "identifier IN %@", ["paste-link", "phone-settings"])).firstMatch
         XCTAssertTrue(start.waitForPresence(timeout: 10), app.debugDescription)
         if app.buttons["paste-link"].exists { try await join() } else { reach("Live", timeout: 20) }
         _ = try await home("empty-cards")

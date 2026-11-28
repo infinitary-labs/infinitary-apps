@@ -1,5 +1,5 @@
 ---
-source: c51b6ca36743cf77
+source: 5f14e68d0589e6f3
 title: Projekte
 description: Wie du ein Projekt zu Infinitary hinzufügst, mehrere Repositorys in einem zusammenfasst, ihm Tags gibst, das Fenster auf eines konzentrierst, wählst, wie seine Änderungen zusammengeführt werden, und es entfernst.
 ---
@@ -143,6 +143,10 @@ Schließ die Übersicht, und das Licht kehrt zurück.
 
 Drück auf das **×** neben der Auswahl (**Alle Projekte anzeigen**) oder wähl **Alle Projekte** in der Reihe, um wieder alles zu sehen.
 Infinitary merkt sich deinen Fokus, wenn du es neu startest.
+
+Auf deinem iPhone oder iPad tippst du rechts in der oberen Leiste auf **Filter**, um das Telefon auf ein Projekt zu konzentrieren.
+Das Telefon behält für jeden Computer seinen eigenen Fokus, getrennt von dem auf deinem Computer.
+Solange er an ist, nennt eine Zeile unter der oberen Leiste das Projekt; tipp auf ihr **×**, um wieder alle Projekte zu sehen.
 
 ## Wie Änderungen in dein Projekt kommen {#how-changes-reach-your-project}
 

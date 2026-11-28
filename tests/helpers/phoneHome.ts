@@ -78,6 +78,7 @@ import type {
 } from "./phoneKeyboard";
 import { raiseMoveCard, showMoveCardPast } from "./phoneMoveCard";
 import { phonePanelControls } from "./phonePanels";
+import { projectFilterCommand } from "./phoneProjectFilter";
 import { startPhonePushRelay } from "./phonePushRelay";
 import { CARD_RECORDINGS } from "./phoneRecordings";
 import { removeEveryDevice } from "./phoneRemove";
@@ -140,7 +141,6 @@ async function controlBody(request: IncomingMessage): Promise<string> {
 }
 
 /** INF-64 piece 2: a disposable real home, never a replacement for the wire or stores. */
-
 export async function startPhoneHome(
   root: string,
   controls?: {
@@ -166,8 +166,8 @@ export async function startPhoneHome(
     turn?(
       to: "book" | "side-left" | "side-right",
     ): Promise<{ turn: "book" | "side-left" | "side-right" }>;
-    // INF-5183: one key pressed on the open Duo as an attached keyboard presses it, and where the simulator sent it
-    // (scripts/phone-hinge.ts); absent with no hinge.
+    // INF-5183: one key pressed as an attached keyboard presses it, and where the simulator sent it
+    // (scripts/phone-hinge.ts): on the open Duo, and on any device for a part marked `keys`; absent otherwise.
     key?(
       key: "tab" | "return" | "escape",
     ): Promise<PhoneKeyOutcome & { key: "tab" | "return" | "escape" }>;
@@ -674,7 +674,6 @@ export async function startPhoneHome(
           return homeUpdate as Awaited<ReturnType<typeof core.dispatch<typeof channel>>>;
         }
         const result = await core.dispatch(channel, args, actor);
-
         if (loseNextReply === "after" && channel === "inf:converse") {
           loseNextReply = undefined;
           await connection.close();
@@ -2897,7 +2896,7 @@ export async function startPhoneHome(
         case "POST key-return":
         case "POST key-escape":
           if (!controls?.key)
-            throw new Error("Only a simulated iPhone Duo takes a key through its test home");
+            throw new Error("Only the Duo or a part marked keys takes keys through its test home");
           result = await controls.key(
             command === "key-tab" ? "tab" : command === "key-return" ? "return" : "escape",
           );
@@ -3496,6 +3495,7 @@ export async function startPhoneHome(
           break;
         default:
           result = await phoneAppearanceCommand(core, `${request.method} ${command}`, takeOver);
+          result ??= await projectFilterCommand(core, writes, until, command ?? "");
           if (result === undefined) {
             response.writeHead(404).end();
             return;

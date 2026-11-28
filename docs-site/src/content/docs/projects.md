@@ -143,6 +143,10 @@ Close the summary and the light goes back.
 Press the **×** beside the pill (**Show all projects**), or pick **All projects** in the row, to see everything again.
 Infinitary remembers your focus when you restart it.
 
+On your iPhone or iPad, tap **Filter** at the right of the top bar to focus the phone on one project.
+The phone keeps its own focus for each computer, apart from the one on your computer.
+While it is on, a row under the top bar names the project; tap its **×** to see every project again.
+
 ## How changes reach your project
 
 Open a project in **Settings → Projects** to choose how its finished work is merged.

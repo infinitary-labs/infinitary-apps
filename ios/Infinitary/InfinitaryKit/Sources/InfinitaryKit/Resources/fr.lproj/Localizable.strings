@@ -2022,6 +2022,9 @@
 "phoneComputerShowHint" = "Affiche cet ordinateur";
 "phoneComputerTitle" = "Votre ordinateur";
 "phoneCrewSummaryOpenTask" = "Ouvrir la tâche";
+"phoneFilterCounts" = "%1$@ en attente de vous · %2$@ en cours";
+"phoneFilterProject" = "Projet";
+"phoneFilterTitle" = "Filtre";
 "phoneFormatDays" = "%1$@ j";
 "phoneFormatDaysHours" = "%1$@ j %2$@ h";
 "phoneFormatHours" = "%1$@ h";

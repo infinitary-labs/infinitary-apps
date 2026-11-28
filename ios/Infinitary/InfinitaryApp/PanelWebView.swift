@@ -57,6 +57,8 @@ import SwiftUI
     private var shown = false
     /// The presses of its header buttons that ask the panel, counted per button.
     private var asks: [String: Int] = [:]
+    /// INF-2820 piece 2: the phone's project focus, which a page that reads the board hears as `view.focusedProjectId`.
+    private var focusedProjectId: String?
     /// This page was mounted again on its own after a stop: a second stop shows Retry (the desktop's FrameMount, INF-936).
     /// It clears on Retry and once the page has answered as many pings in a row as a stop misses (INF-3798).
     private var reloaded = false
@@ -65,6 +67,7 @@ import SwiftUI
          appFiles: @escaping (String, String) async throws(PhonePanelFailure) -> PhonePanelFiles,
          library: @escaping (String) async throws(PhonePanelFailure) -> PhonePanelLibrary) {
         self.panel = panel; self.card = card; self.session = session; self.collapsed = collapsed
+        focusedProjectId = session.projectFocus
         self.appFiles = appFiles; self.library = library
     }
 
@@ -235,10 +238,16 @@ import SwiftUI
         view?.callAsyncJavaScript("window.phonePanel.card(value)", arguments: ["value": value], in: nil, in: .page, completionHandler: nil)
     }
 
+    func setFocus(_ focus: String?) {
+        guard focus != focusedProjectId else { return }
+        focusedProjectId = focus
+        tellState()
+    }
+
     private func tellState() {
         guard stand == .drawn, let view else { return }
         view.callAsyncJavaScript("window.phonePanel.state(value)", arguments: ["value": [
-            "collapsed": collapsed, "shown": shown, "asks": asks,
+            "collapsed": collapsed, "shown": shown, "asks": asks, "focusedProjectId": focusedProjectId ?? NSNull(),
         ] as [String: Any]], in: nil, in: .page, completionHandler: nil)
     }
 
@@ -264,6 +273,7 @@ import SwiftUI
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard webView === view, case .object(var fields)? = input else { return }
         fields["theme"] = .string(theme); fields["colorTheme"] = colorTheme?.frameValue ?? .null; fields["collapsed"] = .bool(collapsed); fields["textScale"] = .number(textScale)
+        fields["focusedProjectId"] = focusedProjectId.map(PhoneJSON.string) ?? .null
         do {
             webView.callAsyncJavaScript("await window.phonePanel.mount(input)", arguments: ["input": try PhoneJSON.object(fields).foundation],
                                        in: nil, in: .page) { [weak self] result in

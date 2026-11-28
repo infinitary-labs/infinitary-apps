@@ -6,8 +6,8 @@ import InfinitaryKit
 ///
 /// - A crewmate whose computer is away (out of reach, or not known to be in reach) stays in that computer's frozen group.
 /// - The built-in projects, Scratch and the app's own workspace, always sit with the first mate.
-/// - So does the middle project: the only project of the person's own with crew, else the focused one, else none.
-///   The phone has no project focus yet, so it passes none.
+/// - So does the middle project: the only project of the person's own with crew, else the phone's project focus
+///   (`PhoneProjectFocus`), else none.
 /// - Every other crewmate sits in its project's group.
 /// - A crewmate whose project the board does not name yet keeps its computer's group.
 enum PhoneCrewGroups {
@@ -50,7 +50,8 @@ enum PhoneCrewGroups {
     }
 
     /// Each active crewmate's group on this board, by task id, and the plan; nil groups everyone by computer.
-    static func read(board: PhoneBoard?, tasks: [PhoneTask], presence: [PhoneComputerPresence], grouping: String)
+    static func read(board: PhoneBoard?, tasks: [PhoneTask], presence: [PhoneComputerPresence], grouping: String,
+                     focus: String? = nil)
         -> (plan: Plan, groups: [String: String])? {
         guard let board else { return nil }
         let projects = board.projects.map { Project(id: $0.id, name: $0.name, builtIn: builtIn($0)) }
@@ -60,7 +61,7 @@ enum PhoneCrewGroups {
             return Crew(id: task.id, computer: computer,
                         away: computer != home && presence.first { $0.id == computer }?.inReach != true)
         }
-        guard let plan = plan(grouping: grouping, projects: projects, projectOf: { projectOf[$0] }, focus: nil, crew: crew)
+        guard let plan = plan(grouping: grouping, projects: projects, projectOf: { projectOf[$0] }, focus: focus, crew: crew)
         else { return nil }
         return (plan, Dictionary(crew.map { ($0.id, group(plan, projects: projects, projectOf: { projectOf[$0] }, $0)) },
                                  uniquingKeysWith: { first, _ in first }))

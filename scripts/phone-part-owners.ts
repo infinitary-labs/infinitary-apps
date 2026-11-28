@@ -71,6 +71,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     // The Apple Pencil watch and placement under every part's Home and message box (PhoneWorkspace.swift).
     "ios/Infinitary/InfinitaryApp/PhonePencilWatch.swift",
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhonePencil.swift",
+    // INF-2820 piece 2: Filter in every part's top bar, and the focus every tab and the crew read.
+    "ios/Infinitary/InfinitaryApp/PhoneProjectFilter.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneProjectFocus.swift",
     "ios/Infinitary/InfinitaryApp/PhoneQuestionBubble.swift",
     "ios/Infinitary/InfinitaryApp/PhoneSettingsSheet.swift",
     "ios/Infinitary/InfinitaryApp/PhoneStyle.swift",
@@ -126,6 +129,8 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
   ] },
   // INF-5608's plan, piece 2: the cards-carried part's card on the test home.
   { parts: ["cards-carried"], files: ["tests/helpers/phoneCarried.ts"] },
+  // INF-2820 piece 2: the project-filter part's three projects on the test home.
+  { parts: ["project-filter"], files: ["tests/helpers/phoneProjectFilter.ts"] },
   // INF-6865: the cards-revised-scroll part's long card on the test home.
   { parts: ["cards-revised-scroll"], files: ["tests/helpers/phoneRevisedCard.ts"] },
   { parts: family("cards"), files: [
@@ -231,8 +236,9 @@ const GROUPS: { parts: readonly string[]; files: readonly string[] }[] = [
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSignInReturn.swift",
   ] },
   // INF-3830 pieces 2 and 3: the Panels tab, its frames and the panel order; a panel's title-row buttons and its cards on Home;
-  // where a panel's point.openSettings opens Settings; the status mark by a panel's title.
-  { parts: family("panels"), files: [
+  // where a panel's point.openSettings opens Settings; the status mark by a panel's title. INF-2820 piece 2: the
+  // project-filter part reads the phone's focus in a panel.
+  { parts: [...family("panels"), "project-filter"], files: [
     "ios/Infinitary/CardRuntime/panelHost.ts",
     "ios/Infinitary/InfinitaryApp/CardAssets/PanelHost.generated.js",
     "ios/Infinitary/InfinitaryApp/PanelWebView.swift",

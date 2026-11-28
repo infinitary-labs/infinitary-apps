@@ -164,6 +164,14 @@
   "phoneComputerShowHint": "Shows this computer",
   "phoneComputerTitle": "Your computer",
   "phoneCrewSummaryOpenTask": "Open task",
+  "phoneFilterCounts": "{waiting} waiting on you · {working} working",
+  "phoneFilterProject": "Project",
+  "phoneFilterTitle": "Filter",
+  "phoneFilterWaitingElsewhere": {
+    "plural": "count",
+    "one": "{count} waiting elsewhere",
+    "other": "{count} waiting elsewhere"
+  },
   "phoneFormatDays": "{days}d",
   "phoneFormatDaysHours": "{days}d {hours}h",
   "phoneFormatHours": "{hours}h",

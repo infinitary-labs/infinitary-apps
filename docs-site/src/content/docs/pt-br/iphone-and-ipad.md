@@ -1,5 +1,5 @@
 ---
-source: b6b6aafda3cee48d
+source: 687152f8b55d6613
 title: iPhone e iPad
 description: Peça um convite privado do TestFlight para o Infinitary no iPhone e no iPad e depois conecte-se ao seu computador para ler cartões e enviar mensagens.
 ---
@@ -37,14 +37,14 @@ Seu celular pode manter mais de um computador, como um em casa e outro no trabal
 Para adicionar outro, abra Ajustes no celular, toque em **Seu computador** e escolha **Adicionar outro computador**, depois leia o código dele, cole o link dele ou conecte-se pelo endereço dele.
 O computador que você estava mostrando continua mantido.
 
-Com mais de um mantido, o botão do computador à direita da barra superior do celular diz o nome do computador mostrado.
-**Seu computador**, a primeira linha de Ajustes no celular, também diz o nome dele, lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
+**Seu computador**, a primeira linha de Ajustes no celular, diz o nome do computador mostrado, lista seus outros computadores e marca cada um que responde de onde você está agora, como quando seu celular está na rede ou na rede privada daquele computador.
 Toque em um, ou pressione Return nele com um teclado, para mostrá-lo.
 O celular nunca troca sozinho: ele fica na sua escolha até você escolher outro.
 
 ## O que ele mostra {#what-it-shows}
 
 A barra superior tem **Início**, **Tarefas** e **Atividade**.
+Com dois projetos ou mais, **Filtro** à direita da barra superior foca o celular em um projeto; veja [Focar em um projeto](/pt-br/projects/#focus-on-one-project).
 
 - **Início** mostra seus cartões, um de cada vez; deslize para ir ao próximo.
   Responda a um cartão no celular como faria no computador.

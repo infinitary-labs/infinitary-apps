@@ -2022,6 +2022,9 @@
 "phoneComputerShowHint" = "يعرض هذا الحاسوب";
 "phoneComputerTitle" = "حاسوبك";
 "phoneCrewSummaryOpenTask" = "فتح المهمة";
+"phoneFilterCounts" = "%1$@ بانتظارك · %2$@ قيد العمل";
+"phoneFilterProject" = "المشروع";
+"phoneFilterTitle" = "تصفية";
 "phoneFormatDays" = "%1$@ ي";
 "phoneFormatDaysHours" = "%1$@ ي %2$@ س";
 "phoneFormatHours" = "%1$@ س";

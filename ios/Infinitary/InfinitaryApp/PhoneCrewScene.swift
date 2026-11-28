@@ -27,7 +27,7 @@ struct PhoneCrewScene: View {
     var body: some View {
         let roster = rosters.read(board: session.board, presence: session.computers, homeName: session.mac.name,
                                   inReach: session.contact == "in-reach", generation: session.sceneGeneration, revision: session.workRevision,
-                                  grouping: session.crewGrouping)
+                                  grouping: session.crewGrouping, focus: session.projectFocus)
         let still = reduceMotion || phase != .active || !messageContext.cardsVisible || !visible || record != nil
         GeometryReader { geometry in
             let viewport = PhoneSceneViewport(scene: CGSize(width: roster.width, height: roster.height),
@@ -49,8 +49,9 @@ struct PhoneCrewScene: View {
                                    fold: CharacterFold(folding: session.firstmateFolding, starts: session.firstmateFoldStarts), still: still,
                                    running: !still && preview == nil, offset: viewport.offset, selection: selectedCrew,
                                    bracketed: preview.map { ($0.id, previewComputer ?? roster.groupID($0)) },
-                                   lit: PhoneFocusLight.project(held: nil, rested: (preview ?? selectedCrew.flatMap { roster.task(selected: $0) })
-                                       .map { roster.byProject ? PhoneSceneRoster.computerID($0) : $0.projectId }))
+                                   lit: PhoneFocusLight.project(held: session.projectFocus, rested: rested(roster)
+                                       .map { roster.byProject ? PhoneSceneRoster.computerID($0) : $0.projectId }),
+                                   litComputer: roster.byProject && rested(roster) != nil)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: PhoneTheme.controlRadius)
@@ -164,6 +165,8 @@ struct PhoneCrewScene: View {
     private struct KeyboardTarget {
         let id: String, task: PhoneTask, computer: String, point: CGPoint
     }
+    /// The crewmate whose summary is open, or that crew browsing selects: its light replaces the held focus's.
+    private func rested(_ roster: PhoneSceneRoster) -> PhoneTask? { preview ?? selectedCrew.flatMap { roster.task(selected: $0) } }
     private func keyboardTargets(roster: PhoneSceneRoster) -> [KeyboardTarget] {
         let glyphs = renderer.crew.current.glyphs.filter { roster.order[$0.task.id] != nil }.map {
             KeyboardTarget(id: $0.task.id, task: $0.task, computer: $0.group, point: $0.point)

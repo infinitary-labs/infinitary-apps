@@ -184,6 +184,18 @@
   "phoneComputerShowHint": "يعرض هذا الحاسوب",
   "phoneComputerTitle": "حاسوبك",
   "phoneCrewSummaryOpenTask": "فتح المهمة",
+  "phoneFilterCounts": "{waiting} بانتظارك · {working} قيد العمل",
+  "phoneFilterProject": "المشروع",
+  "phoneFilterTitle": "تصفية",
+  "phoneFilterWaitingElsewhere": {
+    "plural": "count",
+    "zero": "{count} بانتظارك في مشاريع أخرى",
+    "one": "{count} بانتظارك في مشاريع أخرى",
+    "two": "{count} بانتظارك في مشاريع أخرى",
+    "few": "{count} بانتظارك في مشاريع أخرى",
+    "many": "{count} بانتظارك في مشاريع أخرى",
+    "other": "{count} بانتظارك في مشاريع أخرى"
+  },
   "phoneFormatDays": "{days} ي",
   "phoneFormatDaysHours": "{days} ي {hours} س",
   "phoneFormatHours": "{hours} س",

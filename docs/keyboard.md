@@ -382,6 +382,7 @@ The main process's own commands, the size keys, are never refused by the page.
 - `devices.try-again`, Try again to reach your computers, opens Settings at Devices and tries this Mac's own SSH connection once more to every Mac it stopped trying (`docs/devices.md`, "Through the home's SSH").
 - `project-focus.open`, Focus on a project, opens the top bar's project pill into its row with focus on the checked pill, where the arrows, Home and End move and Enter picks (`docs/project-focus.md`); it refuses in Settings and while there is only one project.
 - `project-focus.clear`, Show all projects, lets the window's project focus go; it refuses while every project is shown.
+- On the iPhone and iPad, ⇧⌘P opens the Filter sheet with focus on the checked row, where the arrows move, Return or Space picks and Escape closes, and Show all projects is a View menu command with no key; holding ⌘ on an iPad lists both, and ⌘I still opens Settings at Your computer (`docs/ios.md`, "The project filter").
 - While Keyboard settings records a key every shell command refuses ("Settings is recording a key"), after the dictation key's pick.
 
 ## Parts of the window

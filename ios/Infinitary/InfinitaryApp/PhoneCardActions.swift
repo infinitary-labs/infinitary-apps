@@ -110,6 +110,8 @@ extension PhoneCardPane {
             let snapshot = try await host.submissionReading()
             let reading = snapshot.value
             var payload: [String: PhoneJSON] = ["text": .string(text), "answers": .array(sendable(reading["answers"].list))]
+            // INF-2820 piece 2: a reply says the phone's project focus, as the message box does; All projects says none.
+            if let focus = session.projectFocus { payload["focusedProjectId"] = .string(focus) }
             // INF-3296's phone piece: every queued note goes with the words and photos as one reply.
             held.add(to: &payload)
             // INF-2553: the words join the thread at once, marked sending, and the draft clears; a refusal puts the
@@ -271,7 +273,7 @@ extension PhoneCardPane {
         onSeen()
     }
     /// A read the connection's end fails says nothing on the card: the card asks again once back in reach, and the
-    /// computer button already says whether it is (the captain: "everywhere else in the ios app said it's in reach").
+    /// reach line and Settings' value already say whether it is (the captain: "everywhere else in the ios app said it's in reach").
     func readThread() {
         guard !card.isPast, reachable else { return }
         Task {

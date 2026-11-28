@@ -254,5 +254,15 @@
       "reads": 394,
       "launches": 3
     }
+  },
+  "project-filter": {
+    "iphone": {
+      "reads": 392,
+      "launches": 3
+    },
+    "ipad": {
+      "reads": 411,
+      "launches": 3
+    }
   }
 }

@@ -99,6 +99,8 @@ try {
     neighboursOf: (ids: readonly string[], left: string) => string[];
   }>(join(REPO_ROOT, "src/renderer/src/app/stack.ts"));
   const { satellitePhase } = await runner.import<typeof import("../src/renderer/src/character/crew/satellites.ts")>(join(character, "crew/satellites.ts"));
+  const { heldFocus, pillShown, projectPillsOf, waitingElsewhere } = await runner.import<typeof import("../src/shared/projectFocus.ts")>(join(REPO_ROOT, "src/shared/projectFocus.ts"));
+  const { focusedKeyOf, linesInFocus } = await runner.import<typeof import("../src/panels/activity/feedRows.ts")>(join(REPO_ROOT, "src/panels/activity/feedRows.ts"));
   const { arrangePanels, RAIL_SLOTS } = await runner.import<typeof import("../src/shared/panelArrangement.ts")>(join(REPO_ROOT, "src/shared/panelArrangement.ts"));
   const { splitCardBodyUrls } = await runner.import<typeof import("../src/shared/linkify.ts")>(join(REPO_ROOT, "src/shared/linkify.ts"));
   const outputs = {
@@ -131,6 +133,7 @@ try {
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneCardDeparture.generated.json": departureReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhonePanelOrder.generated.json": panelOrderReadings(),
     "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneLinkedWords.generated.json": addressReadings(),
+    "ios/Infinitary/InfinitaryKit/Tests/InfinitaryKitTests/Fixtures/PhoneProjectFocus.generated.json": projectFocusReadings(),
   };
   /**
    * INF-7045's plan, part 2: thread replies as the computer splits them at the addresses the opener takes
@@ -466,11 +469,12 @@ try {
    * their order and depth, each row's word and trailing words, the wait line and the folding headers' counts - with and
    * without a search, for the phone's list to replay.
    */
-  function taskListReadings() {
+  /** The rows the task list's and the project focus's readings build their boards from. */
+  function boardRows() {
     const now = Date.UTC(2026, 10, 6, 17, 0);
     const min = 60_000;
-    const project = (id: string, key: string, name: string, repo: string | null) => ({ id, key, name, archived: false,
-      repo: repo ? { name: repo, delivery: "direct-pr" as const, autonomy: false } : null,
+    const project = (id: string, key: string, name: string, repo: string | null, kind?: "personal") => ({ id, key, name, archived: false,
+      repo: repo ? { name: repo, delivery: "direct-pr" as const, autonomy: false, ...(kind ? { kind } : {}) } : null,
       counts: { needsYou: 0, waitingOnYou: 0, open: 0, active: 0, doneRecent: 0 } });
     const row = (n: number, title: string, patch: Record<string, unknown> = {}): TaskView => ({
       id: `t-${n}`, key: `INF-${n}`, projectId: "p-inf", parentId: null, kind: "work", title, goal: title, priority: 2,
@@ -483,6 +487,57 @@ try {
     const running = { activity: "running", workPosture: { state: "active", reason: "turn" } };
     const flags = (blocked: boolean, held: boolean) => ({ flags: { blocked, held, needsYou: false, ready: false } });
     const done = (closed: number) => ({ status: "done", closedReason: "landed", startedAt: now - 2 * closed * min, closedAt: now - closed * min });
+    return { now, min, project, row, started, idle, running, flags, done };
+  }
+  /**
+   * INF-2820 piece 2: the desktop's project focus over one board, for the phone's Filter to replay: which projects get
+   * a pill and what each counts (`projectPillsOf`), whether the pills show (`pillShown`), which saved focus holds
+   * (`heldFocus`), the tail (`waitingElsewhere`) and the Activity lines a focus keeps (`linesInFocus`). Scratch and the
+   * app's own workspace get a pill only while each lists a task, an archived project none.
+   */
+  function projectFocusReadings() {
+    const { now, min, project, row, started, idle, running, done } = boardRows();
+    const keyed = (n: number, key: string, projectId: string, title: string, patch: Record<string, unknown> = {}) =>
+      row(n, title, { key: `${key}-${n}`, projectId, ...patch });
+    const projects = [project("p-inf", "INF", "Infinitary", "infinitary"), project("p-har", "HAR", "Harbour", "harbour"),
+      project("p-web", "WEB", "Website", "website"), { ...project("p-old", "OLD", "Old site", "old-site"), archived: true },
+      project("p-scr", "SCR", "Scratch", null), project("p-ws", "WS", "Workspace", "workspace", "personal"),
+      project("p-own", "OWN", "Your notes", "notes", "personal")];
+    const tasks = [
+      keyed(1, "INF", "p-inf", "Answer the harbour master", { ...started(50), ...idle("captain"), waitingCardId: "card-1" }),
+      keyed(2, "INF", "p-inf", "Port the row's word", { ...started(40), ...running }),
+      // A parent that lists under Working only beside its working part counts as itself, not as working.
+      keyed(3, "INF", "p-inf", "Rebuild the pier", { ...started(45), ...idle("inactive") }),
+      keyed(4, "INF", "p-inf", "Sink the piles", { ...started(25), ...running, parentId: "t-3" }),
+      keyed(5, "HAR", "p-har", "Relight the lamp", { ...started(30), ...idle("captain"), waitingCardId: "card-5" }),
+      keyed(6, "HAR", "p-har", "Ring the bell", { ...started(20), ...idle("captain"), waitingCardId: "card-6" }),
+      keyed(7, "WEB", "p-web", "Compress the hero images", { ...started(10), ...running }),
+      keyed(8, "OLD", "p-old", "Retire the old site", { ...started(10), ...idle("captain"), waitingCardId: "card-8" }),
+      keyed(9, "WS", "p-ws", "Tidy the workspace notes", { ...done(30) }),
+      keyed(10, "INF", "p-inf", "Mark the old wreck", { status: "dropped", closedReason: "dropped", closedAt: now - 5 * min }),
+    ];
+    const board = { seq: 1, tasks, projects, closedLeftOut: { done: { "p-scr": ["t-99"] } } };
+    const pills = projectPillsOf(board);
+    const one = { seq: 1, tasks: tasks.filter((task) => task.projectId === "p-inf"), projects: projects.slice(0, 1) };
+    const lines = [
+      { kind: "spawn", taskKey: "INF-2", text: "Started: Port the row's word", at: now - 9 * min },
+      { kind: "info", text: "First mate answered you", at: now - 8 * min },
+      { kind: "report", taskKey: "HAR-5", text: "Reported: Relight the lamp", at: now - 7 * min },
+      { kind: "spawn", taskKey: "INFRA-3", text: "Started: a key that only begins with INF", at: now - 6 * min },
+      { kind: "done", taskKey: "INF-77", text: "Merged: a task the board no longer lists", at: now - 5 * min },
+    ];
+    return {
+      board, one, lines,
+      pills, shown: pillShown(pills), oneShown: pillShown(projectPillsOf(one)),
+      held: ["p-inf", "p-old", "p-gone", null].map((saved) => ({ saved, held: heldFocus(saved, pills),
+        oneHeld: heldFocus(saved, projectPillsOf(one)) })),
+      elsewhere: [null, "p-inf", "p-har", "p-web"].map((focus) => ({ focus, waiting: waitingElsewhere(pills, focus) })),
+      kept: [null, "p-inf", "p-har"].map((focus) => ({ focus,
+        lines: linesInFocus(lines as never, focusedKeyOf(projects, focus)).map((line) => line.text) })),
+    };
+  }
+  function taskListReadings() {
+    const { now, min, project, row, started, idle, running, flags, done } = boardRows();
     const tasks: TaskView[] = [
       row(2901, "Answer the harbour master's question", { ...started(50), ...idle("captain"), priority: 1, waitingCardId: "card-2901" }),
       row(2902, "Move the phone's list to the desktop's order", { ...started(40), ...running,
@@ -546,10 +601,11 @@ try {
     const bothTagged = { tasks: taggedTasks, projects: [{ ...project("p-inf", "INF", "Infinitary", "infinitary"), tags: projectTags },
       { ...project("p-har", "HAR", "Harbour", "harbour"), tags: [tag("lamp", "lamp")] }] };
     type Board = NowBoard;
-    const read = (name: string, board: typeof several, query: string, found: TaskView[], asked: string | null = null) => {
+    const read = (name: string, board: typeof several, query: string, found: TaskView[], asked: string | null = null,
+      projectId: string | null = null) => {
       const panel = board as unknown as Board;
-      const chips = tagChipsOf(panel, { query, projectId: null });
-      const filter = { query, projectId: null, tag: chips.some((chip) => chip.id === asked) ? asked : null };
+      const chips = tagChipsOf(panel, { query, projectId });
+      const filter = { query, projectId, tag: chips.some((chip) => chip.id === asked) ? asked : null };
       const groups = rowsOf(panel, filter);
       const older = earlierRowsOf(found as unknown as Board["tasks"], groups, filter);
       const sections = [["pinned" as const, groups.get("pinned") ?? []] as const,
@@ -568,7 +624,7 @@ try {
               wait: (section === "queued" || home === "queued") && task.queueWait && task.status === "open" ? task.queueWait.line : undefined })) };
         });
       // The phone reads a board with its seq, which a panel reading has no use for.
-      return { name, query, tag: asked, now, board: { seq: 1, ...board }, earlier: found, chips, sections };
+      return { name, query, tag: asked, project: projectId, now, board: { seq: 1, ...board }, earlier: found, chips, sections };
     };
     return { readings: [read("several projects", several, "", []), read("one project", single, "", []),
       read("a search", several, "HARBOUR", earlier),
@@ -576,7 +632,13 @@ try {
       read("a tag", oneTagged, "", [], "tag-bug"),
       read("no tag", oneTagged, "", [], "none"),
       read("a tag and words", oneTagged, "HARBOUR", taggedEarlier, "tag-bug"),
-      read("two projects with tags", bothTagged, "", [], "tag-bug")] };
+      read("two projects with tags", bothTagged, "", [], "tag-bug"),
+      // INF-2820 piece 2: the phone's project focus narrows every group, Pinned and Earlier to its project, and the tag
+      // row follows the focused project, letting go of a tag it lacks.
+      read("a focused project", several, "", [], null, "p-har"),
+      read("a focused search", several, "HARBOUR", earlier, null, "p-inf"),
+      read("the focused project's tags", bothTagged, "", [], "tag-lamp", "p-har"),
+      read("a focused project with no tags", oneTagged, "", [], "tag-bug", "p-har")] };
   }
   /**
    * INF-2935 (INF-2928 piece 2): the desktop task record's own reading of one task in each state it draws - its bar, its

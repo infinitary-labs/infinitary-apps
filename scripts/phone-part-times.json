@@ -128,5 +128,9 @@
   },
   "homes": {
     "iphone": 210000
+  },
+  "project-filter": {
+    "iphone": 106324,
+    "ipad": 118927
   }
 }

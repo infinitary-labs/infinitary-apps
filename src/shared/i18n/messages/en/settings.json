@@ -1039,7 +1039,6 @@
   "settingsProjectsGroupNameDescription": "Your project keeps its key {key} and its history. Each repository keeps its own name.",
   "settingsProjectsIntro": "Add a project here or ask your first mate, and open one to change how it works. A row says only what is set differently from a new project, which is offered as pull requests where it lives, waits for your word before merging, takes Default rigor and runs on a computer chosen automatically.",
   "settingsProjectsLabel": "Projects",
-  "settingsProjectsLocalCareful": "Changes that merge locally are done carefully, without a review - there is no pull request to look at.",
   "settingsProjectsMoveChoose": "Choose a project",
   "settingsProjectsMoveConfirm": "Move",
   "settingsProjectsMoveFailed": "Could not move this repository.",

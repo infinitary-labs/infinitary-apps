@@ -1,5 +1,4 @@
 import { z } from "zod";
-import type { RepoDelivery } from "./repos";
 
 /**
  * Delivery rigor: how carefully a crewmate ships (captain-approved tiers,
@@ -16,7 +15,7 @@ export type Rigor = z.infer<typeof rigorSchema>;
 
 /**
  * Everything the derivation is made from. Each field is a fact the host
- * holds at dispatch: the repository's posture, the captain's own words on
+ * holds at dispatch: whether the work is gated, the captain's own words on
  * care (`rigor_ask`), and a rigor the repository itself declares
  * (`repos.rigor`, migration 36 - set by talking through `app_change project-settings`;
  * null = derive). Nothing else moves the rigor (captain ruling,
@@ -34,7 +33,6 @@ export type RigorInput = {
    * those is gated and none takes a tier.
    */
   gated: boolean;
-  delivery: RepoDelivery;
   ask?: Rigor | undefined;
   repoRigor?: Rigor | undefined;
 };
@@ -56,31 +54,19 @@ export type RigorDecision = {
  *      (`app_change project-settings rigor`);
  *   4. standard - every repository's default, whatever its posture.
  *
- * One bound sits under the order, mechanical rather than judged: `reviewed`
- * ships a pull request after its review passes - the reviewer reads the
- * builder's branch and the pass is what releases the push - so a reviewed
- * answer someone ASKED for on a local-only posture ships standard instead,
- * the most care that posture can take, and the reason says why.
+ * The posture never lowers it: on local-only work `reviewed`'s review comes
+ * before the local merge, as it comes before the push on a pull request
+ * (the captain's choice on INF-7174).
  */
 export function rigorFor(input: RigorInput): RigorDecision {
   if (!input.gated) {
     return { reason: "the work lands through no gate: no rigor" };
   }
-  const bound = (rigor: Rigor, reason: string): RigorDecision => {
-    // Inline, not `opensPullRequest`: repos.ts imports this module.
-    if (rigor === "reviewed" && input.delivery !== "direct-pr" && input.delivery !== "queue-pr") {
-      return {
-        rigor: "standard",
-        reason: `${reason}; reviewed ships a pull request, so ${input.delivery} ships standard`,
-      };
-    }
-    return { rigor, reason };
-  };
   if (input.ask) {
-    return bound(input.ask, `the captain asked for ${input.ask}`);
+    return { rigor: input.ask, reason: `the captain asked for ${input.ask}` };
   }
   if (input.repoRigor) {
-    return bound(input.repoRigor, `the repository ships ${input.repoRigor}`);
+    return { rigor: input.repoRigor, reason: `the repository ships ${input.repoRigor}` };
   }
   return { rigor: "standard", reason: "every repository ships standard by default" };
 }

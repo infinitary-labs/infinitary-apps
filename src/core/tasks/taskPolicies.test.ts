@@ -64,10 +64,12 @@ describe("live task policies", () => {
       "firstmate",
     );
     const changed = current(tasks, task.id);
+    // A local merge keeps Careful: its review runs before the local merge
+    // (the captain's choice on INF-7174).
     expect(tasks.policiesOf(changed)).toMatchObject({
       delivery: { value: "local-only", source: "task" },
       autonomy: { value: true, source: "task" },
-      rigor: { value: "standard", requested: "reviewed", source: "task" },
+      rigor: { value: "reviewed", requested: "reviewed", source: "task" },
     });
     expect(changed.shape).toMatchObject({
       rigor: "reviewed",

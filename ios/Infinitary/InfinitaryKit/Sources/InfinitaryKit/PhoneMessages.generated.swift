@@ -3900,7 +3900,6 @@ public enum PhoneMessages {
     public static func `settingsProjectsGroupNameDescription`(`key`: String) -> String { PhoneWords.format("settingsProjectsGroupNameDescription", [`key`]) }
     public static func `settingsProjectsIntro`() -> String { PhoneWords.format("settingsProjectsIntro", []) }
     public static func `settingsProjectsLabel`() -> String { PhoneWords.format("settingsProjectsLabel", []) }
-    public static func `settingsProjectsLocalCareful`() -> String { PhoneWords.format("settingsProjectsLocalCareful", []) }
     public static func `settingsProjectsMoveChoose`() -> String { PhoneWords.format("settingsProjectsMoveChoose", []) }
     public static func `settingsProjectsMoveConfirm`() -> String { PhoneWords.format("settingsProjectsMoveConfirm", []) }
     public static func `settingsProjectsMoveFailed`() -> String { PhoneWords.format("settingsProjectsMoveFailed", []) }
@@ -8807,7 +8806,6 @@ extension PhoneWords {
         "settingsProjectsGroupNameDescription": ["key"],
         "settingsProjectsIntro": [],
         "settingsProjectsLabel": [],
-        "settingsProjectsLocalCareful": [],
         "settingsProjectsMoveChoose": [],
         "settingsProjectsMoveConfirm": [],
         "settingsProjectsMoveFailed": [],

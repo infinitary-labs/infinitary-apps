@@ -698,17 +698,6 @@ function RepositorySettings({
       {!personal && repo.host && hasChangeRequests(repo.host.kind) && (
         <ContributorDisclosure repo={repo} onPatch={onPatch} />
       )}
-      {!personal && repo.delivery === "local-only" && repo.rigor === "reviewed" && (
-        <div
-          style={{
-            fontSize: "var(--text-xs)",
-            color: "var(--warn)",
-            paddingBottom: "var(--space-2)",
-          }}
-        >
-          {PROJECT_POLICY_WORDS.carefulLocal}
-        </div>
-      )}
     </>
   );
   const costLimit = !personal && repo.costLimit !== undefined;

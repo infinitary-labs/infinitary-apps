@@ -159,11 +159,11 @@ test("keyboard requests change queued policies, show their sources and Activity,
     });
     await expect.poll(detail).toMatchObject({
       policies: {
-        rigor: { value: "standard", requested: "reviewed" },
+        rigor: { value: "reviewed", requested: "reviewed" },
         autonomy: { value: true },
       },
     });
-    await recordCard(app.page).screenshot({ path: evidence("record-local-bound.png") });
+    await recordCard(app.page).screenshot({ path: evidence("record-local-careful.png") });
     await edit(app, `Use the project settings for all three policies on ${task.key}.`, {
       task: task.key,
       delivery: "project",

@@ -3736,7 +3736,6 @@
 "settingsProjectsGroupNameDescription" = "你的项目会保留它的任务编号前缀 %1$@ 和历史。每个仓库保留自己的名称。";
 "settingsProjectsIntro" = "在这里添加项目或询问你的大副，打开一个项目即可更改它的工作方式。每一行只显示与新项目不同的设置；新项目默认在项目托管处以拉取请求提交、合并前等你确认、使用默认把关，并在自动选择的电脑上运行。";
 "settingsProjectsLabel" = "项目";
-"settingsProjectsLocalCareful" = "本地合并的改动会谨慎完成，但没有审查——因为没有拉取请求可供查看。";
 "settingsProjectsMoveChoose" = "选择项目";
 "settingsProjectsMoveConfirm" = "移动";
 "settingsProjectsMoveFailed" = "无法移动这个仓库。";

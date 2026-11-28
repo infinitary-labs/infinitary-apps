@@ -623,7 +623,7 @@ export class CrewBrief {
     if (shape?.rigor) return decision.rigor;
     // A quiet write, like the kind stamp (S3): the rigor explains what the
     // crewmate was told, it is not a state change, and the facts it was
-    // derived from - posture, ask, repo rigor - are all on the record.
+    // derived from - ask, repo rigor - are all on the record.
     this.options.tasks.placement.recordShape(taskId, { rigor: decision.rigor }, record.difficulty);
     return decision.rigor;
   }

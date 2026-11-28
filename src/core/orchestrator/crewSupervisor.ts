@@ -662,7 +662,6 @@ export class CrewSupervisor {
       askEnding: this.askEnding,
       isPersonalTask: (taskId) => this.facts.isPersonalTask(taskId),
       personalFacts: () => this.facts.personalFacts(),
-      taskDelivery: (taskId) => this.facts.taskDelivery(taskId),
       reviewBuilderOf: (record) => this.reviewBuilderOf(record),
       noteTaskActivity: (task) => this.watch.noteTaskActivity(task),
       pokeInbox: () => this.hooks.pokeInbox?.(),

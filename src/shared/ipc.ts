@@ -45,6 +45,7 @@ import {
 import { keymapSnapshotSchema, nextKeysSchema } from "./keymap";
 import { keyRemindersSchema } from "./keyReminders";
 import { nearbyMacsViewSchema } from "./nearbyMacs";
+import { lendAskSchema, lentDraftSchema } from "./overlayDraft";
 import { appPanelsSchema } from "./personal/appPanels";
 import { personalSnapshotSchema, personalStoreChangeSchema } from "./personal/manifest";
 import { shellPreferencesSchema } from "./preferences";
@@ -430,6 +431,10 @@ export const pushContract = {
   "inf:overlay:settings": { payload: cardOverlaySchema, surface: "host" },
   // The overlay's panel is going: its page settles its unsent words, then asks to hide.
   "inf:overlay:leave": { payload: z.object({}), surface: "host" },
+  // The overlay is opening: the window lends its unsent message by answering `inf:composer:lent`.
+  "inf:composer:lend-ask": { payload: lendAskSchema, surface: "host" },
+  // The overlay went: the message it was lent comes back, taken only while the window's box is as it lent it.
+  "inf:composer:hand-back": { payload: lentDraftSchema, surface: "host" },
   // The window filled the screen or stopped filling it.
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
   // Someone came back to this computer or left it (src/main/presence.ts).

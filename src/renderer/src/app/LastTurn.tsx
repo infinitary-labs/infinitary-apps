@@ -266,8 +266,8 @@ function MateLine({
   busy: boolean;
   announce: boolean;
   older: boolean;
-  /** Where the reply's press opens the conversation. */
-  opens: ConversationEntry;
+  /** Where the reply's press opens the conversation; null where the reply is plain words. */
+  opens: ConversationEntry | null | undefined;
 }) {
   const [shown, setShown] = useState<Mate | null>(target);
   const [leaving, setLeaving] = useState(false);
@@ -301,9 +301,9 @@ function MateLine({
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
   const mateCut = useWholeWords(shown ? mateWords : undefined, LANE);
   const mateRef = useCuttingRef(mateFit.ref, mateCut);
-  // A reply is a button that opens it whole; the working words are not.
-  const Bubble = reply ? "button" : "span";
-  const replyButton = useOpensConversation(reply ? opens : undefined, {
+  // A reply is a button that opens it whole; the working words, and a reply that opens nothing, are not.
+  const Bubble = reply && opens !== null ? "button" : "span";
+  const replyButton = useOpensConversation(reply ? (opens ?? undefined) : undefined, {
     older,
     cut: mateFit.title,
     quiet: !reply,
@@ -440,8 +440,11 @@ export function LastTurnRound({
    * spinning mark and no words (the captain's choice in INF-6365's review).
    */
   act?: "choice" | "reply";
-  /** Where a press on the round opens the conversation. */
-  opens?: ConversationEntry;
+  /**
+   * Where a press on the round opens the conversation; null where it opens
+   * nothing, as in the card overlay's message box (docs/card-overlay.md).
+   */
+  opens?: ConversationEntry | null;
   /** The newest message may still be taken back: the revert control stands beside it. */
   onRevert?: () => void;
 }) {
@@ -454,7 +457,7 @@ export function LastTurnRound({
     <div
       data-last-turn-pair=""
       onClick={(event) => {
-        if (leaving || fading) return;
+        if (leaving || fading || opens === null) return;
         // A press that ends a drag across words keeps the selection.
         const selection = event.currentTarget.ownerDocument.getSelection();
         if (selection && !selection.isCollapsed) return;
@@ -480,7 +483,12 @@ export function LastTurnRound({
           </span>
         ) : null}
         {card ? (
-          <CardName card={card} leaving={leaving} older={older} {...(act ? { opens } : {})} />
+          <CardName
+            card={card}
+            leaving={leaving}
+            older={older}
+            {...(act && opens ? { opens } : {})}
+          />
         ) : null}
         {onRevert && !act && !older && !leaving ? <RevertControl onRevert={onRevert} /> : null}
         {round.takenBack ? (

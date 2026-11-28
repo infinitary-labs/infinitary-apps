@@ -443,8 +443,16 @@ export type FirstmateApi = {
     set: (
       next: import("./cardOverlay").SavedCardOverlay,
     ) => Promise<import("./cardOverlay").CardOverlaySet>;
-    /** The card the newest notification on this computer was about, which the overlay shows first. */
-    start: () => Promise<{ cardId: string | null }>;
+    /**
+     * The card the newest notification on this computer was about, which the
+     * overlay shows first, and the window's unsent message lent for this opening.
+     */
+    start: () => Promise<{
+      cardId: string | null;
+      lent?: import("./overlayDraft").LentDraft | null;
+    }>;
+    /** The overlay's message box hands the lent message back as the overlay goes. */
+    handBack: (lent: import("./overlayDraft").LentDraft) => Promise<{ ok: true }>;
     /** The overlay drew its card, or found none waiting. */
     ready: (cards: boolean) => Promise<{ ok: true }>;
     /** The overlay let go: its panel goes. */
@@ -455,6 +463,12 @@ export type FirstmateApi = {
     wide: (wide: boolean) => Promise<{ ok: true }>;
     /** The panel is going: settle unsent words, then `hide`. */
     onLeave: (listener: () => void) => () => void;
+    /** The window: the overlay asks for its unsent message; answer with `lend`. */
+    onLendAsk: (listener: (ask: number) => void) => () => void;
+    /** The window lends its unsent message for the overlay's opening `ask`. */
+    lend: (lent: import("./overlayDraft").LentDraft) => Promise<{ ok: true }>;
+    /** The window: the overlay handed back the message it was lent. */
+    onHandBack: (listener: (lent: import("./overlayDraft").LentDraft) => void) => () => void;
   };
   /** Settings -> Devices (docs/devices.md): the captain's own, on this Mac's window. */
   devices: {

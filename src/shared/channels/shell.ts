@@ -6,6 +6,7 @@ import { MAIN_COMMAND_IDS, type MainCommandId } from "../keyboard";
 import { offeredKeySchema } from "../keyboardOffer";
 import { keymapSnapshotSchema, panelCommandsSchema, savedKeymapSchema } from "../keymap";
 import { keyRemindersSchema } from "../keyReminders";
+import { lentDraftSchema } from "../overlayDraft";
 import { resetAnswerSchema } from "../reset";
 import {
   micAccessSchema,
@@ -174,12 +175,30 @@ export const shellChannels = {
     request: z.tuple([savedCardOverlaySchema]),
     response: cardOverlaySetSchema,
   },
-  // The overlay's page starts: the card the newest notification was about, never taken from the click.
+  // The overlay's page starts: the card the newest notification was about, never taken from the
+  // click, and the window's unsent message, lent for this opening (docs/card-overlay.md, "The message box").
   "inf:overlay:start": {
     effect: "read",
     surface: "host",
     request: z.tuple([]),
-    response: z.object({ cardId: z.string().min(1).max(256).nullable() }),
+    response: z.object({
+      cardId: z.string().min(1).max(256).nullable(),
+      lent: lentDraftSchema.nullable().optional(),
+    }),
+  },
+  // The overlay's page goes: its message box hands the lent message back to the window that lent it.
+  "inf:overlay:hand-back": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([lentDraftSchema]),
+    response: okSchema,
+  },
+  // The window answers the overlay's ask for its unsent message (`inf:composer:lend-ask`).
+  "inf:composer:lent": {
+    effect: "change",
+    surface: "host",
+    request: z.tuple([lentDraftSchema]),
+    response: okSchema,
   },
   // The overlay's page drew its card, or found none waiting: the panel shows.
   "inf:overlay:ready": {

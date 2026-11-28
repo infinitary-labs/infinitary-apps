@@ -282,6 +282,10 @@ export function createApi(ipc: BridgeIpc, files: BridgeFiles): FirstmateApi {
       pointer: (over) => invoke("inf:overlay:pointer", over),
       wide: (wide) => invoke("inf:overlay:wide", wide),
       onLeave: (listener) => subscribe("inf:overlay:leave", () => listener()),
+      handBack: (lent) => invoke("inf:overlay:hand-back", lent),
+      onLendAsk: (listener) => subscribe("inf:composer:lend-ask", ({ ask }) => listener(ask)),
+      lend: (lent) => invoke("inf:composer:lent", lent),
+      onHandBack: (listener) => subscribe("inf:composer:hand-back", listener),
     },
     devices: {
       shown: () => invoke("inf:devices:shown"),

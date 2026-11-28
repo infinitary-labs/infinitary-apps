@@ -127,11 +127,13 @@ export function isCardOverlayArgv(argv: readonly string[]): boolean {
 
 /**
  * The installed keys the overlay runs: the shown card's own, as in the
- * window (docs/keyboard.md), and none that reach past the card - a side
- * panel, a search, another view. Every other key the window would take
- * does nothing in the overlay.
+ * window (docs/keyboard.md), and Go to the main message, which reaches the
+ * overlay's message box; none that reach past them - a side panel, a
+ * search, another view. Every other key the window would take does nothing
+ * in the overlay.
  */
 export function overlayRunsCommand(id: CommandId): boolean {
+  if (id === "focus.main-message") return true;
   if (id.startsWith("cards.show-")) return false;
   return id.startsWith("cards.") || id.startsWith("focus.card-");
 }

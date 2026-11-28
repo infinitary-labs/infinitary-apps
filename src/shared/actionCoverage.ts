@@ -630,6 +630,14 @@ export const HOST_ACTION_EXCEPTIONS: Partial<Record<HostInvokeChannel, ActionExc
   ],
   "inf:overlay:ready": ["window", "The card overlay's page drew its card, so its panel shows"],
   "inf:overlay:hide": ["window", "The card overlay's page let go, so its panel goes"],
+  "inf:overlay:hand-back": [
+    "window",
+    "The card overlay's message box handing the window's unsent message back as it goes",
+  ],
+  "inf:composer:lent": [
+    "window",
+    "The window lending its unsent message to the card overlay as it opens",
+  ],
   "inf:overlay:wide": [
     "window",
     "The card overlay's panel widening to the display while its card is made large, and back",

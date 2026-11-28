@@ -209,8 +209,19 @@ export function registerIpc(options: IpcOptions): void {
   // A page loaded on a notification hears this only once the key is pressed, so it shows the newest one's card.
   handleInvoke("inf:overlay:start", rendererSource, async (event) => {
     const panel = cardOverlay.panelOf(event.sender);
-    if (panel) await cardOverlay.controller.pressed(panel);
-    return { cardId: panel ? noticedCard() : null };
+    if (!panel) return { cardId: null, lent: null };
+    await cardOverlay.controller.pressed(panel);
+    // Lent at the key, so the box opens with the words the window holds as it is pressed.
+    return { cardId: noticedCard(), lent: await cardOverlay.drafts.lend() };
+  });
+  handleInvoke("inf:overlay:hand-back", rendererSource, (event, lent) => {
+    if (cardOverlay.panelOf(event.sender)) cardOverlay.drafts.handBack(lent);
+    return { ok: true as const };
+  });
+  // Taken only from the window the overlay asked (`DraftRelay.lent`).
+  handleInvoke("inf:composer:lent", rendererSource, (event, lent) => {
+    cardOverlay.drafts.lent(event.sender, lent);
+    return { ok: true as const };
   });
   handleInvoke("inf:overlay:ready", rendererSource, (event, { cards }) => {
     const panel = cardOverlay.panelOf(event.sender);

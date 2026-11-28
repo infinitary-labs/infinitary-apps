@@ -54,8 +54,8 @@ Infinitary 如何用它克隆项目和提交改动，请参阅[项目](/zh-hans/
 
 ## Google：Gmail、Calendar 和云端硬盘 {#google-gmail-calendar-and-drive}
 
-Google 用一个登录同时连接 Gmail、Calendar 和云端硬盘。
-Infinitary 通过 Google 自己面向 AI 智能体的 Gmail、Calendar 和云端硬盘服务器，借助你自己的 Google 连接访问它们：这是你在自己的 Google Cloud 项目中以 Google 个人模式创建的一个客户端。
+Google 用一个登录同时连接 Gmail、Calendar、云端硬盘、文档和表格。
+Infinitary 通过 Google 自己面向 AI 智能体的 Gmail、Calendar、云端硬盘、文档和表格服务器，借助你自己的 Google 连接访问它们：这是你在自己的 Google Cloud 项目中以 Google 个人模式创建的一个客户端。
 Google 不会审核它，不显示警告，也不会在 7 天后结束它的登录。
 
 1. 点击“**Google**”，会打开“**设置你自己的 Google 连接**”。
@@ -88,7 +88,7 @@ Infinitary 把客户端的密钥保存在这台电脑的[机密](/zh-hans/secret
   点击“**重新设置**”。
 - “**请把你的客户端标记为供智能体使用**”：Google 面向 AI 智能体的服务器只接受标记为供 AI 智能体使用的客户端，而你的客户端没有这样标记。
   点击“**打开 Google Cloud**”，在你的客户端上勾选“Use this client for an AI-powered agent”并保存，然后在这一行的菜单中选择“**立即检查**”。
-- “**有一项 Google 服务已关闭**”：你的 Google Cloud 项目中 Gmail、Calendar 或云端硬盘的 MCP 服务已关闭。
+- “**有一项 Google 服务已关闭**”：你的 Google Cloud 项目中 Gmail、Calendar、云端硬盘、文档或表格的 MCP 服务已关闭。
   点击“**打开 Google Cloud**”，开启它，然后在这一行的菜单中选择“**立即检查**”。
 
 在最后这两种情况下，你仍保持登录，不需要重新设置任何东西。
@@ -100,7 +100,10 @@ Infinitary 把客户端的密钥保存在这台电脑的[机密](/zh-hans/secret
 在 Calendar 中，它们可以列出你的日历和日程、阅读某个日程、查找所有人都有空的时间，以及创建或更新日程。
 没有任何操作会删除日历日程。
 在云端硬盘中，它们可以搜索你的文件、以文本形式阅读文件，以及把文件保存到任务的文件夹中，Google 文档、表格或幻灯片会导出为 PDF 或 Office 文件。
-没有任何操作会删除、移动或共享文件，也没有任何操作会修改文件。
+在文档中，它们可以用带标题、列表、粗体和链接的文字新建文档，在文档末尾添加文字，并替换其中的字词。
+在表格中，它们可以读取表格的工作表或单元格，新建带工作表和前几行的表格，设置单元格，并在最后一个有内容的行之后添加行。
+这些更改每一项都要等你批准，“**在此任务剩余期间允许**”只适用于一个文档或一个表格。
+没有任何操作会删除、移动或共享文件。
 
 即使是你已允许的调用，Google 也可能先停止它，来征求你的意见。
 这时 Infinitary 会在一张注明由 Gmail、日历或云端硬盘提问的卡片上显示问题，并把 Google 的每个选项按 Google 的原话做成一个按钮。

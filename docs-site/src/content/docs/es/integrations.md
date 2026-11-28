@@ -54,8 +54,8 @@ Cerrar sesión en GitHub detiene los clones privados y las solicitudes de incorp
 
 ## Google: Gmail, Calendar y Drive {#google-gmail-calendar-and-drive}
 
-Google es un solo inicio de sesión para Gmail, Calendar y Drive.
-Infinitary los alcanza mediante los propios servidores de Gmail, Calendar y Drive de Google para agentes de IA, con tu propia conexión con Google: un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google.
+Google es un solo inicio de sesión para Gmail, Calendar, Drive, Documentos y Hojas de cálculo.
+Infinitary los alcanza mediante los propios servidores de Gmail, Calendar, Drive, Documentos y Hojas de cálculo de Google para agentes de IA, con tu propia conexión con Google: un cliente que creas en tu propio proyecto de Google Cloud, en el modo personal de Google.
 Google no lo revisa, no muestra ninguna advertencia y no cierra su sesión a los 7 días.
 
 1. Presiona **Google**, que abre **Configura tu propia conexión con Google**.
@@ -88,7 +88,7 @@ La fila de Google dice cuándo la conexión te necesita:
   Presiona **Volver a configurar**.
 - **Marca tu cliente para agentes**: los servidores de Google para agentes de IA solo aceptan un cliente marcado para un agente con IA, y el tuyo no lo está.
   Presiona **Abrir Google Cloud**, marca «Use this client for an AI-powered agent» en tu cliente y guarda; luego elige **Comprobar ahora** en el menú de la fila.
-- **Un servicio de Google está desactivado**: el servicio MCP de Gmail, de Calendar o de Drive está desactivado en tu proyecto de Google Cloud.
+- **Un servicio de Google está desactivado**: el servicio MCP de Gmail, de Calendar, de Drive, de Documentos o de Hojas de cálculo está desactivado en tu proyecto de Google Cloud.
   Presiona **Abrir Google Cloud**, actívalo y luego elige **Comprobar ahora** en el menú de la fila.
 
 En esos dos últimos casos sigues con la sesión iniciada, y no hace falta volver a configurar nada.
@@ -100,7 +100,10 @@ A partir del 1 de febrero de 2027, Google no deja que ningún agente de IA obten
 En Calendar pueden enumerar tus calendarios y eventos, leer un evento, encontrar horarios en los que todos están libres, y crear o actualizar un evento.
 Ninguna acción elimina un evento del calendario.
 En Drive pueden buscar tus archivos, leer un archivo como texto y guardar un archivo en la carpeta de una tarea, con un documento, una hoja de cálculo o una presentación de Google exportados como PDF o como archivo de Office.
-Ninguna acción elimina, mueve ni comparte un archivo, y ninguna lo modifica.
+En Documentos pueden crear un documento a partir de texto con títulos, listas, negrita y enlaces, agregar texto al final de un documento y reemplazar palabras en él.
+En Hojas de cálculo pueden leer las pestañas o las celdas de una hoja, crear una hoja con sus pestañas y primeras filas, establecer celdas y agregar filas después de la última con datos.
+Cada uno de esos cambios espera tu aprobación, y **Permitir durante el resto de esta tarea** abarca un documento o una hoja.
+Ninguna acción elimina, mueve ni comparte un archivo.
 
 Google puede detener una llamada para preguntarte primero, incluso una que permitiste.
 Entonces Infinitary muestra la pregunta en una tarjeta que nombra a Gmail, Calendar o Drive como quien pregunta, con cada opción de Google como un botón propio, en las palabras de Google.

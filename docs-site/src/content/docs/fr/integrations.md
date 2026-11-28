@@ -54,8 +54,8 @@ Se déconnecter de GitHub arrête les clonages privés et les demandes de tirage
 
 ## Google : Gmail, Agenda et Drive {#google-gmail-calendar-and-drive}
 
-Google est une seule connexion pour Gmail, Agenda et Drive.
-Infinitary y accède par les propres serveurs Gmail, Agenda et Drive de Google destinés aux agents d’IA, avec une connexion Google à vous : un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google.
+Google est une seule connexion pour Gmail, Agenda, Drive, Docs et Sheets.
+Infinitary y accède par les propres serveurs Gmail, Agenda, Drive, Docs et Sheets de Google destinés aux agents d’IA, avec une connexion Google à vous : un client que vous créez dans votre propre projet Google Cloud, en mode personnel de Google.
 Google ne l’examine pas, n’affiche aucun avertissement et ne met pas fin à sa connexion au bout de 7 jours.
 
 1. Appuyez sur **Google**, ce qui ouvre **Configurer votre propre connexion Google**.
@@ -88,7 +88,7 @@ La ligne Google indique quand la connexion a besoin de vous :
   Appuyez sur **Configurer de nouveau**.
 - **Marquez votre client pour les agents** : les serveurs de Google destinés aux agents d’IA n’acceptent qu’un client marqué pour un agent basé sur l’IA, et le vôtre ne l’est pas.
   Appuyez sur **Ouvrir Google Cloud**, cochez « Use this client for an AI-powered agent » sur votre client et enregistrez, puis choisissez **Vérifier maintenant** dans le menu de la ligne.
-- **Un service Google est désactivé** : le service MCP de Gmail, d’Agenda ou de Drive est désactivé dans votre projet Google Cloud.
+- **Un service Google est désactivé** : le service MCP de Gmail, d’Agenda, de Drive, de Docs ou de Sheets est désactivé dans votre projet Google Cloud.
   Appuyez sur **Ouvrir Google Cloud**, activez-le, puis choisissez **Vérifier maintenant** dans le menu de la ligne.
 
 Dans ces deux derniers cas, vous restez connecté, et rien n’est à configurer de nouveau.
@@ -100,7 +100,10 @@ Une fois Google connecté, votre second et votre équipage peuvent chercher dans
 Dans Agenda, ils peuvent lister vos agendas et vos événements, lire un événement, trouver des créneaux où tout le monde est libre, et créer ou mettre à jour un événement.
 Aucune action ne supprime un événement d’agenda.
 Dans Drive, ils peuvent chercher dans vos fichiers, lire un fichier sous forme de texte et enregistrer un fichier dans le dossier d’une tâche, un document, une feuille de calcul ou une présentation Google étant exporté en PDF ou en fichier Office.
-Aucune action ne supprime, ne déplace ni ne partage un fichier, et aucune n’en modifie un.
+Dans Docs, ils peuvent créer un document à partir d’un texte avec des titres, des listes, du gras et des liens, ajouter du texte à la fin d’un document et y remplacer des mots.
+Dans Sheets, ils peuvent lire les onglets ou les cellules d’une feuille de calcul, créer une feuille de calcul avec ses onglets et ses premières lignes, définir des cellules et ajouter des lignes après la dernière remplie.
+Chacune de ces modifications attend votre accord, et **Autoriser pour le reste de cette tâche** couvre un document ou une feuille de calcul.
+Aucune action ne supprime, ne déplace ni ne partage un fichier.
 
 Google peut arrêter un appel pour vous consulter d’abord, même un appel que vous avez autorisé.
 Infinitary affiche alors la question sur une carte qui nomme Gmail, Agenda ou Drive comme demandeur, avec chaque choix de Google sous forme de bouton, dans les mots de Google.

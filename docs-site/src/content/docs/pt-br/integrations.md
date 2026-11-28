@@ -54,8 +54,8 @@ Sair do GitHub interrompe clones privados e solicitações de pull até você fa
 
 ## Google: Gmail, Agenda e Drive {#google-gmail-calendar-and-drive}
 
-O Google é um único login para o Gmail, a Agenda e o Drive.
-O Infinitary os alcança pelos próprios servidores do Gmail, da Agenda e do Drive do Google para agentes de IA, com uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
+O Google é um único login para o Gmail, a Agenda, o Drive, o Documentos e o Planilhas.
+O Infinitary os alcança pelos próprios servidores do Gmail, da Agenda, do Drive, do Documentos e do Planilhas do Google para agentes de IA, com uma conexão com o Google que é sua: um cliente que você cria no seu próprio projeto do Google Cloud, no modo pessoal do Google.
 O Google não o revisa, não mostra nenhum alerta e não encerra o login dele depois de 7 dias.
 
 1. Aperte **Google**, que abre **Configure sua própria conexão com o Google**.
@@ -88,7 +88,7 @@ A linha do Google diz quando a conexão precisa de você:
   Aperte **Configurar de novo**.
 - **Marque seu cliente para agentes**: os servidores do Google para agentes de IA só aceitam um cliente marcado para um agente com IA, e o seu não está.
   Aperte **Abrir o Google Cloud**, marque “Use this client for an AI-powered agent” no seu cliente e salve; depois escolha **Verificar agora** no menu da linha.
-- **Um serviço do Google está desativado**: o serviço MCP do Gmail, da Agenda ou do Drive está desativado no seu projeto do Google Cloud.
+- **Um serviço do Google está desativado**: o serviço MCP do Gmail, da Agenda, do Drive, do Documentos ou do Planilhas está desativado no seu projeto do Google Cloud.
   Aperte **Abrir o Google Cloud**, ative-o e depois escolha **Verificar agora** no menu da linha.
 
 Nesses dois últimos casos, você continua com o login feito, e nada precisa ser configurado de novo.
@@ -100,7 +100,10 @@ A partir de 1º de fevereiro de 2027, o Google não deixa nenhum agente de IA bu
 Na Agenda, eles podem listar suas agendas e eventos, ler um evento, encontrar horários em que todos estão livres e criar ou atualizar um evento.
 Nenhuma ação exclui um evento da agenda.
 No Drive, eles podem buscar seus arquivos, ler um arquivo como texto e salvar um arquivo na pasta de uma tarefa, com um documento, uma planilha ou uma apresentação do Google exportados como PDF ou como arquivo do Office.
-Nenhuma ação exclui, move ou compartilha um arquivo, e nenhuma altera um.
+No Documentos, eles podem criar um documento a partir de um texto com títulos, listas, negrito e links, adicionar texto no fim de um documento e substituir palavras nele.
+No Planilhas, eles podem ler as abas ou as células de uma planilha, criar uma planilha com suas abas e primeiras linhas, definir células e adicionar linhas depois da última preenchida.
+Cada uma dessas alterações espera a sua aprovação, e **Permitir pelo resto desta tarefa** vale para um documento ou uma planilha.
+Nenhuma ação exclui, move ou compartilha um arquivo.
 
 O Google pode parar uma chamada para perguntar a você primeiro, mesmo uma que você permitiu.
 Então o Infinitary mostra a pergunta em um cartão que diz que é o Gmail, a Agenda ou o Drive que pergunta, com cada opção do Google como um botão próprio, nas palavras do Google.

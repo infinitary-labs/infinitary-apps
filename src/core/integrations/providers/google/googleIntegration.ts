@@ -4,6 +4,7 @@ import * as m from "@shared/i18n/messages.generated";
 import {
   GOOGLE_CLIENTS_PAGE,
   GOOGLE_DATA_KEPT,
+  GOOGLE_MCP_SERVICES,
   googleMcpEnablePage,
   INTEGRATION_KIND_NAMES,
   type IntegrationClientView,
@@ -26,6 +27,7 @@ import {
   type GoogleEndpoints,
 } from "./client";
 import { readGoogleClientFile } from "./clientFile";
+import { DOCS_ACTIONS, runDocsAction } from "./docs";
 import { DRIVE_ACTIONS, runDriveAction } from "./drive";
 import {
   GMAIL_ACTIONS,
@@ -42,6 +44,7 @@ import {
   googleMcp,
 } from "./mcp";
 import { MovedGoogleKeys } from "./movedKeys";
+import { runSheetsAction, SHEETS_ACTIONS } from "./sheets";
 import {
   GOOGLE_REQUEST_TIMEOUT_MS,
   type GoogleTokenExchange,
@@ -54,7 +57,7 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
 /**
  * Google as an integration (docs/integrations.md, "Google"): one row that
  * signs in once, in the person's own browser, for every permission Gmail,
- * Calendar and Drive need (the captain's q8 on INF-775), as the person's own
+ * Calendar and Drive need (Drive's also reaches Docs and Sheets) (the captain's q8 on INF-775), as the person's own
  * Google client, kept from the file Google gives for it (INF-5549's plan,
  * pieces 2 and 3). A new sign-in takes only an own client, unless the run
  * names a client of its own for development or tests (`googleSetup`); a
@@ -89,7 +92,7 @@ import { type GoogleClientRecord, GoogleClientStore, GoogleSignInStore } from ".
 const GOOGLE_ID = "google";
 
 /**
- * The label Gmail, Calendar and Drive answers and event summaries reach every
+ * The label Gmail, Calendar, Drive, Docs and Sheets answers and event summaries reach every
  * agent under (INF-951): anyone can write a message, an invitation or a shared file, so
  * its words sit between marks they could not forge, as data from outside
  * (docs/integrations.md, "Data from outside").
@@ -110,7 +113,11 @@ const NO_SECRETS =
 const SECRETS_LOCKED =
   "Google waits for Secrets, which is locked or cannot open now. Unlock it in Settings -> Secrets.";
 const SIGN_IN_AGAIN = "Google is signed out. Sign in again in Settings -> Integrations.";
-/** A Drive call on a sign-in without Drive's permission: nothing reaches Google. */
+/** Drive's actions, and Docs' and Sheets', which Drive's one permission reaches too. */
+const DRIVE_WIDE_ACTIONS = [...DRIVE_ACTIONS, ...DOCS_ACTIONS, ...SHEETS_ACTIONS];
+/** The id the probe asks Docs and Sheets about: no file has it, so neither reads one. */
+const PROBE_FILE = "infinitary-probe";
+/** A Drive, Docs or Sheets call on a sign-in without Drive's permission: nothing reaches Google. */
 const WITHOUT_DRIVE =
   "Not run: Drive, Docs and Sheets were not added to the captain's Google sign-in, so nothing reached Google. The captain chooses Sign in again on the Google row in Settings -> Integrations and leaves the Drive box ticked; Gmail and Calendar keep working meanwhile.";
 
@@ -500,6 +507,10 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const calendar = mcpOf("calendar", options.endpoints.calendarMcp, "Google Calendar");
   // i18n-exempt: a product name
   const drive = mcpOf("drive", options.endpoints.driveMcp, "Google Drive");
+  // i18n-exempt: a product name
+  const docs = mcpOf("docs", options.endpoints.docsMcp, "Google Docs");
+  // i18n-exempt: a product name
+  const sheets = mcpOf("sheets", options.endpoints.sheetsMcp, "Google Sheets");
   /** Whether the sign-in granted Drive's permission (the captain's answer 2a on INF-6447). */
   const hasDrive = (record: { scopes: readonly string[] } | undefined) =>
     record?.scopes.includes(DRIVE_SCOPE) === true;
@@ -555,7 +566,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
   const letGo = async () => {
     refusals.clear();
     agentRefused = undefined;
-    await Promise.all([gmail.close(), calendar.close(), drive.close()]);
+    await Promise.all([gmail, calendar, drive, docs, sheets].map((service) => service.close()));
   };
 
   /**
@@ -568,7 +579,16 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       gmail.tools()("list_labels", {}),
       calendar.tools()("list_calendars", {}),
       ...(hasDrive(store.read())
-        ? [drive.tools()("search_files", { pageSize: 1, excludeContentSnippets: true })]
+        ? [
+            drive.tools()("search_files", { pageSize: 1, excludeContentSnippets: true }),
+            // Docs and Sheets read nothing without a file: an id no file has is answered
+            // "not found" by a service that is on, and refused by one that is off.
+            docs.tools()("read_doc", { documentId: PROBE_FILE }),
+            sheets.tools()("get_spreadsheet", {
+              spreadsheetId: PROBE_FILE,
+              fields: ["spreadsheetId"],
+            }),
+          ]
         : []),
     ]);
   };
@@ -587,7 +607,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
             : GOOGLE_CLIENTS_PAGE,
       };
     }
-    const off = (["gmail", "calendar", "drive"] as const).flatMap((service) => {
+    const off = GOOGLE_MCP_SERVICES.flatMap((service) => {
       const refusal = refusals.get(service);
       return refusal?.kind === "service" ? [{ service, link: refusal.link }] : [];
     });
@@ -595,9 +615,11 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     if (!first) return undefined;
     const services = off.map((entry) => entry.service);
     // A view from before `off` names only Gmail and Calendar.
-    const older = services.filter((service) => service !== "drive");
+    const older = services.filter(
+      (service): service is "gmail" | "calendar" => service === "gmail" || service === "calendar",
+    );
     const named = {
-      ...(older.length > 0 ? { services: older as ("gmail" | "calendar")[] } : {}),
+      ...(older.length > 0 ? { services: older } : {}),
       off: services,
     };
     if (off.length === 1) return { refused: "service", ...named, link: first.link };
@@ -780,8 +802,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
             ...GMAIL_ACTIONS,
             ...CALENDAR_ACTIONS,
             ...(hasDrive(record)
-              ? DRIVE_ACTIONS
-              : DRIVE_ACTIONS.map((spec) => ({ ...spec, unavailable: WITHOUT_DRIVE }))),
+              ? DRIVE_WIDE_ACTIONS
+              : DRIVE_WIDE_ACTIONS.map((spec) => ({ ...spec, unavailable: WITHOUT_DRIVE }))),
           ],
           events: [GMAIL_MESSAGE_EVENT, CALENDAR_CHANGED_EVENT],
         },
@@ -914,9 +936,17 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     call: async (_id, action, input, _caller, confirmed) => {
       const record = store.read();
       if (!record) throw new Error(SIGN_IN_AGAIN);
-      if (DRIVE_ACTIONS.some((spec) => spec.name === action)) {
+      if (DRIVE_WIDE_ACTIONS.some((spec) => spec.name === action)) {
         // A kept ask the captain clicks can outlive the sign-in it was asked under.
         if (!hasDrive(record)) return { text: WITHOUT_DRIVE, refused: "refused" };
+        if (DOCS_ACTIONS.some((spec) => spec.name === action))
+          return answered(() =>
+            runDocsAction(drive.tools(confirmed), docs.tools(confirmed), action, input),
+          );
+        if (SHEETS_ACTIONS.some((spec) => spec.name === action))
+          return answered(() =>
+            runSheetsAction(drive.tools(confirmed), sheets.tools(confirmed), action, input),
+          );
         return answered(() => runDriveAction(drive.tools(confirmed), action, input));
       }
       return answered(() =>

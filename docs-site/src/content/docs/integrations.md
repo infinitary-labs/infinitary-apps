@@ -53,8 +53,8 @@ Signing out of GitHub stops private clones and pull requests until you sign in a
 
 ## Google: Gmail, Calendar and Drive
 
-Google is one sign-in for Gmail, Calendar and Drive.
-Infinitary reaches them through Google's own Gmail, Calendar and Drive servers for AI agents, with a Google connection of your own: a client you make in your own Google Cloud project, in Google's Personal mode.
+Google is one sign-in for Gmail, Calendar, Drive, Docs and Sheets.
+Infinitary reaches them through Google's own Gmail, Calendar, Drive, Docs and Sheets servers for AI agents, with a Google connection of your own: a client you make in your own Google Cloud project, in Google's Personal mode.
 Google does not review it, shows no warning, and does not end its sign-in after 7 days.
 
 1. Press **Google**, which opens **Set up your own Google connection**.
@@ -87,7 +87,7 @@ The Google row says when the connection needs you:
   Press **Set up again**.
 - **Mark your client for agents**: Google's servers for AI agents take only a client marked for an AI-powered agent, and yours is not.
   Press **Open Google Cloud**, tick "Use this client for an AI-powered agent" on your client and save, then choose **Check now** from the row's menu.
-- **A Google service is off**: the Gmail, Calendar or Drive MCP service is off in your Google Cloud project.
+- **A Google service is off**: the Gmail, Calendar, Drive, Docs or Sheets MCP service is off in your Google Cloud project.
   Press **Open Google Cloud**, turn it on, then choose **Check now** from the row's menu.
 
 In those last two, you stay signed in, and nothing needs to be set up again.
@@ -99,7 +99,10 @@ From February 1, 2027, Google lets no AI agent fetch a file attached to a messag
 In Calendar they can list your calendars and events, read an event, find times when everyone is free, and create or update an event.
 No action deletes a calendar event.
 In Drive they can search your files, read a file as text, and save a file into a task's folder, a Google Doc, Sheet or Slides deck exported as PDF or as an Office file.
-No action deletes, moves or shares a file, and none changes one.
+In Docs they can create a doc from text with headings, lists, bold and links, add text at a doc's end, and replace words in it.
+In Sheets they can read a sheet's tabs or cells, create a sheet with its tabs and first rows, set cells, and add rows after the last filled one.
+Each of those changes waits for your approval, and **Allow for the rest of this task** covers one doc or one sheet.
+No action deletes, moves or shares a file.
 
 Google can stop a call to ask you first, even one you allowed.
 Infinitary then shows the question on a card that names Gmail, Calendar or Drive as asking, with each of Google's choices as its own button, in Google's words.

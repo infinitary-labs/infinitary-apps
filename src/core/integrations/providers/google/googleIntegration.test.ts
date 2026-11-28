@@ -179,6 +179,14 @@ describe("Google as an integration", () => {
           expect.objectContaining({ name: "search_files", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "read_file", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "save_file", effect: "reads", rule: "ask" }),
+          // INF-7010: Docs' and Sheets' actions start at Asks you, each change waiting for the captain.
+          expect.objectContaining({ name: "create_document", effect: "changes", rule: "ask" }),
+          expect.objectContaining({ name: "append_to_document", effect: "changes", rule: "ask" }),
+          expect.objectContaining({ name: "replace_in_document", effect: "changes", rule: "ask" }),
+          expect.objectContaining({ name: "read_sheet", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "create_spreadsheet", effect: "changes", rule: "ask" }),
+          expect.objectContaining({ name: "update_cells", effect: "changes", rule: "ask" }),
+          expect.objectContaining({ name: "append_rows", effect: "changes", rule: "ask" }),
         ],
         events: [
           expect.objectContaining({ name: "message_received", label: "A message arrives" }),
@@ -969,6 +977,8 @@ describe("Google as an integration", () => {
       gmailMcp: "https://gmailmcp.googleapis.com/mcp/v1",
       calendarMcp: "https://calendarmcp.googleapis.com/mcp/v1",
       driveMcp: "https://drivemcp.googleapis.com/mcp/v1",
+      docsMcp: "https://docsmcp.googleapis.com/mcp/v1",
+      sheetsMcp: "https://sheetsmcp.googleapis.com/mcp/v1",
     });
   });
 

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "copilot-bedrock-lists-stay-narrowed",
+      "kind": "fix",
+      "title": "Copilot and Amazon Bedrock accounts list only their own models",
+      "body": "For up to 30 seconds while the model list refreshed, a Copilot account listed every Copilot model instead of only the ones it may use, and a crewmate could be sent to one it cannot run. An Amazon Bedrock account could likewise briefly list models it had not checked, just after the app started or the account was connected. Both now list and use only their own models the whole time.",
+      "area": "subscriptions",
+      "noPicture": "The fix closes a short window after the app starts or the model list refreshes; outside that window the lists already looked like this.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

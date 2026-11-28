@@ -35,8 +35,7 @@ import { storedKeyOnly } from "./storedKeyOnly";
  * collected, not thrown, and the overlay stays as it was. What it does not
  * carry: its fetch is unbounded, so the background refresh is bounded
  * here, and a bound that aborts the refresh cuts the availability pass
- * riding the same signal short - an empty model list - so that pass is
- * rebuilt offline below.
+ * riding the same signal short, so that pass runs again offline below.
  *
  * A create that still rejects is an account-store fault (an unreadable auth
  * file, a broken models.json), not a catalog one: it propagates, because
@@ -151,39 +150,41 @@ export async function createModelRuntime(options: ModelRuntimeOptions): Promise<
       : model.provider !== BEDROCK_PROVIDER_ID && model.api !== "bedrock-converse-stream";
   runtime.getAvailableSnapshot = () =>
     options.bedrockRecheckPending?.() ? [] : snapshot().filter(allows);
-  // Every runtime kind registers the guard first, and the refresh that
-  // registration fires is awaited like keepKeysInTheStore's below.
-  registering = [];
-  runtime.registerNativeProvider(googleAiPlanGuard());
-  await Promise.all(registering);
-  registering = undefined;
-  if (options.bedrockAccount) {
-    const stock = runtime.getProvider(BEDROCK_PROVIDER_ID);
-    if (!stock) throw new Error("Amazon Bedrock models could not be loaded.");
-    runtime.registerNativeProvider(
-      bedrockAccountProvider(stock, {
-        test: options.bedrockUrl,
-        profileUnavailable: options.bedrockProfileUnavailable,
-        ...(options.bedrockResolve ? { resolve: options.bedrockResolve } : {}),
-        ...(options.bedrockClaudeSetup ? { claudeSetup: options.bedrockClaudeSetup } : {}),
-      }),
-    );
-    await runtime.refresh({ allowNetwork: false, providers: [BEDROCK_PROVIDER_ID] });
-  }
-  // Registering a provider and refreshing one provider both reset Pi's
-  // available list to every model of each signed-in provider; only an
-  // unscoped refresh's availability pass narrows them again (Copilot to the
-  // ids stored at its sign-in, a key provider to a stored key). Registering
-  // fires exactly that refresh, so only the refreshes the registrations fire
-  // are awaited: another refresh racing them can leave the reset list
-  // standing. A Bedrock account's runtime, which serves no other provider and
-  // keeps only its checked list above, registers none of them.
-  if (!options.connectionProvider && !options.bedrockAccount) {
+  // Until an availability pass runs, a provider just registered is listed
+  // without its own narrowing (a Bedrock account's checked list, a key only
+  // from the store): as the provider it replaces last passed its check, or
+  // whole when none did. Registering fires an unscoped refresh whose pass
+  // applies that narrowing, and from then on Pi's rebuilds keep a provider
+  // that narrows its own list to its last pass
+  // (patches/@earendil-works__pi-coding-agent@1.5.0.patch). So exactly the
+  // refreshes the registrations fire are awaited and no other starts beside
+  // them: a pass started later supersedes theirs and can land only after this
+  // returns. Every runtime kind registers the Google AI plan guard first; a
+  // Bedrock account's runtime serves no other provider, so beside the guard
+  // it registers only its own.
+  const settleRegistrations = async (register: () => void) => {
     registering = [];
-    keepKeysInTheStore(runtime);
+    register();
     const fired = registering;
     registering = undefined;
     await Promise.all(fired);
+  };
+  await settleRegistrations(() => runtime.registerNativeProvider(googleAiPlanGuard()));
+  if (options.bedrockAccount) {
+    const stock = runtime.getProvider(BEDROCK_PROVIDER_ID);
+    if (!stock) throw new Error("Amazon Bedrock models could not be loaded.");
+    await settleRegistrations(() =>
+      runtime.registerNativeProvider(
+        bedrockAccountProvider(stock, {
+          test: options.bedrockUrl,
+          profileUnavailable: options.bedrockProfileUnavailable,
+          ...(options.bedrockResolve ? { resolve: options.bedrockResolve } : {}),
+          ...(options.bedrockClaudeSetup ? { claudeSetup: options.bedrockClaudeSetup } : {}),
+        }),
+      ),
+    );
+  } else if (!options.connectionProvider) {
+    await settleRegistrations(() => keepKeysInTheStore(runtime));
   }
   const getAuth = runtime.getAuth.bind(runtime);
   runtime.getAuth = ((model, overrides) => {
@@ -372,21 +373,22 @@ export function refreshCatalogInBackground(
 
 /**
  * The pi.dev refresh, off every path that waits. Network is Pi's own call
- * (`PI_OFFLINE` switches it off, as e2e does). A bound that cut the refresh
- * short can leave the availability pass empty, so an emptied list is
- * rebuilt offline - the list may grow when the overlay lands, never shrink
- * because it did not.
+ * (`PI_OFFLINE` switches it off, as e2e does). While it runs, a provider
+ * that narrows its own list keeps what its last availability pass allowed. A
+ * bound that cuts the refresh short cuts its own pass too, which rides the
+ * same signal, so such a provider's models the overlay landed before the cut
+ * would wait for the next pass: that pass runs offline here - the list may
+ * grow when the overlay lands, never shrink because it did not.
  */
 async function refreshInBackground(runtime: ModelRuntime, onRefreshed?: () => void): Promise<void> {
-  const before = runtime.getAvailableSnapshot().length;
+  let cut = true;
   try {
-    await runtime.refresh({ signal: AbortSignal.timeout(MODEL_REFRESH_TIMEOUT_MS) });
+    cut = (await runtime.refresh({ signal: AbortSignal.timeout(MODEL_REFRESH_TIMEOUT_MS) }))
+      .aborted;
   } catch {
-    // A failed refresh leaves the offline catalog; the next one retries.
+    // A failed refresh leaves the offline catalog, and its pass runs again below.
   }
-  if (before > 0 && runtime.getAvailableSnapshot().length === 0) {
-    await runtime.refresh({ allowNetwork: false }).catch(() => undefined);
-  }
+  if (cut) await runtime.refresh({ allowNetwork: false }).catch(() => undefined);
   try {
     onRefreshed?.();
   } catch {

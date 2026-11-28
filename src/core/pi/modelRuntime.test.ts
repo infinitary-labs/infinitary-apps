@@ -319,9 +319,8 @@ describe("OpenCode Go's key", () => {
 
 describe("GitHub Copilot's own list", () => {
   // Pi narrows Copilot to the model ids it stored at sign-in
-  // (docs/model-lists.md); registering OpenCode Go in the same runtime must
-  // not widen it again before the background refresh lands.
-  it("lists only the account's own Copilot models as soon as the runtime is created", async () => {
+  // (docs/model-lists.md), and the account lists only those at every moment.
+  function copilotStore(): { authPath: string; modelsPath: string } {
     const dir = scratchDir("infinitary-model-runtime-copilot-");
     mkdirSync(dir, { recursive: true });
     const authPath = join(dir, "auth.json");
@@ -338,18 +337,38 @@ describe("GitHub Copilot's own list", () => {
       }),
       { mode: 0o600 },
     );
+    return { authPath, modelsPath: join(dir, "models.json") };
+  }
+
+  function copilotIds(runtime: Awaited<ReturnType<typeof createModelRuntime>>): string[] {
+    return runtime
+      .getAvailableSnapshot()
+      .filter((model) => model.provider === "github-copilot")
+      .map((model) => model.id);
+  }
+
+  // Registering OpenCode Go in the same runtime must not widen it again
+  // before the background refresh lands.
+  it("lists only the account's own Copilot models as soon as the runtime is created", async () => {
     const catalogBaseUrl = await startCatalog(({ hang }) => hang());
-    const runtime = await createModelRuntime({
-      authPath,
-      modelsPath: join(dir, "models.json"),
-      catalogBaseUrl,
+    const runtime = await createModelRuntime({ ...copilotStore(), catalogBaseUrl });
+    expect(copilotIds(runtime)).toEqual(["claude-sonnet-5.5"]);
+  });
+
+  it("keeps listing only the account's own Copilot models while pi.dev's answer is awaited (INF-6929)", async () => {
+    let asked: () => void = () => {};
+    const fetching = new Promise<void>((resolve) => {
+      asked = resolve;
     });
-    expect(
-      runtime
-        .getAvailableSnapshot()
-        .filter((model) => model.provider === "github-copilot")
-        .map((model) => model.id),
-    ).toEqual(["claude-sonnet-5.5"]);
+    const catalogBaseUrl = await startCatalog(({ hang }) => {
+      asked();
+      hang();
+    });
+    const runtime = await createModelRuntime({ ...copilotStore(), catalogBaseUrl });
+    // Pi asks pi.dev only once its refresh has rebuilt the model list, so
+    // this read is the list served for as long as the answer takes.
+    await fetching;
+    expect(copilotIds(runtime)).toEqual(["claude-sonnet-5.5"]);
   });
 });
 

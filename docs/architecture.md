@@ -688,7 +688,7 @@ Pi serves models from the static catalog bundled inside `pi-ai`, plus an overlay
 - **Failure is invisible by contract** (captain's hard requirement): a network error, timeout, non-200 or malformed payload falls back to the bundled static catalog and continues - never an error, a hang, or an empty model list.
 - **Nothing waits on it** (lean model lists, captain 2026-09-23, `docs/model-lists.md`).
   The runtime is created offline (the bundled catalog plus the overlay the store last fetched) and returned at once.
-  The pi.dev refresh then runs in the background, bounded by `MODEL_REFRESH_TIMEOUT_MS`; when an abort empties the availability snapshot (pi's availability pass rides the refresh signal), it is rebuilt offline.
+  The pi.dev refresh then runs in the background, bounded by `MODEL_REFRESH_TIMEOUT_MS`; while it runs, a provider that narrows its own list, such as Copilot's ids stored at sign-in, keeps the models its last availability check allowed (a patch of ours to pi, `pnpm-workspace.yaml`), and when the bound cuts it short (pi's availability pass rides the refresh signal), that pass runs again offline.
   The list may grow when the overlay lands, never shrink because it did not.
   While the app stays open, the catalog pass runs the same refresh again just past Pi's window (`CATALOG_REFRESH_EVERY_MS`, `docs/model-lists.md`), so a connected account picks up a model published since; Pi's window still bounds the requests, except OpenRouter's, which every pass sends.
   `modelRuntime.test.ts` proves both properties against a stand-in pi.dev.

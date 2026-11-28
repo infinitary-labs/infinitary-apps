@@ -128,7 +128,7 @@ For work with a merge policy, More shows Delivery (`Pull request` or `Local merg
 Each value is followed by its muted source, `This task` or `Project setting`, and the rows end with `Ask your first mate to change these for this task.` while the task is open.
 Once a device that runs work is on the list, More adds Runs on after Care, for any task that could run elsewhere, answers included (`../devices/RunsOn.prompt.md`): where it started, or where it would start now (`Mac mini`, `Running as Builder`, `This computer`), followed by its muted source, `This task`, `Parent task` or `Project setting`.
 It is read-only like the others, and the helper line shows under it while the task is open.
-Local merge bounds Careful to Default; the muted explanation retains that Careful was requested for pull requests.
+A local merge keeps Careful; a closed task whose snapshot shipped less care than it asked for keeps the muted explanation of that.
 The values update in place, leaving disclosures and keyboard focus alone; accepted changes appear in Activity and the feed.
 These are read-only facts, not switches: the existing message input is the only editing surface, and the action bar does not change.
 Closed tasks keep their policies as history and omit the helper; answers, reviews and the personal workspace keep their existing no-merge presentation.

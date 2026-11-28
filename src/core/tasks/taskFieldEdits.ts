@@ -2,7 +2,6 @@ import { fixedHoldWords } from "@shared/holds";
 import { placementRequirementsSchema } from "@shared/placement";
 import { reasoningWord } from "@shared/reasoning";
 import {
-  POLICY_CARE_BOUND,
   POLICY_DELIVERY_WORDS,
   POLICY_MERGING_WORDS,
   POLICY_SOURCE_WORDS,
@@ -431,7 +430,6 @@ export function updateTaskFields(
           `${key === "autonomy" ? "Merging" : key === "rigor" ? "Rigor" : "Delivery"}: ${value} (${POLICY_SOURCE_WORDS[next[key].source]})${from}`,
         );
       }
-      if (next.rigor.requested !== next.rigor.value) changes.push(POLICY_CARE_BOUND);
       // Cancel pending attempts in this same transaction. The revision also
       // invalidates attempts already reading asynchronous checks.
       const cancel =

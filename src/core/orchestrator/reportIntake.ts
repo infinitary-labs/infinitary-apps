@@ -18,7 +18,7 @@ import {
 import { fencedListReminder } from "@shared/outsideData";
 import { formatDurationShort } from "@shared/quotaSignals";
 import { keptRecoveryWaySchema, workWaitSchema } from "@shared/recovery";
-import { deliveryFor, opensPullRequest, type RepoDelivery } from "@shared/repos";
+import { deliveryFor } from "@shared/repos";
 import { type PlanItem, readPlanItems } from "@shared/taskPlan";
 import { taskTitleRefusal } from "@shared/taskTitle";
 import { cutText } from "@shared/textCut";
@@ -57,8 +57,6 @@ export type ReportIntakeHost = {
   isPersonalTask(taskId: string): boolean;
   /** The personal workspace's brief facts, when this build has one. */
   personalFacts(): PersonalBriefFacts | undefined;
-  /** A task's delivery posture: whether it delivers through a pull request. */
-  taskDelivery(taskId: string): RepoDelivery | undefined;
   /** The builder a review task reads: its parent, the one stored join. */
   reviewBuilderOf(record: TaskRecord | undefined): TaskRecord | undefined;
   /** A crewmate's proof of life: its quiet clock starts again. */
@@ -278,11 +276,9 @@ export class ReportIntake {
     if (!record) throw new Error("The task no longer exists.");
     const builder = this.host.reviewBuilderOf(record);
     const owner = builder ?? record;
-    // INF-994: records are kept at every rigor level, so a raise to Careful
-    // mid-task keeps them. A review's record is the verdict on any change
-    // (INF-1875), however it delivers.
-    if (input.kind !== "review" && !opensPullRequest(this.host.taskDelivery(owner.id)))
-      throw new Error("Live validation belongs to a change delivered through a pull request.");
+    // INF-994: records are kept at every rigor level and every delivery, so
+    // a raise to Careful mid-task keeps them, and local-only work's review
+    // reads them before its local merge.
     // A review's record binds to the head its turn was assigned (INF-1875):
     // the version under review, read when the turn began, never the
     // builder's branch as it stands now.

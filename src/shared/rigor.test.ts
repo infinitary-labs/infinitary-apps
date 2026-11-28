@@ -21,37 +21,31 @@ describe("rigorFor: the derivation order", () => {
   const table: Array<{ why: string; input: RigorInput; rigor: string; reason: string }> = [
     {
       why: "the captain's ask beats the repository: a reviewed repo still ships quick when asked",
-      input: { gated: true, delivery: "direct-pr", ask: "quick", repoRigor: "reviewed" },
+      input: { gated: true, ask: "quick", repoRigor: "reviewed" },
       rigor: "quick",
       reason: "the captain asked for quick",
     },
     {
       why: "the captain's reviewed request overrides a quick project setting",
-      input: { gated: true, delivery: "direct-pr", ask: "reviewed", repoRigor: "quick" },
+      input: { gated: true, ask: "reviewed", repoRigor: "quick" },
       rigor: "reviewed",
       reason: "the captain asked for reviewed",
     },
     {
       why: "the repository's configured rigor beats the default",
-      input: { gated: true, delivery: "direct-pr", repoRigor: "quick" },
+      input: { gated: true, repoRigor: "quick" },
       rigor: "quick",
       reason: "the repository ships quick",
     },
     {
       why: "a repository may configure reviewed",
-      input: { gated: true, delivery: "direct-pr", repoRigor: "reviewed" },
+      input: { gated: true, repoRigor: "reviewed" },
       rigor: "reviewed",
       reason: "the repository ships reviewed",
     },
     {
-      why: "every repository defaults to standard on direct-pr",
-      input: { gated: true, delivery: "direct-pr" },
-      rigor: "standard",
-      reason: "every repository ships standard by default",
-    },
-    {
-      why: "every repository defaults to standard on local-only too",
-      input: { gated: true, delivery: "local-only" },
+      why: "every repository defaults to standard, whatever its posture",
+      input: { gated: true },
       rigor: "standard",
       reason: "every repository ships standard by default",
     },
@@ -72,33 +66,14 @@ describe("rigorFor: the derivation order", () => {
     // for - a quick tier would still be a tier, and the brief would still
     // name one.
     for (const input of [
-      { gated: false, delivery: "local-only", ask: "reviewed" },
-      { gated: false, delivery: "direct-pr", repoRigor: "standard" },
-      { gated: false, delivery: "local-only" },
+      { gated: false, ask: "reviewed" },
+      { gated: false, repoRigor: "standard" },
+      { gated: false },
     ] as const) {
       const decision = rigorFor(input);
       expect(decision.rigor).toBeUndefined();
       expect(decision.reason).toContain("no gate");
     }
-  });
-
-  it("bounds an asked-for reviewed to a posture that ships a pull request: local-only ships standard and says why", () => {
-    // The reviewed sequence ends in a push, PR and CI after the pass; with
-    // no remote delivery there is nothing to ship, so the answer is
-    // standard - never a quiet quick, because the rule that fired asked
-    // for more care.
-    for (const input of [
-      { gated: true, delivery: "local-only", ask: "reviewed" },
-      { gated: true, delivery: "local-only", repoRigor: "reviewed" },
-    ] as const) {
-      const decision = rigorFor(input);
-      expect(decision.rigor).toBe("standard");
-      expect(decision.reason).toContain("reviewed ships a pull request");
-      expect(decision.reason).toContain("local-only ships standard");
-    }
-    // The bound is on reviewed alone: an ask for quick on local-only is
-    // honored as given.
-    expect(rigorFor({ gated: true, delivery: "local-only", ask: "quick" }).rigor).toBe("quick");
   });
 });
 

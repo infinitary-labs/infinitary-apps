@@ -172,7 +172,7 @@ The closed snapshot (`delivery.closedPolicies`) is history, not an input, and st
 The shared `effectiveTaskPolicies` reader supplies the record, task query, crew context, briefs, review gates and final merge guards; the task detail's legacy `rigor` remains dispatch history, and its optional `policies` holds the current values and sources.
 The Info tab's More row shows three read-only rows and `This task` or `Project setting` beside each, followed by the helper inviting a request to the first mate.
 For Automatic work or once a computer that runs work is on the list, a fourth read-only row, Runs on, says where the task runs and whether that came from `This task`, its `Parent task` or the `Project setting` (`TaskDetail.runsOn`; `docs/helper.md`, "A task's own Runs on"); `update_task` `runs_on` changes it before the task starts.
-A local merge bounds Careful to Default without losing the requested care, with an explanation in More.
+A local merge keeps Careful as asked; a closed snapshot whose shipped care differs from the care asked for explains it in More.
 Queued, interrupted and waiting work stays in place; the existing durable inbox carries policy notices to active and later resumed crews without starting a crew solely for that notice.
 A restart recovers a notice from the committed event if the app quit before enqueueing it.
 Newly closed work snapshots its effective policies beside the closed outcome (`delivery.closedPolicies`), without creating or rewriting a routing shape; policy edits refuse closed tasks, reviews, answers and the personal workspace.

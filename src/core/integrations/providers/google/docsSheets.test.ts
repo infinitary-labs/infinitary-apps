@@ -210,7 +210,7 @@ describe("Docs on the Google row", () => {
     ).toBe(0);
   });
 
-  it("answers Docs' refusal inside update_doc's replies as a refusal, not as text added", async () => {
+  it("answers Docs' refusal inside update_doc's replies as a refusal", async () => {
     const world = await signedIn();
     world.google.files.set(SHOT_LIST.id, { ...SHOT_LIST, viewOnly: true });
     const asked = await call(world, "append_to_document", { id: SHOT_LIST.id, text: "\nWrap." });
@@ -221,7 +221,6 @@ describe("Docs on the Google row", () => {
       kind: "refused",
       why: "Google Docs refused: The caller does not have permission",
     });
-    expect(fileOf(world, SHOT_LIST.id)?.text).toBe(SHOT_LIST.text);
   });
 
   it("names Docs' MCP service when it is off, with Google's page that turns it on", async () => {

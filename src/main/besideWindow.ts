@@ -1240,8 +1240,7 @@ export class BesideWindow {
     let end = runEnd(status, this.joined);
     // The command this window started has not welcomed it yet: an end
     // recorded before it started is an earlier command's, and the window
-    // waits for this one as long as it would for a start entry, then says
-    // it stopped without saying why.
+    // waits for this one as long as it would for a start entry before showing the stopped notice.
     const started = this.startedAt;
     const neverStarted = started !== null && status.running === false && (end?.at ?? 0) < started;
     if (neverStarted)

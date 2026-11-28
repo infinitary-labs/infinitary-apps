@@ -761,6 +761,7 @@ export class CrewSupervisor {
       ...(options.quotaGateCleared ? { quotaGateCleared: options.quotaGateCleared } : {}),
       heldOnItsLevel: (record) => this.starts.reasoning.heldOnItsLevel(record),
       wakeDeadGate: (record, dead) => this.starts.wakeDeadGate(record, dead),
+      closeUnhandled: (taskId) => this.intake.closeUnhandled(taskId),
       completeContainers: () => this.intake.completeContainers(),
       broadcastCrewCounts: () => this.facts.broadcastCrewCounts(),
       putOff: (taskId) => this.cards.putOffs.witness(taskId),

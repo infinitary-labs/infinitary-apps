@@ -36,6 +36,7 @@ import {
 import { type IdleRule, type IdleTurn, idleTurn, type Witnesses } from "./reportSort";
 import { wakeBuiltOn } from "./reportWakes";
 import { asksAbout } from "./reviewCard";
+import { nothingMergedWake } from "./startWakes";
 import { waitingGuidance } from "./waitingGuidance";
 import type { TypedWake, WakeFacts, WakeTask } from "./wakes";
 
@@ -260,6 +261,12 @@ export type IdleLadderHost = {
    */
   heldOnItsLevel?: (record: TaskRecord) => boolean;
   wakeDeadGate(record: TaskRecord, dead: TaskRecord): void;
+  /**
+   * Whether the first mate has not yet finished a turn on this task's close:
+   * its news still on the first mate's lane, or it closed in the turn still
+   * running. Absent = every close is handled.
+   */
+  closeUnhandled?(taskId: string): boolean;
   completeContainers(): void;
   broadcastCrewCounts(): void;
   /** The host watches the task's checks for it (`./checkWatch.ts`); absent = nothing is watched. */
@@ -1621,6 +1628,17 @@ export class IdleLadder {
     for (const record of tasks.graph.listDeadBlocked()) {
       const dead = tasks.graph.waitingOn(record.id).find((blocker) => blocker.status === "dropped");
       if (dead) this.host.wakeDeadGate(record, dead);
+    }
+    // A side-effect task's wait whose answer carries on in other work moves
+    // there before anything reads it as finished; one whose every wait then
+    // closed with nothing merged stays unstarted and is one wake
+    // (docs/task-graph.md, "A side-effect task"). The wake waits until the
+    // first mate has finished a turn on each wait's close, since that turn
+    // may file the work built on it, which takes the wait.
+    tasks.graph.carryAnswers("host");
+    for (const { record, waits } of tasks.graph.listNothingMerged()) {
+      if (waits.some((wait) => this.host.closeUnhandled?.(wait.id))) continue;
+      this.host.notifyOp(nothingMergedWake(record, waits), "agent", record.id);
     }
     // The ready query (design section 7): everything it lists starts now,
     // in priority order. On-request rows never appear in it.

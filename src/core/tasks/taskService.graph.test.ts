@@ -383,6 +383,97 @@ describe("the task graph (task-system P2)", () => {
       expect(tasks.graph.listReady().map((r) => r.id)).toContain("close-item");
     });
 
+    // INF-7198's plan, part 3: when every wait ends with nothing merged, there is nothing
+    // for the outside action to tell, so the task stays unstarted for the first mate.
+    it("keeps a side-effect task unstarted when every wait closed with nothing merged", () => {
+      const { tasks, work } = setup();
+      const plan = work("plan", { startPolicy: "on-request" });
+      const repro = work("repro", { startPolicy: "on-request" });
+      const tell = work("tell-item", {
+        blockedBy: ["plan", "repro"],
+        shape: { kind: "unclear", side_effect: true },
+      });
+      tasks.close(plan.id, { status: "done", reason: "answered", actor: "host" });
+      tasks.close(repro.id, { status: "done", reason: "answered", actor: "host" });
+
+      expect(tasks.graph.listReady().map((r) => r.id)).not.toContain(tell.id);
+      expect(
+        tasks.graph
+          .listNothingMerged()
+          .map(({ record, waits }) => [record.id, waits.map((w) => w.id).sort()]),
+      ).toEqual([[tell.id, ["plan", "repro"]]]);
+      const record = tasks.get(tell.id)!;
+      expect(tasks.graph.flagsOf(record)).toMatchObject({ blocked: false, ready: false });
+      expect(tasks.graph.awaitsStart(record)).toBe(true);
+      // The careful review's finding f2: its queue line says only the first mate starts it.
+      expect(queryTasks(tasks, { key: tell.key }).rows[0]?.waiting).toMatch(
+        /^Waiting for the first mate’s go · /,
+      );
+
+      // One wait that merged is work to tell: the task starts.
+      const fix = work("fix", { startPolicy: "on-request" });
+      tasks.graph.link(fix.id, tell.id, "blocks", "firstmate");
+      tasks.close(fix.id, { status: "done", reason: "merged", actor: "host" });
+      expect(tasks.graph.listNothingMerged()).toEqual([]);
+      expect(tasks.graph.listReady().map((r) => r.id)).toContain(tell.id);
+    });
+
+    // The careful review's finding f1: a parent the host closes done when its last part
+    // merges has no delivery of its own, yet its work shipped, so its waiter starts as before.
+    it("starts a side-effect task waiting on a parent whose part merged", () => {
+      const { tasks, work } = setup();
+      const parent = work("parent", { startPolicy: "on-request" });
+      const part = work("part", { startPolicy: "on-request", parentId: parent.id });
+      const tell = work("tell-item", {
+        blockedBy: ["parent"],
+        shape: { kind: "unclear", side_effect: true },
+      });
+      work("other", { startPolicy: "on-request", shape: { kind: "implement", basis: parent.key } });
+      tasks.close(part.id, { status: "done", reason: "merged", actor: "host" });
+      tasks.close(parent.id, { status: "done", reason: "finished", actor: "host" });
+
+      expect(tasks.graph.nothingMerged(tasks.get(tell.id)!)).toBeUndefined();
+      expect(tasks.graph.carryAnswers("host")).toEqual([]);
+      expect(tasks.graph.listReady().map((r) => r.id)).toContain(tell.id);
+    });
+
+    // INF-7198's plan, part 3: a wait whose answer carries on in another task moves to
+    // that task, as a replaced task's wait does.
+    it("moves a side-effect task's answered wait to the work built on the answer", () => {
+      const { tasks, work } = setup();
+      const plan = work("plan", { startPolicy: "on-request" });
+      const tell = work("tell-item", {
+        blockedBy: ["plan"],
+        shape: { kind: "unclear", side_effect: true },
+      });
+      tasks.close(plan.id, { status: "done", reason: "answered", actor: "host" });
+      // Nothing is built on the plan yet: nothing moves, and the task waits for the first mate.
+      expect(tasks.graph.carryAnswers("host")).toEqual([]);
+      expect(tasks.graph.listNothingMerged().map(({ record }) => record.id)).toEqual([tell.id]);
+
+      const build = work("build", {
+        startPolicy: "on-request",
+        shape: { kind: "implement", basis: plan.key },
+      });
+      const stale = work("stale", {
+        startPolicy: "on-request",
+        shape: { kind: "implement", basis: plan.key },
+      });
+      tasks.close(stale.id, { status: "dropped", reason: "cancelled", actor: "firstmate" });
+      const moves = tasks.graph.carryAnswers("host");
+      expect(
+        moves.map(({ waiter, from, to }) => [waiter.id, from.id, to.map((t) => t.id)]),
+      ).toEqual([[tell.id, plan.id, [build.id]]]);
+      expect(tasks.graph.blockers(tell.id).map((r) => r.id)).toEqual([build.id]);
+      expect(tasks.graph.listNothingMerged()).toEqual([]);
+      expect(tasks.graph.listReady().map((r) => r.id)).not.toContain(tell.id);
+      // A second pass finds nothing left to move.
+      expect(tasks.graph.carryAnswers("host")).toEqual([]);
+
+      tasks.close(build.id, { status: "done", reason: "merged", actor: "host" });
+      expect(tasks.graph.listReady().map((r) => r.id)).toContain(tell.id);
+    });
+
     it("keeps a part waiting on the part under its base when it needs that part merged", () => {
       const { tasks, work } = setup();
       const first = work("first", { startPolicy: "on-request" });

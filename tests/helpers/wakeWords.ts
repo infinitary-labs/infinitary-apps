@@ -77,6 +77,7 @@ export type FirstmateWakeKind =
   | "asked-start-waits"
   | "captain-start"
   | "dead-gate"
+  | "nothing-merged"
   | "reasoning-wait"
   | "system-wait"
   | "named-model-wait"

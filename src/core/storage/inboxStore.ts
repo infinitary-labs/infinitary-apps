@@ -842,21 +842,22 @@ export class InboxStore {
   }
 
   /**
-   * Whether the lane holds guidance that will still be delivered: not in
+   * The lane's guidance that will still be delivered, oldest first: not in
    * flight, not set aside, not stuck at its provider, budget not spent -
-   * due now or waiting out its grace or backoff. The idle ladder's "moving"
+   * due now or waiting out its grace or backoff. `CrewFacts.servesTurn`
+   * reads which of them a turn would serve for the idle ladder's "moving"
    * witness.
    */
-  hasDeliverable(recipient: string, maxAttempts: number): boolean {
+  deliverable(recipient: string, maxAttempts: number): InboxRow[] {
     return (
       prepared(
         this.db,
-        `SELECT 1 FROM inbox
+        `SELECT * FROM inbox
          WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL AND stuck_at IS NULL
            AND attempts < ?
-         LIMIT 1`,
-      ).get(recipient, maxAttempts) !== undefined
-    );
+         ORDER BY id`,
+      ).all(recipient, maxAttempts) as Row[]
+    ).map(fromRow);
   }
 
   /**

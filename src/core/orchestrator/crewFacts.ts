@@ -36,6 +36,26 @@ import { rowAttachments } from "./wakes";
 import { deliverableOf } from "./workShape";
 
 /**
+ * A policy, override, allowance or kept-copy notice: guidance a turn
+ * carries, never a reason to start or resume one, nor the task moving.
+ */
+export function isStandingNotice(row: InboxRow): boolean {
+  return (
+    row.facts?.kind === "task-policies-changed" ||
+    row.facts?.kind === "away-copy-kept" ||
+    row.facts?.kind === "task-override-changed" ||
+    row.facts?.kind === "task-allowed-changed"
+  );
+}
+
+/**
+ * How long a lane row still witnesses a crewmate moving after it was
+ * created, last tried or fell due: the sweep serves a due row within a
+ * tick, so one left unserved this long is a leftover nothing is serving.
+ */
+export const SERVABLE_BOUND_MS = 15 * 60_000;
+
+/**
  * The crew's facts (docs/report-sort.md, docs/inbox.md): each task's crew
  * status for the first mate, the crew counts the window shows, and the
  * lane facts the sweeps read - due rows, pictures, the backlog, holds and
@@ -50,6 +70,30 @@ export class CrewFacts {
 
   deliverableRows(taskId: string, now: number): InboxRow[] {
     const rows = this.core.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
+    return this.served(taskId, rows);
+  }
+
+  /**
+   * Whether the lane holds guidance a turn will serve, due now or waiting
+   * out its grace or backoff: the idle ladder's "moving" witness
+   * (docs/report-sort.md). A row due or last tried longer ago than
+   * `SERVABLE_BOUND_MS` is not one: the sweep serves a due row within a
+   * tick, so one left that long is a leftover nothing is serving, and
+   * counting it would hide idle work for as long as it stays (INF-7116).
+   */
+  servesTurn(taskId: string, now: number): boolean {
+    const fresh = this.core.options.inbox
+      .deliverable(taskId, INBOX_ATTEMPT_MAX)
+      .filter(
+        (row) =>
+          Math.max(row.createdAt, row.lastAttemptAt ?? 0, row.nextAttemptAt ?? 0) >
+          now - SERVABLE_BOUND_MS,
+      );
+    return this.served(taskId, fresh).length > 0;
+  }
+
+  /** The rows of `rows` a turn would serve, or none when none may start or join one. */
+  private served(taskId: string, rows: InboxRow[]): InboxRow[] {
     const task = this.core.tasks.get(taskId);
     const running = task !== undefined && task.turn.busy;
     // A renewed conversation's reason rides the next full turn (`runTurn`),
@@ -70,17 +114,7 @@ export class CrewFacts {
         !(running && row.facts?.kind === "turn-resumed"),
     );
     // A policy, override or kept-copy notice alone is guidance, not permission to resume or start.
-    if (
-      !this.core.tasks.get(taskId)?.turn.running &&
-      rest.every(
-        (row) =>
-          row.facts?.kind === "task-policies-changed" ||
-          row.facts?.kind === "away-copy-kept" ||
-          row.facts?.kind === "task-override-changed" ||
-          row.facts?.kind === "task-allowed-changed",
-      )
-    )
-      return [];
+    if (!this.core.tasks.get(taskId)?.turn.running && rest.every(isStandingNotice)) return [];
     return rest;
   }
 

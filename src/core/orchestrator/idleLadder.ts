@@ -7,7 +7,7 @@ import { formatDurationShort } from "@shared/quotaSignals";
 import { type WorkWait, workWaitSchema } from "@shared/recovery";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { capWithOverflow } from "../overflow";
-import { FIRSTMATE_RECIPIENT, INBOX_ATTEMPT_MAX, type InboxStore } from "../storage/inboxStore";
+import { FIRSTMATE_RECIPIENT, type InboxStore } from "../storage/inboxStore";
 import type { FirstmateAsk, TaskGate, TaskRecord } from "../storage/taskRecords";
 import { standingDependencyWaits } from "../tasks/dependencyWaits";
 import { builtOnRows } from "../tasks/taskQuery";
@@ -181,6 +181,8 @@ export type IdleLadderHost = {
   now: () => number;
   tasks: TaskService;
   inbox: InboxStore;
+  /** Guidance on the task's lane a turn will serve, inside its bound (`CrewFacts.servesTurn`). */
+  servesTurn(taskId: string, now: number): boolean;
   runtime(
     taskId: string,
   ): { turn: CrewTurn; crewmate: string; answeredAt?: number; failedAt?: number } | undefined;
@@ -298,8 +300,9 @@ export class IdleLadder {
   /**
    * The witness set for a task (docs/report-sort.md): gathered here once, so
    * the report's sort and the reconciler read the same facts the same way.
-   * Cards are read by task, never by id; guidance is anything its lane will
-   * still deliver, backoff included; a job counts inside its bound.
+   * Cards are read by task, never by id; guidance is what its lane holds that
+   * a turn would serve, inside its bound (`CrewFacts.servesTurn`); a job
+   * counts inside its bound.
    */
   witnesses(taskId: string, now: number): Witnesses {
     const record = this.host.tasks.get(taskId);
@@ -337,8 +340,7 @@ export class IdleLadder {
       captainGateOwed:
         gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait && !answerReady,
       deliverable:
-        this.host.runtime(taskId)?.turn.stage !== "stopped" &&
-        this.host.inbox.hasDeliverable(taskId, INBOX_ATTEMPT_MAX),
+        this.host.runtime(taskId)?.turn.stage !== "stopped" && this.host.servesTurn(taskId, now),
       jobsRunning: this.jobInBound(taskId, now),
       pendingSettle: Boolean(record?.pendingSettle),
       // A due one is the sweep's, on this same tick: counting it until then

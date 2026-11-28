@@ -472,7 +472,7 @@ export function registerIpc(options: IpcOptions): void {
   handleInvoke("inf:frames:mount", rendererSource, async (event, request) => {
     const mount =
       request.kind === "panel" ? await frameMounts.mountPanel(request) : frameMounts.mount(request);
-    heldBy(event.sender, mount.mountId);
+    if ("mountId" in mount) heldBy(event.sender, mount.mountId);
     return mount;
   });
 

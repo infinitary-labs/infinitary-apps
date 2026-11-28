@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "refused-steer-by-order",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Guidance sent just as a task starts on another computer is no longer lost",
+      "body": "When guidance reached a task on another computer before its work had started there, and more guidance followed, the first message could be dropped and a later one repeated. The task now hears the message it missed, once, when its turn ends.",
+      "noPicture": "This changes which guidance a crewmate is served next, not a view or control.",
+      "noDocsSite": "No docs site page describes how guidance reaches a task on another computer.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

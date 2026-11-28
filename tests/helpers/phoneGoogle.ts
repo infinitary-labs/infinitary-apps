@@ -68,6 +68,7 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
     pages: number;
     client: string | null;
     kept: boolean;
+    withoutDrive: boolean;
     own: { file: string; id: string };
   }> => {
     const view = await core.dispatch("inf:integrations:list", []);
@@ -79,6 +80,7 @@ export function phoneGoogleControls(core: Core, stand: GoogleStandIn) {
       pages: pages.length,
       client: page ? new URL(page.url).searchParams.get("client_id") : null,
       kept: (google?.client ?? entry?.client)?.kept === true,
+      withoutDrive: google?.client?.withoutDrive === true,
       own: { file: PHONE_GOOGLE_CLIENT_FILE, id: OWN_CLIENT_ID },
     };
   };

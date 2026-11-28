@@ -12,7 +12,8 @@ extension PhoneJourney {
     /// client file setup to the phone itself"): the test home names no client of its own, as a released build, so Set up
     /// comes first; a file Google does not give is refused and nothing is kept, and the pasted client file is kept on the
     /// computer, which then asks Google as that client. INF-7009: a sign-in that left Drive unticked keeps Gmail and
-    /// Calendar, its row says so quietly with Sign in again, and signing in again with every box ticked clears the line.
+    /// Calendar, its row says so quietly with Sign in again, and signing in again with every box ticked adds Drive to the
+    /// computer's sign-in, where the row's line goes back to the date the stand-in's client in Testing stops.
     func testGoogleSignInAndOut() async throws {
         try await launchFresh()
         try await join()
@@ -98,6 +99,7 @@ extension PhoneJourney {
         let kept = try await home("google-state", method: "GET")
         let who = try XCTUnwrap(kept["account"] as? String)
         XCTAssertTrue(account.label.contains(who), account.label)
+        XCTAssertEqual(kept["withoutDrive"] as? Bool, true)
         // The row keeps the sign-in and says quietly that Drive, Docs and Sheets were left out, with Sign in again.
         let line = app.staticTexts["google-client-state"]
         let next = app.buttons["google-client-next"]
@@ -109,8 +111,8 @@ extension PhoneJourney {
         waitForSteadyTarget(next)
         picture("google-signed-in-without-drive")
 
-        // Sign in again with every box ticked adds Drive: the Drive line goes, and the stand-in's client in Testing
-        // brings back the date it stops.
+        // Sign in again with every box ticked: the stand-in's client in Testing brings back the date it stops, a line
+        // that outranks the Drive line, so the computer's own sign-in says whether Drive was added.
         _ = try await home("google-every-box")
         tapOnPhone(next, repeatDiscarded: false)
         XCTAssertTrue(accept.waitForPresence(timeout: 10), app.debugDescription)
@@ -125,6 +127,8 @@ extension PhoneJourney {
                        .completed, app.debugDescription)
         XCTAssertTrue(account.waitForPresence(timeout: 30), app.debugDescription)
         XCTAssertTrue(account.label.contains(who), account.label)
+        let withDrive = try await home("google-state", method: "GET")
+        XCTAssertEqual(withDrive["withoutDrive"] as? Bool, false)
         picture("google-signed-in")
 
         // INF-7012's approved plan, piece 1: "a row line with a link appears when Google refuses an unmarked client",

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "standing-work-fixture",
+      "reason": "Repair the standing-list test fixture for the idle ladder host contract; no app behavior changes."
+    }
+  ]
+}

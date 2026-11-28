@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: 88c26f56331369d6
 title: Integrações
 description: Conecte GitHub, GitLab, Bitbucket, Google e servidores MCP para que seu imediato e sua tripulação possam alcançá-los, e escolha o que cada um pode fazer sem perguntar a você.
 ---
@@ -106,7 +106,7 @@ Cada uma dessas alterações espera a sua aprovação, e **Permitir pelo resto d
 Nenhuma ação exclui, move ou compartilha um arquivo.
 
 O Google pode parar uma chamada para perguntar a você primeiro, mesmo uma que você permitiu.
-Então o Infinitary mostra a pergunta em um cartão que diz que é o Gmail, a Agenda ou o Drive que pergunta, com cada opção do Google como um botão próprio, nas palavras do Google.
+Então o Infinitary mostra a pergunta em um cartão que diz que é o Gmail, a Agenda, o Drive, o Documentos ou o Planilhas que pergunta, com cada opção do Google como um botão próprio, nas palavras do Google.
 Nada é executado até você apertar um deles, e sua escolha responde só a essa chamada.
 Uma escolha de sempre permitir fica guardada pelo Google, não pelo Infinitary.
 

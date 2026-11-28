@@ -105,7 +105,7 @@ Each of those changes waits for your approval, and **Allow for the rest of this 
 No action deletes, moves or shares a file.
 
 Google can stop a call to ask you first, even one you allowed.
-Infinitary then shows the question on a card that names Gmail, Calendar or Drive as asking, with each of Google's choices as its own button, in Google's words.
+Infinitary then shows the question on a card that names Gmail, Calendar, Drive, Docs or Sheets as asking, with each of Google's choices as its own button, in Google's words.
 Nothing runs until you press one, and your choice answers that one call.
 Google, not Infinitary, keeps a choice to always allow.
 

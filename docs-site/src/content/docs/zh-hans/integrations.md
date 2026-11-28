@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: 88c26f56331369d6
 title: 集成
 description: 连接 GitHub、GitLab、Bitbucket、Google 和 MCP 服务器，让你的大副和船员能够访问它们，并选择每一项可以不经询问就做什么。
 ---
@@ -106,7 +106,7 @@ Infinitary 把客户端的密钥保存在这台电脑的[机密](/zh-hans/secret
 没有任何操作会删除、移动或共享文件。
 
 即使是你已允许的调用，Google 也可能先停止它，来征求你的意见。
-这时 Infinitary 会在一张注明由 Gmail、日历或云端硬盘提问的卡片上显示问题，并把 Google 的每个选项按 Google 的原话做成一个按钮。
+这时 Infinitary 会在一张注明由 Gmail、日历、云端硬盘、文档或表格提问的卡片上显示问题，并把 Google 的每个选项按 Google 的原话做成一个按钮。
 在你按下其中一个之前，什么都不会运行；你的选择只回答这一次调用。
 “始终允许”类选择由 Google 保存，而不是 Infinitary。
 

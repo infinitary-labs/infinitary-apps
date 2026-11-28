@@ -1,5 +1,5 @@
 ---
-source: 88839f4f7e511529
+source: 88c26f56331369d6
 title: Integrationen
 description: Verbinde GitHub, GitLab, Bitbucket, Google und MCP-Server, damit dein erster Offizier und deine Crew sie erreichen, und lege fest, was jede Integration ohne Rückfrage tun darf.
 ---
@@ -106,7 +106,7 @@ Jede dieser Änderungen wartet auf deine Zustimmung, und **Für den Rest dieser 
 Keine Aktion löscht, verschiebt oder teilt eine Datei.
 
 Google kann einen Aufruf stoppen, um zuerst dich zu fragen, auch einen, den du erlaubt hast.
-Infinitary zeigt die Frage dann auf einer Karte, die Gmail, Kalender oder Drive als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
+Infinitary zeigt die Frage dann auf einer Karte, die Gmail, Kalender, Drive, Docs oder Tabellen als Fragenden nennt, mit jeder von Googles Antwortmöglichkeiten als eigener Schaltfläche, in Googles Worten.
 Nichts läuft, bis du eine drückst, und deine Auswahl beantwortet nur diesen einen Aufruf.
 Eine Auswahl, immer zu erlauben, speichert Google, nicht Infinitary.
 

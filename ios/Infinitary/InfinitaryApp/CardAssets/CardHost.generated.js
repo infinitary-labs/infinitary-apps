@@ -89163,33 +89163,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     }
     return `Projects`;
   }
-  function settingsProjectsLocalCareful() {
-    switch (currentLanguage()) {
-      case "ar":
-        return `التغييرات التي تُدمج محليًا تُنجز بتأنٍّ، دون مراجعة - فلا يوجد طلب سحب للاطلاع عليه.`;
-      case "de":
-        return `Lokal zusammengeführte Änderungen werden sorgfältig erledigt, aber ohne Review – es gibt keinen Pull Request, den man ansehen könnte.`;
-      case "es":
-        return `Los cambios que se fusionan localmente se hacen con cuidado, sin revisión: no hay ninguna solicitud de incorporación de cambios que mirar.`;
-      case "fr":
-        return `Les modifications fusionnées localement sont faites avec minutie, sans revue – il n’y a pas de demande de tirage à examiner.`;
-      case "ja":
-        return `ローカルでマージされる変更は慎重に行われますが、レビューはありません。確認するプルリクエストがないためです。`;
-      case "ko":
-        return `로컬에서 병합되는 변경은 검토 없이 신중하게 처리돼요. 살펴볼 끌어오기 요청이 없기 때문이에요.`;
-      case "pt-BR":
-        return `As alterações mescladas localmente são feitas com cuidado, sem revisão - não há solicitação de pull para olhar.`;
-      case "zh-Hans":
-        return `本地合并的改动会谨慎完成，但没有审查——因为没有拉取请求可供查看。`;
-      case "zh-Hant":
-        return `本機合併的變更會謹慎完成，但沒有審查，因為沒有 pull request 可以看。`;
-      case "en-XA":
-        return `[Çĥáñĝéš ţĥáţ ɱéŕĝé ļöçáļļý áŕé ðöñé çáŕéƒûļļý, ŵîţĥöûţ á ŕéṽîéŵ - ţĥéŕé îš ñö þûļļ ŕéǫûéšţ ţö ļööķ áţ. ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~]`;
-      case "ar-XB":
-        return `‮Changes that merge locally are done carefully, without a review - there is no pull request to look at.‬`;
-    }
-    return `Changes that merge locally are done carefully, without a review - there is no pull request to look at.`;
-  }
   function settingsProjectsMoveChoose() {
     switch (currentLanguage()) {
       case "ar":
@@ -120893,7 +120866,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     settingsProjectsGroupNameDescription,
     settingsProjectsIntro,
     settingsProjectsLabel,
-    settingsProjectsLocalCareful,
     settingsProjectsMoveChoose,
     settingsProjectsMoveConfirm,
     settingsProjectsMoveFailed,
@@ -124678,7 +124650,6 @@ Set the \`cycles\` parameter to \`"ref"\` to resolve cyclical schemas with defs.
     "settingsProjectsGroupNameDescription": ["key"],
     "settingsProjectsIntro": [],
     "settingsProjectsLabel": [],
-    "settingsProjectsLocalCareful": [],
     "settingsProjectsMoveChoose": [],
     "settingsProjectsMoveConfirm": [],
     "settingsProjectsMoveFailed": [],

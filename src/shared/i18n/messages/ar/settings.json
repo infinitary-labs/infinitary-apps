@@ -1131,7 +1131,6 @@
   "settingsProjectsGroupNameDescription": "يحتفظ مشروعك برمزه {key} وسجله. ويحتفظ كل مستودع باسمه.",
   "settingsProjectsIntro": "أضف مشروعًا هنا أو اطلب ذلك من نائب القبطان، وافتح مشروعًا لتغيير طريقة عمله. لا يذكر الصف إلا ما يختلف عن المشروع الجديد، الذي يُقدَّم كطلبات سحب حيث يُستضاف، وينتظر كلمتك قبل الدمج، ويأخذ العناية الافتراضية، ويعمل على حاسوب يُختار تلقائيًا.",
   "settingsProjectsLabel": "المشاريع",
-  "settingsProjectsLocalCareful": "التغييرات التي تُدمج محليًا تُنجز بتأنٍّ، دون مراجعة - فلا يوجد طلب سحب للاطلاع عليه.",
   "settingsProjectsMoveChoose": "اختر مشروعًا",
   "settingsProjectsMoveConfirm": "نقل",
   "settingsProjectsMoveFailed": "تعذّر نقل هذا المستودع.",

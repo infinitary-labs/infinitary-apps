@@ -1059,7 +1059,6 @@
   "settingsProjectsGroupNameDescription": "Seu projeto mantém a chave {key} e o histórico. Cada repositório mantém o próprio nome.",
   "settingsProjectsIntro": "Adicione um projeto aqui ou peça ao seu imediato, e abra um para mudar como ele funciona. Uma linha mostra só o que está diferente de um projeto novo, que é oferecido como solicitações de pull onde fica, espera sua palavra antes de mesclar, usa o cuidado Padrão e roda em um computador escolhido automaticamente.",
   "settingsProjectsLabel": "Projetos",
-  "settingsProjectsLocalCareful": "As alterações mescladas localmente são feitas com cuidado, sem revisão - não há solicitação de pull para olhar.",
   "settingsProjectsMoveChoose": "Escolha um projeto",
   "settingsProjectsMoveConfirm": "Mover",
   "settingsProjectsMoveFailed": "Não foi possível mover este repositório.",

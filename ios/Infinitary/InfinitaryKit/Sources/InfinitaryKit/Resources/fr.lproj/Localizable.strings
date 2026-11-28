@@ -3720,7 +3720,6 @@
 "settingsProjectsGroupNameDescription" = "Votre projet garde sa clé %1$@ et son historique. Chaque dépôt garde son propre nom.";
 "settingsProjectsIntro" = "Ajoutez un projet ici ou demandez-le à votre second, et ouvrez-en un pour changer son fonctionnement. Une ligne indique seulement ce qui diffère d’un nouveau projet, qui est proposé en demandes de tirage là où il est hébergé, attend votre accord avant de fusionner, prend le soin Par défaut et s’exécute sur un ordinateur choisi automatiquement.";
 "settingsProjectsLabel" = "Projets";
-"settingsProjectsLocalCareful" = "Les modifications fusionnées localement sont faites avec minutie, sans revue – il n’y a pas de demande de tirage à examiner.";
 "settingsProjectsMoveChoose" = "Choisir un projet";
 "settingsProjectsMoveConfirm" = "Déplacer";
 "settingsProjectsMoveFailed" = "Impossible de déplacer ce dépôt.";

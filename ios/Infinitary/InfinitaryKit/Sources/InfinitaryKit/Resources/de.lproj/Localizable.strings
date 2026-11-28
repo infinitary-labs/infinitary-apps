@@ -3720,7 +3720,6 @@
 "settingsProjectsGroupNameDescription" = "Dein Projekt behält sein Kürzel %1$@ und seinen Verlauf. Jedes Repository behält seinen eigenen Namen.";
 "settingsProjectsIntro" = "Füg hier ein Projekt hinzu oder frag deinen ersten Offizier, und öffne eines, um zu ändern, wie es arbeitet. Eine Zeile nennt nur, was anders eingestellt ist als bei einem neuen Projekt: Das wird als Pull Requests dort angeboten, wo es liegt, wartet vor dem Zusammenführen auf dein Wort, nutzt Sorgfalt Standard und läuft auf einem automatisch gewählten Computer.";
 "settingsProjectsLabel" = "Projekte";
-"settingsProjectsLocalCareful" = "Lokal zusammengeführte Änderungen werden sorgfältig erledigt, aber ohne Review – es gibt keinen Pull Request, den man ansehen könnte.";
 "settingsProjectsMoveChoose" = "Projekt wählen";
 "settingsProjectsMoveConfirm" = "Verschieben";
 "settingsProjectsMoveFailed" = "Dieses Repository konnte nicht verschoben werden.";

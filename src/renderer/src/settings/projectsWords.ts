@@ -77,10 +77,6 @@ export const PROJECT_POLICY_WORDS = {
   get disclosureLine() {
     return m.settingsProjectsDisclosureLine();
   },
-  /** Under the rows of a project that merges locally and asks for Careful. */
-  get carefulLocal() {
-    return m.settingsProjectsLocalCareful();
-  },
 } as const;
 
 /**

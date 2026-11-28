@@ -3720,7 +3720,6 @@
 "settingsProjectsGroupNameDescription" = "Tu proyecto mantiene su clave %1$@ y su historial. Cada repositorio mantiene su propio nombre.";
 "settingsProjectsIntro" = "Agrega un proyecto aquí o pídeselo a tu primer oficial, y abre uno para cambiar cómo funciona. Una fila solo indica lo que difiere de un proyecto nuevo, que se ofrece como solicitudes de incorporación de cambios donde se aloja, espera tu palabra antes de fusionar, usa el cuidado Predeterminado y se ejecuta en una computadora elegida automáticamente.";
 "settingsProjectsLabel" = "Proyectos";
-"settingsProjectsLocalCareful" = "Los cambios que se fusionan localmente se hacen con cuidado, sin revisión: no hay ninguna solicitud de incorporación de cambios que mirar.";
 "settingsProjectsMoveChoose" = "Elige un proyecto";
 "settingsProjectsMoveConfirm" = "Mover";
 "settingsProjectsMoveFailed" = "No se pudo mover este repositorio.";

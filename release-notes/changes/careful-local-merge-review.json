@@ -5,8 +5,8 @@
       "kind": "fix",
       "area": "crewmates",
       "title": "Careful work on a project that merges locally gets its review",
-      "body": "When you ask for a careful review on a project whose work merges on this computer, an independent reviewer now reads the change and its live check before the local merge. Before, the task quietly ran at Default care, so the review you chose never happened and the work could wait for it with nobody starting it.",
-      "noPicture": "This changes what care a task runs at, not how any view looks.",
+      "body": "When you ask for a careful review on a project whose work merges on this computer, an independent reviewer now reads the change and its live check before the local merge. Before, the task quietly ran at Default care, so the review you chose never happened and the work could wait for it with nobody starting it. The project page no longer warns that such work is done without a review.",
+      "noPicture": "The only visible change is that a false warning under Rigor on the project page is gone.",
       "provenance": { "origin": "change" }
     }
   ],

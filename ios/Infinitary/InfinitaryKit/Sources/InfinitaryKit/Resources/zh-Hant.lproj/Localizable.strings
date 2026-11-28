@@ -3720,7 +3720,6 @@
 "settingsProjectsGroupNameDescription" = "你的專案會保留它的任務編號前綴 %1$@ 和歷史。每個存放庫保留自己的名稱。";
 "settingsProjectsIntro" = "在這裡加入專案或請你的大副加入，開啟專案就能更改它的運作方式。每一列只顯示和新專案不同的設定；新專案預設在專案所在處以 pull request 提出、合併前等你同意、使用預設謹慎度，並在自動選擇的電腦上執行。";
 "settingsProjectsLabel" = "專案";
-"settingsProjectsLocalCareful" = "本機合併的變更會謹慎完成，但沒有審查，因為沒有 pull request 可以看。";
 "settingsProjectsMoveChoose" = "選擇專案";
 "settingsProjectsMoveConfirm" = "移動";
 "settingsProjectsMoveFailed" = "無法移動這個存放庫。";

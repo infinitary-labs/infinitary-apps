@@ -3722,7 +3722,6 @@
 "settingsProjectsGroupNameDescription" = "프로젝트는 작업 키 %1$@와 기록을 그대로 유지해요. 각 저장소는 자기 이름을 유지해요.";
 "settingsProjectsIntro" = "여기서 프로젝트를 추가하거나 일등항해사에게 부탁하고, 프로젝트를 열어 작동 방식을 바꾸세요. 각 행에는 새 프로젝트와 다르게 설정된 것만 표시돼요. 새 프로젝트는 프로젝트가 있는 곳에 끌어오기 요청으로 올라가고, 병합 전에 선장님의 말을 기다리고, 기본 주의 수준을 쓰며, 자동으로 고른 컴퓨터에서 실행돼요.";
 "settingsProjectsLabel" = "프로젝트";
-"settingsProjectsLocalCareful" = "로컬에서 병합되는 변경은 검토 없이 신중하게 처리돼요. 살펴볼 끌어오기 요청이 없기 때문이에요.";
 "settingsProjectsMoveChoose" = "프로젝트 선택";
 "settingsProjectsMoveConfirm" = "옮기기";
 "settingsProjectsMoveFailed" = "이 저장소를 옮길 수 없어요.";

@@ -120,6 +120,18 @@ describe("figureLabelSpills", () => {
     expect(figureLabelSpills(moved).map((spill) => spill.edgeRight)).toEqual([100]);
   });
 
+  it("measures a tspan that names only a new row after words from where those words end", () => {
+    // "Step one" fits the wide box above; the run below starts where it ends and passes the 100-unit box.
+    const body = `<svg viewBox="0 0 400 130"><rect x="0" y="0" width="300" height="50"/><rect x="0" y="60" width="100" height="50"/><text x="10" y="30">Step one<tspan dy="60">A label of moderate length</tspan></text></svg>`;
+    const spills = figureLabelSpills(body);
+    expect(spills.map((spill) => [spill.text, spill.edgeRight])).toEqual([
+      ["A label of moderate length", 100],
+    ]);
+    expect(
+      figureLabelSpills(body.replace('dy="60"', 'y="90"')).map((spill) => spill.edgeRight),
+    ).toEqual([100]);
+  });
+
   it("takes the root's size from an inline style, not from a presentation attribute the frame overrides", () => {
     const at = (svgAttrs: string): number | undefined =>
       figureLabelSpills(

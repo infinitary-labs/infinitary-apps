@@ -31,9 +31,19 @@ type Node = {
 };
 
 type Box = { left: number; right: number; top: number; bottom: number };
-type Style = { size: number; weight: number; anchor: "start" | "middle" | "end" };
+type Style = {
+  size: number;
+  weight: number;
+  anchor: "start" | "middle" | "end";
+};
 type Run = { text: string; size: number; weight: number };
-type Label = { text: string; x: number; y: number; width: number; anchor: Style["anchor"] };
+type Label = {
+  text: string;
+  x: number;
+  y: number;
+  width: number;
+  anchor: Style["anchor"];
+};
 type Spill = {
   text: string;
   room: number;
@@ -94,7 +104,12 @@ function collapsed(glyphs: Glyph[]): Glyph[] {
  * anchor of the element that started it, as the browser lays it out.
  */
 function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Label[] {
-  type Line = { x: number; y: number; anchor: Style["anchor"]; glyphs: Glyph[] };
+  type Line = {
+    x: number;
+    y: number;
+    anchor: Style["anchor"];
+    glyphs: Glyph[];
+  };
   const attrs = node.attribs ?? {};
   const lines: Line[] = [
     {
@@ -107,7 +122,11 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
   const add = (child: Node, inherited: Style): void => {
     if (child.type === ElementType.Text) {
       for (const char of child.data ?? "")
-        lines.at(-1)?.glyphs.push({ char, size: inherited.size, weight: inherited.weight });
+        lines.at(-1)?.glyphs.push({
+          char,
+          size: inherited.size,
+          weight: inherited.weight,
+        });
       return;
     }
     if (child.type !== ElementType.Tag || child.name?.toLowerCase() !== "tspan") return;
@@ -126,6 +145,19 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
         (child.attribs?.y !== undefined ? number(child.attribs.y) + at.dy : last.y) +
         number(child.attribs?.dy);
       last.anchor = own.anchor;
+    } else if (child.attribs?.x === undefined && rows && last) {
+      // Words already sit in the old row, so this run starts a new row where
+      // they end, anchored as the run says.
+      const before = collapsed(last.glyphs).reduce((sum, glyph) => sum + glyphWidth(glyph), 0);
+      const end = last.anchor === "middle" ? before / 2 : last.anchor === "end" ? 0 : before;
+      lines.push({
+        x: last.x + end,
+        y:
+          (child.attribs?.y !== undefined ? number(child.attribs.y) + at.dy : last.y) +
+          number(child.attribs?.dy),
+        anchor: own.anchor,
+        glyphs: [],
+      });
     }
     if (child.attribs?.x !== undefined) {
       const y = child.attribs.y !== undefined ? number(child.attribs.y) + at.dy : (last?.y ?? 0);

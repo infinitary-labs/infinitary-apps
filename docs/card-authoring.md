@@ -700,9 +700,9 @@ The design skill states the whole rule (`.claude/skills/infinitary-design/compon
   Instead, once the host takes a card as written, the `emit_card` answer lists every SVG label whose measured words end within 8 units of the edge of the box that holds its anchor, or past it (`figureLabelFacts`, `src/core/pi/cardFigureFit.ts`), with how far and the repairs: shorten the label, widen the box, or draw the box as HTML.
   The facts follow the receipt after a blank line and end with a fixed sentence, which the corpus and replay readers cut off together (`src/shared/labelFit.ts`), so a title holding those words is never read as the facts.
   They ride on every write the host accepted the body of, whenever the captain sees it: a plain send, a first mate's revision with a thread line, and a created or revised shared card.
-  A refusal, a reply alone, an unchanged card and a repeated operation get none.
+  A refusal, a reply alone, an unchanged or repeated typed outcome get none; an ordinary resend of the host's own card is a write and gets them.
   A root `<svg>`'s own `font-size` attribute is not read, since the frame's `svg` rule outranks it; its inline style is.
-  The measure uses the card font's advances, a table the generator `scripts/generate-card-glyph-widths.ts` reads from Chromium (`cardGlyphWidths.generated.ts`); the frame's 12.5px unless the figure declares a size; `rect` and `text` geometry with no transform but `translate`; and each `tspan` that names its own `x` as its own line.
+  The measure uses the card font's advances, a table the generator `scripts/generate-card-glyph-widths.ts` reads from Chromium (`cardGlyphWidths.generated.ts`); the frame's 12.5px unless the figure declares a size; `rect` and `text` geometry with no transform but `translate`; each `tspan` that names its own `x` as its own line, and a `tspan` that names only `y` or `dy` after words as a new row from where those words end.
   It leaves `<foreignObject>` and what a script draws alone.
   A label past its box is a spill the measure saw; a label inside the 8 units is a precaution, since Chromium sets small type a little differently from one card width to the next.
 - **Weight.**

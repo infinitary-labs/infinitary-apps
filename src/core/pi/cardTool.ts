@@ -1144,8 +1144,8 @@ async function emitCard(
   };
   const shown = await options.onCard(card);
   // The label-fit facts go only where the host took this body as written; a
-  // refusal, a reply alone, an unchanged card and a repeated operation did
-  // not show it.
+  // refusal, a reply alone, an unchanged or repeated typed outcome did not
+  // show it. A plain string answer is an ordinary write and carries them.
   const fit = (took: boolean): string => (took ? figureLabelFacts(card.body) : "");
   // A write on someone else's card answers what the host saved, typed.
   if (typeof shown === "object" && "line" in shown)

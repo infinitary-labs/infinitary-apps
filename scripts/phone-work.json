@@ -257,11 +257,11 @@
   },
   "project-filter": {
     "iphone": {
-      "reads": 450,
+      "reads": 392,
       "launches": 3
     },
     "ipad": {
-      "reads": 500,
+      "reads": 411,
       "launches": 3
     }
   }

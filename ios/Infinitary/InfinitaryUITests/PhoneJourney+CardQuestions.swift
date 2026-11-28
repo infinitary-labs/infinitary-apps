@@ -78,6 +78,17 @@ extension PhoneJourney {
         XCTAssertTrue(app.webViews.staticTexts[googleQuestion].firstMatch.waitForPresence(timeout: 10), app.debugDescription)
         let screen = app.windows.firstMatch.frame
         let buttons = choices.map { app.buttons["card-action-\($0)"].firstMatch }
+        // Where the choices outgrow the quarter of the screen the pinned foot may take, they follow the body in the card's
+        // scroller (docs/ios.md, "The choices stay at the foot"), and a person scrolls to them, as the step does.
+        let scroll = app.scrollViews["card-scroll"].firstMatch
+        let inView = { (id: String) in
+            let held = scroll.buttons["card-action-\(id)"].firstMatch
+            return !held.exists || scroll.frame.insetBy(dx: -0.5, dy: -0.5).contains(held.frame)
+        }
+        for _ in 0..<8 where !choices.allSatisfy(inView) {
+            scroll.swipeUp()
+            waitForSteadyTarget(scroll)
+        }
         for (id, button) in zip(choices, buttons) {
             XCTAssertTrue(button.waitForPresence(timeout: 10), "No button for \(id)\n\(app.debugDescription)")
             let tappable = NSPredicate { _, _ in button.isEnabled && button.isHittable }

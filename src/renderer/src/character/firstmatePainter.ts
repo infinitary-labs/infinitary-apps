@@ -58,6 +58,18 @@ import {
   warmNeonHalo,
 } from "./glow";
 import type { FidgetVariant, FirstmateState, MachineSnapshot } from "./machine";
+import {
+  drawMeteorStormGlints,
+  isMeteor,
+  meteorBody,
+  meteorEyes,
+  meteorLights,
+  meteorLitAt,
+  placeStormVertices,
+  type StormGlint,
+  stormFlights,
+  stormLanded,
+} from "./meteors";
 import { noticeFrame } from "./notice";
 import { prefersReducedMotion } from "./reducedMotion";
 import { drawReplyGarnish, isReplyEmote, type ReplyFrame, replyFrame } from "./replies";
@@ -330,6 +342,8 @@ const dotCoreAlpha = new Float64Array(FM_V.length);
 // sky figure; the black hole's placer fills it (zeros when it is not
 // playing) and the sky placers write it when theirs is.
 const windProgress = new Float64Array(16);
+// How far each of the storm's points has left the frame (./meteors).
+const stormProgress = new Float64Array(16);
 // The sky fidgets' restyle of the dots (./sky SkyDots), reset every frame.
 const skyDots: SkyDots = {
   scale: new Float64Array(16),
@@ -405,7 +419,14 @@ export type Sim = {
   /** The cinch's own clock (./cinch), and how far the working state lets it show. */
   cinch: CinchClock;
   cinchGate: number;
+  /** The storm's 16 points where they last stood, x, y pairs from the center, for the crew canvas (./meteors). */
+  stormHome: Float64Array;
+  /** The fireball's turn of the frame last frame, so the turn is added as it changes (./meteors). */
+  meteorFollow: number;
 };
+
+/** Each vertex's winding rank, inner square first: the order the storm's points come home in (./meteors). */
+export const FM_WINDING_RANK: readonly number[] = BH_RANK;
 
 export function createSim(
   size: number,
@@ -459,6 +480,8 @@ export function createSim(
     flickerBoost: 0,
     cinch: new CinchClock(foldStarts),
     cinchGate: 0,
+    stormHome: new Float64Array(32),
+    meteorFollow: 0,
   };
 }
 
@@ -651,6 +674,26 @@ export function drawFrame(
   // The supernova (./supernova): the collapse, the bounce and the eyes.
   const snB = fv === "supernova" ? supernovaBody(et) : null;
   const snEyes = fv === "supernova" ? supernovaEyes(et) : null;
+  // A meteor fidget (./meteors): the hush, the meteors' light on the frame,
+  // and the eyes on the sky. The storm's points falling home light it from
+  // where they were last drawn.
+  const mv = isMeteor(fv) ? fv : null;
+  const mtB = mv ? meteorBody(mv, et) : null;
+  const mtSky = mv
+    ? meteorLights(mv, et, mv === "storm" ? stormFlights(et, BH_RANK, sim.stormHome) : [])
+    : null;
+  const mtLit = mtSky ? meteorLitAt(mtSky.lights, 0, 0) : 0;
+  const mtHush = mtB?.hush ?? 0;
+  const mtEyes =
+    mv && mtSky
+      ? meteorEyes(
+          mv,
+          et,
+          mtSky.watch,
+          mv === "storm" ? stormLanded(et, BH_RANK, sim.stormHome) : null,
+          sim.size * 0.27,
+        )
+      : null;
   // Algol's eclipse dims the whole character's light (./algol).
   const dim = alg > 0.001 ? algolDim(alg, et) : 1;
   const t = FM_STATES[state] ?? (FM_STATES.idle as StateTargets);
@@ -707,8 +750,12 @@ export function drawFrame(
     sim.lastKick = kick;
   }
   sim.vel += (0.5 + (level || 0) * 6 - sim.vel) * Math.min(dt * 1.5, 1);
-  sim.a += (cur.sa * cinchB.spin + (wp?.sa ?? 0) + (snB?.spin ?? 0)) * dt;
-  sim.b += (cur.sb * cinchB.spin + (wp?.sb ?? 0)) * dt;
+  const mtSpin = mtB?.spin ?? 1;
+  sim.a += (cur.sa * cinchB.spin * mtSpin + (wp?.sa ?? 0) + (snB?.spin ?? 0)) * dt;
+  sim.b += (cur.sb * cinchB.spin * mtSpin + (wp?.sb ?? 0)) * dt;
+  // The fireball turns the frame to follow its crossing, and back.
+  if (mtB && mv === "fireball") sim.a += (mtB.follow - sim.meteorFollow) * 0.55;
+  sim.meteorFollow = mv === "fireball" ? (mtB?.follow ?? 0) : 0;
   sim.hs += dt * sim.vel * cur.flat;
 
   if (state === "listening") sim.gaze.look(0, 0);
@@ -728,6 +775,7 @@ export function drawFrame(
     else if (fv === "saturn") sim.gaze.look(0, 0.1);
     else if (wp) sim.gaze.look(wp.look[0], wp.look[1]);
     else if (snEyes) sim.gaze.look(snEyes.look[0], snEyes.look[1]);
+    else if (mtEyes) sim.gaze.look(mtEyes.look[0], mtEyes.look[1]);
     else sim.gaze.look(0, 0);
   } else if (reply?.gaze) sim.gaze.look(reply.gaze.x, reply.gaze.y);
   else sim.gaze.free();
@@ -771,13 +819,14 @@ export function drawFrame(
   if (fv === "galaxy") sim.lid = Math.max(sim.lid, gal * GALAXY.lid);
   if (wp) sim.lid = Math.max(sim.lid, wp.lid);
   if (snEyes) sim.lid = Math.max(sim.lid, snEyes.lid);
+  if (mtEyes) sim.lid = Math.max(sim.lid, mtEyes.lid);
   sim.wink = state === "greet" ? band(et, 0.42, 0.1, 0.68, 0.12) : 0;
   sim.happy =
     state === "celebrate"
       ? band(et, 0.08, 0.15, 0.85, 0.15)
       : state === "greet"
         ? band(et, 0.12, 0.18, 0.82, 0.18)
-        : (reply?.happy ?? 0);
+        : Math.max(reply?.happy ?? 0, mtEyes?.happy ?? 0);
 
   const c = size / 2;
   const { accRgb, dimRgb, hotRgb, bgRgb, boost } = sim;
@@ -831,6 +880,9 @@ export function drawFrame(
     poseRot = wp.rot;
     poseSx = wp.sx;
     poseSy = wp.sy;
+  } else if (mtB && mtB.wish > 0) {
+    // The wish: one small bow.
+    poseTy = mtB.wish * R * 0.07;
   } else if (reply) {
     poseRot = reply.rot;
     poseTx = reply.tx * size;
@@ -857,6 +909,9 @@ export function drawFrame(
   const glowA =
     dim *
     (snB?.glow ?? 1) *
+    // The hush sinks the glow; a meteor's light on the frame lifts it.
+    (1 - 0.7 * mtHush) *
+    (1 + 3 * mtLit) *
     (sim.haloBoost *
       cur.glow *
       (wp?.glow ?? 1) *
@@ -952,6 +1007,24 @@ export function drawFrame(
     ? placeSupernovaVertices(et, BH_LAYOUT.rank, pts, c, R, tSec, windProgress, skyDots)
     : [];
   const squeeze = snB?.squeeze ?? 0;
+  // The storm: the frame fades where it stands and its points come home
+  // down the stream, inner cell first (./meteors). A wire fades by the
+  // farther of its two ends, so it knits again only once both are home.
+  stormProgress.fill(0);
+  const stormGlints: StormGlint[] =
+    mv === "storm"
+      ? placeStormVertices(et, BH_RANK, pts, c, stormProgress, skyDots, sim.stormHome)
+      : [];
+  // In the hush each point twinkles as a star, and a meteor's light lights it.
+  if (mtHush > 0.001 || mtLit > 0.001) {
+    for (let i = 0; i < 16; i++) {
+      const tw = mtHush * (0.5 + 0.5 * noise1(tSec * 3.1 + i * 2.3));
+      skyDots.white[i] = Math.max(skyDots.white[i] as number, 0.55 * tw, 0.8 * mtLit);
+    }
+  }
+  // In the hush the wires sink to under half their light, so the frame
+  // reads as stars among the stars.
+  const mtWire = (1 - 0.58 * mtHush) * (1 + 0.9 * mtLit);
 
   // The crystal: the vertices lift into the standing bipyramid by the
   // crystal amount (./crystal owns the geometry).
@@ -1001,6 +1074,7 @@ export function drawFrame(
     // The cinch dims the outer cell and lifts every wire at its end.
     if (P[3] > 0 && Q[3] > 0) alpha *= cinchB.outer;
     alpha *= (1 + 0.5 * cinchLift) * (1 + 0.5 * squeeze);
+    if (mv) alpha *= mtWire * (1 - Math.max(stormProgress[p] ?? 0, stormProgress[q] ?? 0) * 0.97);
     if (alpha < 0.02) {
       edgeSkip[i] = 1;
       continue;
@@ -1013,7 +1087,7 @@ export function drawFrame(
     // runs cool (./flicker `filamentWaver`). With no flicker `fw` is 0 and
     // every line below is the resting rig's own arithmetic.
     const fw = flick > 0 ? flick * filamentWaver(i, now) : 0;
-    edgeMix[i] = Math.max(m, Math.min(1, fw * 0.8), squeeze);
+    edgeMix[i] = Math.max(m, Math.min(1, fw * 0.8), squeeze, 0.6 * mtLit);
     edgeAlpha[i] = Math.min(1, alpha * (0.85 + 0.15 * m) * (1 + 0.85 * fw)) * bhDim;
     edgeCore[i] = (neon > 0.02 || fw > 0.08) && m > 0.5 ? 1 : 0;
     edgeCoreAlpha[i] = Math.min(1, alpha) * Math.max(neon, fw * 1.1) * 0.85 * bhDim;
@@ -1165,6 +1239,9 @@ export function drawFrame(
     1,
   );
   ctx.globalAlpha = 1;
+  if (stormGlints.length > 0) {
+    drawMeteorStormGlints(ctx, stormGlints, { wire: briRgb, bg: bgRgb, boost });
+  }
   // The sky fidgets' over-layers: a constellation's traced figure and its
   // nebula, Saturn's near ring half in front of the globe.
   if (con && skyK > 0.001) {
@@ -1229,7 +1306,11 @@ export function drawFrame(
   const eyeCol: Rgb = fmMixRgb(eyeBase, [255, 246, 230], Math.min(0.95, 0.45 + spill * 0.3));
   // The supernova draws the eyes in through the collapse and opens them wide after.
   const gather = snEyes?.gather ?? 1;
-  const eyeK = (1 - bh * 0.18) * cur.eyeScale * (snEyes ? snEyes.wide * (0.6 + 0.4 * gather) : 1);
+  const eyeK =
+    (1 - bh * 0.18) *
+    cur.eyeScale *
+    (snEyes ? snEyes.wide * (0.6 + 0.4 * gather) : 1) *
+    (mtEyes?.wide ?? 1);
   const gxo = sim.eye.x * R * 0.1;
   const gyo = sim.eye.y * R * 0.08;
   // Parallax from the rotation keeps them inside the structure; it fades out

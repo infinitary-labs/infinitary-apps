@@ -225,6 +225,10 @@ describe("FirstmateMachine fidget pool", () => {
       "corkscrew",
       // The supernova (the captain: "one more fidget animation added to the pool for the first mate character that's somewhat like a supernova explosion").
       "supernova",
+      // The meteor fidgets (the captain: "a few variants of a meteor shower fidget animation to the pool of first mate fidget animations"; all three approved on their preview).
+      "shower",
+      "storm",
+      "fireball",
       "blackhole",
     ]);
     for (const sky of ["orion", "dipper", "saturn", "galaxy", "algol"] as const) {

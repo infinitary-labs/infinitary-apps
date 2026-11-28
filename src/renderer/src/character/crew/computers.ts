@@ -4,6 +4,7 @@ import * as m from "@shared/i18n/messages.generated";
 import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
 import { Spring } from "../face";
+import type { MeteorFrame } from "../meteors";
 import type { SupernovaFrame } from "../supernova";
 import type { WarpFrame } from "../warp";
 import { type Program, programShare } from "./constellation";
@@ -684,13 +685,14 @@ export class ComputerOrbits extends CrewOrbit {
     rush = 0,
     warp: WarpFrame | null = null,
     supernova: SupernovaFrame | null = null,
+    meteors: MeteorFrame | null = null,
   ): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.clock) / 1000, 0.05);
     this.clock = now;
     // A crewmate arriving or gone can change the middle project, and with it others' groups.
     if (this.grouping?.grouping === "project" && this.present().join() !== this.rosterKey)
       this.regroup();
-    const legacy = super.update(now, settled, rush, warp, supernova);
+    const legacy = super.update(now, settled, rush, warp, supernova, meteors);
     this.settleSeats(dt, settled);
     const clusters = this.clusters();
     this.positions = new Map(clusters.map((c) => [c.id, c]));
@@ -717,7 +719,7 @@ export class ComputerOrbits extends CrewOrbit {
         const center = this.positions.get(computer.id);
         local.frozenCenter = local.lastCenter ?? { x: center?.x ?? 0, y: center?.y ?? 0 };
       }
-      // The black hole's rush, the warps and the supernova stay at home: a remote cluster
+      // The black hole's rush, the warps, the supernova and the meteors stay at home: a remote cluster
       // orbits its own center, out of the Firstmate's pull.
       let frame = computer.reachable
         ? local.model.update(local.time, settled, 0)

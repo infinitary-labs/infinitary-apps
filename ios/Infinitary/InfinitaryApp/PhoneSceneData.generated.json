@@ -239,6 +239,9 @@
     "sphere": 6000,
     "corkscrew": 6000,
     "supernova": 6000,
+    "shower": 6500,
+    "storm": 6500,
+    "fireball": 7000,
     "blackhole": 5600
   },
   "solids": {

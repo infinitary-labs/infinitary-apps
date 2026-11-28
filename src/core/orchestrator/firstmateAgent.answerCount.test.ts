@@ -182,4 +182,40 @@ describe("one answer for every message it answers", () => {
     expect(f.tasks.capture.listAsks()[0]?.answerCardId ?? null).not.toBe("card-strip-merge");
     expect(retries(f)).toHaveLength(1);
   });
+
+  // INF-7157: the first mate answered a question on its card, started the
+  // work for that question and its correction naming only the correction,
+  // then closed the card. The question was left with no work running, the
+  // app asked for a second answer, and that card later carried the
+  // crewmate's finding ahead of the crewmate's own card. Work that names
+  // both messages counts for both.
+  it("keeps a question's started work counted when the work names it and its correction", async () => {
+    const f = setup({ silent: true });
+    vi.advanceTimersByTime(1_000);
+    await f.agent.converse("the replies never went out, did it not work?");
+    const [question] = f.tasks.capture.listAsks();
+    await toolsOf(f.specs).get("emit_card")?.execute("c1", {
+      id: "card-fm-replies",
+      title: "The replies did not go out",
+      body: "<p>I am checking why the replies did not go out.</p>",
+      ask_id: question?.id,
+    });
+    await f.agent.converse("i mean the ones on GitHub");
+    const [, correction] = f.tasks.capture.listAsks();
+    await toolsOf(f.specs)
+      .get("spawn_crewmate")
+      ?.execute("s1", {
+        title: "Find why the GitHub replies did not go out",
+        goal: "Say why the GitHub replies did not go out.",
+        user_words: "the replies never went out, did it not work? i mean the ones on GitHub",
+        ask_id: [question?.id, correction?.id],
+      });
+    await toolsOf(f.specs)
+      .get("close_card")
+      ?.execute("k1", { card_id: "card-fm-replies", reason: "The task answers it." });
+    await finish(f, "I started the work.");
+    await tick();
+
+    expect(retries(f)).toEqual([]);
+  });
 });

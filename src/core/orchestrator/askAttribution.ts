@@ -26,8 +26,8 @@ const ATTRIBUTING_TOOLS = new Set([
 // "EVERY TURN is about a task"), not on each of the sixteen tools that carry it.
 const ASK_ID = Type.Optional(Type.String());
 
-// emit_card alone may name several messages: one answer can answer a
-// question and its correction, and each message then counts it (INF-6769).
+// emit_card may name several messages: one answer can answer a question
+// and its correction, and each message then counts it (INF-6769).
 // i18n-exempt: a tool description served to the first mate
 const ANSWER_ASK_IDS = Type.Optional(
   Type.Union([Type.String(), Type.Array(Type.String(), { minItems: 1 })], {
@@ -36,8 +36,19 @@ const ANSWER_ASK_IDS = Type.Optional(
   }),
 );
 
-// The tool whose ask_id may list several messages.
+// The answering tool, whose ask_id may list several messages.
 const ANSWERING_TOOL = "emit_card";
+
+// Work started or filed may name several messages too: one task can be the
+// work for a question and its correction, and a message left without it
+// counts as having no work running and is forced to a second answer (INF-7157).
+// i18n-exempt: a tool description served to the first mate
+const WORK_ASK_IDS = Type.Optional(
+  Type.Union([Type.String(), Type.Array(Type.String(), { minItems: 1 })], {
+    description:
+      "The open_asks id this work answers, or a list of every one it answers, such as a question and its correction.",
+  }),
+);
 
 // i18n-exempt: served to the first mate as a refusal, never shown to a person
 const UNREAD = "ask_id must name a message this turn has read.";
@@ -74,7 +85,11 @@ type AttributedTool<Tool> =
           Name,
           TObject<
             Params["properties"] & {
-              ask_id: Name extends typeof ANSWERING_TOOL ? typeof ANSWER_ASK_IDS : typeof ASK_ID;
+              ask_id: Name extends typeof ANSWERING_TOOL
+                ? typeof ANSWER_ASK_IDS
+                : Name extends "spawn_crewmate" | "create_task"
+                  ? typeof WORK_ASK_IDS
+                  : typeof ASK_ID;
             } & (Name extends "spawn_crewmate" | "create_task"
                 ? { origin: typeof ORIGIN }
                 : unknown)
@@ -99,7 +114,12 @@ export function withAskAttribution<Tool extends BoundTool>(
     ...tool.parameters,
     properties: {
       ...tool.parameters.properties,
-      ask_id: tool.name === ANSWERING_TOOL ? ANSWER_ASK_IDS : ASK_ID,
+      ask_id:
+        tool.name === ANSWERING_TOOL
+          ? ANSWER_ASK_IDS
+          : FILING_TOOLS.has(tool.name)
+            ? WORK_ASK_IDS
+            : ASK_ID,
       ...(FILING_TOOLS.has(tool.name)
         ? { origin: tool.name === "create_task" ? ORIGIN : ORIGIN_AS_CREATE_TASK }
         : {}),
@@ -114,7 +134,7 @@ export function withAskAttribution<Tool extends BoundTool>(
       const filing = FILING_TOOLS.has(tool.name);
       const { origin, ...input } = rest;
       const named = filing ? origin : undefined;
-      const list = Array.isArray(given) && tool.name === ANSWERING_TOOL;
+      const list = Array.isArray(given) && (tool.name === ANSWERING_TOOL || filing);
       if (
         given !== undefined &&
         typeof given !== "string" &&

@@ -5,14 +5,73 @@ html[data-card-overlay] body {
   background: transparent;
 }
 html[data-card-overlay] {
-  /* The panel's whole height, less air above and below the card. */
-  --card-max-height: calc(100vh - 2 * var(--space-6));
+  /* The hide button's lane above the card: its 28 px, then the two 7 px
+     peeks (CARD_PEEK_STEP) and a gap, so it never sits on the peeks. */
+  --overlay-hide-lane: calc(28px + 14px + var(--space-2));
+  /* The pager's lane under the card: its 10 px gap (CardStack) and its
+     pill, the 28 px row inside a 1 px border. */
+  --overlay-pager-lane: 40px;
+  /* The panel's whole height, less air, the hide lane above and, centred
+     with the card, the pager's lane under it: the tallest card gives up both. */
+  --card-max-height: calc(
+    100vh -
+    2 *
+    (var(--space-4) + var(--overlay-hide-lane)) -
+    var(--overlay-pager-lane)
+  );
 }
 /* No composer lifts the stack: the card is centred in the panel's height. */
 html[data-card-overlay]:not([data-card-maximized]) [data-card-layer],
 html[data-card-overlay] [data-card-layer-leaving] {
   /* biome-ignore lint/complexity/noImportantStyles: the stack sets its top inline (STAGE_TOP), which only !important outranks */
   top: 50% !important;
+}
+html[data-card-overlay] [data-card-slot] {
+  anchor-name: --overlay-card;
+}
+/* The pager hangs under the card and moves with it, the two centred
+   together, instead of under the window's fixed lane, which here is nearly
+   the panel's height. The envelope keeps the cap's height: the card's
+   presentation reads its cap from it (cardPresentation.ts). */
+html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] > [data-card-slot],
+html[data-card-overlay]:not([data-card-maximized]) [data-card-envelope] > [data-card-pager] {
+  /* biome-ignore lint/complexity/noImportantStyles: CardStack places both inline in its envelope, which only !important outranks */
+  position: relative !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  top: auto !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  transform: none !important;
+  flex: none;
+}
+/* Over another app the pager stands on the overlay's own pill surface, as
+   the hide button does, so it reads on any scene. */
+html[data-card-overlay] [data-card-pager] > div {
+  padding: 0 2px;
+  border: 1px solid var(--line-1);
+  border-radius: var(--radius-pill);
+  background: var(--bg-1);
+  box-shadow: var(--shadow-2);
+}
+html[data-card-overlay] [data-card-pager] [data-unread-dot] {
+  /* biome-ignore lint/complexity/noImportantStyles: the dot's ring is inline (CardStack), drawn in the window's ground */
+  box-shadow: 0 0 0 2px var(--bg-1) !important;
+}
+/* The new badge stays beside the pill, on an opaque ground of its own. */
+html[data-card-overlay] [data-card-pager] [role="status"] > * {
+  border-radius: var(--radius-s);
+  box-shadow: var(--shadow-2);
+}
+html[data-card-overlay] [data-card-pager] [role="status"] > span,
+html[data-card-overlay] [data-card-pager] [role="status"] > button > span {
+  /* biome-ignore lint/complexity/noImportantStyles: the badge's ground is inline (Badge) and see-through */
+  background: linear-gradient(var(--accent-dim), var(--accent-dim)), var(--bg-1) !important;
+  /* biome-ignore lint/complexity/noImportantStyles: as above */
+  border-color: var(--line-1) !important;
 }
 html[data-card-overlay] [data-stage] {
   position: absolute;
@@ -55,9 +114,13 @@ html[data-card-overlay] [data-stage] {
   }
 }
 
-/* The hide corner: back to the app without answering. */
+/* The hide button: back to the app without answering. It sits just above
+   the card's top corner, clear of the peeks, and follows the card as its
+   height eases (the slot is its anchor, so the button comes after the stage
+   in the page). A card made large, or no card, leaves it in the panel's corner. */
 [data-card-overlay-hide] {
   position: fixed;
+  position-anchor: --overlay-card;
   inset-block-start: var(--space-4);
   inset-inline-end: var(--space-4);
   z-index: 2;
@@ -72,6 +135,13 @@ html[data-card-overlay] [data-stage] {
   color: var(--fg-2);
   box-shadow: var(--shadow-2);
   cursor: pointer;
+}
+html:not([data-card-maximized]) [data-card-overlay-hide] {
+  inset-block-start: calc(
+    anchor(top, calc(var(--space-4) + var(--overlay-hide-lane))) -
+    var(--overlay-hide-lane)
+  );
+  inset-inline-end: anchor(inside, var(--space-4));
 }
 [data-card-overlay-hide]:hover {
   color: var(--fg-1);

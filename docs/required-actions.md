@@ -38,7 +38,7 @@ The blocked action stays visible in its record, but its card appears only when p
 
 `CardService` presents the first confirmation card and records its presented generation in one transaction.
 Its host button records manual completion of that generation in the closing interaction's transaction.
-A submitted stale or remounted offer refuses confirmation or consequential merging before anything closes.
+A submitted stale or remounted offer refuses confirmation, a step's Decline or consequential merging before anything closes.
 Manual results read “Confirmed by you”.
 Instructions are inert text; a confirmation runs nothing.
 Not now, the close control, navigation, replies and opening Devices do not complete the action.

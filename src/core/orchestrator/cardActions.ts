@@ -496,9 +496,15 @@ export class CardActions {
               ) === "queued";
           }
         : undefined;
+    // A card for a step only the captain can do (docs/required-actions.md).
+    const stepCard = Boolean(card.taskId && associated?.delivery?.captainAction);
+    // The captain's no on it - the app's Decline, which such a card always
+    // takes - drops the step and closes the card (INF-7234), instead of
+    // reaching its thread the way It failed does.
+    const declinesStep = stepCard && source === "chrome" && chosen.declines === true && !effect;
     const confirming = effect?.kind === "host" && effect.op === "confirm-required-action";
     const consequentialMerge = card.requiredActions !== undefined && merge !== undefined;
-    if ((confirming || consequentialMerge) && submission !== undefined) {
+    if ((confirming || consequentialMerge || declinesStep) && submission !== undefined) {
       const gesture = gestureSchema.safeParse(submission);
       if (
         !gesture.success ||
@@ -659,12 +665,6 @@ export class CardActions {
     let takenFirstmateAsk: IntegrationAskTaken | undefined;
     // INF-4446: the captain's yes to a check, kept with their other yeses.
     let checkYes = false;
-    // A card for a step only the captain can do (docs/required-actions.md).
-    const stepCard = Boolean(card.taskId && associated?.delivery?.captainAction);
-    // The captain's no on it - the app's Decline, which such a card always
-    // takes - drops the step and closes the card (INF-7234), instead of
-    // reaching its thread the way It failed does.
-    const declinesStep = stepCard && source === "chrome" && chosen.declines === true && !effect;
     // What else the field sent goes on the choice's record, its pictures
     // copied once for every reader (`choice-attachments.md`).
     const kept = chrome?.carried ? keepCarried(chrome.carried) : undefined;

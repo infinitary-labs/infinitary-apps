@@ -1007,6 +1007,23 @@ describe("CrewSupervisor: the card thread", () => {
     expect(heard).toContain(`${waiting?.key} "Restart the setup"`);
     await tick();
   });
+  // INF-7234's review: Decline drops a step, so a click from an offer the
+  // card no longer shows is refused, as its confirmation is, and drops nothing.
+  it("INF-7234 refuses a Decline from a stale offer of a required-action card", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    const submission = {
+      id: "click-stale-offer",
+      lifecycleId: card.lifecycleId,
+      offerId: "an-older-offer",
+    };
+    expect(() =>
+      h.supervisor.cardActions.act(card.id, DECLINE_ACTION_ID, "chrome", undefined, submission),
+    ).toThrow();
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    expect(h.tasks.get(taskId)?.delivery?.captainAction?.state).toBe("ready");
+    expect(h.supervisor.cards.snapshot().find((entry) => entry.id === card.id)).toBeDefined();
+    await tick();
+  });
   // INF-7234 part 2: words typed with Not now on such a card reached no one.
   it("INF-7234 Not now with words puts the required action off and passes the words to the first mate", async () => {
     const { h, taskId, card } = withRequiredAction();

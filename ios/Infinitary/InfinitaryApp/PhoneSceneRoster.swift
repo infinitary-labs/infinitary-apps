@@ -27,11 +27,16 @@ struct PhoneSceneRoster {
             retained = retained.filter { roots.contains($0.key) }
             let crew = (board?.tasks ?? []).filter { $0.kind == "work" && $0.status == "active" && $0.program != true }
             let grouped = PhoneCrewGroups.read(board: board, tasks: crew, presence: presence, grouping: grouping, focus: focus)
+            // A program with live parts draws where they run now, and only there, as the desktop's routePrograms: a focus
+            // or a finished project can move them between a project's group and the first mate's ring. One with none
+            // keeps where its parts last ran.
+            var live: [String: Set<String>] = [:]
             for task in crew where task.reviewOf == nil {
                 if let parent = task.parentId, roots.contains(parent) {
-                    retained[parent, default: []].insert(grouped?.groups[task.id] ?? PhoneSceneRoster.computerID(task))
+                    live[parent, default: []].insert(grouped?.groups[task.id] ?? PhoneSceneRoster.computerID(task))
                 }
             }
+            retained.merge(live) { _, now in now }
             // Seats are remembered from the last read of a real board, as the desktop remembers them; a new scene seats everyone afresh.
             let books = key?.generation == generation && key?.grouping == grouping && (value?.sequence ?? -1) >= 0 ? value?.books : nil
             var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation,

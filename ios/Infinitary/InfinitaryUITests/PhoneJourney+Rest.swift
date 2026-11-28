@@ -226,6 +226,24 @@ extension PhoneJourney {
         XCTAssertFalse(ring.exists, "With two projects' crew and no focus, the first mate's ring has no name to press")
         picture("native-scene-grouped-two-projects")
 
+        // docs/crew-orbits.md, "Grouping by project": the middle project is the only one with crew, "else the window's
+        // focused project". The phone's own focus (the Filter) picks it as the computer's window focus does, and the
+        // other project keeps its group.
+        tapOnPhone(app.buttons["project-filter"])
+        let offshoreRow = app.buttons["project-filter-" + (try XCTUnwrap(projects["offshore-survey"]))]
+        XCTAssertTrue(offshoreRow.waitForPresence(timeout: 10), app.debugDescription)
+        tapOnPhone(offshoreRow)
+        XCTAssertTrue(offshoreRow.waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(offshore.waitForAbsence(timeout: 20), "The focused project's crew sit with the first mate\n\(app.debugDescription)")
+        XCTAssertTrue(ring.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(ring.label, "offshore-survey", "The first mate's ring takes the focused project's name")
+        XCTAssertTrue(harbour.exists, "The other project keeps its own group\n\(app.debugDescription)")
+        picture("native-scene-grouped-focused")
+        tapOnPhone(app.buttons["project-focus-clear"])
+        XCTAssertTrue(app.otherElements["project-focus-row"].waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(offshore.waitForPresence(timeout: 20), "At All projects the two projects' crew keep their own groups again")
+        XCTAssertTrue(ring.waitForAbsence(timeout: 10), app.debugDescription)
+
         _ = try await home("scene-one-project")
         XCTAssertTrue(offshore.waitForAbsence(timeout: 20), app.debugDescription)
         XCTAssertTrue(ring.waitForPresence(timeout: 10), app.debugDescription)

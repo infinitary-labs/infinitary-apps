@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "settings",
       "title": "Gmail automations check every 5 minutes and stay within Google's daily limit",
-      "body": "Gmail automations now check for new mail every 5 minutes, as Calendar automations do, and several Gmail automations share those checks. Checking every minute used up Google's daily Gmail allowance by morning, so Gmail stopped answering until midnight. If Google still says the daily limit is reached, Infinitary waits until midnight Pacific time to check again. A limit on Gmail no longer pauses Calendar or Drive.",
+      "body": "Gmail automations now check for new mail every 5 minutes, as Calendar automations do, and several Gmail automations share those checks. Checking every minute used up Google's daily Gmail allowance by morning, so Gmail stopped answering until midnight. If Google still says the daily limit is reached, Infinitary waits until midnight Pacific time to check again. A limit on Gmail no longer pauses Calendar, Drive, Docs or Sheets.",
       "picture": {
         "dark": "gmail-five-minute-look-dark.webp",
         "light": "gmail-five-minute-look-light.webp",

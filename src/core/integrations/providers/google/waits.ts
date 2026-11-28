@@ -3,8 +3,8 @@ import type { GoogleService } from "./mcp";
 
 /**
  * How long each Google service waits after Google asks the app to slow down
- * (docs/integrations.md, "Google"). Gmail, Calendar and Drive each have a
- * daily allowance of their own at Google, so a refusal from one holds only
+ * (docs/integrations.md, "Google"). Each Google service has its own
+ * daily allowance at Google, so a refusal from one holds only
  * that one.
  *
  * - A Retry-After is waited out as Google says.

@@ -63,6 +63,8 @@ export type ListenedEvent = {
   label: string;
   /** How often to look, in ticks. */
   every: number;
+  /** Every turned-on rule on this event shares `every`: n of them each look every `every` times n ticks. */
+  shared?: boolean;
   /** A `required` one must be named, since the integration cannot look without it. */
   filters?: readonly { name: string; label: string; defaultValue?: string; required?: true }[];
   /** The integration says when something arrives, so a rule finds its place as soon as it listens. */
@@ -253,6 +255,11 @@ const WEEKDAY_NAMES = [
 
 /** Most occurrences a catch-up counts one by one before it stops counting. */
 const MISSED_COUNT_CAP = 10_000;
+
+/** One event across every rule listening to it, whatever each one filters. */
+function listenerKey(spec: { integration: string; event: string }): string {
+  return `${spec.integration}\u0000${spec.event}`;
+}
 
 function label(record: Pick<ScheduleRecord, "name" | "prompt">): string {
   return record.name ?? cutText(record.prompt, PROMPT_EXCERPT);
@@ -454,9 +461,10 @@ export class Scheduler {
     // reading it per rule, and again per look, stalled the main process on
     // each tick (INF-6885).
     const reading = this.reading();
+    const listeners = this.listenersByEvent();
     for (const record of this.options.store.list()) {
       if (record.spec.kind === "event") {
-        this.listen(record, false, reading);
+        this.listen(record, false, reading, listeners);
         continue;
       }
       if (record.state !== "enabled" || record.nextFire > now) continue;
@@ -641,7 +649,12 @@ export class Scheduler {
    * still looking looks again once that look ends, so nothing dropped
    * meanwhile waits for the next minute.
    */
-  private listen(record: ScheduleRecord, now = false, reading?: EventReading): void {
+  private listen(
+    record: ScheduleRecord,
+    now = false,
+    reading?: EventReading,
+    listeners?: Map<string, number>,
+  ): void {
     const events = this.options.events;
     if (!events || record.state !== "enabled" || record.spec.kind !== "event") {
       this.failedLooks.delete(record.id);
@@ -651,12 +664,16 @@ export class Scheduler {
       if (now) this.again.add(record.id);
       return;
     }
-    const found = (reading ?? events).find(record.spec.integration, record.spec.event);
+    const listened = (reading ?? events).find(record.spec.integration, record.spec.event);
     // A rule that does not look now has no row of failed looks to carry on.
-    if (!found || found.connection !== record.connection || found.paused) {
+    if (!listened || listened.connection !== record.connection || listened.paused) {
       this.failedLooks.delete(record.id);
       return;
     }
+    const sharing = listened.shared
+      ? ((listeners ?? this.listenersByEvent()).get(listenerKey(record.spec)) ?? 1)
+      : 1;
+    const found = sharing > 1 ? { ...listened, every: listened.every * sharing } : listened;
     const last = this.looked.get(record.id);
     if (!now && last !== undefined && this.ticks - last < found.every) return;
     this.looked.set(record.id, this.ticks);
@@ -673,6 +690,17 @@ export class Scheduler {
         if (current) this.listen(current, true);
       });
     this.looking.set(record.id, look);
+  }
+
+  /** How many turned-on event rules listen to each event, holds and put-offs included. */
+  private listenersByEvent(): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const record of this.options.store.list())
+      if (record.state === "enabled" && record.spec.kind === "event") {
+        const key = listenerKey(record.spec);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+      }
+    return counts;
   }
 
   /**

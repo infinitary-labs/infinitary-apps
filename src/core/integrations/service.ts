@@ -193,6 +193,8 @@ export type IntegrationListen = {
   label: string;
   /** How often the app looks, in the tick's minutes. */
   every: number;
+  /** `IntegrationEventSpec.shared`. */
+  shared?: true;
   filters?: readonly IntegrationEventFilter[];
   atOnce?: boolean;
   /** Paused in Settings → Integrations: it answers no look until resumed. */
@@ -397,6 +399,7 @@ export class IntegrationsService {
       event: spec.name,
       label: spec.label,
       every: spec.every,
+      ...(spec.shared ? { shared: true } : {}),
       ...(spec.filters ? { filters: [...spec.filters] } : {}),
       ...(spec.atOnce ? { atOnce: true } : {}),
       ...(row.settings.paused ? { paused: true } : {}),

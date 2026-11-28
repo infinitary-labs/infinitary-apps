@@ -344,6 +344,45 @@ describe("Gmail through its MCP server", () => {
     expect((lookedAt[1] ?? 0) - (lookedAt[0] ?? 0)).toBe(5);
   });
 
+  // INF-7264's spec: "Keep all Gmail checks together under about 3,000 a day, for example by
+  // stretching the interval per automation", since each look spends the same daily allowance.
+  it("shares the five-minute look among every rule listening for new mail", async () => {
+    const { google, integrations, clock, db } = await signedIn();
+    const store = new ScheduleStore(db);
+    const inbox = new InboxStore(db);
+    const scheduler = new Scheduler({
+      store,
+      inbox,
+      notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
+      broadcastEvent: () => {},
+      now: () => clock.now,
+      events: {
+        find: (integration, event) => integrations.listenable(integration, event),
+        look: (integration, event, cursor, filter) =>
+          integrations.look(integration, event, cursor, filter),
+      },
+    });
+    for (const prompt of ["Tell me: {{events}}", "File invoices: {{events}}"])
+      scheduler.create(
+        { kind: "event", integration: "google", event: "message_received" },
+        prompt,
+        true,
+      );
+    const searches = () =>
+      google.calls("gmail").filter((call) => call.tool === "search_threads").length;
+    const tick = async () => {
+      clock.now += 60_000;
+      scheduler.tick(clock.now);
+      await scheduler.settled();
+    };
+    // Past both rules' first looks, so the count below holds only looks on their cadence.
+    for (let minute = 0; minute < 10; minute += 1) await tick();
+    const before = searches();
+    for (let minute = 0; minute < 20; minute += 1) await tick();
+    // Twenty minutes hold four looks at one look per five minutes, two for each rule.
+    expect(searches() - before).toBe(4);
+  });
+
   // The captain's pick B on INF-7017's plan-mismatch card: a rule names only the conversation, and
   // the crewmate reads it by that id.
   it("reads the conversation a rule named as its newest message in the inbox, listing the rest by id, sender and date", async () => {

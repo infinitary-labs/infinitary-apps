@@ -104,6 +104,13 @@ export type IntegrationEventSpec = {
   /** How often, in minutes, a listening rule looks. */
   every: number;
   /**
+   * The cadence is a budget every rule listening shares, since each look
+   * spends the same daily allowance at the service: with n turned-on rules
+   * listening, each looks every `every` times n minutes, so together they
+   * look as often as one rule would.
+   */
+  shared?: true;
+  /**
    * Closed string filters the kind accepts, drawn by the shared event
    * editor; a rule must name a `required` one, since the kind cannot look without it.
    */

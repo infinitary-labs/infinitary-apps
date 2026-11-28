@@ -31,8 +31,10 @@ export const GMAIL_MESSAGE_EVENT: IntegrationEventSpec = {
     "Each Gmail conversation that gets new mail in the inbox, once a look; a later reply in it is a new event. Google asks the captain before anything reads who sent mail or what it says, so the summary names only the conversation's id: read_message with that id as thread reads its newest message, which Google may ask the captain about first.",
   // Each look is one search_threads, which Google counts as 10 of the Gmail MCP server's
   // 5,000 requests a day for the person's Google Cloud project: looking each five minutes
-  // spends 2,880, where each minute ran out before 8 AM.
+  // spends 2,880, where each minute ran out before 8 AM. Every rule on it shares that
+  // budget, so two rules would not spend 5,760 and run out by evening.
   every: 5,
+  shared: true,
 };
 
 const messageIdSchema = z

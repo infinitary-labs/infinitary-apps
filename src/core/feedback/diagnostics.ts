@@ -54,8 +54,8 @@ export function diagnosticsLines(
 ): string[] {
   // i18n-exempt: the diagnostics block goes in a public issue for Infinitary's maker, in English
   const lines = [
-    `- App: Infinitary ${fact(facts.app.version)} · ${fact(facts.app.channel)} · ${fact(facts.app.install)} · ${fact(facts.app.language)}`,
-    `- System: ${fact(facts.system.name)} ${fact(facts.system.release)} · ${fact(facts.system.chip)}`,
+    `- App (this computer): Infinitary ${fact(facts.app.version)} · ${fact(facts.app.channel)} · ${fact(facts.app.install)} · ${fact(facts.app.language)}`,
+    `- System (this computer): ${fact(facts.system.name)} ${fact(facts.system.release)} · ${fact(facts.system.chip)}`,
     `- Other computers: ${counted(facts.computers.map((computer) => `${computer.system} ${computer.version}`))}`,
     `- Phones: ${counted(facts.phones.map((phone) => phone.version))}`,
     `- Model connections: ${counted([...new Set(facts.models)])}`,

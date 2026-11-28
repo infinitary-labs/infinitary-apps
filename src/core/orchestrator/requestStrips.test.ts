@@ -14,7 +14,7 @@ const BODY = [
   "",
   "<details><summary>Diagnostics from the app</summary>",
   "",
-  "- App: Infinitary 0.8.6-alpha.23 · alpha · app · en",
+  "- App (this computer): Infinitary 0.8.6-alpha.23 · alpha · app · en",
   "",
   "</details>",
   "",

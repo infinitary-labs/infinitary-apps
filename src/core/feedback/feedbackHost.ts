@@ -6,7 +6,7 @@ import { currentLanguage } from "@shared/i18n/current";
 import { INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import type { TimelineEntry } from "@shared/timeline";
 import type { FeedbackAskFacts } from "@shared/writeAsk";
-import type { DevicePairing } from "../devices/pairing";
+import type { Computers } from "../devices/computers";
 import { githubApiBaseUrl } from "../forge";
 import type { HomeForges } from "../forge/homeForges";
 import type { HostCapabilities } from "../host";
@@ -37,6 +37,7 @@ export type FeedbackHostDeps = {
   /** The system's own version (macOS 26.1, not its kernel's), and the chip. */
   system: { name: string; version: string; chip: string };
   computerNames: () => string[];
+  /** Each device with what the home reads of it now: a computer's version is a live reading, never saved. */
   devices: () => DeviceView[];
   models: () => Array<{ providerId: string; login?: string | undefined }>;
   repos: () => Array<{
@@ -114,7 +115,9 @@ export function homeFeedbackHost(deps: FeedbackHostDeps): FeedbackHost {
           .filter((device) => !isPhone(device) && device.kind !== "view")
           .map((device) => ({
             system: device.system ?? "unknown",
-            version: device.workVersion ?? device.appVersion?.app ?? "unknown",
+            // Work on this computer's version says `workVersion`, on another `otherVersion`.
+            version:
+              device.workVersion ?? device.otherVersion?.app ?? device.appVersion?.app ?? "unknown",
           })),
         phones: devices
           .filter((device) => isPhone(device))
@@ -220,7 +223,8 @@ export function systemVersion(platform: string): string {
 export function startHomeFeedback(parts: {
   host: Pick<HostCapabilities, "app" | "macUpdates">;
   computerName: string;
-  devices: Pick<DevicePairing, "list">;
+  /** Late-bound: the live list is built with the crew; the saved list keeps no version. */
+  computers: () => Pick<Computers, "list">;
   vault: Pick<AccountVault, "list">;
   repos: Pick<RepoRegistry, "list">;
   forgeSignIns: Pick<HomeForges["signIns"], "view" | "isSignedIn" | "loginOf">;
@@ -261,7 +265,7 @@ export function startHomeFeedback(parts: {
       chip: system.chip ?? process.arch,
     },
     computerNames: () => [parts.computerName, hostname()],
-    devices: () => parts.devices.list(),
+    devices: () => parts.computers().list(),
     models: () => parts.vault.list(),
     repos: () => parts.repos.list(),
     forgeLogins: () =>

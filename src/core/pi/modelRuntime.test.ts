@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import {
   catalogRefreshesSettled,
+  createCatalogRuntime,
   createModelRuntime,
   MODEL_REFRESH_TIMEOUT_MS,
   modelLookup,
@@ -523,5 +524,66 @@ describe("catalogRefreshesSettled", () => {
     // The refresh wrote the overlay after the folder was removed, putting it
     // back, and the wait above resolved only once that write had landed.
     expect(readFileSync(join(folder, "models-store.json"), "utf8")).toContain("grok-9.9");
+  });
+});
+
+// INF-7139's approved plan, part 1: Pi's coding agent adds a google-ai-plan
+// provider signed in through Pi's own Google client to every runtime it
+// creates, and no Infinitary runtime may offer that sign-in.
+describe("Pi's Google AI plan sign-in", () => {
+  type Runtime = Awaited<ReturnType<typeof createModelRuntime>>;
+  const GOOGLE_AI_PLAN = "google-ai-plan";
+
+  async function attemptGoogleSignIn(runtime: Runtime): Promise<{
+    outcome: PromiseSettledResult<unknown>;
+    asked: string[];
+  }> {
+    const asked: string[] = [];
+    const outcome = (
+      await Promise.allSettled([
+        runtime.login(GOOGLE_AI_PLAN, "oauth", {
+          // A sign-in that did start would wait on its browser page; the
+          // bound ends it after the page was asked for.
+          signal: AbortSignal.timeout(3_000),
+          prompt: (prompt) => {
+            asked.push(`prompt: ${prompt.message}`);
+            return Promise.reject(new Error("No one answers in a test."));
+          },
+          notify: (event) => {
+            asked.push(event.type === "auth_url" ? `page: ${event.url}` : `notify: ${event.type}`);
+          },
+        }),
+      ])
+    )[0];
+    return { outcome, asked };
+  }
+
+  function emptyStore(): { authPath: string; modelsPath: string } {
+    const dir = scratchDir("infinitary-model-runtime-google-");
+    mkdirSync(dir, { recursive: true });
+    return { authPath: join(dir, "auth.json"), modelsPath: join(dir, "models.json") };
+  }
+
+  it.each([
+    ["an account's", async () => ({ ...signedInStore() })],
+    ["a connection's", async () => ({ ...emptyStore(), connectionProvider: "custom-fixture" })],
+    ["a Bedrock account's", async () => ({ ...emptyStore(), bedrockAccount: true })],
+  ])("is not offered by %s runtime", async (_kind, options) => {
+    const catalogBaseUrl = await startCatalog(({ status }) => status(500, "nope"));
+    const runtime = await createModelRuntime({ ...(await options()), catalogBaseUrl });
+    const { outcome, asked } = await attemptGoogleSignIn(runtime);
+    expect(outcome.status).toBe("rejected");
+    expect(asked).toEqual([]);
+  });
+
+  it("is not offered by the catalog runtime", async () => {
+    const dir = scratchDir("infinitary-model-runtime-google-catalog-");
+    mkdirSync(dir, { recursive: true });
+    const { runtime } = await createCatalogRuntime({
+      modelsStorePath: join(dir, "models-store.json"),
+    });
+    const { outcome, asked } = await attemptGoogleSignIn(runtime);
+    expect(outcome.status).toBe("rejected");
+    expect(asked).toEqual([]);
   });
 });

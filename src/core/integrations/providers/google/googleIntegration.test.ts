@@ -1564,7 +1564,13 @@ describe("Calendar on the shared Google row", () => {
     google.knobs.limited.push({ service: "calendar" });
     const crew = integrations.forTask("task-1");
     const listCalendars = () =>
-      crew.call("Google", "list_calendars", {}, undefined, "To perform the task’s requested action.");
+      crew.call(
+        "Google",
+        "list_calendars",
+        {},
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect((await listCalendars()).text).toContain(
       "Google Calendar asked the app to slow down without saying for how long, so the app waits 60 seconds.",
     );

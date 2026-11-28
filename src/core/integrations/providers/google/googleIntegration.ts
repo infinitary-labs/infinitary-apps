@@ -528,6 +528,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
           throw new Error("Could not reach Gmail.");
         }
       };
+      // i18n-exempt: a product name
       const token = await key("gmail", "Gmail");
       let response = await fetchWith(token);
       if (response.status === 401) {
@@ -537,6 +538,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
       if (response.ok && typeof body.data === "string") return Buffer.from(body.data, "base64url");
       if (response.status === 429)
+        // i18n-exempt: a product name
         throw new Error(waits.slowed("gmail", "Gmail", response.headers.get("retry-after"), body));
       // i18n-exempt: words served to the crew, which stay English
       const said = errorOf(body).message ?? `status ${response.status}`;

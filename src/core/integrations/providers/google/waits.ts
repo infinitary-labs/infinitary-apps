@@ -1,3 +1,4 @@
+import { nextZonedFire } from "../../../orchestrator/calendar";
 import type { GoogleService } from "./mcp";
 
 /**
@@ -15,45 +16,19 @@ import type { GoogleService } from "./mcp";
  *   answer from that service starts the doubling over.
  */
 
-export const BACKOFF_FIRST_MS = 60_000;
-export const BACKOFF_MOST_MS = 3_600_000;
+const BACKOFF_FIRST_MS = 60_000;
+const BACKOFF_MOST_MS = 3_600_000;
 
 /** Google resets its daily limits at midnight in this zone. */
 const GOOGLE_RESET_ZONE = "America/Los_Angeles";
 
-const PACIFIC = new Intl.DateTimeFormat("en-US", {
-  timeZone: GOOGLE_RESET_ZONE,
-  year: "numeric",
-  month: "numeric",
-  day: "numeric",
-  hour: "numeric",
-  minute: "numeric",
-  hourCycle: "h23",
-});
-
-function pacific(at: number): Record<string, number> {
-  return Object.fromEntries(
-    PACIFIC.formatToParts(at)
-      .filter((part) => part.type !== "literal")
-      .map((part) => [part.type, Number(part.value)]),
-  );
-}
-
 /** The next midnight in Pacific time after `now`, in milliseconds since 1970. */
 export function nextPacificMidnight(now: number): number {
-  const today = pacific(now);
-  const tomorrow = Date.UTC(today.year ?? 1970, (today.month ?? 1) - 1, (today.day ?? 1) + 1);
-  // Pacific midnight is 7 hours after UTC's in summer time and 8 in standard time.
-  for (const hours of [7, 8]) {
-    const at = tomorrow + hours * 3_600_000;
-    const there = pacific(at);
-    if (there.hour === 0 && there.minute === 0) return at;
-  }
-  return tomorrow + 8 * 3_600_000;
+  return nextZonedFire(now, 0, 0, GOOGLE_RESET_ZONE);
 }
 
 /** Retry-After in milliseconds: seconds, or a date. */
-export function retryAfter(value: string | null, now: number): number | undefined {
+function retryAfter(value: string | null, now: number): number | undefined {
   if (!value) return undefined;
   const seconds = Number(value);
   if (Number.isFinite(seconds) && seconds >= 0) return seconds * 1000;
@@ -80,7 +55,8 @@ export function namesDailyLimit(body: unknown): boolean {
   if (reasons.includes("dailyLimitExceeded")) return true;
   const limits = Array.isArray(details)
     ? details.map(
-        (entry) => (entry as { metadata?: { quota_limit?: unknown } } | null)?.metadata?.quota_limit,
+        (entry) =>
+          (entry as { metadata?: { quota_limit?: unknown } } | null)?.metadata?.quota_limit,
       )
     : [];
   return [message, ...limits].some(

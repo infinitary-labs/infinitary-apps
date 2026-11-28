@@ -3,7 +3,6 @@ import { NOTICE_ACCEPTED } from "@shared/integrations";
 import { fencedSpans } from "@shared/outsideData";
 import { afterEach, describe, expect, it } from "vitest";
 import { STAND_IN_ACCOUNT } from "../../../../../tests/helpers/googleStandIn";
-import { GMAIL_MESSAGE_EVENT } from "./gmail";
 import {
   type GoogleWorld,
   type GoogleWorldOptions,
@@ -15,6 +14,7 @@ import { renderWake } from "../../../orchestrator/wakes";
 import { createScheduleTools } from "../../../pi/scheduleTools";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
 import { ScheduleStore } from "../../../storage/scheduleStore";
+import { GMAIL_MESSAGE_EVENT } from "./gmail";
 
 /**
  * Gmail through its MCP server (INF-7012's approved plan, piece 1), as the

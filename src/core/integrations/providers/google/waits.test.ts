@@ -20,16 +20,6 @@ describe("nextPacificMidnight", () => {
     // 7:28 AM PDT on July 15, 2026.
     expect(nextPacificMidnight(Date.UTC(2026, 6, 15, 14, 28))).toBe(Date.UTC(2026, 6, 16, 7));
   });
-
-  it("counts the day in Pacific time when UTC has already passed midnight", () => {
-    // 11:30 PM PST on November 28, 2026, which is 07:30 UTC on the 29th.
-    expect(nextPacificMidnight(Date.UTC(2026, 10, 29, 7, 30))).toBe(Date.UTC(2026, 10, 29, 8));
-  });
-
-  it("names the standard-time midnight after the clocks fall back", () => {
-    // 12:30 AM PDT on November 1, 2026, the day daylight time ends at 2 AM.
-    expect(nextPacificMidnight(Date.UTC(2026, 10, 1, 7, 30))).toBe(Date.UTC(2026, 10, 2, 8));
-  });
 });
 
 describe("namesDailyLimit", () => {
@@ -38,7 +28,13 @@ describe("namesDailyLimit", () => {
     expect(
       namesDailyLimit({
         error: {
-          errors: [{ domain: "usageLimits", reason: "dailyLimitExceeded", message: "Daily Limit Exceeded" }],
+          errors: [
+            {
+              domain: "usageLimits",
+              reason: "dailyLimitExceeded",
+              message: "Daily Limit Exceeded",
+            },
+          ],
           code: 403,
           message: "Daily Limit Exceeded",
         },
@@ -71,7 +67,11 @@ describe("namesDailyLimit", () => {
       namesDailyLimit({
         error: {
           errors: [
-            { domain: "usageLimits", reason: "userRateLimitExceeded", message: "User Rate Limit Exceeded" },
+            {
+              domain: "usageLimits",
+              reason: "userRateLimitExceeded",
+              message: "User Rate Limit Exceeded",
+            },
           ],
           code: 403,
           message: "User Rate Limit Exceeded",

@@ -9,6 +9,7 @@
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import type { AttachmentRef } from "@shared/attachments";
 import { REPLY_SETTINGS_HEAD } from "@shared/cardAnswerLines";
+import { DECLINE_ACTION_ID } from "@shared/cardLeave";
 import { CARD_ANSWERS_TOO_LONG, type Card } from "@shared/cards";
 import { PLAIN_PROBLEM_FALLBACK } from "@shared/plainProblem";
 import { describe, expect, it, vi } from "vitest";
@@ -39,7 +40,7 @@ import { bindTool } from "../session/tools";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
-import { THREAD_STEER_PREAMBLE } from "./captainWakes";
+import { DECLINE_WORDS, DECLINED_STEP_WORDS, THREAD_STEER_PREAMBLE } from "./captainWakes";
 import { cannotMergeText, discardedText } from "./settleWords";
 import { renderWake, type WakeFacts } from "./wakes";
 
@@ -949,6 +950,98 @@ describe("CrewSupervisor: the card thread", () => {
       undefined,
     );
     expect(() => h.supervisor.cardActions.act(card.id, "confirm")).toThrow();
+    await tick();
+  });
+  // INF-7234, the captain's "decline simply sends a message, and it doesn't
+  // close the card, so i currently have no way to close this card": Decline
+  // on a step only the captain can do drops the step and closes its card,
+  // and the first mate hears the no once, with the words and the steps left
+  // waiting on it.
+  it("INF-7234 Decline with words drops the required action, closes its card and tells the first mate once", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    seedTask(h.tasks, { id: "restart-source", title: "Restart the service", status: "completed" });
+    h.tasks.delivery.declareRequiredActions(
+      "restart-source",
+      {
+        cardId: "card-restart-source",
+        offerId: "offer-restart-source",
+        actions: [
+          {
+            id: "restart",
+            target: "the computer",
+            title: "Restart the setup",
+            consequence: "The service runs the old setup.",
+            instructions: ["Restart the computer."],
+            criterion: "The service runs the new setup.",
+            prerequisites: [taskId],
+            completion: { kind: "manual", label: "It restarted" },
+          },
+        ],
+      },
+      true,
+    );
+    const waiting = h.tasks
+      .listOpen()
+      .find((task) => task.id !== taskId && task.delivery?.captainAction);
+    const converse = vi.fn();
+    const notifyCaptainChoice = vi.fn();
+    h.supervisor.setFirstmateHooks({
+      notifyOp: vi.fn(),
+      notifyCaptainChoice,
+      retryConverse: vi.fn(),
+      converseAboutCard: converse,
+    });
+    const words = "ok i'm letting the crew drive it. declining this card now";
+    const answers = [{ name: "anything_else", values: [], changed: true, written: words }];
+    h.supervisor.cardActions.act(card.id, DECLINE_ACTION_ID, "chrome", { answers });
+    expect(h.supervisor.cards.snapshot().find((entry) => entry.id === card.id)).toBeUndefined();
+    expect(h.tasks.get(taskId)).toMatchObject({ status: "dropped", closedReason: "cancelled" });
+    expect(h.tasks.get(taskId)?.delivery?.captainAction?.state).toBe("cancelled");
+    expect(h.supervisor.cards.thread(card.id).messages).toEqual([]);
+    expect(converse).not.toHaveBeenCalled();
+    expect(notifyCaptainChoice).toHaveBeenCalledTimes(1);
+    const heard = renderWake(notifyCaptainChoice.mock.calls[0]?.[0]);
+    expect(heard).toContain(DECLINE_WORDS);
+    expect(heard).toContain(DECLINED_STEP_WORDS);
+    expect(heard).toContain(words);
+    expect(heard).toContain(`${waiting?.key} "Restart the setup"`);
+    await tick();
+  });
+  // INF-7234's review: Decline drops a step, so a click from an offer the
+  // card no longer shows is refused, as its confirmation is, and drops nothing.
+  it("INF-7234 refuses a Decline from a stale offer of a required-action card", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    const submission = {
+      id: "click-stale-offer",
+      lifecycleId: card.lifecycleId,
+      offerId: "an-older-offer",
+    };
+    expect(() =>
+      h.supervisor.cardActions.act(card.id, DECLINE_ACTION_ID, "chrome", undefined, submission),
+    ).toThrow();
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    expect(h.tasks.get(taskId)?.delivery?.captainAction?.state).toBe("ready");
+    expect(h.supervisor.cards.snapshot().find((entry) => entry.id === card.id)).toBeDefined();
+    await tick();
+  });
+  // INF-7234 part 2: words typed with Not now on such a card reached no one.
+  it("INF-7234 Not now with words puts the required action off and passes the words to the first mate", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    const notifyCaptainChoice = vi.fn();
+    h.supervisor.setFirstmateHooks({
+      notifyOp: vi.fn(),
+      notifyCaptainChoice,
+      retryConverse: vi.fn(),
+      converseAboutCard: vi.fn(),
+    });
+    const words = "skip this one, the crew is doing it";
+    const answers = [{ name: "anything_else", values: [], changed: true, written: words }];
+    h.supervisor.cardActions.act(card.id, "defer", "chrome", { answers });
+    expect(h.supervisor.cards.snapshot().find((entry) => entry.id === card.id)).toBeUndefined();
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    expect(h.tasks.get(taskId)?.delivery?.captainAction?.state).toBe("deferred");
+    expect(notifyCaptainChoice).toHaveBeenCalledTimes(1);
+    expect(renderWake(notifyCaptainChoice.mock.calls[0]?.[0])).toContain(words);
     await tick();
   });
   // INF-2225, carrying out INF-2214's approved shared cards: the DOP-217

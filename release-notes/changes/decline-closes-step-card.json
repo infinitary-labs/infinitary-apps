@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "decline-closes-step-card",
+      "kind": "fix",
+      "area": "cards",
+      "docsSite": ["cards-and-decisions"],
+      "title": "Decline closes a card for a step only you can do",
+      "body": "Pressing Decline on a card for a step only you can do now closes the card and drops that step, and your first mate hears your no with anything you typed. Before, Decline posted your words as a reply and the same card came back. Words you type before pressing Not now on such a card now reach your first mate too.",
+      "noPicture": "The fix makes the card go away when you press Decline, which no still picture of a view shows.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

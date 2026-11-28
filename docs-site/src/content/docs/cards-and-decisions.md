@@ -160,6 +160,7 @@ After you merge, each of these comes back as a card of its own.
 Do what it says, then press its button to confirm.
 If it did not work, paste what you saw into its field and choose **It failed**, and your first mate arranges a fix.
 **Not now** leaves it under Waiting on you in Tasks.
+**Decline** says you will not do it: the card closes, the step is dropped, and your first mate hears your no with anything you typed.
 
 ## Past cards
 

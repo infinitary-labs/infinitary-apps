@@ -1,5 +1,5 @@
 ---
-source: 8b70a675730a25eb
+source: cf25805d32836d90
 title: Tarjetas y decisiones
 description: Cómo tu primer oficial y tu tripulación te traen respuestas y decisiones como tarjetas, y cómo responderlas.
 ---
@@ -161,6 +161,7 @@ Después de fusionar, cada una de estas cosas vuelve como una tarjeta propia.
 Haz lo que dice y luego presiona su botón para confirmarlo.
 Si no funcionó, pega lo que viste en su campo y elige **Falló**, y tu primer oficial organiza una corrección.
 **Ahora no** la deja en Esperándote, en Tareas.
+**Rechazar** dice que no lo harás: la tarjeta se cierra, el paso se descarta y tu primer oficial recibe tu negativa con lo que hayas escrito.
 
 ## Tarjetas anteriores {#past-cards}
 

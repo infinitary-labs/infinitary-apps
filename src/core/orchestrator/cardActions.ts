@@ -496,9 +496,15 @@ export class CardActions {
               ) === "queued";
           }
         : undefined;
+    // A card for a step only the captain can do (docs/required-actions.md).
+    const stepCard = Boolean(card.taskId && associated?.delivery?.captainAction);
+    // The captain's no on it - the app's Decline, which such a card always
+    // takes - drops the step and closes the card (INF-7234), instead of
+    // reaching its thread the way It failed does.
+    const declinesStep = stepCard && source === "chrome" && chosen.declines === true && !effect;
     const confirming = effect?.kind === "host" && effect.op === "confirm-required-action";
     const consequentialMerge = card.requiredActions !== undefined && merge !== undefined;
-    if ((confirming || consequentialMerge) && submission !== undefined) {
+    if ((confirming || consequentialMerge || declinesStep) && submission !== undefined) {
       const gesture = gestureSchema.safeParse(submission);
       if (
         !gesture.success ||
@@ -716,7 +722,13 @@ export class CardActions {
                   Number(generation),
                   "confirmed",
                 );
-            } else this.core.options.tasks.delivery.deferCaptainAction(card.taskId);
+            } else if (declinesStep)
+              this.core.options.tasks.close(card.taskId, {
+                status: "dropped",
+                reason: "cancelled",
+                actor: "captain",
+              });
+            else this.core.options.tasks.delivery.deferCaptainAction(card.taskId);
           }
         },
       );
@@ -780,8 +792,7 @@ export class CardActions {
         ? card.taskId
         : undefined;
     const wordsForFirstmate =
-      card.author === "host" &&
-      card.answeredBy === "firstmate" &&
+      ((card.author === "host" && card.answeredBy === "firstmate") || stepCard) &&
       anythingElseOf(answers) !== undefined;
     const tellFirstmate = () => {
       if (closedAnswer) return;
@@ -921,7 +932,7 @@ export class CardActions {
       default:
         break;
     }
-    if (source === "chrome" && card.taskId && associated?.delivery?.captainAction) {
+    if (source === "chrome" && card.taskId && stepCard && !declinesStep) {
       // An ordinary conversational choice closes its offer, just like any
       // card action. The outstanding operation is then offered again so its
       // author can answer on the same card, without completing the action.
@@ -951,6 +962,9 @@ export class CardActions {
             ...(decisionTaskId ? { taskId: decisionTaskId } : {}),
           },
           choice,
+          ...(declinesStep && card.taskId
+            ? { declinedStep: { waiting: this.waitingSteps(card.taskId) } }
+            : {}),
           // A choice the captain's own command made says so (INF-3898 piece 2).
           ...(source === "chrome" && throughNow() ? { through: THROUGH_THE_COMMAND } : {}),
         },
@@ -971,6 +985,17 @@ export class CardActions {
       this.steerChoice(card.taskId, card, source, choice, undefined, kept);
     } else tellFirstmate();
     return {};
+  }
+
+  /**
+   * The steps only the captain can do still waiting on this one: a dropped
+   * step never clears their wait (docs/required-actions.md).
+   */
+  private waitingSteps(taskId: string): { key: string; title: string }[] {
+    return this.core.options.tasks.graph
+      .liveWaiters(taskId)
+      .filter((task) => task.delivery?.captainAction)
+      .map((task) => ({ key: task.key || task.id, title: task.title }));
   }
 
   /**

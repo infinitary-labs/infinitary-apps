@@ -1,5 +1,5 @@
 ---
-source: 8b70a675730a25eb
+source: cf25805d32836d90
 title: Cartes et décisions
 description: Comment votre second et votre équipage vous apportent réponses et décisions sous forme de cartes, et comment y répondre.
 ---
@@ -161,6 +161,7 @@ Après la fusion, chacune de ces actions revient sous forme de carte à part.
 Faites ce qu’elle dit, puis appuyez sur son bouton pour confirmer.
 Si cela n’a pas marché, collez ce que vous avez vu dans son champ et choisissez **Ça n’a pas marché**, et votre second organise une correction.
 **Pas maintenant** la laisse sous En attente de vous dans Tâches.
+**Refuser** indique que vous ne le ferez pas : la carte se ferme, l’étape est abandonnée, et votre second reçoit votre refus avec ce que vous avez écrit.
 
 ## Cartes passées {#past-cards}
 

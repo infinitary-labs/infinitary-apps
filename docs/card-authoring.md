@@ -39,6 +39,7 @@ The core adds Decline to the card it shows and the saved card never holds it, so
 Decline is drawn quiet, first in the footer to the left of the choices, is reached with Tab, and `cards.decline` presses it from command search.
 Pressing it records the captain's answer "no to every choice" through the choice path under the reserved id `app-decline` (`DECLINE_ACTION_ID` in `src/shared/cardLeave.ts`), and its author gets the one card-choice message that says so.
 On an answer task Decline closes the task as answered, as any choice does, unless the card is marked `continues`.
+On a card for a step only the captain can do, Decline drops that step's task and closes the card, and the first mate hears it with the steps still waiting on it (`docs/required-actions.md`, "Confirmation and deferral").
 An available crewmate shows its own findings and decisions on its own card, rather than reporting only for the first mate to relay them.
 A note is never a progress update; routine progress belongs in the quiet feed, and emitting zero cards is correct when nothing needs them.
 

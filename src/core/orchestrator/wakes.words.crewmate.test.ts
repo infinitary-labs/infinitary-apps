@@ -97,6 +97,14 @@ const CASES: WordsCases<CrewmateOtherWakeKind> = {
         'Host handoff from INF-2761 at 4be7c1d90a2f: The captain chose "Change it" on "Keep the Later copy?".\nThe captain answered your reviewer\'s question after its review closed; the history carries the answer word for word, and it governs. If it chose a change, make it under the review\'s fix rules, commit it, then push and follow your brief\'s delivery for the new version: a new merge card, with a new review as your rigor asks. If it kept the code as built, nothing more is needed. Do not ask the first mate to relay it.',
     },
   ],
+  // INF-7106: the captain's approval started a use its crewmate heard waits on him.
+  "secrets-use-started": [
+    {
+      name: "an approved protected recipient started",
+      wake: { facts: { kind: "secrets-use-started", request: completedSecret.request } },
+      words: `[fm-op] Secrets request ${completedSecret.request}: started. The captain allowed it and its program is running, so it no longer waits on the captain. You hear once more when it ends. This is a receipt, not permission for another use or an external action.`,
+    },
+  ],
   // INF-1109: completion is metadata, never new permission; an unknown effect must not repeat.
   "secrets-use-ended": [
     {
@@ -108,6 +116,12 @@ const CASES: WordsCases<CrewmateOtherWakeKind> = {
       name: "an unknown protected effect",
       wake: { facts: { kind: "secrets-use-ended", receipt: unknownSecret } },
       words: `[fm-op] Secrets request ${unknownSecret.request}: unknown. This is a receipt, not permission for another use or an external action. Do not repeat this request; reconcile what happened before depending on it.`,
+    },
+    {
+      // INF-7106: a run the app's close cut off is told as Secrets opens again.
+      name: "a protected run the app's close cut off",
+      wake: { facts: { kind: "secrets-use-ended", receipt: unknownSecret, restarted: true } },
+      words: `[fm-op] Secrets request ${unknownSecret.request}: unknown. The app closed while this request waited or ran. This is a receipt, not permission for another use or an external action. Do not repeat this request; reconcile what happened before depending on it.`,
     },
   ],
   "secrets-ask-ended": [

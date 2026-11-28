@@ -1,5 +1,5 @@
 ---
-source: 91a924b8c4a1a2d6
+source: fae1b8cd31c6767c
 title: Secrets
 description: Gardez les mots de passe et les clés dont votre équipage a besoin, autorisez chaque utilisation sur une carte et voyez ce qui les a utilisés.
 ---
@@ -90,7 +90,8 @@ Choisissez ensuite :
 Chaque autorisation vous demande d’abord de confirmer : sur un Mac avec Touch ID ou votre mot de passe, sous Linux avec votre mot de passe, et sous Windows avec Windows Hello ou votre mot de passe Windows.
 Ce qui reçoit un secret peut le garder.
 Autoriser n’approuve jamais une action distincte, comme déployer ou envoyer quelque chose.
-L’équipier apprend seulement si l’exécution s’est terminée, pas ce qu’elle a affiché.
+L’équipier apprend quand son programme démarre, pour continuer son travail, puis si l’exécution s’est terminée, jamais ce qu’elle a affiché.
+Si Infinitary se ferme pendant qu’une demande attend ou que son programme tourne, l’équipier apprend comment elle s’est terminée à la prochaine ouverture d’Infinitary.
 
 Pendant qu’une demande attend, Réglages → Secrets l’affiche en haut, avec **Examiner la demande** pour ouvrir sa carte.
 

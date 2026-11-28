@@ -18,8 +18,10 @@ const shell = (command: string): ScenarioAnswer => ({
  * INF-1109: the actual supervisor grants the command, the task asks once and
  * ends its turn while waiting, and the durable completion wake resumes it.
  * Only model choices stand in here; no command grant, approval or wake is injected.
+ * With `release` (INF-7106), the crewmate answers the wake that says its run
+ * started by creating that file, which the running program waits for.
  */
-export function protectedSecretUse(cwd: string, reference: string): Scenario {
+export function protectedSecretUse(cwd: string, reference: string, release?: string): Scenario {
   return () => {
     let requested = false;
     return ({ body, isFirstmate, wantsStream, latestUserTail }) => {
@@ -89,6 +91,10 @@ export function protectedSecretUse(cwd: string, reference: string): Scenario {
           };
         return { text: "Reported the completed check." };
       }
+      if (release && user.includes(SECRETS_USE_ENDED_LEAD) && user.includes(": started."))
+        return calledTool(latestUserTail, "bash")
+          ? { text: "The approved check runs; its end arrives as a receipt." }
+          : shell(`: > ${quote(release)}`);
       if (requested) return { text: "The protected request is waiting." };
       requested = true;
       return shell(

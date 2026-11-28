@@ -82,4 +82,78 @@ describe("Secrets request completion", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts + 1);
     },
   );
+
+  // INF-7106: a crewmate that reported it waits on the captain's approval of
+  // a secret run kept waiting until the program ended, and the first mate
+  // was told the task waited on the captain with no card up.
+  it("delivers an approved use's start once, before its end, and ends the task's wait on the captain", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Deploy the staging service",
+      intent: intentOf("Deploy the staging service with its approved key"),
+    });
+    await tick();
+    const endTurn = async () => {
+      crewmate.emit({ type: "turn_end", taskId });
+      crewmate.finishPrompt();
+      await tick();
+    };
+    h.specs[0]?.onReport?.("The deploy waits on the captain's Secrets approval.", undefined, {
+      wait: { reason: "allow the deploy's secret run" },
+    });
+    await endTurn();
+    expect(h.tasks.get(taskId)?.delivery?.captainWait).toEqual(
+      expect.objectContaining({ reason: "allow the deploy's secret run" }),
+    );
+    const prompts = crewmate.promptCalls.length;
+    const request = randomUUID();
+    const started = renderWake({ facts: { kind: "secrets-use-started", request } });
+
+    h.supervisor.steer.secretsUseStarted(taskId, request);
+    await tick();
+    expect(crewmate.promptCalls.slice(prompts)).toEqual([started]);
+    expect(h.tasks.get(taskId)?.delivery?.captainWait).toBeUndefined();
+    await endTurn();
+
+    const receipt = { request, state: "completed" as const, exitCode: 0 };
+    h.supervisor.steer.secretsUseStarted(taskId, request);
+    h.supervisor.steer.secretsUseEnded(taskId, receipt);
+    await tick();
+    expect(crewmate.promptCalls.slice(prompts)).toEqual([
+      started,
+      renderWake({ facts: { kind: "secrets-use-ended", receipt } }),
+    ]);
+  });
+
+  // INF-7106: a run that ends at once is told in order, each once.
+  it("delivers a start and an end that arrive together in that order", async () => {
+    const crewmate = fakeCrewmate();
+    const h = setup(crewmate);
+    const { taskId } = await h.supervisor.intake.commission({
+      title: "Check the staging service",
+      intent: intentOf("Check the staging service with its approved key"),
+    });
+    await tick();
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const prompts = crewmate.promptCalls.length;
+    const request = randomUUID();
+    const receipt = { request, state: "completed" as const, exitCode: 0 };
+    h.supervisor.steer.secretsUseStarted(taskId, request);
+    h.supervisor.steer.secretsUseEnded(taskId, receipt);
+    await tick();
+    const started = renderWake({ facts: { kind: "secrets-use-started", request } });
+    const ended = renderWake({ facts: { kind: "secrets-use-ended", receipt } });
+    // The start opens the next turn and the end is steered into it.
+    expect(crewmate.promptCalls.slice(prompts)).toEqual([started]);
+    expect(crewmate.steer.mock.calls.map(([text]) => text)).toEqual([ended]);
+    expect(
+      h.tasks
+        .timeline(taskId)
+        .filter((event) => event.kind === "steered")
+        .map((event) => event.text),
+    ).toEqual([started, ended]);
+  });
 });

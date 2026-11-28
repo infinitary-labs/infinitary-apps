@@ -363,9 +363,13 @@ Settings can only remove: a `save-rules` request that adds or changes a rule, or
 The command facade exposes the agent-visible entries' metadata, injection, status and cancellation, not this controller or a broker result reader.
 It namespaces command intent IDs by task to prevent accidental collisions; the namespace is not an authenticated identity or an access grant.
 A requester that received a waiting or executing receipt hears the terminal metadata through its task's existing durable inbox, once, after cleanup and journaling settle.
+A requester whose receipt said waiting also hears once, through the same inbox (`secrets-use-started`), when the approval starts the program: Allow once, Always allow this or a phone's Allow.
+It goes when the program has started (`SecretRequests`' `began`, which the recipient calls at its spawn, or a computer that runs work calls when it takes the values), never at the click, so a use whose last check fails before its program starts sends only its end; the start always comes before the end, and its new turn clears the task's report that it waits on the captain.
+A use a saved decision starts at once sends no start: its first receipt already says it runs.
 Terminal requests invalidate their private offers and withdraw any obsolete approval card.
-The caller receives its own cancellation directly, while other waiting requesters still hear the result.
-Pending approval and notification registrations remain process-local; after a restart, the requester reads the durable receipt before continuing, never repeats an unknown effect and never reuses an old card.
+The caller receives its own cancellation directly and hears neither the start nor the end, while other waiting requesters still hear the result.
+Pending approval and notification registrations remain process-local (`UseRequesters`); after a restart, the requester reads the durable receipt before continuing, never repeats an unknown effect and never reuses an old card.
+A use the restart ended is told to the task its intent names, while that task is open, as Secrets opens again (`secrets-use-ended` with `restarted`, see "Journal and reconciliation").
 
 ## Brokered uses and bounded reads
 
@@ -472,6 +476,8 @@ The journal (`<userData>/secrets/history.jsonl`) records each use's request, app
 Each line carries a check chained to the line before it, so a forged or edited line ends what is read.
 Consumption is written before the recipient starts; a journal that cannot be written refuses the launch.
 At the next start, a use consumed with no recorded end is `unknown`, because its effect may have happened, and a use still waiting is `invalidated`.
+The app opens Secrets once as it starts (`SecretsSettings.resumeUses`), as the Settings page does, which reads custody without any dialog; the uses that opening ended (`UseJournal.cutOff`) are told to their tasks then, each once, rather than at the task's next Secrets read.
+Where custody is locked at start, they are told when it next opens.
 The same intent ID then answers its earlier receipt instead of running again, so a restart never replays a use.
 Private folders a previous process left are removed at start.
 Truncating the journal's last lines is not detected.

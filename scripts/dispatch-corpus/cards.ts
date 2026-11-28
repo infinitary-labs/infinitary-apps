@@ -5,7 +5,7 @@
  * never a table of reserved ids.
  */
 
-import { LABEL_FIT_DELIMITER } from "../../src/shared/labelFit.ts";
+import { withoutLabelFitFacts } from "../../src/shared/labelFit.ts";
 import { LEGACY_CLOSE_CONTROL_IDS } from "../../src/shared/cardLeave.ts";
 import { migrateLegacyActions } from "../../src/shared/legacyCardActions.ts";
 import type { CardRow } from "./fleetTables.ts";
@@ -37,7 +37,7 @@ export type CardVersionSource = Pick<CardRow, "kind" | "title" | "body" | "actio
 /** `Card shown: <title> (<card id>)`, less any label-fit facts the emit_card
  * answer adds after it (`src/shared/labelFit.ts`) → the card id the store assigned. */
 export function cardIdFromEmitResult(text: string): string | null {
-  const receipt = text.split(LABEL_FIT_DELIMITER)[0] ?? text;
+  const receipt = withoutLabelFitFacts(text);
   const match = receipt.match(/^Card shown: .*\(([^()]+)\)\s*$/);
   return match?.[1] ?? null;
 }

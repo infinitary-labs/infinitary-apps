@@ -5,7 +5,7 @@ import { cardIdFromEmitResult } from "../scripts/dispatch-corpus/cards.ts";
 // (src/core/pi/cardFigureFit.ts); replay and corpus export still read the id.
 it("reads the card id with and without label-fit facts, and from a title with brackets", () => {
   const facts =
-    '\n\nLabel fit: SVG text does not wrap. Measured in the card font, 1 of 1 flagged label runs past its box: "Loosen the roots (if root-bound)" ends 70 units past its box\'s right edge (360). Shorten the label.';
+    '\n\nLabel fit: SVG text does not wrap. Measured in the card font, 1 of 1 flagged label runs past its box: "Loosen the roots (if root-bound)" ends 70 units past its box\'s right edge (360). Shorten the label, widen the box, then revise the card.';
   expect(cardIdFromEmitResult("Card shown: Repotting steps (card-fm-1-abc)")).toBe("card-fm-1-abc");
   expect(cardIdFromEmitResult(`Card shown: Repotting steps (card-fm-1-abc)${facts}`)).toBe(
     "card-fm-1-abc",
@@ -16,13 +16,23 @@ it("reads the card id with and without label-fit facts, and from a title with br
   expect(cardIdFromEmitResult("Card refused: no")).toBeNull();
 });
 
-it("reads a card whose title mimics the label-fit words, from the id and not from the title", () => {
+const FACTS =
+  '\n\nLabel fit: SVG text does not wrap. "A (b)" ends 4 units past its box\'s right edge (170). Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, then revise the card.';
+
+it("reads a card whose title holds the label-fit words, from the id and not from the title", () => {
+  // A title may hold a blank line, though the tool's receipt reader never matched across it.
   expect(
     cardIdFromEmitResult("Card shown: Plan (draft) Label fit: next steps (card-fm-1-abc)"),
   ).toBe("card-fm-1-abc");
   expect(
+    cardIdFromEmitResult("Card shown: Plan (draft)\n\nLabel fit: next steps (card-fm-1-abc)"),
+  ).toBeNull();
+  expect(
     cardIdFromEmitResult(
-      'Card shown: Plan (draft) Label fit: next steps (card-fm-1-abc)\n\nLabel fit: SVG text does not wrap. "A (b)" ends 4 units past its box\'s right edge (170).',
+      `Card shown: Plan (draft)\n\nLabel fit: next steps (card-fm-1-abc)${FACTS}`,
     ),
+  ).toBeNull();
+  expect(
+    cardIdFromEmitResult(`Card shown: Plan (draft) Label fit: next (card-fm-1-abc)${FACTS}`),
   ).toBe("card-fm-1-abc");
 });

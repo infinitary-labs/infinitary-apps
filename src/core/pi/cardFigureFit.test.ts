@@ -112,7 +112,7 @@ describe("figureLabelSpills", () => {
 
   it("measures a first tspan that names its own row against the box in that row", () => {
     // The label (about 140 units wide) fits the wide box in the first row but not the 100-unit box below.
-    const body = `<svg viewBox="0 0 400 130"><rect x="0" y="0" width="300" height="50"/><rect x="0" y="60" width="100" height="50"/><text x="10" y="30"><tspan y="90">A label of moderate length</tspan></text></svg>`;
+    const body = `<svg viewBox="0 0 400 130"><rect x="0" y="0" width="300" height="50"/><rect x="0" y="60" width="100" height="50"/><text x="10" y="30">\n      <tspan y="90">A label of moderate length</tspan>\n    </text></svg>`;
     expect(figureLabelSpills(body).map((spill) => [spill.text, spill.edgeRight])).toEqual([
       ["A label of moderate length", 100],
     ]);
@@ -127,6 +127,12 @@ describe("figureLabelSpills", () => {
       )[0]?.room;
     expect(at('font-size="32"')).toBeCloseTo(6.1, 0);
     expect(at('style="font-size: 32px"')).toBeLessThan(0);
+  });
+
+  it("keeps a root's text-anchor, which the frame does not override", () => {
+    // 25 letters "n" (191.6 units) centred at 98 in a box from 0 to 200: 2.2 units from the left edge.
+    const body = `<svg viewBox="0 0 400 60" text-anchor="middle"><rect x="0" y="0" width="200" height="60"/><text x="98" y="30">${"n".repeat(25)}</text></svg>`;
+    expect(figureLabelSpills(body)[0]?.side).toBe("left");
   });
 });
 

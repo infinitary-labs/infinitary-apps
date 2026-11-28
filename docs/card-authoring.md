@@ -698,7 +698,8 @@ The design skill states the whole rule (`.claude/skills/infinitary-design/compon
   Text does not wrap in SVG: keep labels short, cut a long one to its column, or use `<foreignObject>` for real flowing text.
   The size check does not interpret arbitrary scripts, and it refuses nothing for a spilling label.
   Instead, once the host takes a card as written, the `emit_card` answer lists every SVG label whose measured words end within 8 units of the edge of the box that holds its anchor, or past it (`figureLabelFacts`, `src/core/pi/cardFigureFit.ts`), with how far and the repairs: shorten the label, widen the box, or draw the box as HTML.
-  The facts follow the receipt after a blank line, which the corpus and replay readers cut off (`src/shared/labelFit.ts`), and ride on every write the host took as written: a plain send, a first mate's revision with a thread line, and a created or revised shared card.
+  The facts follow the receipt after a blank line and end with a fixed sentence, which the corpus and replay readers cut off together (`src/shared/labelFit.ts`), so a title holding those words is never read as the facts.
+  They ride on every write the host accepted the body of, whenever the captain sees it: a plain send, a first mate's revision with a thread line, and a created or revised shared card.
   A refusal, a reply alone, an unchanged card and a repeated operation get none.
   A root `<svg>`'s own `font-size` attribute is not read, since the frame's `svg` rule outranks it; its inline style is.
   The measure uses the card font's advances, a table the generator `scripts/generate-card-glyph-widths.ts` reads from Chromium (`cardGlyphWidths.generated.ts`); the frame's 12.5px unless the figure declares a size; `rect` and `text` geometry with no transform but `translate`; and each `tspan` that names its own `x` as its own line.

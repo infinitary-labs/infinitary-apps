@@ -1,5 +1,5 @@
 // i18n-exempt: served to the agent that wrote the card, stays English
-import { LABEL_FIT_DELIMITER } from "@shared/labelFit";
+import { LABEL_FIT_DELIMITER, LABEL_FIT_END } from "@shared/labelFit";
 import { ElementType, parseDocument } from "htmlparser2";
 import { GLYPH_ADVANCES } from "./cardGlyphWidths.generated";
 import { declaredSize } from "./cardLint";
@@ -114,7 +114,12 @@ function labelsOf(node: Node, style: Style, at: { dx: number; dy: number }): Lab
     const own = styleOf(child, inherited);
     const last = lines.at(-1);
     const rows = child.attribs?.y !== undefined || child.attribs?.dy !== undefined;
-    if (child.attribs?.x === undefined && rows && last && last.glyphs.length === 0) {
+    if (
+      child.attribs?.x === undefined &&
+      rows &&
+      last &&
+      last.glyphs.every((glyph) => /\s/.test(glyph.char))
+    ) {
       // The first run names its own row and keeps the text's x: no earlier
       // words sit in the old row, so the line itself moves.
       last.y =
@@ -201,9 +206,11 @@ function spillsOf(svg: Node): Spill[] {
     for (const child of node.children ?? []) walk(child, own, place);
   };
   // The frame's own SVG type size (docs/card-authoring.md, "Type"), unless the root says otherwise.
-  // The frame's `svg` rule outranks a presentation attribute on the root, so only an inline style moves it.
+  // The frame's `svg` rule outranks a font-size attribute on the root, so only its inline style moves the
+  // size; the root's other presentation attributes, an anchor or a weight, still reach its text.
+  const { "font-size": _overridden, ...rootAttribs } = svg.attribs ?? {};
   const root = styleOf(
-    { type: ElementType.Tag, attribs: { style: svg.attribs?.style ?? "" } },
+    { type: ElementType.Tag, attribs: rootAttribs },
     { size: FRAME_SVG_SIZE, weight: 400, anchor: "start" },
   );
   for (const child of svg.children ?? []) walk(child, root, { dx: 0, dy: 0 });
@@ -285,5 +292,5 @@ export function figureLabelFacts(body: string): string {
   const listed = spills.map(spillWords).join("; ");
   const past = spills.filter((spill) => spill.room < 0).length;
   // i18n-exempt: served to the agent, stays English
-  return `${LABEL_FIT_DELIMITER} SVG text does not wrap. Measured in the card font, ${past} of ${spills.length} flagged label${spills.length === 1 ? "" : "s"} ${past === 1 ? "runs" : "run"} past its box; the rest sit within ${LABEL_EDGE_ROOM} units of an edge, where the width of the card can tip them over: ${listed}. Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, then revise the card.`;
+  return `${LABEL_FIT_DELIMITER} SVG text does not wrap. Measured in the card font, ${past} of ${spills.length} flagged label${spills.length === 1 ? "" : "s"} ${past === 1 ? "runs" : "run"} past its box; the rest sit within ${LABEL_EDGE_ROOM} units of an edge, where the width of the card can tip them over: ${listed}. Shorten the label, widen the box, or draw the box as HTML, whose words wrap and whose height grows, ${LABEL_FIT_END}`;
 }

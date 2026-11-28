@@ -1514,7 +1514,7 @@ Shared modules, connection/device code, general packages and the lockfile alone 
 Every pull request still checks on Linux that the generated file is current, through `pnpm check` (`node scripts/generate-phone-contract.ts --check`).
 A request's Linux `request` job runs the chooser, `scripts/affected-phone.ts`, before any phone Mac is taken; an unreadable comparison runs the gate, and a change it selects no gate for starts no job on a phone Mac.
 The chooser deals the request's passes into jobs of at most 20 recorded minutes, each device past a job's first counted as 3, each on its own phone Mac, side by side (`docs/testing.md`, "Native phone checks").
-A default run on request (`workflow_dispatch`) runs every part on every device, dealt the same way, and starts no release step (`docs/testing.md`, "The phone check on request"); the phone release's one job of every device keeps each part's minutes as `part-times.json` in `phone-logs`.
+A default run on request (`workflow_dispatch`) runs every part on every device, dealt the same way, and starts no release step (`docs/testing.md`, "The phone check on request"); the phone release is dealt into jobs the same way.
 On a branch it needs `task` and `reason` inputs, and the workflow refuses it without them (`docs/testing.md`, "What a task branch requests").
 Inside a gate, a failed Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
 The gate does not check the generated Swift files: `pnpm check` does on every pull request, on Linux.
@@ -1537,11 +1537,11 @@ Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a p
 Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
 The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
-A dealt job's gate step is stopped at 30 minutes, inside the job's 34, or 46 for the first job of a check dealt into several jobs, which builds and uploads the app before its gate, so an over-long gate fails the job and still keeps its results; the phone release's gate step keeps 90 minutes.
+A dealt job's gate step is stopped at 30 minutes, inside the job's 34, or 46 for the first job of a check dealt into several jobs, which builds and uploads the app before its gate, so an over-long gate fails the job and still keeps its results; the phone release's dealt jobs keep the same limits, and a job dealt nothing keeps its gate step's 90 minutes.
 Both sequential and parallel device lanes must finish within that same limit.
 Two full checks at once, one on each of the Mac mini's virtual Macs, starve each other: their parts ran past XCTest's 20-minute allowance, and one check ran past the 90 minutes too (INF-2052).
 Xcode collects no diagnostics after a failed test (`-collect-test-diagnostics never`), since its collection held each failed part for ten minutes and the gate keeps its own failure logs (INF-2052).
-The phone release's job keeps its limit of 165 minutes for setup, the ordinary pass, cleanup and evidence upload, plus 90 for each of two further passes, without command-admission waits.
+A job dealt nothing keeps its limit of 165 minutes for setup, the ordinary pass, cleanup and evidence upload, plus 90 for each of two further passes, without command-admission waits.
 Neither device's failure is ignored: both devices run every selected part, whether their lanes run side by side or sequentially, and any failing fails the gate; on a pull request the first failed part stops the rest.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
@@ -1563,7 +1563,7 @@ An absent, empty or malformed mapping supplies no runnable destination instead o
 The other nine queue mappings and the generic Mac labels remain unchanged for non-phone jobs.
 Each guest runs `scripts/test-phone.ts` directly, with as many simulators as the guest holds, two on a compute Mac VM of 10 cores and 9 GiB, where an iPhone Duo runs alone, and one on a rented VM of 5 cores (INF-4241 piece 3).
 A request runs each dealt job's passes with `--plan`, and only its first job runs the phone's Swift package tests (INF-5387's plan, piece 2).
-The unsigned TestFlight call names no device: one job, matrix device `every`, whose gate runs `--every-device`, so every device's lanes run from one build on one guest and write one `part-times.json` (INF-4241 piece 8, the plan's "a phone release runs the full check"); a request of every part on every device is dealt into jobs instead.
+The unsigned TestFlight call names no device, and the `request` job deals every part on every device into jobs of at most 20 recorded minutes, each on its own guest side by side, as a request of every part is dealt (INF-7079's fix 5, replacing INF-4241 piece 8's one job of every device from one build); its first failed job stops no other.
 The ordinary request and the unsigned TestFlight call use the same gate and failure behavior.
 Those places also take other kinds of Mac work, such as the merge batch's Mac lanes, so a phone check and a batch lane wait for the same free places (INF-3726); a phone retry after a failure therefore runs only what failed: a rerun of the failed jobs runs only the parts that did not pass, and a retry at a repaired version names only the failing part and device (`docs/testing.md`, "A retry after a failed phone request").
 `tests/phone-pool-isolation.test.ts` evaluates the workflows with configured queues and both release modes, allowing only the native phone job there and refusing secret reads.

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "windows-pi-reads-images",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates on Windows see the pictures they read",
+      "body": "On Windows, a crewmate using any provider other than Claude now sees the PNG and JPEG files it reads, and the pictures attached to its messages. Before, each picture reached it only as a note saying the image was omitted because it could not be resized.",
+      "noPicture": "This changes what a crewmate receives when it reads a picture, not how any view looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

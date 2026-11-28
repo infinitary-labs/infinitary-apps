@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, realpathSync } from "node:fs";
-import { dirname, join, relative, sep } from "node:path";
+import { dirname, join, sep } from "node:path";
 import type { Plugin } from "vite";
 
 /**
@@ -100,17 +100,16 @@ export function lookupPackage(from: string, name: string): string | null {
 
 /** The installed package a file belongs to: its real folder, name and the file's path inside it. */
 export function packageOf(file: string): { root: string; name: string; inside: string } | null {
-  const marker = `${sep}node_modules${sep}`;
-  const at = file.lastIndexOf(marker);
+  // Vite names modules with forward slashes on Windows too, where Node's
+  // separator is a backslash, so both forms are read as forward slashes.
+  const posix = file.split(sep).join("/");
+  const marker = "/node_modules/";
+  const at = posix.lastIndexOf(marker);
   if (at < 0) return null;
-  const rest = file.slice(at + marker.length).split(sep);
+  const rest = posix.slice(at + marker.length).split("/");
   const parts = rest[0]?.startsWith("@") ? rest.slice(0, 2) : rest.slice(0, 1);
-  const root = file.slice(0, at + marker.length) + parts.join(sep);
-  return {
-    root,
-    name: parts.join("/"),
-    inside: relative(root, file).split(sep).join("/"),
-  };
+  const root = posix.slice(0, at + marker.length) + parts.join("/");
+  return { root, name: parts.join("/"), inside: posix.slice(root.length + 1) };
 }
 
 /**

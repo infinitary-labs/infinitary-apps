@@ -43,6 +43,8 @@ struct CharacterCatalog: Decodable, Sendable {
     let warp: CharacterWarp.Data
     /// The supernova fidget: the captain's settings, its schedule, and every spark, ray, shard and flight.
     let supernova: CharacterSupernova.Data
+    /// The meteor fidgets: the captain's settings, their schedule, and every meteor, piece, star and grain of dust.
+    let meteors: CharacterMeteors.Data
     /// The fixed stars (INF-3634): the captain's staged look and the constellation's tables, from the desktop owner
     /// (fixedStars.ts); PhoneFixedStars places them.
     struct FixedStars: Decodable, Sendable {

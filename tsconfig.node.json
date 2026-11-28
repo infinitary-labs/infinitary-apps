@@ -122,6 +122,8 @@
     "src/renderer/src/character/crew/warp.ts",
     "src/renderer/src/character/supernova.ts",
     "src/renderer/src/character/crew/supernova.ts",
+    "src/renderer/src/character/meteors.ts",
+    "src/renderer/src/character/crew/meteors.ts",
     // The stage clock is pure too; the crew hover e2e reads its slow rate,
     // and the summary's beat from the hover measures.
     "src/renderer/src/character/stageClock.ts",

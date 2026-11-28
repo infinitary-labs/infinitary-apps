@@ -33,7 +33,8 @@ import { BATCH_GATE } from "@shared/batchGate";
 // travel speeds up the same way, the tunnel opens their orbits face-on, and
 // each orbiting crewmate is moved in screen space after it is seated.
 // A supernova (../supernova.ts) lights the same crewmates and its front
-// kicks each one outward and lets it swing back to its seat (./supernova.ts).
+// kicks each one outward and lets it swing back to its seat (./supernova.ts);
+// a meteor fidget's meteors light them as they pass (./meteors.ts).
 //
 // A remote cluster's orbit (./computers.ts) hands this model a projection
 // that puts its circles beside the home formation. Its spark, its fall home
@@ -50,11 +51,13 @@ import type { CenterCue } from "@shared/dependencyVisual";
 import type { Slot } from "@shared/modelSlots";
 import { clamp01, easeInOut, easeOut, Spring, TAU } from "../face";
 import { flickerEnvelope, flickerMerge } from "../flicker";
+import type { MeteorFrame } from "../meteors";
 import type { SupernovaFrame } from "../supernova";
 import { type WarpFrame, warpCrewTravel } from "../warp";
 import { type CircleBase, companionTargets, seatParts, withReviewCues } from "./companions";
 import { type Program, programShare, runningParts } from "./constellation";
 import { FIXED_STARS, skyPlaces, twinkleOf } from "./fixedStars";
+import { lightCrewmate, meteorCrewLights } from "./meteors";
 import { CROWDED_PLANES, planePhase, planeRadius, projectPlane } from "./orbitalPlanes";
 import {
   type Arc,
@@ -1137,8 +1140,9 @@ export class CrewOrbit {
    * formation as it will be - no spark, no fall, no packet. `rush` is the
    * black hole's rush level (./rush.ts), 0 at the normal pace; `warp` is the
    * warp the first mate is playing (./warp.ts), null when none; `supernova`
-   * the supernova (./supernova.ts), likewise. A settled frame has none, and a
-   * remote cluster's orbit never takes a warp or a supernova.
+   * the supernova (./supernova.ts) and `meteors` a meteor fidget
+   * (./meteors.ts), likewise. A settled frame has none, and a remote
+   * cluster's orbit never takes a warp, a supernova or a meteor fidget.
    */
   update(
     now: number,
@@ -1146,6 +1150,7 @@ export class CrewOrbit {
     rush = 0,
     warp: WarpFrame | null = null,
     supernova: SupernovaFrame | null = null,
+    meteors: MeteorFrame | null = null,
   ): OrbitFrame {
     this.frameFallback.clear();
     const originalSeats = new Map(this.roster().map((c) => [c.id, c.planeSlot]));
@@ -1160,6 +1165,7 @@ export class CrewOrbit {
         rush,
         warp,
         settled || this.projection ? null : supernova,
+        settled || this.projection ? null : meteors,
       );
       if (this.seatsChanged) {
         const resolved = this.offMain;
@@ -1184,6 +1190,7 @@ export class CrewOrbit {
     rush: number,
     warp: WarpFrame | null,
     supernova: SupernovaFrame | null,
+    meteors: MeteorFrame | null,
   ): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.last) / 1000, 0.05);
     this.last = now;
@@ -1487,14 +1494,16 @@ export class CrewOrbit {
     }
     if (ended.length > 0) this.bump();
     // The warp's riders: every orbiting crewmate not circling a program's mark.
-    // The supernova lights and kicks the same riders.
-    if (w || supernova) {
+    // The supernova lights and kicks the same riders, and meteors light them.
+    if (w || supernova || meteors) {
       const riders = crewFrames.filter(
         (f) => f.phase === "orbiting" && !seats.has(f.id) && (f.star ?? 0) < 0.5,
       );
+      const lights = meteors ? meteorCrewLights(meteors) : [];
       for (const [i, f] of riders.entries()) {
         if (w) warpCrewmate(f, i, riders.length, w);
         if (supernova) kickCrewmate(f, supernova);
+        if (meteors) lightCrewmate(f, meteors, lights);
       }
     }
     // Packets ride the line to where the crewmate is drawn, circle included.

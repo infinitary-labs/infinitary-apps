@@ -16,6 +16,7 @@
 // This module is DOM-free and time-injected so it unit-tests in node.
 
 import type { FidgetVariant } from "@shared/emotes";
+import { METEORS } from "./meteors";
 import { isReplyEmote, REPLY_DURATION_MS, type ReplyEmote } from "./replies";
 import { SUPERNOVA } from "./supernova";
 import { WARP } from "./warp";
@@ -76,6 +77,10 @@ export const FIDGET_DURATION_MS: Record<FidgetVariant, number> = {
   corkscrew: WARP.durationMs,
   // The supernova's length is the captain's setting on its preview card.
   supernova: SUPERNOVA.durationMs,
+  // The meteor fidgets' lengths are the captain's settings on their preview card.
+  shower: METEORS.shower.durationMs,
+  storm: METEORS.storm.durationMs,
+  fireball: METEORS.fireball.durationMs,
   // Last on purpose: the pool draws by key order, and the black hole's e2e
   // picks "the last variant" with a deterministic draw.
   blackhole: 5600,
@@ -122,6 +127,9 @@ export const CLIP_BLEND_MS: Record<string, number> = {
   sphere: 250,
   corkscrew: 250,
   supernova: 250,
+  shower: 250,
+  storm: 250,
+  fireball: 250,
   blackhole: 250,
 };
 

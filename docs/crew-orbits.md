@@ -109,7 +109,7 @@ Remote clusters receive a rush level of zero: their crew keep their pace and sho
 
 **The warps stay at home too.**
 A remote cluster's orbit never takes a warp: its crew keep their own group and pace while the home crew ride ("The warps" below).
-Nor does a supernova's kick reach a remote cluster ("The supernova" below).
+Nor does a supernova's kick reach a remote cluster ("The supernova" below), nor a meteor's light ("The meteors" below).
 
 **Placement arrives with the row.**
 The core creates a placed task's row with its computer in the same write (`CreateTaskInput.deviceId`), so the row's first `task_changed` already carries `executionDeviceId` and the crewmate spawns on its own cluster.
@@ -590,6 +590,18 @@ Reduced motion plays no supernova.
 The near crew canvas publishes the supernova it draws as `data-crew-supernova`.
 
 `crew/supernova.test.ts` covers the kick: no crewmate moves before the front reaches it or after its swing settles, the front reaches every orbit, and a cut supernova lets go; on the phone, `PhoneSupernovaTests` replays the desktop's own readings and holds the same promises for its scene.
+
+## The meteors
+
+Captain's ask: "a few variants of a meteor shower fidget animation to the pool of first mate fidget animations. it should look visually pleasing and inspire a sense of awe"; the approved plan lights only the crewmates circling the first mate.
+The character publishes the meteor fidget it plays to `crew/meteors.ts`'s shared `crewMeteors` every frame (which one, its start in stage time, the first mate's radius, its ember and where it last drew the storm's 16 points) and that it stopped; the orbit reads the frame each frame (`CrewOrbit.update(now, settled, rush, warp, supernova, meteors)`), and the crew's far canvas paints the sky under every crewmate, the storm's nearest streaks going on the near canvas.
+A meteor passing a rider lights it by the captain's crew light, 0.6; nothing moves a crewmate, and the light is applied in screen space after the crewmate is seated.
+The storm's points falling home light the riders they pass too, from where the first mate last drew them.
+A meteor fidget cut short by attention holds its sky where it stopped and fades it over a warp's release, 0.6 s.
+Reduced motion plays no meteor fidget.
+The near crew canvas publishes the meteor fidget it draws as `data-crew-meteors`.
+
+`crew/meteors.test.ts` covers the light: each fidget lights some riders and not others, moves none, leaves each as it was, lets go when cut short and never reaches a remote cluster; `meteors.test.ts` covers the first mate's part; on the phone, `PhoneMeteorsTests` replays the desktop's own readings and holds the same promises for its scene.
 
 
 ## Fixed stars

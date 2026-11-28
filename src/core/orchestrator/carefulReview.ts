@@ -26,8 +26,12 @@ export function carefulReviewOwed(input: {
   kind: string | undefined;
   committed: CommittedVersion | undefined;
   reviewOpen: boolean;
-  /** When the latest review of the task started, closed ones included. */
-  reviewStartedAt: number | undefined;
+  /**
+   * When the latest review of the task started, closed ones included. Read
+   * only once the cheaper facts leave a version owing, because the first
+   * mate's roster asks every task's witnesses and must not walk children.
+   */
+  reviewStartedAt: () => number | undefined;
   delivery: TaskDelivery | null | undefined;
 }): CarefulReviewOwed | undefined {
   const { committed } = input;
@@ -35,8 +39,8 @@ export function carefulReviewOwed(input: {
   if (!committed || input.reviewOpen) return undefined;
   const reviewedAt = input.delivery?.reviewedAt;
   if (reviewedAt !== undefined && reviewedAt >= committed.at) return undefined;
-  if (input.reviewStartedAt !== undefined && input.reviewStartedAt >= committed.at)
-    return undefined;
   if (reviewCoversHead(input.delivery, committed.head)) return undefined;
+  const reviewStartedAt = input.reviewStartedAt();
+  if (reviewStartedAt !== undefined && reviewStartedAt >= committed.at) return undefined;
   return { head: committed.head };
 }

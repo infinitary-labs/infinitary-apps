@@ -414,13 +414,14 @@ export class IdleLadder {
       kind: record.shape?.kind,
       committed: this.host.runtime(record.id)?.committed,
       reviewOpen: this.reviewReading(record),
-      reviewStartedAt: this.host.tasks.graph
-        .children(record.id)
-        .filter((child) => child.shape?.kind === "review")
-        .reduce<number | undefined>(
-          (latest, child) => Math.max(latest ?? 0, child.createdAt),
-          undefined,
-        ),
+      reviewStartedAt: () =>
+        this.host.tasks.graph
+          .children(record.id)
+          .filter((child) => child.shape?.kind === "review")
+          .reduce<number | undefined>(
+            (latest, child) => Math.max(latest ?? 0, child.createdAt),
+            undefined,
+          ),
       delivery: record.delivery,
     });
   }

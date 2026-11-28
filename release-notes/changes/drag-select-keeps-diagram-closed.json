@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "drag-select-keeps-diagram-closed",
+      "kind": "fix",
+      "title": "Selecting words in a card's diagram no longer opens it larger",
+      "body": "Dragging across words in a card's diagram now selects them so you can copy them, and the larger view stays shut. A single click on the diagram still opens it at once.",
+      "area": "cards",
+      "noPicture": "The larger view opens in the window's own chrome, outside the card, so a still of the card looks the same with or without the fix.",
+      "noDocsSite": "The pages say a click on a picture shows it larger, which still holds.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

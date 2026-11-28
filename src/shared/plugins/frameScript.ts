@@ -695,7 +695,19 @@ ${FRAME_EXPAND_SCRIPT}${FRAME_SOUND_SCRIPT}
   ).join(" ")}
 ${FRAME_PICTURE_SCRIPT}
 ${FRAME_PRESS_SCRIPT}
+  // What a press left to tell its own words from earlier ones, read in place because the browser queues selectionchange apart from the gesture: the selection's ends, which a drag moves, and where it went down, which a drag that selects the same words again still leaves. A click the card's script or a held touch sends ahead of the browser's own clearing moves neither. Only a mouse's travel counts, four pixels of it: a held touch may move further and is still a press, and its click is sent at the release.
+  var pressed = { ends: [], x: 0, y: 0, mouse: false };
+  function selectionEnds() {
+    var selection = getSelection();
+    return [selection.anchorNode, selection.anchorOffset, selection.focusNode, selection.focusOffset];
+  }
+  document.addEventListener("pointerdown", function (event) {
+    pressed = { ends: selectionEnds(), x: event.clientX, y: event.clientY, mouse: event.pointerType === "mouse" };
+  }, true);
   document.addEventListener("click", function (event) {
+    var ends = selectionEnds();
+    var selecting = (pressed.mouse && Math.hypot(event.clientX - pressed.x, event.clientY - pressed.y) > 4)
+      || ends.some(function (end, at) { return end !== pressed.ends[at]; });
     var target = event.target;
     var action = target && target.closest ? target.closest("[data-inf-action]") : null;
     if (action) {
@@ -754,6 +766,9 @@ ${FRAME_PRESS_SCRIPT}
     if (caps.pictures && !target.closest(DRAWING_CONTROL)) {
       var drawing = outermostDrawing(target);
       if (drawing && isDiagram(drawing)) {
+        // The browser sends a drag's release to the drawing both ends sit in as a click: words that press selected stay, and nothing opens.
+        // Words selected before it do not count.
+        if (selecting && String(getSelection())) return;
         openDrawing(drawing);
         return;
       }
@@ -861,4 +876,4 @@ ${FRAME_KEYBOARD_SCRIPT}
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-+mDEnM1Yjg8Z6LQ4+E0QuBXWrN6UkHJN4FsaVIZHCEI=";
+export const FRAME_BRIDGE_SHA256 = "sha256-8lANOMMhZ8uUfKwE7L642Ns4NQDvdW4noRdYBDXt64Q=";

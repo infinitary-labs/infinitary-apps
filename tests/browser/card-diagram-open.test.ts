@@ -1,6 +1,7 @@
 import { DRAWING_SOURCE_PREFIX, FRAME_BRIDGE_VERSION } from "@shared/plugins/bridge";
 import { frameCsp } from "@shared/plugins/containment";
 import { buildFrameDocument } from "@shared/plugins/frameDocument";
+import { WEBKIT_HIGHLIGHT_DELAY_MS } from "@shared/plugins/framePressScript";
 import { expect, test } from "vitest";
 import { commands } from "vitest/browser";
 import { cardBodyMarkup, cardStylesheet } from "../../src/renderer/src/cards/prototypeSrcdoc";
@@ -24,12 +25,13 @@ const FIGURE_CAPTION = "Three pieces in merge order";
 const WIDE_LABEL = "The phone and the Mac read one viewer";
 
 const BODY = `
-  <p>The plan has three pieces. <svg id="mark" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="var(--ok)"/></svg> Ready.</p>
+  <p id="lead">The plan has three pieces. <svg id="mark" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="var(--ok)"/></svg> Ready.</p>
   <figure id="figure">
     <svg id="diagram" viewBox="0 0 750 120" width="100%" role="img" aria-label="Pieces" onclick="window.clicked = true">
       <script>window.ranInViewer = true;</script>
       <rect id="piece" x="25" y="30" width="200" height="60" rx="8" fill="var(--bg-2)" stroke="var(--line-2)"/>
       <text id="label" x="125" y="66" text-anchor="middle" fill="var(--fg-1)" font-size="14">Frame</text>
+      <text id="command" x="400" y="66" fill="var(--fg-1)" font-size="14">git pull --ff-only</text>
       <svg id="inner" x="300" y="30" width="60" height="60" viewBox="0 0 60 60"><circle cx="30" cy="30" r="20" fill="var(--accent)"/></svg>
     </svg>
     <figcaption>${FIGURE_CAPTION} <svg id="caption-mark" width="10" height="10" viewBox="0 0 10 10"><rect width="10" height="10"/></svg></figcaption>
@@ -69,6 +71,7 @@ async function mounted(annotations = false): Promise<Heard[]> {
   const heard: Heard[] = [];
   const frame = document.createElement("iframe");
   frame.name = FRAME;
+  frame.title = FRAME;
   frame.setAttribute("sandbox", "allow-scripts");
   frame.style.cssText = "width:800px;height:700px;border:0";
   addEventListener("message", (event) => {
@@ -229,4 +232,157 @@ test("a still the stage drew over shows in the opened picture", async () => {
   await press("label");
   const picture = drawn(opened(heard)[0]?.pictures?.[0] as Picture);
   expect(picture.getElementById("still")?.getAttribute("style")).not.toContain("display:none");
+});
+
+/**
+ * The frame's messages reach the page in the order it posts them, so one
+ * posted after a gesture is heard only once every message that gesture made
+ * has been.
+ */
+async function settled(heard: Heard[]): Promise<void> {
+  const before = heard.filter((message) => message.type === "settled").length;
+  await inFrame(() => {
+    parent.postMessage({ type: "settled" }, "*");
+  }, null);
+  await expect
+    .poll(() => heard.filter((message) => message.type === "settled").length)
+    .toBe(before + 1);
+}
+
+/** Selects words in the paragraph as a drag across them leaves them. */
+const selectParagraphWords = (words: string) =>
+  inFrame((words: string) => {
+    const node = document.getElementById("lead")?.firstChild;
+    if (!node) throw new Error("missing paragraph");
+    const start = (node.textContent ?? "").indexOf(words);
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, start + words.length);
+    getSelection()?.removeAllRanges();
+    getSelection()?.addRange(range);
+    return String(getSelection());
+  }, words);
+
+/**
+ * Intent: the captain's report that dragging to select words in a drawing
+ * opened the larger view, and the approved answer that one click opens it at
+ * once. The browser's own mouse drags, because a script's synthetic click
+ * never meets the release that ends a selection.
+ */
+test("a drag that selects words in a diagram keeps them and opens nothing; a click opens it at once", async () => {
+  const COMMAND = "git pull --ff-only";
+  const WORDS = "three pieces";
+  for (const annotations of [false, true]) {
+    const heard = await mounted(annotations);
+    await commands.dragAcrossWordsInFrame(FRAME, "#command", COMMAND);
+    await settled(heard);
+    expect(await inFrame(() => String(getSelection()), null)).toBe(COMMAND);
+    expect(opened(heard)).toEqual([]);
+
+    // The next click's press clears the words, and it opens the diagram.
+    await commands.clickWordsInFrame(FRAME, "#label", "Frame");
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(1);
+
+    // The browser queues its selection notice apart from the gesture: here the notice of words selected before the press reaches the document between its press and its click, and must not count as the press's own.
+    await selectParagraphWords(WORDS);
+    await inFrame(async () => {
+      const label = document.getElementById("label");
+      const delivered = new Promise((done) =>
+        document.addEventListener("selectionchange", done, { once: true }),
+      );
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("lead") as Element);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+      label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      await delivered;
+      label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("command") as Element);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+      label?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
+
+    // The mouse's travel is the fallback for a drag that leaves the selection's ends as they were: words selected in the diagram, a press and a release 120 px apart.
+    // A real press inside selected words starts a text drag-and-drop in Chromium, so a reselecting drag cannot be made with the mouse here.
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("command") as Element);
+      getSelection()?.removeAllRanges();
+      getSelection()?.addRange(range);
+      label?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "mouse",
+          clientX: 100,
+          clientY: 60,
+        }),
+      );
+      label?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 220, clientY: 60 }),
+      );
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(2);
+
+    // A held touch may move within its press and its click is sent at the release, with earlier words still selected.
+    await selectParagraphWords(WORDS);
+    await inFrame(() => {
+      const label = document.getElementById("label");
+      label?.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          bubbles: true,
+          pointerType: "touch",
+          clientX: 100,
+          clientY: 60,
+        }),
+      );
+      label?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, clientX: 112, clientY: 60 }),
+      );
+    }, null);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(3);
+
+    // A held touch's release makes the bridge send its click before the browser clears words selected elsewhere.
+    await inFrame(() => {
+      const seen: { trusted: boolean; words: string }[] = [];
+      const win = window as unknown as { clicks: typeof seen; ups: number };
+      win.clicks = seen;
+      win.ups = 0;
+      addEventListener(
+        "click",
+        (event) => seen.push({ trusted: event.isTrusted, words: String(getSelection()) }),
+        true,
+      );
+      addEventListener(
+        "mouseup",
+        (event) => {
+          if (event.isTrusted) win.ups += 1;
+        },
+        true,
+      );
+    }, null);
+    expect(await selectParagraphWords(WORDS)).toBe(WORDS);
+    await commands.holdTouchInFrame(FRAME, "#label", WEBKIT_HIGHLIGHT_DELAY_MS + 180);
+    // The browser's own mouseup follows the touch's end, with its click in the same turn.
+    await expect
+      .poll(() => inFrame(() => (window as unknown as { ups: number }).ups, null))
+      .toBeGreaterThan(0);
+    await settled(heard);
+    expect(opened(heard)).toHaveLength(4);
+    const clicks = await inFrame(() => (window as unknown as { clicks: unknown[] }).clicks, null);
+    expect(clicks[0]).toEqual({ trusted: false, words: WORDS });
+  }
 });
